@@ -2,6 +2,9 @@
 
 #include "types.h"
 
+#include "sys/syscall.h"
+#include "../../../common/include/kernel/syscall-definitions.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -55,6 +58,8 @@ extern int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 extern int pthread_setcancelstate(int state, int *oldstate);
 
 extern int pthread_setcanceltype(int type, int *oldtype);
+
+extern int get_thread_count(void);
 
 #ifdef __cplusplus
 }
