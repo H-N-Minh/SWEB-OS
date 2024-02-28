@@ -46,9 +46,8 @@ class Thread
     /**
      * runs whatever the user wants it to run;
      */
-    //virtual void Run() = 0;
-    virtual void Run(){};
-
+    virtual void Run() = 0;
+    
     void* getKernelStackStartPointer();
 
     bool isStackCanaryOK();

@@ -20,8 +20,6 @@ class UserProcess
 
     virtual ~UserProcess();
 
-    //virtual void Run(); // not used
-
     ustl::vector<UserThread*> threads;
 
   private:
