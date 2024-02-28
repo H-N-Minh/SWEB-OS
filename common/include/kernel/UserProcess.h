@@ -1,8 +1,8 @@
 #pragma once
 
-#include "Thread.h"
+#include "UserThread.h"
 
-class UserProcess : public Thread
+class UserProcess
 {
   public:
     /**
@@ -18,7 +18,10 @@ class UserProcess : public Thread
 
     virtual void Run(); // not used
 
+    ustl::vector<UserThread*> threads;
+
   private:
     int32 fd_;
+    Loader* loader_;
 };
 
