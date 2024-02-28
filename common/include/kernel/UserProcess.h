@@ -1,5 +1,6 @@
 #pragma once
 
+#include "UserProcess.h"
 #include "UserThread.h"
 #include "uvector.h"
 

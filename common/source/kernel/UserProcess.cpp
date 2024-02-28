@@ -30,7 +30,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   size_t page_for_stack = PageManager::instance()->allocPPN();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
-  threads.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, loader_, terminal_number));
+
+  threads.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, loader_, terminal_number, this));
 
 }
 
