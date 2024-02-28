@@ -1,5 +1,7 @@
-#include "ProcessRegistry.h"
 #include "UserProcess.h"
+
+#include "UserThread.h"
+#include "ProcessRegistry.h"
 #include "kprintf.h"
 #include "Console.h"
 #include "Loader.h"
@@ -43,13 +45,14 @@ UserProcess::~UserProcess()
 
   //delete working_dir_;
   //working_dir_ = 0;
+  debug(USERPROCESS, "???");
 
   ProcessRegistry::instance()->processExit();
 }
 
-void UserProcess::Run()
-{
-  debug(USERPROCESS, "Run: Fail-safe kernel panic - you probably have forgotten to set switch_to_userspace_ = 1\n");
-  assert(false);
-}
+// void UserProcess::Run()
+// {
+//   debug(USERPROCESS, "Run: Fail-safe kernel panic - you probably have forgotten to set switch_to_userspace_ = 1\n");
+//   assert(false);
+// }
 

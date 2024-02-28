@@ -1,6 +1,9 @@
 #pragma once
 
 #include "UserThread.h"
+#include "uvector.h"
+
+
 
 class UserProcess
 {
@@ -16,7 +19,7 @@ class UserProcess
 
     virtual ~UserProcess();
 
-    virtual void Run(); // not used
+    //virtual void Run(); // not used
 
     ustl::vector<UserThread*> threads;
 

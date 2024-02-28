@@ -113,7 +113,7 @@ void Scheduler::cleanupDeadThreads()
   thread_count_max = ustl::min(thread_count_max, threads_.size());
   Thread* destroy_list[thread_count_max];
   uint32 thread_count = 0;
-  for (uint32 i = 0; i < threads_.size() && thread_count < thread_count_max; ++i)
+  for (uint32 i = 0; i < threads_.size() && thread_count < thread_count_max; ++i)             //?? locked in here??
   {
     Thread* tmp = threads_[i];
     if (tmp->getState() == ToBeDestroyed)
