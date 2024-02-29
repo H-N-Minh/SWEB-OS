@@ -23,7 +23,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   if (!loader_ || !loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
-    //kill();
+    //kill();                                                                 //???
     return;
   }
 
@@ -44,16 +44,9 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-  //delete working_dir_;
-  //working_dir_ = 0;
-  debug(USERPROCESS, "???");
+
 
   ProcessRegistry::instance()->processExit();
 }
 
-// void UserProcess::Run()
-// {
-//   debug(USERPROCESS, "Run: Fail-safe kernel panic - you probably have forgotten to set switch_to_userspace_ = 1\n");
-//   assert(false);
-// }
 

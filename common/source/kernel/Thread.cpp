@@ -47,6 +47,11 @@ Thread::~Thread()
   user_registers_ = 0;
   delete kernel_registers_;
   kernel_registers_ = 0;
+
+  delete working_dir_;         //not sure if really every Thread has its own working_dir -> or every process !!
+  working_dir_ = 0;
+
+
   if(unlikely(holding_lock_list_ != 0))
   {
     debug(THREAD, "~Thread: ERROR: Thread <%s (%p)> is going to be destroyed, but still holds some locks!\n",

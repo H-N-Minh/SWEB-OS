@@ -12,7 +12,7 @@ class UserThread : public Thread
 
         UserProcess* process_;
 
-        ~UserThread();
+        virtual ~UserThread();
 
         virtual void Run()
         {

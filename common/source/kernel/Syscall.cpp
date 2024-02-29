@@ -174,7 +174,6 @@ size_t Syscall::createprocess(size_t path, size_t sleep)
     while (ProcessRegistry::instance()->processCount() > process_count) // please note that this will fail ;)
     {
       Scheduler::instance()->yield();
-      //debug(SYSCALL, "Proccescount1: %ld, Processcount2 %ld\n", ProcessRegistry::instance()->processCount(), process_count);
     }
   }
   return 0;
