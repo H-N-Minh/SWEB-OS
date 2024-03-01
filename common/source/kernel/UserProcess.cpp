@@ -13,7 +13,7 @@
 #include "Scheduler.h"
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) :
-    fd_(VfsSyscall::open(filename, O_RDONLY))
+    fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), terminal_number_(terminal_number), filename_(filename)
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
@@ -44,9 +44,26 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-
+  delete working_dir_;
+  working_dir_ = 0;
 
   ProcessRegistry::instance()->processExit();
+}
+
+int UserProcess::add_thread()
+{
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, loader_, terminal_number_, this);
+  if(new_thread)
+  {
+    threads.push_back(new_thread);
+    //add to process registery
+    return 0;
+  }
+  else
+  {
+    return -1;   //error codes to be added
+  }
+  
 }
 
 

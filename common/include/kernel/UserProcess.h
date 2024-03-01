@@ -3,6 +3,7 @@
 #include "UserProcess.h"
 #include "UserThread.h"
 #include "uvector.h"
+#include "types.h"
 
 
 
@@ -21,8 +22,13 @@ class UserProcess
 
     ustl::vector<UserThread*> threads;
 
+    long int process_id_ = 422; //change to something usefull
+    int add_thread();
   private:
     int32 fd_;
     Loader* loader_;
+    FileSystemInfo* working_dir_;
+    uint32 terminal_number_;
+    ustl::string filename_;
 };
 

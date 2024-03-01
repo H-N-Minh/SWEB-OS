@@ -48,7 +48,7 @@ extern "C" void startup()
   writeLine2Bochs("Console created \n");
 
   Terminal *term_0 = main_console->getTerminal(0); // add more if you need more...
-  term_0->initTerminalColors(Console::GREEN, Console::BLACK);
+  term_0->initTerminalColors(Console::WHITE, Console::BLACK);
   kprintfd("Init debug printf\n");
   term_0->writeString("This is on term 0, you should see me now\n");
 

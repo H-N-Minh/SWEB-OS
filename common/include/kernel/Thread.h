@@ -15,6 +15,7 @@ class Loader;
 class Terminal;
 class Mutex;
 class Lock;
+class UserProcess;
 
 extern Thread* currentThread;
 
@@ -111,6 +112,8 @@ class Thread
      */
     Lock* holding_lock_list_;
 
+    /**Returns pointer to process to which the thread belongs*/
+
   private:
     Thread(Thread const &src);
     Thread &operator=(Thread const &src);
@@ -120,6 +123,8 @@ class Thread
     size_t tid_;
 
     Terminal* my_terminal_;
+
+    Thread::TYPE type_;
 
   protected:
     ThreadState getState() const;

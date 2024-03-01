@@ -7,6 +7,8 @@
 #include "ProcessRegistry.h"
 #include "File.h"
 #include "Scheduler.h"
+#include "UserProcess.h"
+#include "UserThread.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -52,6 +54,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       case sc_threadcount:
           return_value = get_thread_count();
           break; // you will need many debug hours if you forget the break
+    case sc_pthread_create:
+      return_value = pthread_create((size_t*)arg1, arg2, arg3, arg4);                    //maybe i should cast here
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -184,6 +189,17 @@ void Syscall::trace()
   currentThread->printBacktrace();
 }
 
-uint32 Syscall::get_thread_count() {
-    return Scheduler::instance()->getThreadCount();
+uint32 Syscall::get_thread_count()
+{
+  return Scheduler::instance()->getThreadCount();
+}
+
+int Syscall::pthread_create(size_t* thread, size_t attr, size_t start_routine, size_t arg)         //no idea if size_t* is right here
+{
+  
+  *thread = 13;                //!!!!!!!!
+  debug(SYSCALL, "Unused:  %zu, %zu, %zu\n", attr, start_routine, arg);       //!!!!!!!!
+  //return 43;
+
+  return static_cast<UserThread*>(currentThread)->process_->add_thread();
 }

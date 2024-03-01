@@ -27,3 +27,8 @@ UserThread::~UserThread()
     delete process_;              //should only be called (and i am not sure, if userthread is the right place)
 }
 
+UserProcess* UserThread::get_process()
+{
+    return process_;
+}
+
