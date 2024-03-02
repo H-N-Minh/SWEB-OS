@@ -4,12 +4,20 @@
 void function()
 {
     printf("Function called!");
+    while(1)
+    {
+        //printf("hey\n");
+    }
 }
 
 int main()
 {
     pthread_t thread_id = 0;
     printf("pthread_creates returns %d und has thread_id %ld \n", pthread_create(&thread_id, NULL, (void * (*)(void *))function, NULL), thread_id);
+    while(1)
+    {
+        //printf("hey\n");
+    }
     return 0;
 }
 
