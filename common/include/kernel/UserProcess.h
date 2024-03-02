@@ -23,7 +23,7 @@ class UserProcess
     ustl::vector<UserThread*> threads;
 
     long int process_id_ = 422; //change to something usefull
-    int add_thread();
+    int add_thread(void *(*start_routine)(void*), void* arg);
   private:
     int32 fd_;
     Loader* loader_;

@@ -8,7 +8,7 @@ class UserProcess;
 class UserThread : public Thread
 {
     public:
-        UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader, int32 terminal_number, UserProcess* process);
+        UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader, int32 terminal_number, UserProcess* process, void *(*start_routine)(void*), void* function_args);
 
         UserProcess* process_;
 
