@@ -63,8 +63,11 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 void Syscall::createThread(void *func, void *para, size_t stack_size) {
   (void)func;  // Cast to void to "use" the parameter
   (void)para;
+  // Thread new_thread = Thread(currentThread->getWorkingDirInfo(), "new_thread", Thread::USER_THREAD);
+  
   kprintf("%zd", stack_size);
 }
+
 
 void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 {
