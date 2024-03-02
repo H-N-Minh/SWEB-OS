@@ -60,6 +60,12 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
+void Syscall::createThread(void *func, void *para, size_t stack_size) {
+  (void)func;  // Cast to void to "use" the parameter
+  (void)para;
+  kprintf("%zd", stack_size);
+}
+
 void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 {
   if(buffer && ((size_t)buffer >= USER_BREAK || (size_t)buffer + size > USER_BREAK))
