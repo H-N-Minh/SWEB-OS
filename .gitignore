@@ -26,6 +26,8 @@ cmake-build-*/*
 # OS-specific files
 *.DS_Store
 *Thumbs.db
+userspace/tests/pthreadCreate
+.vscode/launch.json
 .vscode/settings.json
 .vscode/tasks.json
-userspace/tests/pthreadCreate
+arch/x86/64/CMakeLists.include

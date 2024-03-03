@@ -7,6 +7,7 @@
 #include "ProcessRegistry.h"
 #include "File.h"
 #include "Scheduler.h"
+#include "UserThread.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -63,9 +64,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 void Syscall::createThread(void *func, void *para, size_t stack_size) {
   (void)func;  // Cast to void to "use" the parameter
   (void)para;
-  // Thread new_thread = Thread(currentThread->getWorkingDirInfo(), "new_thread", Thread::USER_THREAD);
-  
-  kprintf("%zd", stack_size);
+  kprintf("here first/n");
+  // UserThread new_thread = UserThread();
+  // UserThread bro = UserThread(currentThread->getWorkingDirInfo(), "new thread bro", Thread::USER_THREAD);
+  kprintf("here second %zd", stack_size);
 }
 
 
