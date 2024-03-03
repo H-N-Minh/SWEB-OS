@@ -10,6 +10,7 @@
 #include "offsets.h"
 #include "Scheduler.h"
 
+//initializes a UserProcess object, and it will initialize the base class Thread
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) :
     Thread(fs_info, filename, Thread::USER_THREAD), fd_(VfsSyscall::open(filename, O_RDONLY))
 {
@@ -60,8 +61,13 @@ UserProcess::~UserProcess()
 
 void UserProcess::Run()
 {
-  debug(USERPROCESS, "Run: Fail-safe kernel panic - you probably have forgotten to set switch_to_userspace_ = 1\n");
-  assert(false);
+    Thread* thread1 = createThread("Thread1");
+    Thread* thread2 = createThread("Thread2");
+
+    terminateThread(thread1);
+    terminateThread(thread2);
+    debug(USERPROCESS, "Run: Fail-safe kernel panic - you probably have forgotten to set switch_to_userspace_ = 1\n");
+    assert(false);
 }
 
 Thread* UserProcess::createThread(ustl::string thread_name) {
