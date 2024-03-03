@@ -80,7 +80,7 @@ class Thread
     bool schedulable();
   
   
-    uint32 kernel_stack_[2048];
+    uint32 kernel_stack_[2048]; //kernel stack size for each thread
     ArchThreadRegisters* kernel_registers_;
     ArchThreadRegisters* user_registers_;
 

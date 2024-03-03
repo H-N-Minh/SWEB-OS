@@ -64,3 +64,17 @@ void UserProcess::Run()
   assert(false);
 }
 
+Thread* UserProcess::createThread(ustl::string thread_name) {
+    Thread* new_thread = new UserThread(working_dir_, thread_name, Thread::USER_THREAD);
+    threads_.push_back(new_thread);
+    return new_thread;
+}
+
+void UserProcess::terminateThread(Thread* thread) {
+    auto it = ustl::find(threads_.begin(), threads_.end(), thread);
+    if (it != threads_.end()) {
+        threads_.erase(it);
+        delete thread;
+    }
+}
+
