@@ -65,9 +65,9 @@ void Syscall::createThread(void *func, void *para, size_t stack_size) {
   (void)func;  // Cast to void to "use" the parameter
   (void)para;
   kprintf("here first/n");
-  // UserThread new_thread = UserThread();
+  UserThread* new_thread = new UserThread();
   // UserThread bro = UserThread(currentThread->getWorkingDirInfo(), "new thread bro", Thread::USER_THREAD);
-  kprintf("here second %zd", stack_size);
+  kprintf("here second %p, %zd", new_thread, stack_size);
 }
 
 
