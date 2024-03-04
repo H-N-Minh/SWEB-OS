@@ -69,7 +69,7 @@ void Syscall::createThread(void *func, void *para, size_t stack_size) {
   // new_thread->Run();
   
   Scheduler::instance()->printThreadList();
-  Scheduler::instance()->addNewThread(new_thread);
+  // Scheduler::instance()->addNewThread(new_thread);
   Scheduler::instance()->printThreadList();
   // UserThread bro = UserThread(currentThread->getWorkingDirInfo(), "new thread bro", Thread::USER_THREAD);
   kprintf("here second %p, %zd", new_thread, stack_size);

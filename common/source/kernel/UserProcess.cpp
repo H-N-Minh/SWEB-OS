@@ -48,3 +48,38 @@ UserProcess::~UserProcess()
 //   assert(false);
 // }
 
+
+void UserProcess::setTerminal(Terminal *my_term)
+{
+  my_terminal_ = my_term;
+}
+
+
+// DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
+void UserProcess::kill()
+{
+  // debug(UserProcess, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
+  //       currentThread, getName(), this);
+
+  // setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
+
+  // if (currentThread == this)
+  // {
+  //   ArchInterrupts::enableInterrupts();
+  //   Scheduler::instance()->yield();
+  //   assert(false && "This should never happen, how are we still alive?");
+  // }
+}
+
+
+
+
+FileSystemInfo* UserProcess::getWorkingDirInfo()
+{
+  return working_dir_;
+}
+
+void UserProcess::setWorkingDirInfo(FileSystemInfo* working_dir)
+{
+  working_dir_ = working_dir;
+}
