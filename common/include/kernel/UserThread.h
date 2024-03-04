@@ -1,0 +1,4 @@
+#ifndef SWEB_USERTHREAD_H
+#define SWEB_USERTHREAD_H
+
+#endif //SWEB_USERTHREAD_H

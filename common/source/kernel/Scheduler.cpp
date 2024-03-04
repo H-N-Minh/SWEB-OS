@@ -210,3 +210,7 @@ void Scheduler::printLockingInformation()
   debug(LOCK, "Scheduler::printLockingInformation finished\n");
   unlockScheduling();
 }
+
+uint32 Scheduler::getThreadCount() {
+    return threads_.size();
+}
