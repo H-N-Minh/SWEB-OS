@@ -5,6 +5,8 @@
 #include "File.h"
 #include "PageManager.h"
 #include "Scheduler.h"
+#include "umap.h"
+#include "UserThread.h"
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info)
 {
