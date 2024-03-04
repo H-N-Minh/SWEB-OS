@@ -60,7 +60,7 @@ int UserProcess::add_thread(void *(*start_routine)(void*), void* arg)
   if(new_thread)
   {
     threads.push_back(new_thread);
-    //add to process registery
+    Scheduler::instance()->addNewThread(new_thread);
     return 0;
   }
   else

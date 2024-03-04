@@ -47,7 +47,12 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 UserThread::~UserThread()
 {
-    delete process_;              //should only be called for the last thread (and i am not sure, if userthread is the right place)
+    debug(USERPROCESS, "Number of threads in process %ld\n", process_->threads.size());
+    // if(process_->threads.size() == 1)
+    // {
+        delete process_;              //should only be called for the last thread (and i am not sure, if userthread is the right place)
+    //}
+        
 }
 
 UserProcess* UserThread::get_process()

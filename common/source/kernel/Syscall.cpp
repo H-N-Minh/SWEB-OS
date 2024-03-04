@@ -203,8 +203,6 @@ int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_ro
 
   int rv = static_cast<UserThread*>(currentThread)->process_->add_thread(start_routine, arg);
   
-  Scheduler::instance()->addNewThread(static_cast<UserThread*>(currentThread)->process_->threads.back());
-  //debug(PROCESS_REG, "added thread %s\n", path);
 
   return rv;
 }
