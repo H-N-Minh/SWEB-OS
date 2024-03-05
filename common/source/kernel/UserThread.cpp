@@ -57,5 +57,3 @@ FileSystemInfo* getcwd()
 
 
 extern Stabs2DebugInfo const *kernel_debug_info;
-
-

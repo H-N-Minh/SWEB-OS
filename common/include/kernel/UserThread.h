@@ -2,11 +2,12 @@
 
 #include "Thread.h"
 
+
 #define STACK_CANARY ((uint32)0xDEADDEAD ^ (uint32)(size_t)this)
 
 class UserThread : public Thread
 {
-    public:
+public:
 
 
     /**
