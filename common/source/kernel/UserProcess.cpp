@@ -14,7 +14,6 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
     Thread(fs_info, filename, Thread::USER_THREAD), fd_(VfsSyscall::open(filename, O_RDONLY))
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
-
   if (fd_ >= 0)
     loader_ = new Loader(fd_);
 
@@ -29,18 +28,12 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-  ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
-                                   (void*) (USER_BREAK - sizeof(pointer)),
-                                   getKernelStackStartPointer());
-
-  ArchThreads::setAddressSpace(this, loader_->arch_memory_);
 
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 
   if (main_console->getTerminal(terminal_number))
     setTerminal(main_console->getTerminal(terminal_number));
 
-  switch_to_userspace_ = 1;
 }
 
 UserProcess::~UserProcess()
