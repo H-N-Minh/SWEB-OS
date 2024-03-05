@@ -16,6 +16,7 @@ class UserProcess
     virtual ~UserProcess();
 
     ustl::vector<UserThread*> threads_;          //!!
+    bool to_be_destroyed_ = false;
   private:
     int32 fd_;
     Loader* loader_;

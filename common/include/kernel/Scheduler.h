@@ -41,6 +41,7 @@ class Scheduler
     friend class CleanupThread;
 
     void cleanupDeadThreads();
+    void cleanupDeadProcesses();
 
   private:
     Scheduler();

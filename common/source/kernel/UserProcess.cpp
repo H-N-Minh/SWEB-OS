@@ -17,6 +17,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
     //kill();           //!
+    to_be_destroyed_ = true;
     return;
   }
 

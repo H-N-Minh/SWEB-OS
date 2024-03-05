@@ -17,7 +17,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 UserThread::~UserThread()
 {
-    delete process_; 
+    //delete process_;
+    process_->to_be_destroyed_ = true;
 }
 
 void UserThread::Run()
