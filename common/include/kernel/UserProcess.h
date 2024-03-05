@@ -1,8 +1,8 @@
 #pragma once
+#include "UserThread.h"
+#include "uvector.h"
 
-#include "Thread.h"
-
-class UserProcess : public Thread
+class UserProcess
 {
   public:
     /**
@@ -13,12 +13,12 @@ class UserProcess : public Thread
      *
      */
     UserProcess(ustl::string minixfs_filename, FileSystemInfo *fs_info, uint32 terminal_number = 0);
-
     virtual ~UserProcess();
 
-    virtual void Run(); // not used
-
+    ustl::vector<UserThread*> threads_;          //!!
   private:
     int32 fd_;
+    Loader* loader_;
+    FileSystemInfo* working_dir_;
 };
 

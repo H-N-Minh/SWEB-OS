@@ -10,6 +10,7 @@
 #include "backtrace.h"
 #include "KernelMemoryManager.h"
 #include "Stabs2DebugInfo.h"
+#include "UserProcess.h"
 
 #define BACKTRACE_MAX_FRAMES 20
 
@@ -29,8 +30,8 @@ extern "C" void threadStartHack()
   while(1);
 }
 
-Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type) :
-    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(0),
+Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type, Loader* loader) :
+    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader),
     next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
     my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name))
 {
@@ -145,22 +146,22 @@ void Thread::printBacktrace(bool use_stored_registers)
         kernel_debug_info->printCallInformation(call_stack[i]);
     }
   }
-  if(user_registers_)
-  {
-    Stabs2DebugInfo const *deb = loader_->getDebugInfos();
-    count = backtrace_user(call_stack, BACKTRACE_MAX_FRAMES, this, 0);
-    debug(BACKTRACE, " ----- Userspace --------------------\n");
-    if(!deb)
-      debug(BACKTRACE, "Userspace debug info not set up, backtrace won't look nice!\n");
-    else
-    {
-      for(size_t i = 0; i < count; ++i)
-      {
-        debug(BACKTRACE, " ");
-        deb->printCallInformation(call_stack[i]);
-      }
-    }
-  }
+  // if(user_registers_)
+  // {
+  //   Stabs2DebugInfo const *deb = loader_->getDebugInfos();
+  //   count = backtrace_user(call_stack, BACKTRACE_MAX_FRAMES, this, 0);
+  //   debug(BACKTRACE, " ----- Userspace --------------------\n");
+  //   if(!deb)
+  //     debug(BACKTRACE, "Userspace debug info not set up, backtrace won't look nice!\n");
+  //   else
+  //   {
+  //     for(size_t i = 0; i < count; ++i)
+  //     {
+  //       debug(BACKTRACE, " ");
+  //       deb->printCallInformation(call_stack[i]);
+  //     }
+  //   }
+  // }
   debug(BACKTRACE, "=== End of backtrace for %sthread <%s> ===\n", user_registers_ ? "user" : "kernel", getName());
 }
 
