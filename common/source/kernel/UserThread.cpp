@@ -33,3 +33,20 @@ void UserThread::Run()
 {
 
 }
+
+
+// DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
+void UserThread::kill()
+{
+//   debug(UserThread, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
+//         currentThread, getName(), this);
+
+//   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
+
+//   if (currentThread == this)
+//   {
+//     ArchInterrupts::enableInterrupts();
+//     Scheduler::instance()->yield();
+//     assert(false && "This should never happen, how are we still alive?");
+//   }
+}

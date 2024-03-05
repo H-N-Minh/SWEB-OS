@@ -57,22 +57,13 @@ void UserProcess::setTerminal(Terminal *my_term)
 }
 
 
-// DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
-void UserProcess::kill()
+
+
+
+Terminal *UserProcess::getTerminal()
 {
-  // debug(UserProcess, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
-  //       currentThread, getName(), this);
-
-  // setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
-
-  // if (currentThread == this)
-  // {
-  //   ArchInterrupts::enableInterrupts();
-  //   Scheduler::instance()->yield();
-  //   assert(false && "This should never happen, how are we still alive?");
-  // }
+  return my_terminal_ ? my_terminal_ : main_console->getActiveTerminal();
 }
-
 
 
 
