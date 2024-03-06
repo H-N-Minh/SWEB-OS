@@ -135,43 +135,43 @@ void Scheduler::cleanupDeadThreads()
   }
 }
 
-void Scheduler::cleanupDeadProcesses()
-{
-  lockScheduling();
-  UserProcess* destroy_list[500];                             //!! should be max number of processes
-  int destroy_index[500];                             //!! should be max number of processes
-  int processes_to_delete = 0;
-  int index = 0;
-  for(auto& process: ProcessRegistry::instance()->processes_)
-  {
-    if(process->to_be_destroyed_)
-    {
-      destroy_list[processes_to_delete] = process;
-      destroy_index[processes_to_delete] = index;
-      processes_to_delete++;
-    }
-    index++;
-  }
-  if (processes_to_delete > 0)
-  {
-    for (int i = 0; i < processes_to_delete; ++i)
-    {
-      delete destroy_list[i];
-    }
+// void Scheduler::cleanupDeadProcesses()                        //123
+// {
+//   lockScheduling();                                      //not sure if this is right
+//   UserProcess* destroy_list[500];                             //!! should be max number of processes
+//   int destroy_index[500];                             //!! should be max number of processes
+//   int processes_to_delete = 0;
+//   int index = 0;
+//   for(auto& process: ProcessRegistry::instance()->processes_)
+//   {
+//     if(process->to_be_destroyed_)
+//     {
+//       destroy_list[processes_to_delete] = process;
+//       destroy_index[processes_to_delete] = index;
+//       processes_to_delete++;
+//     }
+//     index++;
+//   }
+//   if (processes_to_delete > 0)
+//   {
+//     for (int i = 0; i < processes_to_delete; ++i)
+//     {
+//       delete destroy_list[i];
+//     }
 
-    int deleted_values = 0;
-    for (auto& index : destroy_index)
-    {
-      ProcessRegistry::instance()->processes_.erase(ProcessRegistry::instance()->processes_.begin()+index-deleted_values);
-      deleted_values++;
-      if(deleted_values >= processes_to_delete)
-      {
-        break;
-      }
-    }
-  }
-  unlockScheduling();
-}
+//     int deleted_values = 0;
+//     for (auto& index : destroy_index)
+//     {
+//       ProcessRegistry::instance()->processes_.erase(ProcessRegistry::instance()->processes_.begin()+index-deleted_values);
+//       deleted_values++;
+//       if(deleted_values >= processes_to_delete)
+//       {
+//         break;
+//       }
+//     }
+//   }
+//   unlockScheduling();            //not sure if this is right
+// }
 
 void Scheduler::printThreadList()
 {

@@ -17,7 +17,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
     //kill();           //!
-    to_be_destroyed_ = true;
+    //to_be_destroyed_ = true;     //123
     return;
   }
 
@@ -31,9 +31,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
 UserProcess::~UserProcess()
 {
-  assert(Scheduler::instance()->isCurrentlyCleaningUp());
-  delete loader_;
-  loader_ = 0;
+
 
   if (fd_ > 0)
     VfsSyscall::close(fd_);

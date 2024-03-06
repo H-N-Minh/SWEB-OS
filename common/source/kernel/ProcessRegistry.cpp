@@ -107,7 +107,7 @@ void ProcessRegistry::createProcess(const char* path)
 {
   debug(PROCESS_REG, "create process %s\n", path);
   UserProcess* process = new UserProcess(path, new FileSystemInfo(*working_dir_));
-  processes_.push_back(process);
+  //processes_.push_back(process);      //123
   debug(PROCESS_REG, "created userprocess %s\n", path);
   Scheduler::instance()->addNewThread(process->threads_.front());
   debug(PROCESS_REG, "added thread %s\n", path);

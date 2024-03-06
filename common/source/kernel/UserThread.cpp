@@ -4,6 +4,7 @@
 #include "ArchThreads.h"
 #include "Loader.h"
 #include "debug.h"
+#include "Scheduler.h"
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process):Thread(working_dir, name, type, loader), process_(process)
 {
@@ -18,7 +19,14 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 UserThread::~UserThread()
 {
     //delete process_;
-    process_->to_be_destroyed_ = true;
+    //process_->to_be_destroyed_ = true;
+    if(!process_)
+    {
+        assert(Scheduler::instance()->isCurrentlyCleaningUp());
+        delete loader_;
+        loader_ = 0;
+    }
+    
 }
 
 void UserThread::Run()

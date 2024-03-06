@@ -146,22 +146,22 @@ void Thread::printBacktrace(bool use_stored_registers)
         kernel_debug_info->printCallInformation(call_stack[i]);
     }
   }
-  // if(user_registers_)
-  // {
-  //   Stabs2DebugInfo const *deb = loader_->getDebugInfos();
-  //   count = backtrace_user(call_stack, BACKTRACE_MAX_FRAMES, this, 0);
-  //   debug(BACKTRACE, " ----- Userspace --------------------\n");
-  //   if(!deb)
-  //     debug(BACKTRACE, "Userspace debug info not set up, backtrace won't look nice!\n");
-  //   else
-  //   {
-  //     for(size_t i = 0; i < count; ++i)
-  //     {
-  //       debug(BACKTRACE, " ");
-  //       deb->printCallInformation(call_stack[i]);
-  //     }
-  //   }
-  // }
+  if(user_registers_)
+  {
+    Stabs2DebugInfo const *deb = loader_->getDebugInfos();
+    count = backtrace_user(call_stack, BACKTRACE_MAX_FRAMES, this, 0);
+    debug(BACKTRACE, " ----- Userspace --------------------\n");
+    if(!deb)
+      debug(BACKTRACE, "Userspace debug info not set up, backtrace won't look nice!\n");
+    else
+    {
+      for(size_t i = 0; i < count; ++i)
+      {
+        debug(BACKTRACE, " ");
+        deb->printCallInformation(call_stack[i]);
+      }
+    }
+  }
   debug(BACKTRACE, "=== End of backtrace for %sthread <%s> ===\n", user_registers_ ? "user" : "kernel", getName());
 }
 
