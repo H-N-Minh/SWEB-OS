@@ -1,4 +1,5 @@
 #include "pthread.h"
+#include "stdio.h"
 
 /**
  * function stub
@@ -7,7 +8,7 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 {
-  return -1;
+  return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
 }
 
 /**
@@ -25,6 +26,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
  */
 void pthread_exit(void *value_ptr)
 {
+  __syscall(sc_pthread_exit, 0x0, 0x0, 0x0, 0x0, 0x0);          //TODO: value_ptr
 }
 
 /**
@@ -189,6 +191,14 @@ int pthread_setcanceltype(int type, int *oldtype)
   return -1;
 }
 
+
 int get_thread_count(void) {
     return __syscall(sc_threadcount, 0x0, 0x0, 0x0, 0x0, 0x0);
+}
+
+void pthread_create_wrapper(){      //void *(*start_routine)()
+  printf("i am here\n");
+  //start_routine();
+  //while(1){}
+  pthread_exit(0);
 }

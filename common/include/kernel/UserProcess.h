@@ -14,12 +14,15 @@ class UserProcess
      */
     UserProcess(ustl::string minixfs_filename, FileSystemInfo *fs_info, uint32 terminal_number = 0);
     virtual ~UserProcess();
+    int add_thread(void *(*start_routine)(void*), void *(*wrapper)());
 
     ustl::vector<UserThread*> threads_;          //!!
-    bool to_be_destroyed_ = false;
+    //bool to_be_destroyed_ = false;     //123
   private:
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
+    uint32 terminal_number_;
+    ustl::string filename_;
 };
 

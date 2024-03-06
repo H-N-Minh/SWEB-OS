@@ -4,7 +4,7 @@
 #include "Thread.h"
 #include "Mutex.h"
 #include "Condition.h"
-#include "uvector.h"
+//#include "uvector.h"
 
 class ProcessRegistry : public Thread
 {

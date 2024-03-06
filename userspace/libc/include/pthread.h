@@ -60,6 +60,8 @@ extern int pthread_setcanceltype(int type, int *oldtype);
 
 extern int get_thread_count(void);
 
+void pthread_create_wrapper();
+
 
 #ifdef __cplusplus
 }

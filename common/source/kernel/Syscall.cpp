@@ -51,7 +51,13 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_threadcount:
       return_value = get_thread_count();
-      break; // you will need many debug hours if you forget the break
+      break;
+    case sc_pthread_create:
+      return_value = pthread_create((size_t*)arg1, (unsigned int*)arg2, (void *(*)(void*))arg3, (void*)arg4, (void *(*)())arg5);
+      break;
+    case sc_pthread_exit:
+      pthread_exit((void*)arg1);
+      break;  // you will need many debug hours if you forget the break
 
     default:
       return_value = -1;
@@ -74,7 +80,7 @@ void Syscall::exit(size_t exit_code)
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   delete static_cast<UserThread*>(currentThread)->process_;
   static_cast<UserThread*>(currentThread)->process_ = 0;
-  //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;
+  //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;  //123
   currentThread->kill();
   assert(false && "This should never happen");
 }
@@ -190,4 +196,19 @@ void Syscall::trace()
 
 uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
+}
+
+int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_routine)(void*), void* arg, void *(*wrapper_address)())         
+{
+  //TODO: check arguments
+  
+  debug(SYSCALL, "Unused: Thread %p, Attribute %p, Args %p\n", thread, attr, arg);       //TODO
+  int rv = static_cast<UserThread*>(currentThread)->process_->add_thread(start_routine, wrapper_address);
+  
+  return rv;
+}
+
+void Syscall::pthread_exit(void* value_ptr){
+  debug(SYSCALL, "Unused: value_ptr, %p",value_ptr);
+  currentThread->kill();
 }
