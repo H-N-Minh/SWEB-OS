@@ -71,3 +71,15 @@ void UserProcess::setWorkingDirInfo(FileSystemInfo* working_dir)
 {
   working_dir_ = working_dir;
 }
+
+
+void UserProcess::createThread(void *func, void *para, size_t stack_size)
+{
+  debug(MINH_HOANG, "UserProcess::createThread: called, process: %p\n func: %p, para: %p, stack: %zu", this_process_, func, para, stack_size);
+  (void) func;  // Cast to void to "use" the parameter
+  (void) para;
+  (void) stack_size;
+  userThread_map_[tid_] = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, tid_, this_process_, func, para);
+  Scheduler::instance()->addNewThread(userThread_map_[tid_]);
+  tid_++;
+}

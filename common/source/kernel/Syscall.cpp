@@ -66,6 +66,9 @@ void Syscall::createThread(void *func, void *para, size_t stack_size) {
   (void)func;  // Cast to void to "use" the parameter
   (void)para;
   kprintf("here first/n");
+  UserProcess* process = ((UserThread*) currentThread)->getProcess();
+  debug(MINH_HOANG, "Syscall::createThread: called, process: %p\n\n func: %p, para: %p, stack: %zu", process, func, para, stack_size);
+  process->createThread(func, para, stack_size);
   // UserThread* new_thread = new UserThread();
   // new_thread->Run();
   
@@ -93,6 +96,7 @@ void Syscall::exit(size_t exit_code)
   static_cast<UserThread*>(currentThread)->process_ = 0;
   //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;
   currentThread->kill();
+  delete ((UserThread*) currentThread)->getProcess();
   assert(false && "This should never happen");
 }
 

@@ -35,6 +35,33 @@ void UserThread::Run()
 }
 
 
+UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, 
+                       Loader* loader, uint32 tid, UserProcess* process, void *func, void *para) 
+                : Thread(working_dir, name, type), process_(process)
+{
+  debug(MINH_HOANG, "UserThread: created new UserThread for func: %p and para: %p\n", func, para);
+    tid_ = tid;
+    loader_ = loader;
+
+    ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
+                                      (void*) (USER_BREAK - sizeof(pointer)),
+                                      getKernelStackStartPointer());
+
+    ArchThreads::setAddressSpace(this, loader_->arch_memory_);
+
+    debug(USERTHREAD, "ctor: Done loading %s\n", name.c_str());
+
+    if (main_console->getTerminal(terminal_number))
+        setTerminal(main_console->getTerminal(terminal_number));
+
+    switch_to_userspace_ = 1;
+}
+
+void UserThread::Run() {
+  assert(false && "UserThread::Run: This should never be called");
+  assert(true && "UserThread::Run: This should be called");
+}
+
 // DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
 void UserThread::kill()
 {
