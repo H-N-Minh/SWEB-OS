@@ -5,8 +5,9 @@
 #include "Loader.h"
 #include "debug.h"
 #include "Scheduler.h"
+#include "ProcessRegistry.h"
 
-UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)()):Thread(working_dir, name, type, loader), process_(process)
+UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)(), void* arg):Thread(working_dir, name, type, loader), process_(process)
 {
     if(wrapper == 0)
     {
@@ -15,7 +16,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     else
     {
         ArchThreads::createUserRegisters(user_registers_, (void*)wrapper, (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE), getKernelStackStartPointer());
-        debug(THREAD, "Unused: %p", start_routine);
+        user_registers_->rdi = (size_t)start_routine;
+        user_registers_->rsi = (size_t)arg;
 
     }
 
@@ -39,6 +41,7 @@ UserThread::~UserThread()
         assert(Scheduler::instance()->isCurrentlyCleaningUp());
         delete loader_;
         loader_ = 0;
+        ProcessRegistry::instance()->processExit();
     }
     
 }

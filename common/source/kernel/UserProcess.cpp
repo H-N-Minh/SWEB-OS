@@ -25,7 +25,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
   
-  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0));       //zero zero
+  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));       //zero zero
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 }
 
@@ -39,16 +39,16 @@ UserProcess::~UserProcess()
   delete working_dir_;
   working_dir_ = 0;
 
-  ProcessRegistry::instance()->processExit();
+  //ProcessRegistry::instance()->processExit();
 }
 
-int UserProcess::add_thread(void *(*start_routine)(void*), void *(*wrapper)())
+int UserProcess::add_thread(void *(*start_routine)(void*), void *(*wrapper)(), void* arg)
 {
   size_t page_for_stack = PageManager::instance()->allocPPN();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 - (this->threads_.size()) , page_for_stack, 1);  //TODO -> only works if no deletion and idk??
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
   
-  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, wrapper);  //TODO ->not sure if filname and working_dir are actually thread specific
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, wrapper, arg);  //TODO ->not sure if filname and working_dir are actually thread specific
   if(new_thread)
   {
     threads_.push_back(new_thread);

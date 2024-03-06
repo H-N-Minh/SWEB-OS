@@ -26,7 +26,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
  */
 void pthread_exit(void *value_ptr)
 {
-  __syscall(sc_pthread_exit, 0x0, 0x0, 0x0, 0x0, 0x0);          //TODO: value_ptr
+  __syscall(sc_pthread_exit, (size_t)value_ptr, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -196,9 +196,7 @@ int get_thread_count(void) {
     return __syscall(sc_threadcount, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
 
-void pthread_create_wrapper(){      //void *(*start_routine)()
-  printf("i am here\n");
-  //start_routine();
-  //while(1){}
-  pthread_exit(0);
+void pthread_create_wrapper(void *(*start_routine)(void*), void* arg){
+  size_t rv = (size_t)start_routine(arg);
+  pthread_exit((void*)rv);
 }

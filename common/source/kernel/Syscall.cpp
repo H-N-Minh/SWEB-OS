@@ -202,13 +202,13 @@ int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_ro
 {
   //TODO: check arguments
   
-  debug(SYSCALL, "Unused: Thread %p, Attribute %p, Args %p\n", thread, attr, arg);       //TODO
-  int rv = static_cast<UserThread*>(currentThread)->process_->add_thread(start_routine, wrapper_address);
-  
+  debug(SYSCALL, "Unused: Thread %p, Attribute %p\n", thread, attr);       //TODO
+  int rv = static_cast<UserThread*>(currentThread)->process_->add_thread(start_routine, wrapper_address, arg);
   return rv;
 }
 
 void Syscall::pthread_exit(void* value_ptr){
-  debug(SYSCALL, "Unused: value_ptr, %p",value_ptr);
+  //TODO: check arguments
+  debug(SYSCALL, "Return_value of thread was, %ld\n",(size_t)value_ptr);
   currentThread->kill();
 }
