@@ -13,19 +13,15 @@
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo* fs_info, uint32 terminal_number)
         : fd_(VfsSyscall::open(filename, O_RDONLY)),
-          loader_(nullptr), working_dir_(fs_info), my_terminal_(nullptr), filename_(filename),
+           working_dir_(fs_info), my_terminal_(nullptr), filename_(filename),
           terminal_number_(terminal_number) {
 
 
     ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
-  // new error
-    if (fd_ < 0) {
-        debug(USERPROCESS, "Error: Could not open file %s.\n", filename.c_str());
-        return;
+    if (fd_ >= 0){
+        loader_ = new Loader(fd_);
     }
-    loader_ = new Loader(fd_);
-    //
 
 
   if (!loader_ || !loader_->loadExecutableAndInitProcess())
@@ -67,10 +63,15 @@ UserProcess::~UserProcess()
 
 
 void UserProcess::createInitialThread() {
+    //debug(FABI, "FABI: Done loading %s\n", filename.c_str());
     auto* initialThread = new UserThread(working_dir_, filename_, loader_, terminal_number_, this);
     threads.push_back(initialThread);
     Scheduler::instance()->addNewThread(initialThread);
 }
 
 
+void UserProcess::setTerminal(Terminal *my_term)
+{
+    my_terminal_ = my_term;
+}
 

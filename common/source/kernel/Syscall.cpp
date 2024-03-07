@@ -186,5 +186,6 @@ void Syscall::trace()
 }
 
 uint32 Syscall::get_thread_count() {
+    Scheduler::instance()->printThreadList();
     return Scheduler::instance()->getThreadCount();
 }

@@ -13,7 +13,6 @@ public:
     void Run() override;
 
 private:
-    Loader* loader_;
     uint32 terminal_number_;
     UserProcess* process_;
 };

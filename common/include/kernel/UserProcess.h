@@ -27,12 +27,14 @@ class UserProcess
     FileSystemInfo* getWorkingDirInfo();
     void setWorkingDirInfo(FileSystemInfo* working_dir);
 
+    ustl::vector<UserThread*> threads;
+
   private:
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
     Terminal* my_terminal_;
-    ustl::vector<UserThread*> threads;
+
     ustl::string filename_;
     uint32 terminal_number_;
 
