@@ -25,7 +25,6 @@ UserThread::~UserThread()
         assert(Scheduler::instance()->isCurrentlyCleaningUp());
         delete loader_;
         loader_ = 0;
-        ProcessRegistry::instance()->processExit();
     }
     
 }
