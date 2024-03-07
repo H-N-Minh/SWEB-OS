@@ -6,7 +6,7 @@
 #include "UserThread.h"
 #include "uvector.h"
 
-class UserProcess : public Thread
+class UserProcess
 {
   public:
     /**

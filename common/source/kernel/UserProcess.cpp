@@ -63,7 +63,7 @@ UserProcess::~UserProcess()
 
 
 void UserProcess::createInitialThread() {
-    auto *initialThread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, loader_, terminal_number_, this);
+    auto* initialThread = new UserThread(working_dir_, filename_, loader_, terminal_number_, this);
     threads.push_back(initialThread);
     Scheduler::instance()->addNewThread(initialThread);
 }
