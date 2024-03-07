@@ -38,8 +38,6 @@ UserProcess::~UserProcess()
 
   delete working_dir_;
   working_dir_ = 0;
-
-  ProcessRegistry::instance()->processExit();
 }
 
 // void UserProcess::Run()
