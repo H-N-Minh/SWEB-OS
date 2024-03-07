@@ -14,8 +14,8 @@ class UserProcess
      */
     UserProcess(ustl::string minixfs_filename, FileSystemInfo *fs_info, uint32 terminal_number = 0);
     virtual ~UserProcess();
+    
     int create_thread(size_t* thread, void *(*start_routine)(void*), void *(*wrapper)(), void* arg);
-
     ustl::vector<UserThread*> getThreads();
     void addThreadtoThreadList(UserThread* thread);
 
