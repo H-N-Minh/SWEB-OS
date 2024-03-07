@@ -9,7 +9,6 @@
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)(), void* arg):Thread(working_dir, name, type, loader), process_(process)
 {
-    debug(USERTHREAD, "Function called %ld times.\n", TID_counter_);
     if(wrapper == 0)
     {
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),(void*) (USER_BREAK - sizeof(pointer)), getKernelStackStartPointer());

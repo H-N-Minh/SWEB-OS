@@ -79,7 +79,7 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
-  ustl::vector<UserThread*> threads_of_process = static_cast<UserThread*>(currentThread)->process_->threads_;
+  ustl::vector<UserThread*> threads_of_process = static_cast<UserThread*>(currentThread)->process_->getThreads();
   ustl::vector<UserThread*>::iterator iterator = ustl::find(threads_of_process.begin(), threads_of_process.end(), static_cast<UserThread*>(currentThread));
   size_t number_of_threads_in_process = threads_of_process.size();
   threads_of_process.erase(iterator);
@@ -219,14 +219,14 @@ int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_ro
     return -1;
   }
   debug(SYSCALL, "Unused: Thread %p, Attribute %p\n", thread, attr);       //TODO
-  int rv = static_cast<UserThread*>(currentThread)->process_->add_thread(thread, start_routine, wrapper_address, arg);
+  int rv = static_cast<UserThread*>(currentThread)->process_->create_thread(thread, start_routine, wrapper_address, arg);
   return rv;
 }
 
 void Syscall::pthread_exit(void* value_ptr){
   //TODO: check arguments
   debug(SYSCALL, "Return_value of thread was, %ld\n",(size_t)value_ptr);
-  ustl::vector<UserThread*> threads_of_process = static_cast<UserThread*>(currentThread)->process_->threads_;
+  ustl::vector<UserThread*> threads_of_process = static_cast<UserThread*>(currentThread)->process_->getThreads();
   ustl::vector<UserThread*>::iterator iterator = ustl::find(threads_of_process.begin(), threads_of_process.end(), static_cast<UserThread*>(currentThread));
   size_t number_of_threads_in_process = threads_of_process.size();
   threads_of_process.erase(iterator);

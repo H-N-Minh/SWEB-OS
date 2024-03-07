@@ -26,7 +26,6 @@ int main()
     assert(thread_id != 0 && "UserThread has ID of KernelThread");
 
 
-
     //Test2: Simple pthread_create
     pthread_t thread_id1 = 424242;
     pthread_t thread_id2 = 424242;
