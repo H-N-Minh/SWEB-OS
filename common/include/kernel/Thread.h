@@ -120,7 +120,7 @@ class Thread
     Terminal* my_terminal_;
 
   protected:
-    size_t tid_;
+    size_t s;
 
     ThreadState getState() const;
 
