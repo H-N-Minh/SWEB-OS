@@ -11,9 +11,13 @@
 #include "Scheduler.h"
 #include "UserThread.h"
 
-UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
-        : fd_(VfsSyscall::open(filename, O_RDONLY)), terminal_number_(terminal_number), filename_(filename), working_dir_(fs_info), loader_(nullptr) {
-  ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
+UserProcess::UserProcess(ustl::string filename, FileSystemInfo* fs_info, uint32 terminal_number)
+        : fd_(VfsSyscall::open(filename, O_RDONLY)),
+          loader_(nullptr), working_dir_(fs_info), my_terminal_(nullptr), filename_(filename),
+          terminal_number_(terminal_number) {
+
+
+    ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
   // new error
     if (fd_ < 0) {
