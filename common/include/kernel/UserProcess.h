@@ -28,5 +28,7 @@ class UserProcess
     FileSystemInfo* working_dir_;
     uint32 terminal_number_;
     ustl::string filename_;
+    size_t thread_counter_{0};
+
 };
 

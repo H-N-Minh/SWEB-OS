@@ -7,7 +7,7 @@
 #include "Scheduler.h"
 #include "ProcessRegistry.h"
 
-UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)(), void* arg):Thread(working_dir, name, type, loader), process_(process)
+UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter):Thread(working_dir, name, type, loader), process_(process)
 {
     if(wrapper == 0)
     {
@@ -15,7 +15,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     }
     else
     {
-        ArchThreads::createUserRegisters(user_registers_, (void*)wrapper, (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE), getKernelStackStartPointer());
+        ArchThreads::createUserRegisters(user_registers_, (void*)wrapper, (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * thread_counter), getKernelStackStartPointer());
         user_registers_->rdi = (size_t)start_routine;
         user_registers_->rsi = (size_t)arg;
 
