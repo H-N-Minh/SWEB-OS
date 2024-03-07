@@ -215,7 +215,10 @@ uint32 Syscall::get_thread_count() {
 int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_routine)(void*), void* arg, void *(*wrapper_address)())         
 {
   //TODO: check arguments
-  
+  if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
+  {
+    return -1;
+  }
   debug(SYSCALL, "Unused: Thread %p, Attribute %p\n", thread, attr);       //TODO
   int rv = static_cast<UserThread*>(currentThread)->process_->add_thread(start_routine, wrapper_address, arg);
   return rv;
@@ -232,4 +235,18 @@ void Syscall::pthread_exit(void* value_ptr){
   assert(number_of_threads_in_process - number_of_threads_in_process_after_removing_current_thread == 1 && "Current thread was not removed from threadlist.");
   debug(SYSCALL, "Process has currently %ld thread in his list.\n", threads_of_process.size());
   currentThread->kill();
+}
+
+bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
+{
+    if(!allowed_to_be_null && ptr == 0)
+    {
+      return false;
+    }
+    debug(SYSCALL, "Ptr %p USER_BREAK %p.\n",(void*)ptr, (void*)USER_BREAK);
+    if(ptr >= USER_BREAK)
+    {
+      return false;
+    }
+    return true;
 }
