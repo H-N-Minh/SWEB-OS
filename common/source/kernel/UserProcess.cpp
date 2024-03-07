@@ -9,18 +9,24 @@
 #include "ArchThreads.h"
 #include "offsets.h"
 #include "Scheduler.h"
+#include "UserThread.h"
 
-UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) :
-    Thread(fs_info, filename, Thread::USER_THREAD), fd_(VfsSyscall::open(filename, O_RDONLY))
-{
+UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
+        : fd_(VfsSyscall::open(filename, O_RDONLY)), terminal_number_(terminal_number), filename_(filename), working_dir_(fs_info), loader_(nullptr) {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
-  if (fd_ >= 0)
+
+  // new error
+    if (fd_ < 0) {
+        debug(USERPROCESS, "Error: Could not open file %s.\n", filename.c_str());
+        return;
+    }
     loader_ = new Loader(fd_);
+    //
+
 
   if (!loader_ || !loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
-    kill();
     return;
   }
 
@@ -28,6 +34,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
+    createInitialThread();
 
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 
@@ -39,6 +46,9 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 UserProcess::~UserProcess()
 {
   assert(Scheduler::instance()->isCurrentlyCleaningUp());
+    for (auto &thread : threads) {
+        delete thread;
+    }
   delete loader_;
   loader_ = 0;
 
@@ -51,9 +61,12 @@ UserProcess::~UserProcess()
   ProcessRegistry::instance()->processExit();
 }
 
-void UserProcess::Run()
-{
-  debug(USERPROCESS, "Run: Fail-safe kernel panic - you probably have forgotten to set switch_to_userspace_ = 1\n");
-  assert(false);
+
+void UserProcess::createInitialThread() {
+    auto *initialThread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, loader_, terminal_number_, this);
+    threads.push_back(initialThread);
+    Scheduler::instance()->addNewThread(initialThread);
 }
+
+
 
