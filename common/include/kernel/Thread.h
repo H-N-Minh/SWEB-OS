@@ -2,6 +2,7 @@
 
 #include "types.h"
 #include "fs/FileSystemInfo.h"
+#include "debug.h"
 
 #define STACK_CANARY ((uint32)0xDEADDEAD ^ (uint32)(size_t)this)
 
@@ -9,6 +10,7 @@ enum ThreadState{Running, Sleeping, ToBeDestroyed};
 enum SystemState {BOOTING, RUNNING, KPANIC};
 extern SystemState system_state;
 
+class UserProcess;
 class Thread;
 class ArchThreadRegisters;
 class Loader;
@@ -47,6 +49,9 @@ class Thread
      * runs whatever the user wants it to run;
      */
     virtual void Run() = 0;
+
+    virtual UserProcess* getProcess(){assert(0);}
+    virtual void setProcess(UserProcess* process){assert(0); debug(THREAD, "Unused %p",(void*)process);}
 
     void* getKernelStackStartPointer();
 
