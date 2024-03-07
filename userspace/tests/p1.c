@@ -16,9 +16,9 @@ int main()
     printf("pthread_creates returns %d \n", pthread_create(&thread_id, NULL, (void * (*)(void *))function1, (void*)simple_argument));
     //printf("pthread_creates returns %d \n", pthread_create(&thread_id, NULL, (void * (*)(void *))function, NULL));
     //while(1){}
-    for(int i; i < 400; i++)
-    {
-        printf(".");
-    }
+    // for(int i; i < 400; i++)
+    // {
+    //     printf(".");
+    // }
     return 0;
 }

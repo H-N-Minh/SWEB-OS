@@ -7,6 +7,7 @@
 #include "ProcessRegistry.h"
 #include "File.h"
 #include "Scheduler.h"
+#include "uvector.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -78,11 +79,24 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
+  ustl::vector<UserThread*> threads_of_process = static_cast<UserThread*>(currentThread)->process_->threads_;
+  ustl::vector<UserThread*>::iterator iterator = ustl::find(threads_of_process.begin(), threads_of_process.end(), static_cast<UserThread*>(currentThread));
+  size_t number_of_threads_in_process = threads_of_process.size();
+  threads_of_process.erase(iterator);
+  size_t number_of_threads_in_process_after_removing_current_thread = threads_of_process.size();
+  assert(number_of_threads_in_process - number_of_threads_in_process_after_removing_current_thread == 1 && "Current thread was not removed from threadlist.");
+  debug(SYSCALL, "Process has currently %ld thread in his list.\n", threads_of_process.size());
+  for (auto& thread : threads_of_process)
+  {
+    assert(thread != static_cast<UserThread*>(currentThread) && "Current thread needs to be killed last.");
+    thread->kill();
+  }
   delete static_cast<UserThread*>(currentThread)->process_;
   static_cast<UserThread*>(currentThread)->process_ = 0;
   //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;  //123
   currentThread->kill();
   assert(false && "This should never happen");
+
 }
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
@@ -210,5 +224,12 @@ int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_ro
 void Syscall::pthread_exit(void* value_ptr){
   //TODO: check arguments
   debug(SYSCALL, "Return_value of thread was, %ld\n",(size_t)value_ptr);
+  ustl::vector<UserThread*> threads_of_process = static_cast<UserThread*>(currentThread)->process_->threads_;
+  ustl::vector<UserThread*>::iterator iterator = ustl::find(threads_of_process.begin(), threads_of_process.end(), static_cast<UserThread*>(currentThread));
+  size_t number_of_threads_in_process = threads_of_process.size();
+  threads_of_process.erase(iterator);
+  size_t number_of_threads_in_process_after_removing_current_thread = threads_of_process.size();
+  assert(number_of_threads_in_process - number_of_threads_in_process_after_removing_current_thread == 1 && "Current thread was not removed from threadlist.");
+  debug(SYSCALL, "Process has currently %ld thread in his list.\n", threads_of_process.size());
   currentThread->kill();
 }
