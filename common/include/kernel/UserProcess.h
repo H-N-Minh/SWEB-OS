@@ -19,8 +19,7 @@ class UserProcess
     ustl::vector<UserThread*> getThreads();
     void addThreadtoThreadList(UserThread* thread);
 
-    
-    //bool to_be_destroyed_ = false;     //123
+
   private:
     ustl::vector<UserThread*> threads_;          //!!
     int32 fd_;

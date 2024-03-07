@@ -93,7 +93,6 @@ void Syscall::exit(size_t exit_code)
   }
   delete static_cast<UserThread*>(currentThread)->process_;           //TODO: replace with virtual method
   static_cast<UserThread*>(currentThread)->process_ = 0;
-  //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;  //123
   currentThread->kill();
   assert(false && "This should never happen");
 

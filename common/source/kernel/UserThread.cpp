@@ -25,8 +25,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     if (main_console->getTerminal(terminal_number))
         setTerminal(main_console->getTerminal(terminal_number));
 
-    setTID(TID_counter_);
-    TID_counter_++;
+    setTID(thread_counter);
 
     switch_to_userspace_ = 1;            //maybe add to userprocess after adding thread to threads_
 
