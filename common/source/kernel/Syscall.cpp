@@ -79,6 +79,7 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
+  currentThread->getProcess()->threads_lock_.acquire();           // TODO: Code1
   ustl::vector<UserThread*> threads_of_process = currentThread->getProcess()->getThreads();
   ustl::vector<UserThread*>::iterator iterator = ustl::find(threads_of_process.begin(), threads_of_process.end(), currentThread);
   size_t number_of_threads_in_process = threads_of_process.size();
@@ -91,6 +92,7 @@ void Syscall::exit(size_t exit_code)
     assert(thread != currentThread && "Current thread needs to be killed last.");
     thread->kill();
   }
+  currentThread->getProcess()->threads_lock_.release();  // TODO: Code1 ?? //maybe defining the lock in the process is not the best idea
   delete currentThread->getProcess();           //TODO: replace with virtual method
   currentThread->setProcess(0);
   currentThread->kill();
@@ -225,6 +227,7 @@ int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_ro
 void Syscall::pthread_exit(void* value_ptr){
   //TODO: check arguments
   debug(SYSCALL, "Return_value of thread was, %ld\n",(size_t)value_ptr);
+  currentThread->getProcess()->threads_lock_.acquire(); // TODO: Code1
   ustl::vector<UserThread*> threads_of_process =currentThread->getProcess()->getThreads();
   ustl::vector<UserThread*>::iterator iterator = ustl::find(threads_of_process.begin(), threads_of_process.end(), currentThread);
   size_t number_of_threads_in_process = threads_of_process.size();
@@ -232,6 +235,7 @@ void Syscall::pthread_exit(void* value_ptr){
   size_t number_of_threads_in_process_after_removing_currentThread = threads_of_process.size();
   assert(number_of_threads_in_process - number_of_threads_in_process_after_removing_currentThread == 1 && "Current thread was not removed from threadlist.");
   debug(SYSCALL, "Process has currently %ld thread in his list.\n", threads_of_process.size());
+  currentThread->getProcess()->threads_lock_.release();  // TODO: Code1 !!???
   currentThread->kill();
 }
 

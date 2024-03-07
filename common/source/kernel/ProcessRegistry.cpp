@@ -6,6 +6,8 @@
 #include "VfsSyscall.h"
 #include "VirtualFileSystem.h"
 #include "PageManager.h"
+#include "Mutex.h"
+#include "UserProcess.h"
 
 ProcessRegistry* ProcessRegistry::instance_ = 0;
 
@@ -108,6 +110,8 @@ void ProcessRegistry::createProcess(const char* path)
   debug(PROCESS_REG, "create process %s\n", path);
   UserProcess* process = new UserProcess(path, new FileSystemInfo(*working_dir_));
   debug(PROCESS_REG, "created userprocess %s\n", path);
+  process->threads_lock_.acquire(); // TODO: Code1
   Scheduler::instance()->addNewThread(process->getThreads().front());
+  process->threads_lock_.release();  // TODO: Code1
   debug(PROCESS_REG, "added thread %s\n", path);
 }
