@@ -91,7 +91,7 @@ void Syscall::exit(size_t exit_code)
     assert(thread != static_cast<UserThread*>(currentThread) && "Current thread needs to be killed last.");
     thread->kill();
   }
-  delete static_cast<UserThread*>(currentThread)->process_;
+  delete static_cast<UserThread*>(currentThread)->process_;           //TODO: replace with virtual method
   static_cast<UserThread*>(currentThread)->process_ = 0;
   //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;  //123
   currentThread->kill();
@@ -214,13 +214,12 @@ uint32 Syscall::get_thread_count() {
 
 int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_routine)(void*), void* arg, void *(*wrapper_address)())         
 {
-  //TODO: check arguments
   if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
   {
     return -1;
   }
   debug(SYSCALL, "Unused: Thread %p, Attribute %p\n", thread, attr);       //TODO
-  int rv = static_cast<UserThread*>(currentThread)->process_->add_thread(start_routine, wrapper_address, arg);
+  int rv = static_cast<UserThread*>(currentThread)->process_->add_thread(thread, start_routine, wrapper_address, arg);
   return rv;
 }
 

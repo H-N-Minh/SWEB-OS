@@ -180,6 +180,11 @@ size_t Thread::getTID()
   return tid_;
 }
 
+void Thread::setTID(size_t tid)
+{
+  tid_ = tid;
+}
+
 ThreadState Thread::getState() const
 {
   return state_;

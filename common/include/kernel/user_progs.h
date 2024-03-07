@@ -11,6 +11,7 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/pc1.sweb",
+                            "/usr/pc2.sweb",
                             0
                            };
 

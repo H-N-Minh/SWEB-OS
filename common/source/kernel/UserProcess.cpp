@@ -42,7 +42,7 @@ UserProcess::~UserProcess()
   //ProcessRegistry::instance()->processExit();
 }
 
-int UserProcess::add_thread(void *(*start_routine)(void*), void *(*wrapper)(), void* arg)
+int UserProcess::add_thread(size_t* thread, void *(*start_routine)(void*), void *(*wrapper)(), void* arg)
 {
   size_t page_for_stack = PageManager::instance()->allocPPN();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 - (this->threads_.size()) , page_for_stack, 1);  //TODO -> only works if no deletion and idk??
@@ -53,11 +53,12 @@ int UserProcess::add_thread(void *(*start_routine)(void*), void *(*wrapper)(), v
   {
     threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
+    *thread = new_thread->getTID();
     return 0;
   }
   else
   {
-    return -1; //error
+    return -1;
   }
   
 }
