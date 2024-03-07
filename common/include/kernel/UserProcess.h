@@ -5,7 +5,8 @@
 
 #include "UserThread.h"
 
-class UserProcess : public Thread
+class UserProcess
+//        : public Thread
 {
   public:
     /**
@@ -23,9 +24,14 @@ class UserProcess : public Thread
 
     Thread* createThread(ustl::string thread_name);
     void terminateThread(Thread* thread);
+    ustl::vector<Thread*> getThread();
 
   private:
     int32 fd_;
     ustl::vector<Thread*> threads_;
+    Loader* loader_;
+    FileSystemInfo* working_dir_;
+    ustl::string filename_;
+    uint32 terminal_number_;
 };
 

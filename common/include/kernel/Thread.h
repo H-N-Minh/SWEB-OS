@@ -33,7 +33,7 @@ class Thread
      * @param name The name of the thread
      * @param type The type of the thread (user or kernel thread)
      */
-    Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type);
+    Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader=0);
 
     virtual ~Thread();
 
@@ -55,6 +55,8 @@ class Thread
     static bool currentThreadIsStackCanaryOK();
 
     const char* getName();
+
+    Loader* loader_;
 
     size_t getTID();
 
@@ -86,7 +88,7 @@ class Thread
 
     uint32 switch_to_userspace_;
 
-    Loader* loader_;
+
 
 
     void setState(ThreadState state);
@@ -120,6 +122,7 @@ class Thread
     size_t tid_;
 
     Terminal* my_terminal_;
+
 
   protected:
     ThreadState getState() const;
