@@ -49,9 +49,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pseudols:
       pseudols((const char*) arg1, (char*) arg2, arg3);
       break;
-      case sc_threadcount:
-          return_value = get_thread_count();
-          break; // you will need many debug hours if you forget the break
+    case sc_threadcount:
+      return_value = get_thread_count();
+      break; // you will need many debug hours if you forget the break
+
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -71,6 +72,9 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
+  delete static_cast<UserThread*>(currentThread)->process_;
+  static_cast<UserThread*>(currentThread)->process_ = 0;
+  //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;
   currentThread->kill();
   assert(false && "This should never happen");
 }

@@ -1,15 +1,14 @@
 #pragma once
 
 #include "Thread.h"
-#include "ArchThreads.h"
-#include "Loader.h"
-#include "Console.h"
-#include "UserProcess.h"
 
-class UserThread : public Thread {
-public:
-    UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader, int32 terminal_number);
-    ~UserThread();
-    UserProcess* process_;
-    void Run() override;
+class UserProcess;
+
+class UserThread : public Thread
+{
+    public:
+        UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process);
+        ~UserThread();
+        UserProcess* process_;
+        void Run();
 };

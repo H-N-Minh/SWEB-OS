@@ -26,6 +26,7 @@ class Scheduler
     bool isCurrentlyCleaningUp();
     void incTicks();
     size_t getTicks();
+    uint32 getThreadCount();
 
     uint32 getThreadCount();
 
@@ -42,6 +43,7 @@ class Scheduler
     friend class CleanupThread;
 
     void cleanupDeadThreads();
+    //void cleanupDeadProcesses();  //123
 
   private:
     Scheduler();
