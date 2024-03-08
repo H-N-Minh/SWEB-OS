@@ -10,7 +10,7 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 {
-  return __syscall(sc_pthread_create, (size_t) start_routine, (size_t) arg, 2097152, 0, 0);
+  return -1;
 }
 
 /**

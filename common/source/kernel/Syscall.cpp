@@ -62,24 +62,6 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
-void Syscall::createThread(void *func, void *para, size_t stack_size) {
-  (void)func;  // Cast to void to "use" the parameter
-  (void)para;
-  kprintf("here first/n");
-  UserProcess* process = ((UserThread*) currentThread)->getProcess();
-  debug(MINH_HOANG, "Syscall::createThread: called, process: %p\n\n func: %p, para: %p, stack: %zu", process, func, para, stack_size);
-  process->createThread(func, para, stack_size);
-  // UserThread* new_thread = new UserThread();
-  // new_thread->Run();
-  
-  Scheduler::instance()->printThreadList();
-  // Scheduler::instance()->addNewThread(new_thread);
-  // Scheduler::instance()->printThreadList();
-  // UserThread bro = UserThread(currentThread->getWorkingDirInfo(), "new thread bro", Thread::USER_THREAD);
-  kprintf("here second, %zd", stack_size);
-}
-
-
 void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 {
   if(buffer && ((size_t)buffer >= USER_BREAK || (size_t)buffer + size > USER_BREAK))
@@ -94,9 +76,7 @@ void Syscall::exit(size_t exit_code)
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   delete static_cast<UserThread*>(currentThread)->process_;
   static_cast<UserThread*>(currentThread)->process_ = 0;
-  //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;
   currentThread->kill();
-  delete ((UserThread*) currentThread)->getProcess();
   assert(false && "This should never happen");
 }
 
