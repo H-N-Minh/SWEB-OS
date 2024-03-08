@@ -4,7 +4,7 @@
 
 class UserProcess
 {
-  public:
+public:
     /**
      * Constructor
      * @param minixfs_filename filename of the file in minixfs to execute
@@ -17,7 +17,7 @@ class UserProcess
 
     ustl::vector<UserThread*> threads_;          //!!
     bool to_be_destroyed_ = false;
-  private:
+private:
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;

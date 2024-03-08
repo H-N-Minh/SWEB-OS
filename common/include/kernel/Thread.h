@@ -21,7 +21,7 @@ extern Thread* currentThread;
 class Thread
 {
     friend class Scheduler;
-  public:
+public:
 
     static const char* threadStatePrintable[3];
 
@@ -56,8 +56,6 @@ class Thread
 
     const char* getName();
 
-    Loader* loader_;
-
     size_t getTID();
 
     Terminal* getTerminal();
@@ -80,15 +78,15 @@ class Thread
      * @return true if ready for scheduling
      */
     bool schedulable();
-  
-  
-    uint32 kernel_stack_[2048]; //kernel stack size for each thread
+
+
+    uint32 kernel_stack_[2048];
     ArchThreadRegisters* kernel_registers_;
     ArchThreadRegisters* user_registers_;
 
     uint32 switch_to_userspace_;
 
-
+    Loader* loader_;
 
 
     void setState(ThreadState state);
@@ -113,7 +111,7 @@ class Thread
      */
     Lock* holding_lock_list_;
 
-  private:
+private:
     Thread(Thread const &src);
     Thread &operator=(Thread const &src);
 
@@ -123,8 +121,7 @@ class Thread
 
     Terminal* my_terminal_;
 
-
-  protected:
+protected:
     ThreadState getState() const;
 
     FileSystemInfo* working_dir_;
