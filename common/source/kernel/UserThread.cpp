@@ -12,3 +12,13 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
     switch_to_userspace_ = 1;
 }
+
+UserThread::~UserThread()
+{
+    delete process_;
+}
+
+void UserThread::Run()
+{
+
+}

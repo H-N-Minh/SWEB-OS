@@ -30,7 +30,7 @@ extern "C" void threadStartHack()
 }
 
 Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type, Loader* loader) :
-    loader_(loader), kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0),
+    loader_(0), kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0),
     next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
     my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name))
 {

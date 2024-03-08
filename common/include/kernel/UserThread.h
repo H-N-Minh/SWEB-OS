@@ -4,9 +4,12 @@
 #include "ArchThreads.h"
 #include "Loader.h"
 #include "Console.h"
+#include "UserProcess.h"
 
 class UserThread : public Thread {
 public:
     UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader, int32 terminal_number);
-    virtual void Run() override;
+    ~UserThread();
+    UserProcess* process_;
+    void Run() override;
 };
