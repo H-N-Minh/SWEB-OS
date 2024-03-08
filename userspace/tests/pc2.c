@@ -26,7 +26,7 @@ int main()
     assert(thread_id != 0 && "UserThread has ID of KernelThread");
 
 
-    //Test2: Simple pthread_create
+    //Test2: 2 Threads
     pthread_t thread_id1 = 424242;
     pthread_t thread_id2 = 424242;
     rv = pthread_create(&thread_id1, NULL, (void * (*)(void *))function2, NULL);
@@ -36,13 +36,6 @@ int main()
     assert(thread_id1 != 424242 && "thread_id was not set");
     assert(thread_id2 != 424242 && "thread_id was not set");
     assert(thread_id1 != thread_id2 && "Two running thread cant have the same id.");
-    
-    
-
-
-
-
-
 
     printf("pc2 successful!\n");
 

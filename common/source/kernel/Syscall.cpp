@@ -82,18 +82,20 @@ void Syscall::exit(size_t exit_code)
   currentThread->getProcess()->threads_lock_.acquire();           // TODO: Code1
   ustl::vector<UserThread*> threads_of_process = currentThread->getProcess()->getThreads();
   ustl::vector<UserThread*>::iterator iterator = ustl::find(threads_of_process.begin(), threads_of_process.end(), currentThread);
-  size_t number_of_threads_in_process = threads_of_process.size();
+  //size_t number_of_threads_in_process = threads_of_process.size();
   threads_of_process.erase(iterator);
-  size_t number_of_threads_in_process_after_removing_currentThread = threads_of_process.size();
-  assert(number_of_threads_in_process - number_of_threads_in_process_after_removing_currentThread == 1 && "Current thread was not removed from threadlist.");
-  debug(SYSCALL, "Process has currently %ld thread in his list.\n", threads_of_process.size());
+  //size_t number_of_threads_in_process_after_removing_currentThread = threads_of_process.size();
+  //assert(number_of_threads_in_process - number_of_threads_in_process_after_removing_currentThread == 1 && "Current thread was not removed from threadlist.");
+  //debug(SYSCALL, "Process has currently %ld thread in his list.\n", threads_of_process.size());
   for (auto& thread : threads_of_process)
   {
-    assert(thread != currentThread && "Current thread needs to be killed last.");
+    //assert(thread != currentThread && "Current thread needs to be killed last.");
     thread->kill();
   }
-  currentThread->getProcess()->threads_lock_.release();  // TODO: Code1 ?? //maybe defining the lock in the process is not the best idea
-  delete currentThread->getProcess();           //TODO: replace with virtual method
+  threads_of_process.clear();
+  //i somehow have to make sure that it is actually the last thread and that the threads from pthreadcreate
+  currentThread->getProcess()->threads_lock_.release();  // TODO: Code1 ?? //what if it is not the last thread
+  delete currentThread->getProcess();
   currentThread->setProcess(0);
   currentThread->kill();
   assert(false && "This should never happen");
@@ -228,14 +230,26 @@ void Syscall::pthread_exit(void* value_ptr){
   //TODO: check arguments
   debug(SYSCALL, "Return_value of thread was, %ld\n",(size_t)value_ptr);
   currentThread->getProcess()->threads_lock_.acquire(); // TODO: Code1
-  ustl::vector<UserThread*> threads_of_process =currentThread->getProcess()->getThreads();
+
+  ustl::vector<UserThread*> threads_of_process = currentThread->getProcess()->getThreads();
   ustl::vector<UserThread*>::iterator iterator = ustl::find(threads_of_process.begin(), threads_of_process.end(), currentThread);
   size_t number_of_threads_in_process = threads_of_process.size();
+  
+  if(number_of_threads_in_process == 1)  //?
+  {
+    currentThread->getProcess()->threads_lock_.release();  // TODO: Code1 ?? //what if the other threads are not set ToBeDestroyed yet
+    delete currentThread->getProcess();
+    currentThread->setProcess(0);
+    currentThread->kill();
+  }
+  
   threads_of_process.erase(iterator);
-  size_t number_of_threads_in_process_after_removing_currentThread = threads_of_process.size();
-  assert(number_of_threads_in_process - number_of_threads_in_process_after_removing_currentThread == 1 && "Current thread was not removed from threadlist.");
-  debug(SYSCALL, "Process has currently %ld thread in his list.\n", threads_of_process.size());
-  currentThread->getProcess()->threads_lock_.release();  // TODO: Code1 !!???
+  //size_t number_of_threads_in_process_after_removing_currentThread = threads_of_process.size();
+  //assert(number_of_threads_in_process - number_of_threads_in_process_after_removing_currentThread == 1 && "Current thread was not removed from threadlist.");
+  //debug(SYSCALL, "Process has currently %ld thread in his list.\n", threads_of_process.size());
+  currentThread->getProcess()->threads_lock_.release();  // TODO: Code1 !!??? //not threadsafe
+  //what if exit is called here -> currentthread has no loader
+
   currentThread->kill();
 }
 
