@@ -10,12 +10,7 @@ class UserThread : public Thread
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter);
         ~UserThread();
 
-        void Run();
-        UserProcess* getProcess();
-        void setProcess(UserProcess* process);
-        
-    private:
-        UserProcess* process_;
+        bool last_thread_alive_{false};
 
-        
+        void Run();        
 };

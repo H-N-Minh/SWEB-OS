@@ -32,13 +32,18 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
 UserProcess::~UserProcess()
 {
+
+  assert(Scheduler::instance()->isCurrentlyCleaningUp());
+  delete loader_;
+  loader_ = 0;
+
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
   delete working_dir_;
   working_dir_ = 0;
 
-  //ProcessRegistry::instance()->processExit();
+  ProcessRegistry::instance()->processExit();
 }
 
 int UserProcess::create_thread(size_t* thread, void *(*start_routine)(void*), void *(*wrapper)(), void* arg)
@@ -62,10 +67,10 @@ int UserProcess::create_thread(size_t* thread, void *(*start_routine)(void*), vo
   threads_lock_.release();
 }
 
-ustl::vector<UserThread*> UserProcess::getThreads(){
-  assert(threads_lock_.isHeldBy(currentThread) && "threads_ accessed without lock");
-  return threads_;
-}
+// ustl::vector<UserThread*> UserProcess::getThreads(){
+//   assert(threads_lock_.isHeldBy(currentThread) && "threads_ accessed without lock");
+//   return threads_;
+// }
 
 void UserProcess::addThreadtoThreadList(UserThread* thread){
   assert(threads_lock_.isHeldBy(currentThread)  && "threads_ accessed without lock");

@@ -50,8 +50,8 @@ class Thread
      */
     virtual void Run() = 0;
 
-    virtual UserProcess* getProcess(){assert(0);}
-    virtual void setProcess(UserProcess* process){assert(0); debug(THREAD, "Unused %p",(void*)process);}
+    //virtual UserProcess* getProcess(){assert(0);}
+    //virtual void setProcess(UserProcess* process){assert(0); debug(THREAD, "Unused %p",(void*)process);}
 
     void* getKernelStackStartPointer();
 
@@ -117,6 +117,9 @@ class Thread
      * Changing the list has to be done atomic, else it cannot be ensured that the list is valid at any moment!
      */
     Lock* holding_lock_list_;
+
+    UserProcess* process_{0};
+
 
   private:
     Thread(Thread const &src);

@@ -17,12 +17,11 @@ class UserProcess
     virtual ~UserProcess();
 
     int create_thread(size_t* thread, void *(*start_routine)(void*), void *(*wrapper)(), void* arg);
-    ustl::vector<UserThread*> getThreads();
+
     void addThreadtoThreadList(UserThread* thread);
 
-    
-  private:
     ustl::vector<UserThread*> threads_;          //!!
+  private:
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;

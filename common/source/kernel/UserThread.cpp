@@ -9,8 +9,10 @@
 #include "debug.h"
 #include "PageManager.h"
 
-UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter):Thread(working_dir, name, type, loader), process_(process)
+UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter):Thread(working_dir, name, type, loader)
 {
+    process_ = process;
+
     size_t page_for_stack = PageManager::instance()->allocPPN();
     if(wrapper == 0)
     {
@@ -40,13 +42,17 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 UserThread::~UserThread()
 {
-    if(!process_)
+    // TODO: Code1 ?? //Currently unlocked
+    if(last_thread_alive_)
     {
-        assert(Scheduler::instance()->isCurrentlyCleaningUp());
-        delete loader_;
-        loader_ = 0;
-        ProcessRegistry::instance()->processExit();
+        debug(USERTHREAD, "Userprocess gets deleted\n");
+        delete process_;
+        process_ = 0;
     }
+    
+
+
+
     
 }
 
@@ -54,11 +60,11 @@ void UserThread::Run(){
     assert(0);
 }
 
-UserProcess* UserThread::getProcess(){
-    return process_;
-}
+// UserProcess* UserThread::getProcess(){
+//     return process_;
+// }
 
 
-void UserThread::setProcess(UserProcess* process){
-    process_ = process;
-}
+// void UserThread::setProcess(UserProcess* process){
+//     process_ = process;
+// }
