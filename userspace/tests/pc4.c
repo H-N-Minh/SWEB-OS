@@ -16,15 +16,14 @@ int main()
     for(int i = 0; i < 250; i++)
     {
         pthread_create(&thread_id[i], NULL, (void * (*)(void *))function, NULL);
-        //printf("Thread id %ld\n", thread_id);
     }
 
     for(int i = 0; i < 250; i++)
     {
         printf("%ld  ", thread_id[i]);
-
-        //printf("Thread id %ld\n", thread_id);
     }
+
+    
     
 
 

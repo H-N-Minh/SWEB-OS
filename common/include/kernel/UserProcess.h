@@ -1,6 +1,7 @@
 #pragma once
 #include "UserThread.h"
 #include "uvector.h"
+#include "umap.h"
 #include "Mutex.h"
 
 class UserProcess
@@ -20,12 +21,14 @@ class UserProcess
     
 
     ustl::vector<UserThread*> threads_;
+    ustl::map<size_t, void*> value_ptr_by_id_;
 
-    int32 fd_;
-    Loader* loader_;
-    FileSystemInfo* working_dir_;
-    uint32 terminal_number_;
-    ustl::string filename_;
+    int32 fd_;  //TODO: lock ?                   
+    Loader* loader_;  //TODO: lock ? 
+    FileSystemInfo* working_dir_;  //TODO: lock ? 
+    uint32 terminal_number_;  //TODO: lock ? 
+    ustl::string filename_;  //TODO: lock ? 
+
     size_t thread_counter_{0};   //gets currently also increased if thread_creation was not succesfull
 
 

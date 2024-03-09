@@ -12,11 +12,11 @@
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
   size_t return_value = 0;
-  // if ((syscall_number != sc_sched_yield) && (syscall_number != sc_outline)) // no debug print because these might occur very often
-  // {
-  //   debug(SYSCALL, "Syscall %zd called with arguments %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx)\n",
-  //         syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
-  // }
+  if ((syscall_number != sc_sched_yield) && (syscall_number != sc_outline)) // no debug print because these might occur very often
+  {
+    debug(SYSCALL, "Syscall %zd called with arguments %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx)\n",
+          syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
+  }
 
   switch (syscall_number)
   {
@@ -58,7 +58,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_pthread_exit:
       pthread_exit((void*)arg1);
-      break;  // you will need many debug hours if you forget the break
+      break;  
+    case sc_pthread_join:
+      return_value = pthread_join((size_t)arg1, (void **)arg2);
+      break; // you will need many debug hours if you forget the break
 
     default:
       return_value = -1;
@@ -90,64 +93,13 @@ void Syscall::exit(size_t exit_code)
   }
   currentThread->process_->threads_.clear();
   ((UserThread*)currentThread)->last_thread_alive_ = true;
-  currentThread->holding_lock_list_->waiters_list_ = 0;      //needs to be locked
-  currentThread->process_->threads_lock_.release();  // TODO: Code1 ?? //what if it is not the last thread
+  currentThread->holding_lock_list_->waiters_list_ = 0;      //TODO: Needs to locked i guess
+  currentThread->process_->threads_lock_.release();  // TODO: Code1 //what if it is not the last thread
   currentThread->kill();
   assert(false && "This should never happen");
 
 }
 
-// void Syscall::exit(size_t exit_code)
-// {
-//   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
-//   currentThread->process_->threads_lock_.acquire();      //Code1
-//   bool still_threads_left = true;
-//   //currentThread->lock_waiting_on_->lockWaitersList();       
-//   while(still_threads_left)
-//   {
-//     still_threads_left = false;
-//     for (UserThread*& thread : currentThread->process_->threads_)
-//     {
-//       if(thread != (UserThread*)currentThread && thread != 0)         //Thread* next_thread_in_lock_waiters_list_;   //Lock* lock_waiting_on_;
-//       { 
-//         still_threads_left = true;                                       
-//         if(thread->lock_waiting_on_)
-//         {
-//             Thread* next_thread_in_waiters_list = thread->next_thread_in_lock_waiters_list_;
-//             debug(SYSCALL, "Next thread is %p\n",next_thread_in_waiters_list);
-//             debug(SYSCALL, "Thread is      %p\n\n",thread);
-
-//             if(next_thread_in_waiters_list == thread)
-//             {
-//               Thread* tmp = thread->next_thread_in_lock_waiters_list_->next_thread_in_lock_waiters_list_;
-              
-//               thread->kill();
-//               next_thread_in_waiters_list = tmp;
-//               thread = 0;
-//             }
-//           }      
-//         else
-//         {    
-//           thread->kill();
-//           thread = 0;
-//         }   
-                                                    
-//       } 
-//     }
-//   }
-//   //currentThread->lock_waiting_on_->unlockWaitersList();  
-//   debug(SYSCALL, "Kill called for all threads besides the last one.\n");
-//   debug(SYSCALL, "Next thread in waiters list %p.\n", currentThread->next_thread_in_lock_waiters_list_);
-
-//   ((UserThread*)currentThread)->last_thread_alive_ = true;
-//   currentThread->process_->threads_.clear();
-  
-//   currentThread->process_->threads_lock_.release();  //Code1
-//   //debug(SYSCALL, "Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
-//   currentThread->kill();        //is this fine since it is no longer in the list?
-//   assert(false && "This should never happen");
-
-// }
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 {
@@ -161,7 +113,7 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
   if (fd == fd_stdout) //stdout
   {
-    //debug(SYSCALL, "Syscall::write: %.*s\n", (int)size, (char*) buffer);
+    debug(SYSCALL, "Syscall::write: %.*s\n", (int)size, (char*) buffer);
     kprintf("%.*s", (int)size, (char*) buffer);
     num_written = size;
   }
@@ -276,7 +228,10 @@ int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_ro
 void Syscall::pthread_exit(void* value_ptr){
   //TODO: check arguments
   debug(SYSCALL, "Syscall::PTHREAD_EXIT: called, value_ptr: %p\n", value_ptr);
-  currentThread->switch_to_userspace_ = 0;
+  // if(!check_parameter((size_t)value_ptr, true))
+  // {
+  //   return -1;
+  // }
   currentThread->process_->threads_lock_.acquire(); //Code1
   ustl::vector<UserThread*>::iterator iterator = ustl::find(currentThread->process_->threads_.begin(), currentThread->process_->threads_.end(), currentThread);
   currentThread->process_->threads_.erase(iterator);
@@ -284,10 +239,28 @@ void Syscall::pthread_exit(void* value_ptr){
   {
     ((UserThread*)currentThread)->last_thread_alive_ = true;
   }
+  else
+  {
+    currentThread->process_->value_ptr_by_id_[currentThread->getTID()] = value_ptr;
+  }
   currentThread->process_->threads_lock_.release(); //Code1
-  currentThread->kill();  //?? is it fine if it was released from the list??
+  currentThread->kill();  //TODO: is it fine if it was released from the list??
   assert(false && "This should never happen");
 }
+
+int Syscall::pthread_join(size_t thread, void**value_ptr)
+{
+  if(!check_parameter((size_t)value_ptr, true))
+  {
+    return -1;
+  }
+  if(value_ptr != NULL)
+  {
+    *value_ptr = currentThread->process_->value_ptr_by_id_[thread];
+  }
+  return 0;
+}
+
 
 bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
 {

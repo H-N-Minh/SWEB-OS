@@ -44,7 +44,7 @@ int pthread_cancel(pthread_t thread)
  */
 int pthread_join(pthread_t thread, void **value_ptr)
 {
-  return -1;
+   return __syscall(sc_pthread_join, (size_t)thread, (size_t)value_ptr, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -195,6 +195,8 @@ int pthread_setcanceltype(int type, int *oldtype)
 int get_thread_count(void) {
     return __syscall(sc_threadcount, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
+
+
 
 void pthread_create_wrapper(void *(*start_routine)(void*), void* arg){
   size_t rv = (size_t)start_routine(arg);
