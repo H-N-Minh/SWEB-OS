@@ -254,10 +254,25 @@ int Syscall::pthread_join(size_t thread, void**value_ptr)
   {
     return -1;
   }
-  if(value_ptr != NULL)
+  if(currentThread->getTID() == thread)
   {
-    *value_ptr = currentThread->process_->value_ptr_by_id_[thread];
+    return -1;
   }
+  currentThread->process_->threads_lock_.acquire(); //Code1
+  void* value = currentThread->process_->value_ptr_by_id_[thread];
+  if(value)  //thread has already terminated
+  {
+    if(value_ptr != NULL)
+    {
+      *value_ptr = value;
+    }
+    currentThread->process_->threads_lock_.release(); //Code1
+    return 0;
+  }
+
+  //check if thread is running if not return error
+
+  currentThread->process_->threads_lock_.release(); //Code1  //wait
   return 0;
 }
 
