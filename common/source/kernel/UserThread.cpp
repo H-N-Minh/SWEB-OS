@@ -42,29 +42,14 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 UserThread::~UserThread()
 {
-    // TODO: Code1 ?? //Currently unlocked
     if(last_thread_alive_)
     {
         debug(USERTHREAD, "Userprocess gets deleted\n");
         delete process_;
         process_ = 0;
     }
-    
-
-
-
-    
 }
 
 void UserThread::Run(){
     assert(0);
 }
-
-// UserProcess* UserThread::getProcess(){
-//     return process_;
-// }
-
-
-// void UserThread::setProcess(UserProcess* process){
-//     process_ = process;
-// }

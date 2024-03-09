@@ -78,7 +78,6 @@ void ProcessRegistry::Run()
           pm->getNumFreePages(),
           pm->getNumPagesForUser());
   }
-
   kill();
 }
 
@@ -110,8 +109,8 @@ void ProcessRegistry::createProcess(const char* path)
   debug(PROCESS_REG, "create process %s\n", path);
   UserProcess* process = new UserProcess(path, new FileSystemInfo(*working_dir_));
   debug(PROCESS_REG, "created userprocess %s\n", path);
-  process->threads_lock_.acquire(); // TODO: Code1
+  process->threads_lock_.acquire(); //Code1
   Scheduler::instance()->addNewThread(process->threads_.front());
-  process->threads_lock_.release();  // TODO: Code1
+  process->threads_lock_.release();  //Code1
   debug(PROCESS_REG, "added thread %s\n", path);
 }

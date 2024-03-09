@@ -131,9 +131,9 @@ class Thread
 
     Terminal* my_terminal_;
 
-  protected:
+  public:
     ThreadState getState() const;
-
+  protected:
     FileSystemInfo* working_dir_;
 
     ustl::string name_;

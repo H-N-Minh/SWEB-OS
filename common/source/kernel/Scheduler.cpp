@@ -82,7 +82,6 @@ void Scheduler::sleep()
 
 void Scheduler::wake(Thread* thread_to_wake)
 {
-  // wait until the thread is sleeping
   while(thread_to_wake->getState() != Sleeping)
     yield();
   thread_to_wake->setState(Running);

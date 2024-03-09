@@ -12,6 +12,8 @@ class Lock
 public:
   friend class Scheduler;
 
+  //friend class Syscall;
+
   Lock(const char* name);
 
   /**
@@ -154,7 +156,7 @@ protected:
    * @return 0 in case no thread is waiting for this lock.
    */
   Thread* popBackThreadFromWaitersList();
-
+  protected:
   /**
    * Add the current thread to the waiters list of this lock.
    */
@@ -178,6 +180,7 @@ private:
    */
   const char* name_;
 
+public:
   /**
    * The single chained list of threads waiting on this lock.
    * The list can be read out while the lock is not held (for checks and prints).
