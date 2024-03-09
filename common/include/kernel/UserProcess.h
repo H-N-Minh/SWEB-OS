@@ -21,5 +21,16 @@ class UserProcess
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
+
+    /* 
+    Could be added from Thread:
+      - Terminal* my_terminal_;
+      - Thread* next_thread_in_lock_waiters_list_;
+      - Lock* lock_waiting_on_;
+      - Lock* holding_lock_list_;
+
+    Could be added (from Minh):
+      - Tid counter for unique thread id (Note that Thead.h already has tid_)
+    */
 };
 
