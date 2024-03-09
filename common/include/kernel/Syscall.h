@@ -20,5 +20,7 @@ class Syscall
     static void trace();
 
     static uint32 get_thread_count();
+
+    static int pthread_create(size_t* thread, size_t* attr, void *(*start_routine)(void*), void* arg);
 };
 

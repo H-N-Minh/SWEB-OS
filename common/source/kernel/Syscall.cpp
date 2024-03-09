@@ -53,6 +53,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = get_thread_count();
       break; // you will need many debug hours if you forget the break
 
+    case sc_pthread_create:
+      return_value = pthread_create((size_t*)arg1, (size_t*)arg2, (void *(*)(void*))arg3, (void*)arg4);
+      break;
+
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -190,4 +194,11 @@ void Syscall::trace()
 
 uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
+}
+
+int Syscall::pthread_create(size_t* thread, size_t* attr, void *(*start_routine)(void*), void* arg)
+{
+    debug(SYSCALL, "thread %p, attribute %p, args %p\n", thread, attr, arg);
+    (void)start_routine;
+    return 0;
 }

@@ -31,8 +31,6 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
 UserProcess::~UserProcess()
 {
-
-
     if (fd_ > 0)
         VfsSyscall::close(fd_);
 
