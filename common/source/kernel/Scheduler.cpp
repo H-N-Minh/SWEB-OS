@@ -13,6 +13,7 @@
 #include "umap.h"
 #include "ustring.h"
 #include "Lock.h"
+#include "ProcessRegistry.h"
 
 ArchThreadRegisters *currentThreadRegisters;
 Thread *currentThread;

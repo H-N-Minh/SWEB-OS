@@ -33,7 +33,7 @@ class Thread
      * @param name The name of the thread
      * @param type The type of the thread (user or kernel thread)
      */
-    Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader = 0);
+    Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader=0);
 
     virtual ~Thread();
 

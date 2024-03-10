@@ -10,6 +10,7 @@
 #include "backtrace.h"
 #include "KernelMemoryManager.h"
 #include "Stabs2DebugInfo.h"
+#include "UserProcess.h"
 
 #define BACKTRACE_MAX_FRAMES 20
 

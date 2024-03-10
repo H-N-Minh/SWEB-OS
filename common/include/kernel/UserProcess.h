@@ -1,8 +1,4 @@
 #pragma once
-
-#include "FileSystemInfo.h"
-#include "Loader.h"
-#include "Terminal.h"
 #include "UserThread.h"
 #include "uvector.h"
 
@@ -16,28 +12,25 @@ class UserProcess
      * @param terminal_number the terminal to run in (default 0)
      *
      */
-    UserProcess(ustl::string filename, FileSystemInfo* fs_info, uint32 terminal_number = 0);
-    ~UserProcess();
+    UserProcess(ustl::string minixfs_filename, FileSystemInfo *fs_info, uint32 terminal_number = 0);
+    virtual ~UserProcess();
 
-    void Run(); // either no use or needs to be implemented
-
-    Terminal* getTerminal();
-    void setTerminal(Terminal* my_term);
-
-    FileSystemInfo* getWorkingDirInfo();
-    void setWorkingDirInfo(FileSystemInfo* working_dir);
-
-    ustl::vector<UserThread*> threads;
-
+    ustl::vector<UserThread*> threads_;          //!!
+    bool to_be_destroyed_ = false;
   private:
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
-    Terminal* my_terminal_;
 
-    ustl::string filename_;
-    uint32 terminal_number_;
+    /* 
+    Could be added from Thread:
+      - Terminal* my_terminal_;
+      - Thread* next_thread_in_lock_waiters_list_;
+      - Lock* lock_waiting_on_;
+      - Lock* holding_lock_list_;
 
-    void createInitialThread();
+    Could be added (from Minh):
+      - Tid counter for unique thread id (Note that Thead.h already has tid_)
+    */
 };
 

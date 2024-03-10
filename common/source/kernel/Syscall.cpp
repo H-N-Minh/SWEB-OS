@@ -72,6 +72,8 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
+  delete static_cast<UserThread*>(currentThread)->process_;
+  static_cast<UserThread*>(currentThread)->process_ = 0;
   currentThread->kill();
   assert(false && "This should never happen");
 }
@@ -186,6 +188,5 @@ void Syscall::trace()
 }
 
 uint32 Syscall::get_thread_count() {
-    Scheduler::instance()->printThreadList();
     return Scheduler::instance()->getThreadCount();
 }
