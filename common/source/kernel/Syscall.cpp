@@ -64,12 +64,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 uint32 Syscall::createThread(void* func, void* para)
 {
-  debug(MINH, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
-  // if(buffer && ((size_t)buffer >= USER_BREAK || (size_t)buffer + size > USER_BREAK))
-  //   return;
-  // if((size_t)pathname >= USER_BREAK)
-  //   return;
-  // VfsSyscall::readdir(pathname, buffer, size);
+  // debug(MINH, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
+  ((UserThread*) currentThread)->process_->createUserThread(func, para);
+  return 0;
 }
 
 void Syscall::pseudols(const char *pathname, char *buffer, size_t size)

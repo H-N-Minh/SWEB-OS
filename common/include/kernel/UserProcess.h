@@ -17,10 +17,18 @@ class UserProcess
 
     ustl::vector<UserThread*> threads_;          //!!
     bool to_be_destroyed_ = false;
+
   private:
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
+    int32 tid_counter_;
+
+    // added by Minh
+  public:
+    void createUserThread(void* func, void* para);
+
+
 
     /* 
     Could be added from Thread:
