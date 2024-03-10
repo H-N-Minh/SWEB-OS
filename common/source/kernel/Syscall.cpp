@@ -19,9 +19,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     debug(SYSCALL, "Syscall %zd called with arguments %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx)\n",
           syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
   }
-  if(((UserThread*)currentThread)->receieved_cancel_request_ && syscall_number != 1)
+  if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
   {
-    currentThread->has_been_destroyed_.signal();
+    currentThread->has_received_cancalation_requestion_.signal();
     syscall_number = 301;
   }
 
@@ -297,7 +297,7 @@ int Syscall::pthread_cancel(size_t thread_id)
   {
     if(thread_id == thread->getTID())
     {
-      thread->receieved_cancel_request_ = false;
+      thread->wants_to_be_canceled_ = true;
       thread_id_found = true;
       thread_to_be_deleted = thread;
       break;
@@ -310,12 +310,12 @@ int Syscall::pthread_cancel(size_t thread_id)
   }
   currentThread->process_->threads_lock_.release();  
 
-  thread_to_be_deleted->has_been_destroyed_lock_.acquire();
+  thread_to_be_deleted->has_received_cancalation_requestion_lock_.acquire();
   while(thread_to_be_deleted->getState() != ToBeDestroyed)
   {
-    thread_to_be_deleted->has_been_destroyed_.wait();
+    thread_to_be_deleted->has_received_cancalation_requestion_.wait();
   }
-  //thread_to_be_deleted->has_been_destroyed_lock_.release();      //problem -> thread maybe dead
+  //thread_to_be_deleted->has_received_cancalation_requestion_lock_.release();      //problem -> thread maybe dead
 
 
   return 0;

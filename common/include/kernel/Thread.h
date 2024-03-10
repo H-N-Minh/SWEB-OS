@@ -141,8 +141,8 @@ class Thread
     ustl::string name_;
 
   public:
-    Mutex has_been_destroyed_lock_;
-    Condition has_been_destroyed_;
+    Mutex has_received_cancalation_requestion_lock_;
+    Condition has_received_cancalation_requestion_;
 
 };
 
