@@ -53,16 +53,19 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 UserThread::~UserThread()
 {
+    // if(loader_->arch_memory_.checkAddressValid(virtual_page_))
+    // {
+    //     loader_->arch_memory_.unmapPage(virtual_page_);
+    // }
+    
     if(last_thread_alive_)
     {
         debug(USERTHREAD, "Userprocess gets deleted\n");
         delete process_;
         process_ = 0;
     }
-    if(loader_->arch_memory_.checkAddressValid(virtual_page_))
-    {
-        loader_->arch_memory_.unmapPage(virtual_page_);
-    }
+
+
 }
 
 void UserThread::Run(){

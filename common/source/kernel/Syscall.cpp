@@ -312,7 +312,7 @@ int Syscall::pthread_cancel(size_t thread_id)
   {
     thread_to_be_deleted->has_been_destroyed_.wait();
   }
-  //thread_to_be_deleted->has_been_destroyed_lock_.release();      //problem -> thread maybe dead
+  thread_to_be_deleted->has_been_destroyed_lock_.release();      //problem -> thread maybe dead
 
 
   return 0;
