@@ -3,6 +3,8 @@
 #include "types.h"
 #include "fs/FileSystemInfo.h"
 #include "debug.h"
+#include "Condition.h"
+#include "Mutex.h"
 
 #define STACK_CANARY ((uint32)0xDEADDEAD ^ (uint32)(size_t)this)
 
@@ -137,6 +139,10 @@ class Thread
     FileSystemInfo* working_dir_;
 
     ustl::string name_;
+
+  public:
+    Mutex has_been_destroyed_lock_;
+    Condition has_been_destroyed_;
 
 };
 

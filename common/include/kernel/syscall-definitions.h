@@ -22,3 +22,4 @@
 #define sc_pthread_create 300
 #define sc_pthread_exit 301
 #define sc_pthread_join 302
+#define sc_pthread_cancel 303

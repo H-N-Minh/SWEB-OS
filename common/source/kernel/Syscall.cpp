@@ -8,6 +8,7 @@
 #include "File.h"
 #include "Scheduler.h"
 #include "uvector.h"
+#include "Mutex.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -16,6 +17,11 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   {
     debug(SYSCALL, "Syscall %zd called with arguments %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx)\n",
           syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
+  }
+  if(((UserThread*)currentThread)->receieved_cancel_request_ && syscall_number != 1)
+  {
+    currentThread->has_been_destroyed_.signal();
+    syscall_number = 301;
   }
 
   switch (syscall_number)
@@ -61,6 +67,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;  
     case sc_pthread_join:
       return_value = pthread_join((size_t)arg1, (void **)arg2);
+      break;
+    case sc_pthread_cancel:
+      return_value = pthread_cancel((size_t)arg1);
       break; // you will need many debug hours if you forget the break
 
     default:
@@ -269,10 +278,43 @@ int Syscall::pthread_join(size_t thread, void**value_ptr)
     currentThread->process_->threads_lock_.release(); //Code1
     return 0;
   }
+  currentThread->process_->threads_lock_.release(); //Code1
+  return 0;
+}
 
-  //check if thread is running if not return error
 
-  currentThread->process_->threads_lock_.release(); //Code1  //wait
+int Syscall::pthread_cancel(size_t thread_id)
+{
+  debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called");
+  currentThread->process_->threads_lock_.acquire();           // TODO: Code1
+  debug(SYSCALL, "Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
+
+  bool thread_id_found = false;
+  UserThread* thread_to_be_deleted;
+  for (auto& thread : currentThread->process_->threads_)
+  {
+    if(thread_id == thread->getTID())
+    {
+      thread->receieved_cancel_request_ = false;
+      thread_id_found = true;
+      thread_to_be_deleted = thread;
+      break;
+    } 
+  }
+
+  if(!thread_id_found)
+  {
+    return -1;
+  }
+
+  thread_to_be_deleted->has_been_destroyed_lock_.acquire();
+  while(thread_to_be_deleted->getState() != ToBeDestroyed)
+  {
+    thread_to_be_deleted->has_been_destroyed_.wait();
+  }
+  //thread_to_be_deleted->has_been_destroyed_lock_.release();      //problem -> thread maybe dead
+
+
   return 0;
 }
 

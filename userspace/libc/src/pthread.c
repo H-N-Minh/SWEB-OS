@@ -35,7 +35,7 @@ void pthread_exit(void *value_ptr)
  */
 int pthread_cancel(pthread_t thread)
 {
-  return -1;
+  return __syscall(sc_pthread_cancel, (size_t)thread, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -44,6 +44,7 @@ int pthread_cancel(pthread_t thread)
  */
 int pthread_join(pthread_t thread, void **value_ptr)
 {
+   return -1;
    return __syscall(sc_pthread_join, (size_t)thread, (size_t)value_ptr, 0x0, 0x0, 0x0);
 }
 

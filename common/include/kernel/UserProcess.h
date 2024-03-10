@@ -23,6 +23,12 @@ class UserProcess
     ustl::vector<UserThread*> threads_;
     ustl::map<size_t, void*> value_ptr_by_id_;
 
+
+    ustl::map<size_t, Mutex> thread_has_been_deleted_lock_by_id_;
+    ustl::map<size_t, Condition> thread_has_been_deleted_by_id_;
+    
+
+
     int32 fd_;  //TODO: lock ?                   
     Loader* loader_;  //TODO: lock ? 
     FileSystemInfo* working_dir_;  //TODO: lock ? 

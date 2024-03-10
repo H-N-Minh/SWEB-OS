@@ -24,6 +24,7 @@ class Syscall
     static int pthread_create(size_t* thread, unsigned int* attr, void *(*start_routine)(void*), void* arg, void *(*pthread_create_wrapper)());
     static void pthread_exit(void* value_ptr);
     static int pthread_join(size_t thread, void**value_ptr);
+    static int pthread_cancel(size_t thread_id);
 
 
     static bool check_parameter(size_t ptr, bool allowed_to_be_null = false);

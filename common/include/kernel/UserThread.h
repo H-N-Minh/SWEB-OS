@@ -1,6 +1,8 @@
 #pragma once
 
 #include "Thread.h"
+#include "Mutex.h"
+#include "Condition.h"
 
 class UserProcess;
 
@@ -11,6 +13,11 @@ class UserThread : public Thread
         ~UserThread();
 
         bool last_thread_alive_{false};
+        bool receieved_cancel_request_{false};
 
-        void Run();        
+
+
+
+        void Run();
+
 };
