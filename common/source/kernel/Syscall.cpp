@@ -9,6 +9,7 @@
 #include "Scheduler.h"
 #include "uvector.h"
 #include "Mutex.h"
+#include "Loader.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -252,6 +253,7 @@ void Syscall::pthread_exit(void* value_ptr){
   {
     currentThread->process_->value_ptr_by_id_[currentThread->getTID()] = value_ptr;
   }
+  currentThread->loader_->arch_memory_.unmapPage(((UserThread*)currentThread)->virtual_page_);
   currentThread->process_->threads_lock_.release(); //Code1
   currentThread->kill();  //TODO: is it fine if it was released from the list??
   assert(false && "This should never happen");
@@ -312,7 +314,7 @@ int Syscall::pthread_cancel(size_t thread_id)
   {
     thread_to_be_deleted->has_been_destroyed_.wait();
   }
-  thread_to_be_deleted->has_been_destroyed_lock_.release();      //problem -> thread maybe dead
+  //thread_to_be_deleted->has_been_destroyed_lock_.release();      //problem -> thread maybe dead
 
 
   return 0;

@@ -10,6 +10,7 @@ char const *user_progs[] = {
                             "/usr/pc3.sweb",
                             "/usr/pc4.sweb",
                             "/usr/pc5.sweb",
+                            "/usr/pc6.sweb",
                             0
                            };
 

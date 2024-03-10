@@ -28,7 +28,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   threads_lock_.acquire(); //Code1
   UserThread* new_thread = new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, thread_counter_);
   thread_counter_lock_.release();
-  threads_.push_back(new_thread);  
+  threads_.push_back(new_thread); 
+  new_thread->switch_to_userspace_ = 1; 
   threads_lock_.release(); //Code1
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 }

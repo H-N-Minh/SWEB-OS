@@ -47,17 +47,12 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
     setTID(thread_counter);
 
-    switch_to_userspace_ = 1;            //maybe add to userprocess after adding thread to threads_
+    
 
 
 }
 UserThread::~UserThread()
 {
-    // if(loader_->arch_memory_.checkAddressValid(virtual_page_))
-    // {
-    //     loader_->arch_memory_.unmapPage(virtual_page_);
-    // }
-    
     if(last_thread_alive_)
     {
         debug(USERTHREAD, "Userprocess gets deleted\n");
