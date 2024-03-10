@@ -18,3 +18,5 @@
 #define sc_trace 252
 
 #define sc_threadcount 2048
+
+#define sc_pthread_create 1000

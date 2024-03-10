@@ -5,9 +5,9 @@
  * posix compatible signature - do not change the signature!
  */
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg)
+                   void* func, void *arg)
 {
-  return -1;
+  return __syscall(sc_pthread_create, (size_t)func, (size_t)arg, 0x0, 0x0, 0x0);
 }
 
 /**

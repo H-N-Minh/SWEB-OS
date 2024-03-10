@@ -52,12 +52,24 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_threadcount:
       return_value = get_thread_count();
       break; // you will need many debug hours if you forget the break
-
+    case sc_pthread_create:
+      return_value = createThread((void*) arg1, (void*) arg2);
+      break; // you will need many debug hours if you forget the break
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
   return return_value;
+}
+
+uint32 Syscall::createThread(void* func, void* para)
+{
+  debug(MINH, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
+  // if(buffer && ((size_t)buffer >= USER_BREAK || (size_t)buffer + size > USER_BREAK))
+  //   return;
+  // if((size_t)pathname >= USER_BREAK)
+  //   return;
+  // VfsSyscall::readdir(pathname, buffer, size);
 }
 
 void Syscall::pseudols(const char *pathname, char *buffer, size_t size)

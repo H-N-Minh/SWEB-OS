@@ -20,5 +20,7 @@ class Syscall
     static void trace();
 
     static uint32 get_thread_count();
+    
+    static uint32 createThread(void* func, void* para);
 };
 
