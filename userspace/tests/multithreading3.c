@@ -5,6 +5,7 @@
 int main()
 {
     printf("pc3 successful if no assertion gets raised!\n");
+    
     int value;
     //Test1: Pthread_exit in main
     pthread_exit(&value);

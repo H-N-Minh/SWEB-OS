@@ -308,6 +308,7 @@ int Syscall::pthread_cancel(size_t thread_id)
   {
     return -1;
   }
+  currentThread->process_->threads_lock_.release();  
 
   thread_to_be_deleted->has_been_destroyed_lock_.acquire();
   while(thread_to_be_deleted->getState() != ToBeDestroyed)
