@@ -22,9 +22,11 @@ class UserProcess
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
-    int32 tid_counter_;
 
     // added by Minh
+    int32 tid_counter_;
+    ustl::string filename_;
+    uint32 terminal_number_;
   public:
     void createUserThread(void* func, void* para);
 

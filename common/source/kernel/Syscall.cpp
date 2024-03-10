@@ -66,6 +66,11 @@ uint32 Syscall::createThread(void* func, void* para)
 {
   // debug(MINH, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
   ((UserThread*) currentThread)->process_->createUserThread(func, para);
+  while (1)
+  {
+    /* code */
+  }
+  
   return 0;
 }
 

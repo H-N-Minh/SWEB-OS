@@ -7,7 +7,8 @@
 #include "Scheduler.h"
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) 
-    : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), tid_counter_(1)
+    : fd_(VfsSyscall::open(filename, O_RDONLY)), loader_(0), working_dir_(fs_info), tid_counter_(1), 
+      filename_(filename), terminal_number_(terminal_number)
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
@@ -40,6 +41,10 @@ UserProcess::~UserProcess()
 void UserProcess::createUserThread(void* func, void* para)
 {
   debug(MINH, "UserProcess::createUserThread: func (%p), para (%zu) \n", func, (size_t) para);
-  // threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, ((UserThread*) currentThread)->process_));
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, 
+                    ((UserThread*) currentThread)->process_, tid_counter_, func, para);
+  threads_.push_back(new_thread);
+  tid_counter_++;
+  Scheduler::instance()->addNewThread(new_thread);
 }
 
