@@ -15,21 +15,31 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     process_ = process;
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
+    size_t user_stack_start;
+
     if(wrapper == 0)
     {
-        bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
+        virtual_page_ = USER_BREAK / PAGE_SIZE - 1;
+        user_stack_start = USER_BREAK - sizeof(pointer);
+        bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page_, page_for_stack, 1);
         assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
-        ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),(void*) (USER_BREAK - sizeof(pointer)), getKernelStackStartPointer());
+        ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),(void*)user_stack_start, getKernelStackStartPointer());
+        debug(USERTHREAD, "First thread: Stack starts at %zd(=%zx) and virtual page is%zd(=%zx)\n\n",user_stack_start, user_stack_start, virtual_page_, virtual_page_);
     }
     else
     {
-        bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 - thread_counter , page_for_stack, 1); //idk
+        virtual_page_ = USER_BREAK / PAGE_SIZE - 1 - thread_counter;
+        user_stack_start = USER_BREAK - sizeof(pointer) - PAGE_SIZE * thread_counter;
+        bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page_ , page_for_stack, 1);
         assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
-        ArchThreads::createUserRegisters(user_registers_, (void*)wrapper, (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * thread_counter), getKernelStackStartPointer());
+        ArchThreads::createUserRegisters(user_registers_, (void*)wrapper, (void*)user_stack_start, getKernelStackStartPointer());
         user_registers_->rdi = (size_t)start_routine;
         user_registers_->rsi = (size_t)arg;
+        debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",user_stack_start, user_stack_start, virtual_page_, virtual_page_);
 
     }
+
+    
 
     ArchThreads::setAddressSpace(this, loader_->arch_memory_); 
     if (main_console->getTerminal(terminal_number))
@@ -48,6 +58,10 @@ UserThread::~UserThread()
         debug(USERTHREAD, "Userprocess gets deleted\n");
         delete process_;
         process_ = 0;
+    }
+    if(loader_->arch_memory_.checkAddressValid(virtual_page_))
+    {
+        loader_->arch_memory_.unmapPage(virtual_page_);
     }
 }
 

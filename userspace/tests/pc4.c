@@ -11,14 +11,14 @@ int function(void* simple_argument)
 
 int main()
 {
-    pthread_t thread_id[250];
+    pthread_t thread_id[550];
 
-    for(int i = 0; i < 250; i++)
+    for(int i = 0; i < 550; i++)
     {
         pthread_create(&thread_id[i], NULL, (void * (*)(void *))function, NULL);
     }
 
-    for(int i = 0; i < 250; i++)
+    for(int i = 0; i < 550; i++)
     {
         printf("%ld  ", thread_id[i]);
     }

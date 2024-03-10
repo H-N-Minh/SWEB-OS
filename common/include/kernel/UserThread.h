@@ -15,7 +15,7 @@ class UserThread : public Thread
         bool last_thread_alive_{false};
         bool receieved_cancel_request_{false};
 
-
+        size_t virtual_page_;
 
 
         void Run();
