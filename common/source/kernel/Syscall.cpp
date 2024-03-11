@@ -86,8 +86,16 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
-  delete static_cast<UserThread*>(currentThread)->process_;
-  static_cast<UserThread*>(currentThread)->process_ = 0;
+  UserProcess* process = ((UserThread*) currentThread)->process_;
+  for (auto thread : process->threads_)
+  {
+    if(thread != currentThread)
+    {
+      thread->kill();
+    } 
+  }
+  delete process;
+  ((UserThread*) currentThread)->process_ = 0;
   currentThread->kill();
   assert(false && "This should never happen");
 }

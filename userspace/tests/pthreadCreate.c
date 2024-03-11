@@ -3,22 +3,21 @@
 #include <assert.h>
 
 
-void add6900(size_t x)
+void printNumber(size_t x)
 {
-    printf("Hello from add6900 func\n");
-    size_t y = x + 6900;
-    printf("Hello from add6900 func, y is now %zu\n", y);
-    while (1)
-    {
-        /* code */
-    }
-    
+    printf("From 'printNumber' func, para is %zu\n", x);
 }
+
 
 int main()
 {
     size_t x = 69;
-    pthread_create(NULL, NULL, (void* (*)(void*))add6900, (void*) x);
-    printf("Hello from pthreadCreate test\n");
+
+    printf("From 'main' func, before pthread_create\n");
+    pthread_create(NULL, NULL, (void* (*)(void*))printNumber, (void*) x);
+    printf("From 'main' func, after pthread_create\n");
+
+    assert(0);      // Why is this never reached?
+    assert(1);
     return 0;
 }
