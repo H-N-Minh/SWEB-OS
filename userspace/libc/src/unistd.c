@@ -26,7 +26,7 @@ void* sbrk(intptr_t increment)
  */
 unsigned int sleep(unsigned int seconds)
 {
-  return -1U;
+  return  __syscall(sc_sleep, (size_t)seconds, 0x0, 0x0, 0x0, 0x0);
 }
 
 
