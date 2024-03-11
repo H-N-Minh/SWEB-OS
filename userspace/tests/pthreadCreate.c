@@ -5,19 +5,27 @@
 
 void printNumber(size_t x)
 {
-    printf("From 'printNumber' func, para is %zu\n", x);
+    for (size_t i = 0; i < 1000; i++)
+    {
+        printf("%zu\n", x);
+    }
 }
 
 
 int main()
 {
-    size_t x = 69;
+    size_t x = 0;
+    size_t y = 111111111;
 
-    printf("From 'main' func, before pthread_create\n");
     pthread_create(NULL, NULL, (void* (*)(void*))printNumber, (void*) x);
-    printf("From 'main' func, after pthread_create\n");
+    pthread_create(NULL, NULL, (void* (*)(void*))printNumber, (void*) y);
 
-    assert(0);      // Why is this never reached?
-    assert(1);
+    // no pthread_join so have to loop forever to keep the process alive
+    while (1)
+    {
+        /* code */
+    }
+    
+
     return 0;
 }

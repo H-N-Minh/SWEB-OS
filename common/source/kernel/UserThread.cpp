@@ -34,7 +34,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         start_func_ptr = func;
     }
     ArchThreads::createUserRegisters(user_registers_, start_func_ptr, user_stack_ptr, getKernelStackStartPointer());
-    if (para)
+    if (func)
     {
         user_registers_->rdi = (size_t)para;
     }
