@@ -133,6 +133,7 @@ void Syscall::pthread_exit(void* value_ptr){
 
 int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
 {
+  UserProcess* current_process = currentThread->process_;
   if(!check_parameter((size_t)value_ptr, true))
   {
     return -1;
@@ -143,9 +144,9 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
     return -1;
   }
 
-  currentThread->process_->threads_lock_.acquire();
+  current_process->threads_lock_.acquire();
   current_process->value_ptr_by_id_lock_.acquire();                                                         
-  void* return_value = currentThread->process_->value_ptr_by_id_[thread_id];
+  void* return_value = current_process->value_ptr_by_id_[thread_id];
   //probably removing it from the value_ptr_by_id list would be a good idea here
   current_process->value_ptr_by_id_lock_.release(); 
   if(return_value)                         //thread has already terminated
@@ -154,12 +155,12 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
     {
       *value_ptr = return_value;
     }
-    currentThread->process_->threads_lock_.release(); 
+    current_process->threads_lock_.release(); 
     return 0;
   }
   
   UserThread* thread_to_be_joined;
-  for (auto& thread : currentThread->process_->threads_)
+  for (auto& thread : current_process->threads_)
   {
     if(thread_id == thread->getTID())
     {
