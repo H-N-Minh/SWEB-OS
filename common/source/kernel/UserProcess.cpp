@@ -6,7 +6,8 @@
 #include "PageManager.h"
 #include "Scheduler.h"
 
-UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info)
+UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
+            : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), num_thread_(1)
 {
     ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
@@ -25,7 +26,9 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
     bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this));
+    threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, num_thread_));
+    num_thread_++;
+    debug(TAI_THREAD, "num thread %zu\n", num_thread_);
     debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 }
 

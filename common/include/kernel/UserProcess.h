@@ -21,5 +21,7 @@ class UserProcess
         int32 fd_;
         Loader* loader_;
         FileSystemInfo* working_dir_;
+
+        size_t num_thread_;
 };
 
