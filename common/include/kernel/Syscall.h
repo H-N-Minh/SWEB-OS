@@ -21,6 +21,8 @@ class Syscall
 
     static uint32 get_thread_count();
     
-    static uint32 createThread(void* func, void* para);
+    static uint32 createThread(void* func, void* para, void* tid);
+
+    static uint32 joinThread(size_t thread, void **return_ptr);
 };
 

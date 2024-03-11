@@ -28,7 +28,7 @@ class UserProcess
     ustl::string filename_;
     uint32 terminal_number_;
   public:
-    void createUserThread(void* func, void* para);
+    void createUserThread(void* func, void* para, void* tid);
 
 
 

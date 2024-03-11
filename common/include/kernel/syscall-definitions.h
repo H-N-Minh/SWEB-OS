@@ -20,3 +20,4 @@
 #define sc_threadcount 2048
 
 #define sc_pthread_create 1000
+#define sc_pthread_join 1001

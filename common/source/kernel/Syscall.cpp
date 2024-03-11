@@ -7,6 +7,7 @@
 #include "ProcessRegistry.h"
 #include "File.h"
 #include "Scheduler.h"
+#include "ArchInterrupts.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -53,7 +54,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = get_thread_count();
       break; // you will need many debug hours if you forget the break
     case sc_pthread_create:
-      return_value = createThread((void*) arg1, (void*) arg2);
+      return_value = createThread((void*) arg1, (void*) arg2, (void*) arg3);
+      break; // you will need many debug hours if you forget the break
+    case sc_pthread_join:
+      return_value = joinThread((size_t) arg1, (void**) arg2);
       break; // you will need many debug hours if you forget the break
     default:
       return_value = -1;
@@ -62,11 +66,24 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
-uint32 Syscall::createThread(void* func, void* para)
+uint32 Syscall::joinThread(size_t thread, void **return_ptr)
 {
-  // debug(MINH, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
-  ((UserThread*) currentThread)->process_->createUserThread(func, para);
+  debug(MINH, "Syscall::joinThread: thread (%zu), para (%p) \n", thread, return_ptr);
+  // ((UserThread*) currentThread)->process_->createUserThread(func, para);
+  // currentThread->setState(ThreadState::Sleeping);
+  ArchInterrupts::enableInterrupts();
+  Scheduler::instance()->yield();
+  debug(MINH, "THIS SHOULD NEVER REACHED\n");
   
+  return 0;
+}
+
+uint32 Syscall::createThread(void* func, void* para, void* tid)
+{
+  debug(MINH, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
+  ((UserThread*) currentThread)->process_->createUserThread(func, para, tid);
+  
+  debug(MINH, "Syscall::createThread: tid is %ld\n", *((unsigned long*) tid));
   return 0;
 }
 

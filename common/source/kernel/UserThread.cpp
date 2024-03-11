@@ -25,7 +25,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     void* user_stack_ptr = (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid-1));
     if (!func)
     {
-        // create first thread of process
+        // create first thread of process => start the "main" func
         start_func_ptr = loader_->getEntryFunction();
     }
     else

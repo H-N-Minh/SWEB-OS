@@ -39,12 +39,13 @@ UserProcess::~UserProcess()
   ProcessRegistry::instance()->processExit();
 }
 
-void UserProcess::createUserThread(void* func, void* para)
+void UserProcess::createUserThread(void* func, void* para, void* tid)
 {
   debug(MINH, "UserProcess::createUserThread: func (%p), para (%zu) \n", func, (size_t) para);
   UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, 
                                           ((UserThread*) currentThread)->process_, tid_counter_, func, para);
   threads_.push_back(new_thread);
+  *((unsigned long*) tid) = (unsigned long) tid_counter_;
   tid_counter_++;
 
   debug(MINH, "UserProcess::createUserThread: Adding new thread to scheduler\n");
