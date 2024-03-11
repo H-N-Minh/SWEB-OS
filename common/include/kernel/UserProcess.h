@@ -2,6 +2,11 @@
 #include "UserThread.h"
 #include "uvector.h"
 
+
+struct ThreadCreateParams {
+  void* startRoutine;
+  void* arg;
+};
 class UserProcess
 {
   public:
@@ -17,10 +22,13 @@ class UserProcess
 
     ustl::vector<UserThread*> threads_;          //!!
     bool to_be_destroyed_ = false;
+    void createUserThread(const ThreadCreateParams& params, size_t* tid_address);
+
   private:
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
+    size_t generateUniqueTid();
 
     /* 
     Could be added from Thread:

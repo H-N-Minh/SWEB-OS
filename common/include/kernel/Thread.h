@@ -111,13 +111,16 @@ class Thread
      */
     Lock* holding_lock_list_;
 
+    //not sure how good this idea is to make the tid public
+    size_t tid_;
+
   private:
     Thread(Thread const &src);
     Thread &operator=(Thread const &src);
 
     volatile ThreadState state_;
 
-    size_t tid_;
+    //size_t tid_;
 
     Terminal* my_terminal_;
 
