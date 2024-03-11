@@ -52,6 +52,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_threadcount:
       return_value = get_thread_count();
       break; // you will need many debug hours if you forget the break
+    case sc_pthread_create:
+      return_value = PthreadCreate((void*)arg3, (void*)arg4, (void*)arg1);
+      break;
 
     default:
       return_value = -1;
@@ -189,4 +192,14 @@ void Syscall::trace()
 
 uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
+}
+
+uint32 Syscall::PthreadCreate(void* func, void* arg, void* tid_address) {
+  UserThread* new_thread = ((UserThread*)currentThread)->process_->userThreadCreate(func, arg); //gehört zu UserProcess (userPthreadCreate)
+
+  if (tid_address != nullptr) {
+    *(size_t*)tid_address = new_thread->getTID();
+    debug(Fabi, "Syscall::PthreadCreate: tid is %ld\n", *((unsigned long*)tid_address));
+  }
+  return 0;
 }
