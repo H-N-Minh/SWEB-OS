@@ -11,6 +11,4 @@ class UserThread : public Thread
         ~UserThread();
         UserProcess* process_;
         void Run();
-
-        size_t tid_{};
 };

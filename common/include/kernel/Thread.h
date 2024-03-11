@@ -117,11 +117,10 @@ class Thread
 
         volatile ThreadState state_;
 
+    protected:
         size_t tid_;
-
         Terminal* my_terminal_;
 
-    protected:
         ThreadState getState() const;
 
         FileSystemInfo* working_dir_;

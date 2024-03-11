@@ -7,8 +7,10 @@
 #include "Scheduler.h"
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, size_t tid)
-            :Thread(working_dir, name, type, loader), process_(process), tid_(tid)
+            :Thread(working_dir, name, type, loader), process_(process)
 {
+    tid_ = tid;
+
     ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),(void*) (USER_BREAK - sizeof(pointer)), getKernelStackStartPointer());
     ArchThreads::setAddressSpace(this, loader_->arch_memory_);
 
