@@ -297,14 +297,19 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   {
     return -1;
   }
-  thread_to_be_joined->thread_that_wants_to_join_this_thread_ = currentThread;
+  thread_to_be_joined->thread_gets_killed_lock_.acquire();
+  thread_to_be_joined->thread_that_wants_to_join_this_thread_ = currentThread; //??
+
   currentThread->process_->threads_lock_.release(); //Code1
 
-  thread_to_be_joined->thread_gets_killed_lock_.acquire();
+
   thread_to_be_joined->thread_gets_killed_.wait();            //Todo: add while                                     
   thread_to_be_joined->thread_gets_killed_lock_.release(); 
+
+  currentThread->recieved_join_signal_lock_.acquire();
   thread_to_be_joined->thread_that_wants_to_join_this_thread_ = NULL;
   currentThread->recieved_join_signal_.signal();
+  currentThread->recieved_join_signal_lock_.release();
   return 0;
 }
 

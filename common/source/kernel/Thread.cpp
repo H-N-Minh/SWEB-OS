@@ -72,12 +72,16 @@ void Thread::kill()
 
   if(thread_that_wants_to_join_this_thread_)
   {
+    debug(THREAD, "Some other thread wants to join this thread.\n");
+    thread_gets_killed_lock_.acquire();
     thread_gets_killed_.signal();
+    thread_gets_killed_lock_.release();
+
 
     thread_that_wants_to_join_this_thread_->recieved_join_signal_lock_.acquire(); //Todo:what if thread that wants to get joined get killed in the meantime -> we are stuck and never get killed
     while(thread_that_wants_to_join_this_thread_ != NULL)
     {
-      thread_that_wants_to_join_this_thread_->recieved_join_signal_.wait();
+     thread_that_wants_to_join_this_thread_->recieved_join_signal_.wait();
     }                                         
     thread_that_wants_to_join_this_thread_->recieved_join_signal_lock_.release(); 
   }
