@@ -6,7 +6,7 @@
 #include "debug.h"
 #include "Scheduler.h"
 #include "PageManager.h"
-
+#include "ArchInterrupts.h"
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, 
                         Loader* loader, UserProcess* process, int32 tid, void* func, void* para)
@@ -47,6 +47,27 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     switch_to_userspace_ = 1;
 }
 
+// DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
+void UserThread::kill()
+{
+    // save return value and wake up all threads that are waiting for this thread to finish
+    void* ret = (void*) user_registers_->rax;
+    debug(MINH, "UserThread kill(): Thread %ld is being killed with return value %zu\n", tid_, (size_t) ret);
+    process_->storeThreadRetval(tid_, ret);
+
+    // normal kill() just like in Thread.cpp
+    debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
+        currentThread, getName(), this);
+
+    setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
+
+    if (currentThread == this)
+    {
+    ArchInterrupts::enableInterrupts();
+    Scheduler::instance()->yield();
+    assert(false && "This should never happen, how are we still alive?");
+    }
+}
 
 UserThread::~UserThread()
 {

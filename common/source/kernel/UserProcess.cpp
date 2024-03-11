@@ -6,6 +6,8 @@
 #include "PageManager.h"
 #include "Scheduler.h"
 
+#include "ArchInterrupts.h"
+
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) 
     : fd_(VfsSyscall::open(filename, O_RDONLY)), loader_(0), working_dir_(fs_info), tid_counter_(1), 
       filename_(filename), terminal_number_(terminal_number)
@@ -54,3 +56,43 @@ void UserProcess::createUserThread(void* func, void* para, void* tid)
   // Scheduler::instance()->printThreadList();
 }
 
+// TODO: this is not thread-safe when pt_join thread tries to gets the result at the same time as this thread
+// try to write the result. 
+// Can be solved by locking both p_join_sleep_map_ and result_storage_
+/**
+ * Store the return value of a thread, then wake up all threads that are waiting for this thread to finish
+*/
+void UserProcess::storeThreadRetval(uint32 tid, void* retval)
+{
+  debug(USERPROCESS, "UserProcess::storeThreadRetval: storing for thread %d the return value %zu\n", tid, (size_t) retval);
+  result_storage_[tid] = retval;
+  if (p_join_sleep_map_.find(tid) != p_join_sleep_map_.end())
+  {
+    debug(USERPROCESS, "UserProcess::storeThreadRetval: waking up thread %d\n", tid);
+    p_join_sleep_map_[tid]->setState(ThreadState::Running);
+    p_join_sleep_map_.erase(tid);
+  }
+}
+
+// get return value of a thread, if the retval is not ready then put it to sleep
+void UserProcess::retrieveThreadRetval(uint32 target_tid, UserThread* waiter_thread, void** retval)
+{
+  // if the result is not ready yet
+  if (result_storage_.find(target_tid) == result_storage_.end())
+  {
+    debug(USERPROCESS, "UserProcess::retrieveThreadRetval: thread (%d) is not finished yet, putting thread (%zu) to sleep\n", 
+                        target_tid, waiter_thread->getTID());
+    p_join_sleep_map_[target_tid] = waiter_thread;
+    waiter_thread->setState(ThreadState::Sleeping);
+    ArchInterrupts::enableInterrupts();
+    Scheduler::instance()->yield();
+  }
+
+  // When this thread got waken up, it continues here
+  assert(result_storage_.find(target_tid) != result_storage_.end() && "Waiter Thread is woken up but the retval is still not ready\n");
+  debug(USERPROCESS, "UserProcess::retrieveThreadRetval: found the return value for thread %d\n", target_tid);
+
+  *retval = result_storage_[target_tid];
+  result_storage_.erase(target_tid);
+  p_join_sleep_map_.erase(target_tid);
+}
