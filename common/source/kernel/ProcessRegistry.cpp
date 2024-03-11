@@ -109,8 +109,8 @@ void ProcessRegistry::createProcess(const char* path)
   debug(PROCESS_REG, "create process %s\n", path);
   UserProcess* process = new UserProcess(path, new FileSystemInfo(*working_dir_));
   debug(PROCESS_REG, "created userprocess %s\n", path);
-  process->threads_lock_.acquire(); //Code1
+  process->threads_lock_.acquire();
   Scheduler::instance()->addNewThread(process->threads_.front());
-  process->threads_lock_.release();  //Code1
+  process->threads_lock_.release();
   debug(PROCESS_REG, "added thread %s\n", path);
 }

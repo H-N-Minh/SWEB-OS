@@ -5,7 +5,7 @@
 
 int function1()
 {
-    for(int i = 1; i < 1000; i++)
+    for(int i = 1; i < 100; i++)
     {
         printf("%d ",i);
     }
@@ -27,6 +27,10 @@ int main()
     
     printf("Multithreading 8 successful!\n");
 
+    for(int i = 1; i < 100; i++)
+    {
+        printf("%d ",i);
+    }
 
     return 0;
 }

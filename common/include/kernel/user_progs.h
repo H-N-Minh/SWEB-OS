@@ -5,12 +5,15 @@ char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
 
-                            // "/usr/pc1.sweb",
-                            // "/usr/pc2.sweb",
-                            // "/usr/pc3.sweb",
-                            // "/usr/pc4.sweb",
-                            // "/usr/pc5.sweb",
-                            // "/usr/pc6.sweb",
+                            // "/usr/multithreading1.sweb",
+                            // "/usr/multithreading2.sweb",
+                            // "/usr/multithreading3.sweb",
+                            // "/usr/multithreading4.sweb",
+                            // "/usr/multithreading5.sweb",
+                            // "/usr/multithreading6.sweb",
+                            // "/usr/multithreading7.sweb",
+                            // "/usr/multithreading8.sweb",
+                            "/usr/multithreading9.sweb",
                             0
                            };
 

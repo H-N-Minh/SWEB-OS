@@ -24,10 +24,7 @@ class UserProcess
     ustl::map<size_t, void*> value_ptr_by_id_;
 
 
-    ustl::map<size_t, Mutex> thread_has_been_deleted_lock_by_id_;
-    ustl::map<size_t, Condition> thread_has_been_deleted_by_id_;
     
-
 
     int32 fd_;  //TODO: lock ?                   
     Loader* loader_;  //TODO: lock ? 
@@ -38,7 +35,8 @@ class UserProcess
     size_t thread_counter_{0};   //gets currently also increased if thread_creation was not succesfull
 
 
-    Mutex thread_counter_lock_;    //locking order 1
+    Mutex thread_counter_lock_;    //locking order 1         //Todo: check if the locking order is actually followed
     Mutex threads_lock_;           //2
+    Mutex value_ptr_by_id_lock_;   //3
 };
 
