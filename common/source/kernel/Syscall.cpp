@@ -21,18 +21,18 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   }
   if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
   {
-    currentThread->has_received_cancalation_requestion_lock_.acquire();
-    currentThread->recieved_cancalation_signal_bool_ = true;
-    currentThread->has_received_cancalation_requestion_.signal();
-    currentThread->has_received_cancalation_requestion_lock_.release();
+    currentThread->has_reached_cancelation_point_lock_.acquire();
+    currentThread->reached_cancelation_point_ = true;
+    currentThread->has_reached_cancelation_point_.signal();
+    currentThread->has_reached_cancelation_point_lock_.release();
 
-    currentThread->thread_that_wants_to_cancel_this_thread_->recieved_delete_signal_lock_.acquire();
-    while(!currentThread->thread_that_wants_to_cancel_this_thread_-> recieved_delete_signal_bool_)
+    currentThread->cancel_thread_->recieved_delete_signal_lock_.acquire();
+    while(!currentThread->cancel_thread_-> recieved_delete_signal_bool_)
     {
-      currentThread->thread_that_wants_to_cancel_this_thread_->recieved_delete_signal_.wait();
+      currentThread->cancel_thread_->recieved_delete_signal_.wait();
     }
     
-    currentThread->thread_that_wants_to_cancel_this_thread_->recieved_delete_signal_lock_.release();
+    currentThread->cancel_thread_->recieved_delete_signal_lock_.release();
 
     syscall_number = 301;
   }
@@ -169,7 +169,7 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
 
   currentThread->process_->threads_lock_.release();   //possible later release
   
-  thread_to_be_joined->thread_that_wants_to_join_this_thread_ = currentThread; //??
+  thread_to_be_joined->join_thread_ = currentThread; //??
   thread_to_be_joined->thread_gets_killed_lock_.acquire();
   while(!thread_to_be_joined->thread_killed)
   {
@@ -244,16 +244,16 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
   }
   currentThread->process_->threads_lock_.release();  
 
-  thread_to_be_deleted->thread_that_wants_to_cancel_this_thread_ = currentThread;
+  thread_to_be_deleted->cancel_thread_ = currentThread;
   
 
-  thread_to_be_deleted->has_received_cancalation_requestion_lock_.acquire();
-  while(!thread_to_be_deleted->recieved_cancalation_signal_bool_)
+  thread_to_be_deleted->has_reached_cancelation_point_lock_.acquire();
+  while(!thread_to_be_deleted->reached_cancelation_point_)
   {
-    thread_to_be_deleted->has_received_cancalation_requestion_.wait();
+    thread_to_be_deleted->has_reached_cancelation_point_.wait();
     
   }
-  thread_to_be_deleted->has_received_cancalation_requestion_lock_.release();
+  thread_to_be_deleted->has_reached_cancelation_point_lock_.release();
 
   
   currentThread->recieved_delete_signal_lock_.acquire();

@@ -35,11 +35,11 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
     kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader),
     next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
     my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name)), 
-    has_received_cancalation_requestion_lock_("has_received_cancalation_requestion_lock_"),
-    has_received_cancalation_requestion_(&has_received_cancalation_requestion_lock_, "has_received_cancalation_requestion_"),
-    thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
+    has_reached_cancelation_point_lock_("has_reached_cancelation_point_lock_"),
+    has_reached_cancelation_point_(&has_reached_cancelation_point_lock_, "has_reached_cancelation_point_"),
+    recieved_delete_signal_lock_("recieved_delete_signal_lock_"), recieved_delete_signal_(&recieved_delete_signal_lock_, "recieved_delete_signal_"),
     recieved_join_signal_lock_("recieved_join_signal_lock_"), recieved_join_signal_(&recieved_join_signal_lock_, "recieved_join_signal_"),
-    recieved_delete_signal_lock_("recieved_delete_signal_lock_"), recieved_delete_signal_(&recieved_delete_signal_lock_, "recieved_delete_signal_")
+    thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_")
 
 {
   debug(THREAD, "Thread ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
@@ -71,7 +71,7 @@ void Thread::kill()
   debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
         currentThread, getName(), this);
 
-  if(thread_that_wants_to_join_this_thread_)
+  if(join_thread_)
   {
     debug(THREAD, "Some other thread wants to join this thread.\n");
     thread_gets_killed_lock_.acquire();
@@ -81,14 +81,14 @@ void Thread::kill()
     thread_gets_killed_lock_.release();
 
     
-    thread_that_wants_to_join_this_thread_->recieved_join_signal_lock_.acquire(); //Todo:what if thread that wants to get joined get killed in the meantime -> we are stuck and never get killed
+    join_thread_->recieved_join_signal_lock_.acquire(); //Todo:what if thread that wants to get joined get killed in the meantime -> we are stuck and never get killed
     while(!recieved_join_signal_bool_)
     {
-      debug(THREAD, "Waiting until join signal is received by %ld.\n",thread_that_wants_to_join_this_thread_->getTID()); //should be 1
-      thread_that_wants_to_join_this_thread_->recieved_join_signal_.wait();
-      debug(THREAD, "Join signal was received by %ld.\n",thread_that_wants_to_join_this_thread_->getTID()); //should be 1
+      debug(THREAD, "Waiting until join signal is received by %ld.\n",join_thread_->getTID()); //should be 1
+      join_thread_->recieved_join_signal_.wait();
+      debug(THREAD, "Join signal was received by %ld.\n",join_thread_->getTID()); //should be 1
     }                                         
-    thread_that_wants_to_join_this_thread_->recieved_join_signal_lock_.release(); 
+    join_thread_->recieved_join_signal_lock_.release(); 
   }
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv

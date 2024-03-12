@@ -34,16 +34,5 @@ int main()
 
     
     printf("Multithreading 10 successful!\n");
-
-    // for(int i = 1; i < 10000; i++)
-    // {
-    //     printf("%d ",i);
-    // }
-    // while(1)
-    // {
-    //     printf(".");
-    // }
-    
-
     return 0;
 }
