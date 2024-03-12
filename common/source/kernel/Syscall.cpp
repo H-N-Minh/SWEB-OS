@@ -19,17 +19,17 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     debug(SYSCALL, "Syscall %zd called with arguments %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx)\n",
           syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
   }
-  if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
-  {
-    //
-    currentThread->has_received_cancalation_requestion_.signal();
-    //lock
-    //while
-    //lock
-    //signal
-    //lock
-    syscall_number = 301;
-  }
+  // if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
+  // {
+  //   //
+  //   currentThread->has_received_cancalation_requestion_.signal();
+  //   //lock
+  //   //while
+  //   //lock
+  //   //signal
+  //   //lock
+  //   syscall_number = 301;
+  // }
 
   switch (syscall_number)
   {
@@ -217,44 +217,46 @@ void Syscall::pthread_exit(void* value_ptr){
 
 int Syscall::pthread_cancel(size_t thread_id) //probably broken
 {
-  debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called");
-  currentThread->process_->threads_lock_.acquire();           // TODO: Code1
-  debug(SYSCALL, "Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
+  // debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called");
+  // currentThread->process_->threads_lock_.acquire();           // TODO: Code1
+  // debug(SYSCALL, "Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
 
-  bool thread_id_found = false;
-  UserThread* thread_to_be_deleted;
-  for (auto& thread : currentThread->process_->threads_)
-  {
-    if(thread_id == thread->getTID())
-    {
-      thread->wants_to_be_canceled_ = true;
-      thread_id_found = true;
-      thread_to_be_deleted = thread;
-      break;
-    } 
-  }
+  // bool thread_id_found = false;
+  // UserThread* thread_to_be_deleted;
+  // for (auto& thread : currentThread->process_->threads_)
+  // {
+  //   if(thread_id == thread->getTID())
+  //   {
+  //     thread->wants_to_be_canceled_ = true;
+  //     thread_id_found = true;
+  //     thread_to_be_deleted = thread;
+  //     break;
+  //   } 
+  // }
 
-  if(!thread_id_found)
-  {
-    return -1;
-  }
-  currentThread->process_->threads_lock_.release();  
-
-
-  thread_to_be_deleted->has_received_cancalation_requestion_lock_.acquire();
-  while(!thread_to_be_deleted->recieved_cancalation_signal_bool_)
-  {
-    thread_to_be_deleted->has_received_cancalation_requestion_.wait();
-  }
-  thread_to_be_deleted->has_received_cancalation_requestion_lock_.release();
+  // if(!thread_id_found)
+  // {
+  //   return -1;
+  // }
+  // currentThread->process_->threads_lock_.release();  
 
 
-  thread_to_be_deleted->recieved_delete_signal_bool_ = true;           
-  currentThread->recieved_delete_signal_lock_.acquire();
-  currentThread->recieved_delete_signal_.signal();
-  currentThread->recieved_delete_signal_lock_.release();
+  // thread_to_be_deleted->has_received_cancalation_requestion_lock_.acquire();
+  // while(!thread_to_be_deleted->recieved_cancalation_signal_bool_)
+  // {
+  //   thread_to_be_deleted->has_received_cancalation_requestion_.wait();
+  // }
+  // thread_to_be_deleted->has_received_cancalation_requestion_lock_.release();
 
+
+  // thread_to_be_deleted->recieved_delete_signal_bool_ = true;           
+  // currentThread->recieved_delete_signal_lock_.acquire();
+  // currentThread->recieved_delete_signal_.signal();
+  // currentThread->recieved_delete_signal_lock_.release();
+
+  // return 0;
   return 0;
+  return thread_id;
 }
 
 
