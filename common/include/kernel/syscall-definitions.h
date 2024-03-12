@@ -21,3 +21,4 @@
 
 #define sc_pthread_create 1000
 #define sc_pthread_join 1001
+#define sc_pthread_exit 1002

@@ -58,6 +58,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pthread_join:
       return_value = joinThread((size_t) arg1, (void**) arg2);
       break; // you will need many debug hours if you forget the break
+    case sc_pthread_exit:
+      return_value = exitThread();
+      break; // you will need many debug hours if you forget the break
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -65,9 +68,17 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
+uint32 Syscall::exitThread()
+{
+  debug(SYSCALL, "Syscall::exitThread: killing current thread \n");
+  Scheduler::instance()->printThreadList();
+  currentThread->kill();
+  return 0;
+}
+
 uint32 Syscall::joinThread(size_t target_thread, void **return_ptr)
 {
-  debug(MINH, "Syscall::joinThread: thread (%zu), para (%p) \n", target_thread, return_ptr);
+  debug(SYSCALL, "Syscall::joinThread: thread (%zu), para (%p) \n", target_thread, return_ptr);
   ((UserThread*) currentThread)->process_->retrieveThreadRetval(target_thread, (UserThread*) currentThread, return_ptr);
   debug(MINH, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
   return 0;
@@ -75,8 +86,10 @@ uint32 Syscall::joinThread(size_t target_thread, void **return_ptr)
 
 uint32 Syscall::createThread(void* func, void* para, void* tid, void* pcreate_helper)
 {
+  Scheduler::instance()->printThreadList();
   debug(SYSCALL, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
   ((UserThread*) currentThread)->process_->createUserThread(func, para, tid, pcreate_helper);
+  Scheduler::instance()->printThreadList();
   return 0;
 }
 
@@ -91,11 +104,12 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 
 void Syscall::exit(size_t exit_code)
 {
+  Scheduler::instance()->printThreadList();
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   UserProcess* process = ((UserThread*) currentThread)->process_;
   for (auto thread : process->threads_)
   {
-    if(thread != currentThread)
+    if(thread != currentThread && thread->getTID() != 0)
     {
       thread->kill();
     } 

@@ -67,34 +67,37 @@ void UserProcess::storeThreadRetval(uint32 tid, void* retval)
 {
   debug(USERPROCESS, "UserProcess::storeThreadRetval: storing for thread %d the return value %zu\n", tid, (size_t) retval);
 
-  tid_counter_++;
-  result_storage_[tid] = retval;
-  if (p_join_sleep_map_.find(tid) != p_join_sleep_map_.end())
-  {
-    debug(USERPROCESS, "UserProcess::storeThreadRetval: waking up sleeping thread %d\n", tid);
-    Scheduler::instance()->wake(p_join_sleep_map_[tid]);
-    p_join_sleep_map_.erase(tid);
-  }
+  // tid_counter_++;
+  // result_storage_[tid] = retval;
+  // if (p_join_sleep_map_.find(tid) != p_join_sleep_map_.end())
+  // {
+  //   debug(USERPROCESS, "UserProcess::storeThreadRetval: waking up sleeping thread %d\n", tid);
+  //   Scheduler::instance()->wake(p_join_sleep_map_[tid]);
+  //   p_join_sleep_map_.erase(tid);
+  // }
 }
 
 // get return value of a thread, if the retval is not ready then put it to sleep
 void UserProcess::retrieveThreadRetval(uint32 target_tid, UserThread* waiter_thread, void** retval)
 {
-  // if the result is not ready yet
-  if (result_storage_.find(target_tid) == result_storage_.end())
-  {
-    debug(USERPROCESS, "UserProcess::retrieveThreadRetval: thread (%d) is not finished yet, putting thread (%zu) to sleep\n", 
+  debug(USERPROCESS, "UserProcess::retrieveThreadRetval: thread (%d) is not finished yet, putting thread (%zu) to sleep\n", 
                         target_tid, waiter_thread->getTID());
+  (void) retval;
+  // // if the result is not ready yet
+  // if (result_storage_.find(target_tid) == result_storage_.end())
+  // {
+  //   debug(USERPROCESS, "UserProcess::retrieveThreadRetval: thread (%d) is not finished yet, putting thread (%zu) to sleep\n", 
+  //                       target_tid, waiter_thread->getTID());
 
-    p_join_sleep_map_[target_tid] = waiter_thread;
-    Scheduler::instance()->sleep();
-  }
+  //   p_join_sleep_map_[target_tid] = waiter_thread;
+  //   Scheduler::instance()->sleep();
+  // }
 
-  // When this thread got waken up, it continues here
-  assert(result_storage_.find(target_tid) != result_storage_.end() && "Waiter Thread is woken up but the retval is still not ready\n");
-  debug(USERPROCESS, "UserProcess::retrieveThreadRetval: found the return value for thread %d\n", target_tid);
+  // // When this thread got waken up, it continues here
+  // assert(result_storage_.find(target_tid) != result_storage_.end() && "Waiter Thread is woken up but the retval is still not ready\n");
+  // debug(USERPROCESS, "UserProcess::retrieveThreadRetval: found the return value for thread %d\n", target_tid);
 
-  *retval = result_storage_[target_tid];
-  result_storage_.erase(target_tid);
+  // *retval = result_storage_[target_tid];
+  // result_storage_.erase(target_tid);
 }
 

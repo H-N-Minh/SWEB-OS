@@ -24,5 +24,7 @@ class Syscall
     static uint32 createThread(void* func, void* para, void* tid, void* pcreate_helper);
 
     static uint32 joinThread(size_t thread, void **return_ptr);
+
+    static uint32 exitThread();
 };
 

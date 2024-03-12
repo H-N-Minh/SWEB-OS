@@ -48,6 +48,27 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     switch_to_userspace_ = 1;
 }
 
+// DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
+void Thread::kill()
+{
+  debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
+        currentThread, getName(), this);
+
+  // remove itself from list of threads in process
+  ustl::vector<UserThread*> threads_ = ((UserThread*) currentThread)->process_->threads_;
+  auto thread = ustd::find(threads_.begin(), threads_.end(), currentThread);
+  if (thread != threads_.end()) {
+      threads_.erase(thread);
+  }
+  setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
+
+  if (currentThread == this)
+  {
+    ArchInterrupts::enableInterrupts();
+    Scheduler::instance()->yield();
+    assert(false && "This should never happen, how are we still alive?");
+  }
+}
 
 UserThread::~UserThread()
 {
