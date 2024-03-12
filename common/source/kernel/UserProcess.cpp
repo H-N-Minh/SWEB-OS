@@ -52,9 +52,7 @@ void UserProcess::createUserThread(void* func, void* para, void* tid, void* pcre
   tid_counter_++;
 
   debug(USERPROCESS, "UserProcess::createUserThread: Adding new thread to scheduler\n");
-  // Scheduler::instance()->printThreadList();
   Scheduler::instance()->addNewThread(new_thread);
-  // Scheduler::instance()->printThreadList();
 }
 
 // TODO: this is not thread-safe when pt_join thread tries to gets the result at the same time as this thread

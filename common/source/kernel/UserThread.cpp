@@ -8,6 +8,8 @@
 #include "PageManager.h"
 #include "ArchInterrupts.h"
 
+#include "uvector.h"
+
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, 
                         Loader* loader, UserProcess* process, int32 tid, void* func, void* para, void* pcreate_helper)
     : Thread(working_dir, name, type, loader), process_(process)
@@ -49,17 +51,23 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 
 // DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
-void Thread::kill()
+void UserThread::kill()
 {
-  debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
-        currentThread, getName(), this);
+  debug(THREAD, "kill: Called by <%s (%zu)>. Preparing Thread <%s (%zu)> for destruction\n", currentThread->getName(),
+        currentThread->getTID(), getName(), this->getTID());
 
   // remove itself from list of threads in process
-  ustl::vector<UserThread*> threads_ = ((UserThread*) currentThread)->process_->threads_;
-  auto thread = ustd::find(threads_.begin(), threads_.end(), currentThread);
-  if (thread != threads_.end()) {
-      threads_.erase(thread);
+  if (((UserThread*) currentThread)->process_)
+  {
+    UserProcess* process = ((UserThread*) currentThread)->process_;
+    auto thread = ustl::find(process->threads_.begin(), process->threads_.end(), currentThread);
+    if (thread != process->threads_.end()) {
+        process->threads_.erase(thread);
+    }
   }
+  
+
+  // exactly like original kill()
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
 
   if (currentThread == this)

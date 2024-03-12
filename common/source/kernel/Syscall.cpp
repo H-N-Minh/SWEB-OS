@@ -71,7 +71,6 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 uint32 Syscall::exitThread()
 {
   debug(SYSCALL, "Syscall::exitThread: killing current thread \n");
-  Scheduler::instance()->printThreadList();
   currentThread->kill();
   return 0;
 }
@@ -86,10 +85,8 @@ uint32 Syscall::joinThread(size_t target_thread, void **return_ptr)
 
 uint32 Syscall::createThread(void* func, void* para, void* tid, void* pcreate_helper)
 {
-  Scheduler::instance()->printThreadList();
   debug(SYSCALL, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
   ((UserThread*) currentThread)->process_->createUserThread(func, para, tid, pcreate_helper);
-  Scheduler::instance()->printThreadList();
   return 0;
 }
 
@@ -104,8 +101,7 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 
 void Syscall::exit(size_t exit_code)
 {
-  Scheduler::instance()->printThreadList();
-  debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
+  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
   UserProcess* process = ((UserThread*) currentThread)->process_;
   for (auto thread : process->threads_)
   {

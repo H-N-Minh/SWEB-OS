@@ -12,4 +12,5 @@ class UserThread : public Thread
         ~UserThread();
         UserProcess* process_;
         void Run();
+        void kill() override;
 };
