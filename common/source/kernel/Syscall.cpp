@@ -14,16 +14,16 @@
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
   size_t return_value = 0;
-  // if ((syscall_number != sc_sched_yield) && (syscall_number != sc_outline)) // no debug print because these might occur very often
-  // {
-  //   debug(SYSCALL, "Syscall %zd called with arguments %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx)\n",
-  //         syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
-  // }
-  // if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
-  // {
-  //   currentThread->has_received_cancalation_requestion_.signal();
-  //   syscall_number = 301;
-  // }
+  if ((syscall_number != sc_sched_yield) && (syscall_number != sc_outline)) // no debug print because these might occur very often
+  {
+    debug(SYSCALL, "Syscall %zd called with arguments %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx)\n",
+          syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
+  }
+  if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
+  {
+    currentThread->has_received_cancalation_requestion_.signal();
+    syscall_number = 301;
+  }
 
   switch (syscall_number)
   {
@@ -177,6 +177,9 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   currentThread->recieved_join_signal_.signal();
   currentThread->recieved_join_signal_lock_.release();
   debug(SYSCALL, "Thread with id %ld joined thread with id %ld.\n", ((UserThread*)currentThread)->getTID(), thread_to_be_joined_id);
+
+  return_value = current_process->value_ptr_by_id_[thread_id];
+  *value_ptr = return_value;
   return 0;
 }
 
@@ -212,39 +215,39 @@ void Syscall::pthread_exit(void* value_ptr){
 int Syscall::pthread_cancel(size_t thread_id) //probably broken
 {
   debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called");
-  // currentThread->process_->threads_lock_.acquire();           // TODO: Code1
-  // debug(SYSCALL, "Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
+  currentThread->process_->threads_lock_.acquire();           // TODO: Code1
+  debug(SYSCALL, "Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
 
-  // bool thread_id_found = false;
-  // UserThread* thread_to_be_deleted;
-  // for (auto& thread : currentThread->process_->threads_)
-  // {
-  //   if(thread_id == thread->getTID())
-  //   {
-  //     thread->wants_to_be_canceled_ = true;
-  //     thread_id_found = true;
-  //     thread_to_be_deleted = thread;
-  //     break;
-  //   } 
-  // }
+  bool thread_id_found = false;
+  UserThread* thread_to_be_deleted;
+  for (auto& thread : currentThread->process_->threads_)
+  {
+    if(thread_id == thread->getTID())
+    {
+      thread->wants_to_be_canceled_ = true;
+      thread_id_found = true;
+      thread_to_be_deleted = thread;
+      break;
+    } 
+  }
 
-  // if(!thread_id_found)
-  // {
-  //   return -1;
-  // }
-  // currentThread->process_->threads_lock_.release();  
+  if(!thread_id_found)
+  {
+    return -1;
+  }
+  currentThread->process_->threads_lock_.release();  
 
-  // thread_to_be_deleted->has_received_cancalation_requestion_lock_.acquire();
-  // while(thread_to_be_deleted->getState() != ToBeDestroyed)
-  // {
-  //   thread_to_be_deleted->has_received_cancalation_requestion_.wait();
-  // }
-  // //thread_to_be_deleted->has_received_cancalation_requestion_lock_.release();      //problem -> thread maybe dead
+  thread_to_be_deleted->has_received_cancalation_requestion_lock_.acquire();
+  while(thread_to_be_deleted->getState() != ToBeDestroyed)
+  {
+    thread_to_be_deleted->has_received_cancalation_requestion_.wait();
+  }
+  //thread_to_be_deleted->has_received_cancalation_requestion_lock_.release();      //problem -> thread maybe dead
 
 
-  //return 0;
+  return 0;
 
-  return thread_id;  //just to silence the unused warning
+
 }
 
 
