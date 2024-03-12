@@ -27,10 +27,15 @@ int main()
     
     printf("Multithreading 8 successful!\n");
 
-    for(int i = 1; i < 100; i++)
+    for(int i = 1; i < 10000; i++)
     {
         printf("%d ",i);
     }
+    // while(1)
+    // {
+    //     printf(".");
+    // }
+    
 
     return 0;
 }

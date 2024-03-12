@@ -74,18 +74,21 @@ void Thread::kill()
   {
     debug(THREAD, "Some other thread wants to join this thread.\n");
     thread_gets_killed_lock_.acquire();
+    thread_killed = true;
     thread_gets_killed_.signal();
+    debug(THREAD, "Thread %ld signaled that it gets killed.\n",getTID()); //should be 2
     thread_gets_killed_lock_.release();
 
-
+    
     thread_that_wants_to_join_this_thread_->recieved_join_signal_lock_.acquire(); //Todo:what if thread that wants to get joined get killed in the meantime -> we are stuck and never get killed
-    while(thread_that_wants_to_join_this_thread_ != NULL)
+    while(!recieved_join_signal_bool_)
     {
-     thread_that_wants_to_join_this_thread_->recieved_join_signal_.wait();
+      debug(THREAD, "Waiting until join signal is received by %ld.\n",thread_that_wants_to_join_this_thread_->getTID()); //should be 1
+      thread_that_wants_to_join_this_thread_->recieved_join_signal_.wait();
+      debug(THREAD, "Join signal was received by %ld.\n",thread_that_wants_to_join_this_thread_->getTID()); //should be 1
     }                                         
     thread_that_wants_to_join_this_thread_->recieved_join_signal_lock_.release(); 
   }
-  
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
 
@@ -217,6 +220,6 @@ void Thread::setState(ThreadState new_state)
 {
   assert(!((state_ == ToBeDestroyed) && (new_state != ToBeDestroyed)) && "Tried to change thread state when thread was already set to be destroyed");
   assert(!((new_state == Sleeping) && (currentThread != this)) && "Setting other threads to sleep is not thread-safe");
-
+  //debug(THREAD, "Thread with id %ld sets it state to %s.\n",getTID(), threadStatePrintable[getState()]);
   state_ = new_state;
 }

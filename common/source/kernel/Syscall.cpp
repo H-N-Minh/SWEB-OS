@@ -89,11 +89,12 @@ void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   currentThread->process_->threads_lock_.acquire();
-  debug(SYSCALL, "Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
+  debug(SYSCALL, "Syscall::EXIT: Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
   for (auto& thread : currentThread->process_->threads_)
   {
     if(thread != currentThread)
     {
+      debug(SYSCALL, "Syscall::EXIT: Thread %ld gets killed. \n",thread->getTID());
       thread->kill();         //i somehow need to deal with the lock
     } 
   }
@@ -101,38 +102,16 @@ void Syscall::exit(size_t exit_code)
   ((UserThread*)currentThread)->last_thread_alive_ = true;
   currentThread->holding_lock_list_->waiters_list_ = 0;      //TODO: Needs to locked i guess
   currentThread->process_->threads_lock_.release();  // TODO://what if it is not the last thread
+  debug(SYSCALL, "Syscall::EXIT: Last Thread %ld gets killed. \n",currentThread->getTID());
   currentThread->kill();
+
   assert(false && "This should never happen");
 
 }
-
-void Syscall::pthread_exit(void* value_ptr){
-  debug(SYSCALL, "Syscall::PTHREAD_EXIT: called, value_ptr: %p\n", value_ptr);
-  UserProcess* current_process = currentThread->process_;
-  current_process->threads_lock_.acquire();
-
-  ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process->threads_.begin(), current_process->threads_.end(), currentThread);
-  current_process->threads_.erase(iterator);
-  
-  if(current_process->threads_.size() == 0)
-  {
-    ((UserThread*)currentThread)->last_thread_alive_ = true;
-  }
-  else
-  {
-    current_process->value_ptr_by_id_lock_.acquire();
-    current_process->value_ptr_by_id_[currentThread->getTID()] = value_ptr;
-    current_process->value_ptr_by_id_lock_.release();
-  }
-  currentThread->loader_->arch_memory_.unmapPage(((UserThread*)currentThread)->virtual_page_);
-  current_process->threads_lock_.release();
-  currentThread->kill();  //TODO: i think this is fine, since is no longer on the list
-  assert(false && "This should never happen");
-}
-
 
 int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
 {
+  debug(SYSCALL, "Syscall::PTHREAD_JOIN: called, thread_id: %ld\n", thread_id);
   UserProcess* current_process = currentThread->process_;
   if(!check_parameter((size_t)value_ptr, true))
   {
@@ -160,11 +139,14 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   }
   
   UserThread* thread_to_be_joined;
+  size_t thread_to_be_joined_id;
+
   for (auto& thread : current_process->threads_)
   {
     if(thread_id == thread->getTID())
     {
       thread_to_be_joined = thread;
+      thread_to_be_joined_id = thread_id;
       break;
     } 
   }
@@ -172,21 +154,59 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   {
     return -1;
   }
-  thread_to_be_joined->thread_gets_killed_lock_.acquire();
+
+  currentThread->process_->threads_lock_.release();   //possible later release
+  
   thread_to_be_joined->thread_that_wants_to_join_this_thread_ = currentThread; //??
-
-  currentThread->process_->threads_lock_.release(); 
-
-
-  thread_to_be_joined->thread_gets_killed_.wait();            //Todo: add while                                     
+  thread_to_be_joined->thread_gets_killed_lock_.acquire();
+  while(!thread_to_be_joined->thread_killed)
+  {
+    debug(SYSCALL, "Waiting for thread %ld to get killed.\n",thread_to_be_joined->getTID()); //should be 2
+    thread_to_be_joined->thread_gets_killed_.wait();   
+    debug(SYSCALL, "Recieved from thread %ld that it get killed.\n",thread_to_be_joined->getTID());  //should be 2
+  }                  
+  thread_to_be_joined->recieved_join_signal_bool_ = true;           
   thread_to_be_joined->thread_gets_killed_lock_.release(); 
 
+
+
+
+
   currentThread->recieved_join_signal_lock_.acquire();
-  thread_to_be_joined->thread_that_wants_to_join_this_thread_ = NULL;
+  
   currentThread->recieved_join_signal_.signal();
   currentThread->recieved_join_signal_lock_.release();
+  debug(SYSCALL, "Thread with id %ld joined thread with id %ld.\n", ((UserThread*)currentThread)->getTID(), thread_to_be_joined_id);
   return 0;
 }
+
+void Syscall::pthread_exit(void* value_ptr){
+  debug(SYSCALL, "Syscall::PTHREAD_EXIT: called, value_ptr: %p\n", value_ptr);
+  UserProcess* current_process = currentThread->process_;
+  current_process->threads_lock_.acquire();
+
+  ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process->threads_.begin(), current_process->threads_.end(), currentThread);
+  current_process->threads_.erase(iterator);
+  
+  if(current_process->threads_.size() == 0)
+  {
+    ((UserThread*)currentThread)->last_thread_alive_ = true;
+  }
+  else
+  {
+    current_process->value_ptr_by_id_lock_.acquire();
+    current_process->value_ptr_by_id_[currentThread->getTID()] = value_ptr;
+    current_process->value_ptr_by_id_lock_.release();
+  }
+  //currentThread->loader_->arch_memory_.unmapPage(((UserThread*)currentThread)->virtual_page_);
+  current_process->threads_lock_.release();
+  debug(SYSCALL, "Syscall::PTHREAD_EXIT: Thread %ld gets killed. \n",currentThread->getTID());
+  currentThread->kill();  //TODO: i think this is fine, since is no longer on the list
+  assert(false && "This should never happen");
+}
+
+
+
 
 
 int Syscall::pthread_cancel(size_t thread_id) //probably broken

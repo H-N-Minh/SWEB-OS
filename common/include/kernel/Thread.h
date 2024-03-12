@@ -144,12 +144,14 @@ class Thread
     Mutex has_received_cancalation_requestion_lock_;
     Condition has_received_cancalation_requestion_;
 
-
+    bool thread_killed{false};
     Mutex thread_gets_killed_lock_;  //actually send before thread actually set toBeDestroyed 
     Condition thread_gets_killed_;  //need to super careful using this to ensure that thread is still alive when using
 
 
     Thread* thread_that_wants_to_join_this_thread_{NULL};
+
+    bool recieved_join_signal_bool_{false};
     Mutex recieved_join_signal_lock_;
     Condition recieved_join_signal_;
 

@@ -53,9 +53,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 UserThread::~UserThread()
 {
+    debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
     if(last_thread_alive_)
     {
-        debug(USERTHREAD, "Userprocess gets deleted\n");
+        debug(USERTHREAD, "Userprocess gets deleted by thread with id %ld.\n", getTID());
         delete process_;
         process_ = 0;
     }
