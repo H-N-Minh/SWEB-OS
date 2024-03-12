@@ -1,17 +1,6 @@
 #include "pthread.h"
 
 #include <stdio.h>
-typedef enum { false, true } bool;
-
-// // Global Variable (shared between threads)
-// ustl::map <uint32, UserThread*> p_join_sleep_map_;   // map of the thread that is sleeping/waiting for the return value
-// //TODO: currently this map only let 1 thread wait for 1 tid, can change key and value place to solve this
-// ustl::map <uint32, void*> result_storage_;   // when a thread finishes, it stores its return value here
-// bool __ready = false;
-// void* __retval;
-// void* __sleeper;
-// TODO: create linked list for this 
-
 
 
 /**
@@ -49,7 +38,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
  */
 void pthread_exit(void *value_ptr)
 {
-  __syscall(sc_pthread_exit, 0x0, 0x0, 0x0, 0x0, 0x0);
+  __syscall(sc_pthread_exit, (size_t) value_ptr, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**

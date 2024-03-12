@@ -12,7 +12,7 @@
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, 
                         Loader* loader, UserProcess* process, int32 tid, void* func, void* para, void* pcreate_helper)
-    : Thread(working_dir, name, type, loader), process_(process)
+    : Thread(working_dir, name, type, loader), process_(process), return_value_(0), finished_(0), joiner_(0)
 {
     debug(USERTHREAD, "UserThread Constructor: creating new thread with func (%p), para (%zu) \n", func, (size_t) para);
     tid_ = tid;
@@ -49,6 +49,39 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
     switch_to_userspace_ = 1;
 }
+
+
+
+void UserThread::setReturnValue(void* return_value)
+{
+    return_value_ = return_value;
+    finished_ = 1;
+    if(joiner_)
+    {
+        Scheduler::instance()->wake(joiner_);
+    }
+    debug(USERTHREAD, "UserThread::setReturnValue: Thread <%s (%zu)> finished, return value: %zu. Going to sleep now until Joined\n", 
+                        getName(), getTID(), (size_t) return_value);
+    Scheduler::instance()->sleep();
+}
+
+void UserThread::getReturnValue(void** return_value, UserThread* joiner)
+{
+    if(finished_)
+    {
+        *return_value = return_value_;
+    }
+    else
+    {
+        joiner_ = joiner;
+        Scheduler::instance()->sleep();
+
+        assert(finished_ && "Thread should be finished now");
+        *return_value = return_value_;
+    }
+}
+
+
 
 // DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
 void UserThread::kill()

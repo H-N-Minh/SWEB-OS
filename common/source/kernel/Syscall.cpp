@@ -56,10 +56,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = createThread((void*) arg1, (void*) arg2, (void*) arg3, (void*) arg4);
       break; // you will need many debug hours if you forget the break
     case sc_pthread_join:
-      return_value = joinThread((size_t) arg1, (void**) arg2);
+      return_value = joinThread(arg1, (void**) arg2);
       break; // you will need many debug hours if you forget the break
     case sc_pthread_exit:
-      return_value = exitThread();
+      return_value = exitThread((void*) arg1);
       break; // you will need many debug hours if you forget the break
     default:
       return_value = -1;
@@ -68,9 +68,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
-uint32 Syscall::exitThread()
+uint32 Syscall::exitThread(void* return_value)
 {
-  debug(SYSCALL, "Syscall::exitThread: killing current thread \n");
+  debug(SYSCALL, "Syscall::exitThread: zombie the current thread \n");
+  ((UserThread*) currentThread)->setReturnValue(return_value);
   Scheduler::instance()->sleep();
   return 0;
 }
