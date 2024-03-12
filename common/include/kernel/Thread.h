@@ -111,7 +111,7 @@ class Thread
      */
     Lock* holding_lock_list_;
 
-    size_t tid_;
+    //size_t tid_;
     volatile ThreadState state_;
 
   private:
@@ -120,7 +120,7 @@ class Thread
 
     //volatile ThreadState state_;
 
-    //size_t tid_;
+    size_t tid_;
 
     Terminal* my_terminal_;
 
@@ -130,6 +130,8 @@ class Thread
     FileSystemInfo* working_dir_;
 
     ustl::string name_;
+
+    //size_t tid_;
 
 };
 

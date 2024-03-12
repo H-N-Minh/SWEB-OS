@@ -26,7 +26,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
   
-  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this));
+  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, generateUniqueTid(), NULL, NULL));
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 }
 
@@ -50,7 +50,7 @@ size_t UserProcess::generateUniqueTid() {
 
 UserThread* UserProcess::createUserThread(const ThreadCreateParams& params) {
   size_t new_tid = generateUniqueTid();
-  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, new_tid, params.startRoutine, params.arg);
+  auto new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, new_tid, params.startRoutine, params.arg);
   threads_.push_back(new_thread);
   Scheduler::instance()->addNewThread(new_thread);
   return new_thread;
