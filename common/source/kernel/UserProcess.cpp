@@ -7,8 +7,9 @@
 #include "Scheduler.h"
 
 
-UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info)
-{
+UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
+    : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info),
+      filename_(filename), terminal_number_(terminal_number) {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
   if (fd_ >= 0)
@@ -47,20 +48,10 @@ size_t UserProcess::generateUniqueTid() {
 }
 
 
-void UserProcess::createUserThread(const ThreadCreateParams& params, size_t* tid_address) {
-  debug(Fabi, "createUserThread: startRoutine (%p), arg (%p)\n", params.startRoutine, params.arg);
-
+UserThread* UserProcess::createUserThread(const ThreadCreateParams& params) {
   size_t new_tid = generateUniqueTid();
-
-  UserThread* new_thread = new UserThread(working_dir_, filname_, Thread::USER_THREAD, terminal_number_, loader_, this, new_tid, params.startRoutine, params.arg);
-
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, new_tid, params.startRoutine, params.arg);
   threads_.push_back(new_thread);
-
-  if (tid_address != nullptr) {
-    *tid_address = new_tid;
-  }
-
-  debug(Fabi, "createUserThread: New thread ID is %zu\n", new_tid);
-
   Scheduler::instance()->addNewThread(new_thread);
+  return new_thread;
 }

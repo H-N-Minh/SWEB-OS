@@ -22,13 +22,15 @@ class UserProcess
 
     ustl::vector<UserThread*> threads_;          //!!
     bool to_be_destroyed_ = false;
-    void createUserThread(const ThreadCreateParams& params, size_t* tid_address);
+    UserThread* createUserThread(const ThreadCreateParams& params);
 
   private:
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
     size_t generateUniqueTid();
+    ustl::string filename_;
+    uint32 terminal_number_;
 
     /* 
     Could be added from Thread:
