@@ -69,6 +69,7 @@ uint32 Syscall::joinThread(size_t target_thread, void **return_ptr)
 {
   debug(MINH, "Syscall::joinThread: thread (%zu), para (%p) \n", target_thread, return_ptr);
   ((UserThread*) currentThread)->process_->retrieveThreadRetval(target_thread, (UserThread*) currentThread, return_ptr);
+  debug(MINH, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
   return 0;
 }
 

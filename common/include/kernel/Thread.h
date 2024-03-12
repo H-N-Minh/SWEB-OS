@@ -91,6 +91,8 @@ class Thread
 
     void setState(ThreadState state);
 
+    ThreadState getState() const;
+
     /**
      * A part of the single-chained waiters list for the locks.
      * It references to the next element of the list.
@@ -123,8 +125,6 @@ class Thread
     size_t tid_;
     
     Terminal* my_terminal_;
-
-    ThreadState getState() const;
 
     FileSystemInfo* working_dir_;
 

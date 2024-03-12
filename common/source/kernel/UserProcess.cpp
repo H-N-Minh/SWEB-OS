@@ -8,6 +8,7 @@
 
 #include "ArchInterrupts.h"
 
+
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) 
     : fd_(VfsSyscall::open(filename, O_RDONLY)), loader_(0), working_dir_(fs_info), tid_counter_(1), 
       filename_(filename), terminal_number_(terminal_number)
@@ -65,11 +66,13 @@ void UserProcess::createUserThread(void* func, void* para, void* tid)
 void UserProcess::storeThreadRetval(uint32 tid, void* retval)
 {
   debug(USERPROCESS, "UserProcess::storeThreadRetval: storing for thread %d the return value %zu\n", tid, (size_t) retval);
+
+  tid_counter_++;
   result_storage_[tid] = retval;
   if (p_join_sleep_map_.find(tid) != p_join_sleep_map_.end())
   {
-    debug(USERPROCESS, "UserProcess::storeThreadRetval: waking up thread %d\n", tid);
-    p_join_sleep_map_[tid]->setState(ThreadState::Running);
+    debug(USERPROCESS, "UserProcess::storeThreadRetval: waking up sleeping thread %d\n", tid);
+    Scheduler::instance()->wake(p_join_sleep_map_[tid]);
     p_join_sleep_map_.erase(tid);
   }
 }
@@ -82,10 +85,9 @@ void UserProcess::retrieveThreadRetval(uint32 target_tid, UserThread* waiter_thr
   {
     debug(USERPROCESS, "UserProcess::retrieveThreadRetval: thread (%d) is not finished yet, putting thread (%zu) to sleep\n", 
                         target_tid, waiter_thread->getTID());
+
     p_join_sleep_map_[target_tid] = waiter_thread;
-    waiter_thread->setState(ThreadState::Sleeping);
-    ArchInterrupts::enableInterrupts();
-    Scheduler::instance()->yield();
+    Scheduler::instance()->sleep();
   }
 
   // When this thread got waken up, it continues here
@@ -94,5 +96,5 @@ void UserProcess::retrieveThreadRetval(uint32 target_tid, UserThread* waiter_thr
 
   *retval = result_storage_[target_tid];
   result_storage_.erase(target_tid);
-  p_join_sleep_map_.erase(target_tid);
 }
+
