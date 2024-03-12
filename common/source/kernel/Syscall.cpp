@@ -198,7 +198,7 @@ void Syscall::pthread_exit(void* value_ptr){
     current_process->value_ptr_by_id_[currentThread->getTID()] = value_ptr;
     current_process->value_ptr_by_id_lock_.release();
   }
-  //currentThread->loader_->arch_memory_.unmapPage(((UserThread*)currentThread)->virtual_page_);
+  currentThread->loader_->arch_memory_.unmapPage(((UserThread*)currentThread)->virtual_page_);
   current_process->threads_lock_.release();
   debug(SYSCALL, "Syscall::PTHREAD_EXIT: Thread %ld gets killed. \n",currentThread->getTID());
   currentThread->kill();  //TODO: i think this is fine, since is no longer on the list
