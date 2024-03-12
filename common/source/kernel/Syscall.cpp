@@ -53,7 +53,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = get_thread_count();
       break; // you will need many debug hours if you forget the break
     case sc_pthread_create:
-      return_value = createThread((void*) arg1, (void*) arg2, (void*) arg3);
+      return_value = createThread((void*) arg1, (void*) arg2, (void*) arg3, (void*) arg4);
       break; // you will need many debug hours if you forget the break
     case sc_pthread_join:
       return_value = joinThread((size_t) arg1, (void**) arg2);
@@ -73,10 +73,10 @@ uint32 Syscall::joinThread(size_t target_thread, void **return_ptr)
   return 0;
 }
 
-uint32 Syscall::createThread(void* func, void* para, void* tid)
+uint32 Syscall::createThread(void* func, void* para, void* tid, void* pcreate_helper)
 {
-  debug(MINH, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
-  ((UserThread*) currentThread)->process_->createUserThread(func, para, tid);
+  debug(SYSCALL, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
+  ((UserThread*) currentThread)->process_->createUserThread(func, para, tid, pcreate_helper);
   return 0;
 }
 

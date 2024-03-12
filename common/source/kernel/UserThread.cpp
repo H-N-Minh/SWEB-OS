@@ -9,10 +9,10 @@
 #include "ArchInterrupts.h"
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, 
-                        Loader* loader, UserProcess* process, int32 tid, void* func, void* para)
+                        Loader* loader, UserProcess* process, int32 tid, void* func, void* para, void* pcreate_helper)
     : Thread(working_dir, name, type, loader), process_(process)
 {
-    debug(MINH, "UserThread Constructor: creating new thread with func (%p), para (%zu) \n", func, (size_t) para);
+    debug(USERTHREAD, "UserThread Constructor: creating new thread with func (%p), para (%zu) \n", func, (size_t) para);
     tid_ = tid;
 
     // allocate physical page for stack and map to virtual memory
@@ -31,12 +31,13 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     else
     {
         // Create another thread for a process
-        start_func_ptr = func;
+        start_func_ptr = pcreate_helper;
     }
     ArchThreads::createUserRegisters(user_registers_, start_func_ptr, user_stack_ptr, getKernelStackStartPointer());
     if (func)
     {
-        user_registers_->rdi = (size_t)para;
+        user_registers_->rdi = (size_t)func;
+        user_registers_->rsi = (size_t)para;
     }
 
     // Setting up AddressSpace and Terminal
@@ -47,27 +48,6 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     switch_to_userspace_ = 1;
 }
 
-// DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
-void UserThread::kill()
-{
-    // save return value and wake up all threads that are waiting for this thread to finish
-    void* ret = (void*) user_registers_->rax;
-    debug(MINH, "UserThread kill(): Thread %ld is being killed with return value %zu\n", tid_, (size_t) ret);
-    process_->storeThreadRetval(tid_, ret);
-
-    // normal kill() just like in Thread.cpp
-    debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
-        currentThread, getName(), this);
-
-    setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
-
-    if (currentThread == this)
-    {
-    ArchInterrupts::enableInterrupts();
-    Scheduler::instance()->yield();
-    assert(false && "This should never happen, how are we still alive?");
-    }
-}
 
 UserThread::~UserThread()
 {

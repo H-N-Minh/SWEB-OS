@@ -7,7 +7,17 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                     void *(*start_routine)(void *), void *arg)
 {
-  return __syscall(sc_pthread_create, (size_t)start_routine, (size_t)arg, (size_t) thread, 0x0, 0x0);
+  return __syscall(sc_pthread_create, (size_t)start_routine, (size_t)arg, (size_t) thread, (size_t) pthread_create_helper, 0x0);
+}
+
+/**
+ * after thread finished its task, this helper will exit that thread correctly
+ * TODO: setup the return value for these pthread call correctly
+*/
+void pthread_create_helper(void* start_routine, void* arg)
+{
+  void* ret = ((void* (*)(void*))start_routine)(arg);
+  pthread_exit(ret);
 }
 
 /**

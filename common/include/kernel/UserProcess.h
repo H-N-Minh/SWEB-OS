@@ -33,7 +33,7 @@ class UserProcess
     //TODO: currently this map only let 1 thread wait for 1 tid, can change key and value place to solve this
     ustl::map <uint32, void*> result_storage_;   // when a thread finishes, it stores its return value here
 
-    void createUserThread(void* func, void* para, void* tid);
+    void createUserThread(void* func, void* para, void* tid, void* pcreate_helper);
     void storeThreadRetval(uint32 tid, void* retval);   
     void retrieveThreadRetval(uint32 target_tid, UserThread* waiter_thread, void** retval);
 
