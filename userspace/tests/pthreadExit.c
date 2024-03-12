@@ -5,7 +5,7 @@
 
 void printNumber(size_t x)
 {
-    for (size_t i = 0; i < 2; i++)
+    for (size_t i = 0; i < 1; i++)
     {
         printf("%zu\n", x);
     }
@@ -23,10 +23,11 @@ int main()
     pthread_create(&thread2, NULL, (void* (*)(void*))printNumber, (void*) y);
 
     // no pthread_join so have to loop forever to keep the process alive
-    for (size_t i = 0; i < 50; i++)
+    for (size_t i = 0; i < 10000; i++)
     {
-        printf("------------------------------------------------\n");
+        size_t j = i++;
+        size_t k = j + i;
     }
-
+    printf("main thread done\n");
     return 0;
 }

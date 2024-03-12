@@ -71,7 +71,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 uint32 Syscall::exitThread()
 {
   debug(SYSCALL, "Syscall::exitThread: killing current thread \n");
-  currentThread->kill();
+  Scheduler::instance()->sleep();
   return 0;
 }
 
@@ -103,13 +103,19 @@ void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
   UserProcess* process = ((UserThread*) currentThread)->process_;
-  for (auto thread : process->threads_)
+
+  size_t vector_size = process->threads_.size();
+  for (size_t i = 0; i < vector_size; ++i)
   {
-    if(thread != currentThread && thread->getTID() != 0)
+    if(process->threads_[i] != currentThread)
     {
-      thread->kill();
+      process->threads_[i]->kill();
+      i--;
+      vector_size--;
     } 
   }
+
+  // Scheduler::instance()->printThreadList();
   delete process;
   ((UserThread*) currentThread)->process_ = 0;
   currentThread->kill();
