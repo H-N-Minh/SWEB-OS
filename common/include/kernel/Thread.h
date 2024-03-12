@@ -141,6 +141,7 @@ class Thread
     ustl::string name_;
 
   public:
+    bool recieved_cancalation_signal_bool_{false};
     Mutex has_received_cancalation_requestion_lock_;
     Condition has_received_cancalation_requestion_;
 
@@ -154,6 +155,10 @@ class Thread
     bool recieved_join_signal_bool_{false};
     Mutex recieved_join_signal_lock_;
     Condition recieved_join_signal_;
+
+    bool recieved_delete_signal_bool_{false};
+    Mutex recieved_delete_signal_lock_;
+    Condition recieved_delete_signal_;
 
 
     

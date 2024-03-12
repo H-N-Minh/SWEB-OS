@@ -38,7 +38,8 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
     has_received_cancalation_requestion_lock_("has_received_cancalation_requestion_lock_"),
     has_received_cancalation_requestion_(&has_received_cancalation_requestion_lock_, "has_received_cancalation_requestion_"),
     thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
-    recieved_join_signal_lock_("recieved_join_signal_lock_"), recieved_join_signal_(&recieved_join_signal_lock_, "recieved_join_signal_")
+    recieved_join_signal_lock_("recieved_join_signal_lock_"), recieved_join_signal_(&recieved_join_signal_lock_, "recieved_join_signal_"),
+    recieved_delete_signal_lock_("recieved_delete_signal_lock_"), recieved_delete_signal_(&recieved_delete_signal_lock_, "recieved_delete_signal_")
 
 {
   debug(THREAD, "Thread ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
