@@ -53,5 +53,5 @@ void UserProcess::createThread(void *(*start_routine)(void*), void* arg)
                                             ((UserThread*) currentThread)->process_, num_thread_, start_routine, arg);
     threads_.push_back(new_thread);
     num_thread_++;
-    Scheduler::instance()->addNewThread(new_thread);
+    //Scheduler::instance()->addNewThread(new_thread);
 }

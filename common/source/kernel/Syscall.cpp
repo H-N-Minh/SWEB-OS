@@ -198,7 +198,7 @@ uint32 Syscall::get_thread_count() {
 
 int Syscall::pthread_create(size_t* thread, size_t* attr, void *(*start_routine)(void*), void* arg)
 {
-    debug(TAI_THREAD, "thread %p, attribute %p, args %p\n", thread, attr, arg);
+    debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
     ((UserThread*) currentThread)->process_->createThread(start_routine, arg);
     return 0;
 }
