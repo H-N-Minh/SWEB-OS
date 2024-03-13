@@ -7,7 +7,8 @@
 #include "Scheduler.h"
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
-            : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), num_thread_(1)
+            : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), num_thread_(1),
+              filename_(filename), terminal_number_(terminal_number)
 {
     ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
@@ -48,3 +49,16 @@ UserProcess::~UserProcess()
 //   debug(USERPROCESS, "Run: Fail-safe kernel panic - you probably have forgotten to set switch_to_userspace_ = 1\n");
 //   assert(false);
 // }
+
+void UserProcess::createThread(void *(*start_routine)(void*), void* arg)
+{
+    size_t page_for_stack = PageManager::instance()->allocPPN();
+    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
+    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
+
+    UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_,
+                                            ((UserThread*) currentThread)->process_, num_thread_, start_routine, arg);
+    threads_.push_back(new_thread);
+    num_thread_++;
+    Scheduler::instance()->addNewThread(new_thread);
+}
