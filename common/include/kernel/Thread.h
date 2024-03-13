@@ -57,6 +57,7 @@ class Thread
     const char* getName();
 
     size_t getTID();
+    void setTID(size_t tid);
 
     Terminal* getTerminal();
 
@@ -113,6 +114,7 @@ class Thread
 
     //size_t tid_;
     volatile ThreadState state_;
+
 
   private:
     Thread(Thread const &src);

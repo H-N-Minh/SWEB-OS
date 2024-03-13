@@ -4,6 +4,7 @@
 
 void* threadFunction(void* arg) {
   printf("Hello from the new thread!\n");
+  while (1){}
   return NULL;
 }
 
@@ -22,6 +23,6 @@ int main() {
     printf("Failed to join the thread. Error code: %d\n", result);
     return -1;
   }
-
+  while(1){}
   return 0;
 }

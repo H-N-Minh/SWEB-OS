@@ -196,7 +196,9 @@ uint32 Syscall::get_thread_count() {
 
 uint32 Syscall::PthreadCreate(void* func, void* arg, void* tid_address) {
   ThreadCreateParams params = {func, arg};
+  Scheduler::instance()->printThreadList();
   UserThread* new_thread = ((UserThread*)currentThread)->process_->createUserThread(params);
+  Scheduler::instance()->printThreadList();
   if (new_thread != nullptr && tid_address != nullptr) {
     *(size_t*)tid_address = new_thread->getTID();
     debug(Fabi, "Syscall::PthreadCreate: tid is %ld\n", *((unsigned long*)tid_address));
