@@ -13,16 +13,20 @@ int main() {
 
     pthread_create(&thread, NULL, addition, (void*)numbers);
 
-    size_t* sum;
+    // create a delay to make sure this thread Join after worker thread finished.
+    for (size_t i = 0; i < 100000000; i++)
+    {
+        if (i % 10000000 == 0)
+        {
+            printf("Main thread is running\n");
+        }
+    }
+    size_t sum;
     pthread_join(thread, (void**) &sum);
     
 
-    printf("Sum of %zu and %zu is: %zu\n", numbers[0], numbers[1], *sum);
+    printf("Sum of %zu and %zu is: %zu \n", numbers[0], numbers[1], sum);
 
-    while (1)
-    {
-        /* code */
-    }
     
     return 0;
 }

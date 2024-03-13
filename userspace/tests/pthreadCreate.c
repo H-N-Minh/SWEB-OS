@@ -23,10 +23,10 @@ int main()
     pthread_create(&thread2, NULL, (void* (*)(void*))printNumber, (void*) y);
 
     // no pthread_join so have to loop forever to keep the process alive
-    while (1)
-    {
-        /* code */
-    }
+    size_t i = 0;
+    pthread_join(thread1, (void**) &i);
+    pthread_join(thread2, (void**) &i);
+    printf("both thread has finished\n");
     
 
     return 0;

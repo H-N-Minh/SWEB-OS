@@ -76,6 +76,7 @@ uint32 Syscall::exitThread(void* return_value)
   return 0;
 }
 
+// TODO: handle when return_ptr is NULL
 uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
 {
   debug(SYSCALL, "Syscall::joinThread: target_thread (%zu), para (%p) \n", worker_thread, return_ptr);

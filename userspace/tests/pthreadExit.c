@@ -9,8 +9,9 @@ void printNumber(size_t x)
     {
         printf("%zu\n", x);
     }
-    size_t ret = 69;
+    size_t ret = 7711;
     pthread_exit((void*) ret);
+
 }
 
 
@@ -20,11 +21,8 @@ int main()
     pthread_t thread1;
 
     pthread_create(&thread1, NULL, (void* (*)(void*))printNumber, (void*) x);
-    while (1)
-    {
-        /* code */
-    }
+    pthread_join(thread1, (void**) &x);
     
-    printf("main thread done\n");
+    printf("x is now %zu\n", x);
     return 0;
 }
