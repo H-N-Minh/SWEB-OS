@@ -23,7 +23,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
         return;
     }
 
-    threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, num_thread_));
+    threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD,
+                                      terminal_number, loader_, this, num_thread_, NULL, NULL));
     num_thread_++;
     debug(TAI_THREAD, "num thread %zu\n", num_thread_);
     debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
