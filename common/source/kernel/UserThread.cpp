@@ -38,6 +38,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - tid, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
     ArchThreads::createUserRegisters(user_registers_, (void*) func,
+
                                      (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid-1)),
                                      getKernelStackStartPointer());
     user_registers_->rdi = (size_t)arg;
