@@ -4,7 +4,7 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
-                            "/usr/pthreadExit.sweb",
+                            "/usr/pthreadJoin.sweb",
                             0
                            };
 

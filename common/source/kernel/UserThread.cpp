@@ -51,36 +51,45 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 
 
-
+// TODO: these 2 methods need locking for thread safe
 void UserThread::setReturnValue(void* return_value)
 {
     return_value_ = return_value;
     finished_ = 1;
     if(joiner_)
     {
+        debug(USERTHREAD, "UserThread::setReturnValue: Worker (%zu) waking up Joiner (%zu)\n", 
+                            getTID(), joiner_->getTID());
         Scheduler::instance()->wake(joiner_);
     }
-    debug(USERTHREAD, "UserThread::setReturnValue: Thread <%s (%zu)> finished, return value: %zu. Going to sleep now until Joined\n", 
-                        getName(), getTID(), (size_t) return_value);
+    debug(USERTHREAD, "UserThread::setReturnValue: worker (%zu) finished, return value: %zu. Going to sleep till Joined\n", 
+                        getTID(), (size_t) return_value);
     Scheduler::instance()->sleep();
+
+    assert(!finished_ && "Worker should only wakes up after Joined, then kill itself\n");
+    kill();
 }
 
-void UserThread::getReturnValue(void** return_value, UserThread* joiner)
+void UserThread::getReturnValue(void** return_value, UserThread* worker)
 {
-    if(finished_)
+    if(!finished_)
     {
-        *return_value = return_value_;
-    }
-    else
-    {
-        joiner_ = joiner;
+        joiner_ = (UserThread*) currentThread;
+        debug(USERTHREAD, "UserThread::getReturnValue: Worker (%zu) is not finished, Joiner (%zu) going to sleep\n", 
+                            getTID(), currentThread->getTID());
         Scheduler::instance()->sleep();
 
-        assert(finished_ && "Thread should be finished now");
-        *return_value = return_value_;
+        assert(finished_ && "Joiner should wakes up only when the result is finished");
+    }
+    *return_value = return_value_;
+    finished_ = 0;  // reset the finished flag so the worker thread can wake up and kill itself
+    if (worker->getState() == ThreadState::Sleeping)
+    {
+        debug(USERTHREAD, "UserThread::getReturnValue: Joiner (%zu) waking up Worker (%zu)\n",
+                            currentThread->getTID(), worker->getTID());
+        Scheduler::instance()->wake(worker);
     }
 }
-
 
 
 // DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
@@ -98,7 +107,6 @@ void UserThread::kill()
         process->threads_.erase(thread);
     }
   }
-  
 
   // exactly like original kill()
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv

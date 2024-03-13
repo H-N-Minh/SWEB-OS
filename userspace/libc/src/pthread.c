@@ -19,8 +19,8 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 */
 void pthread_create_helper(void* start_routine, void* arg)
 {
-  ((void* (*)(void*))start_routine)(arg);
-  pthread_exit(NULL);
+  void* retval = ((void* (*)(void*))start_routine)(arg);
+  pthread_exit(retval);
 }
 
 /**

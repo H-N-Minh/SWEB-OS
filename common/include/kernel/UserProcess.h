@@ -1,6 +1,7 @@
 #pragma once
 #include "UserThread.h"
 #include "uvector.h"
+#include "types.h"
 
 class UserProcess
 {
@@ -16,7 +17,6 @@ class UserProcess
     virtual ~UserProcess();
 
     ustl::vector<UserThread*> threads_;
-    bool to_be_destroyed_ = false;
 
   private:
     int32 fd_;
@@ -27,12 +27,11 @@ class UserProcess
     int32 tid_counter_;
     ustl::string filename_;
     uint32 terminal_number_;
+
   public:
-
-
     void createUserThread(void* func, void* para, void* tid, void* pcreate_helper);
-    void storeThreadRetval(uint32 tid, void* retval);   
-    void retrieveThreadRetval(uint32 target_tid, UserThread* waiter_thread, void** retval);
+
+    UserThread* getUserThread(size_t tid);
 
     /* 
     Could be added from Thread:

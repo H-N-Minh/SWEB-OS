@@ -76,10 +76,13 @@ uint32 Syscall::exitThread(void* return_value)
   return 0;
 }
 
-uint32 Syscall::joinThread(size_t target_thread, void **return_ptr)
+uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
 {
-  debug(SYSCALL, "Syscall::joinThread: thread (%zu), para (%p) \n", target_thread, return_ptr);
-  ((UserThread*) currentThread)->process_->retrieveThreadRetval(target_thread, (UserThread*) currentThread, return_ptr);
+  debug(SYSCALL, "Syscall::joinThread: target_thread (%zu), para (%p) \n", worker_thread, return_ptr);
+  UserThread* worker = ((UserThread*) currentThread)->process_->getUserThread(worker_thread);
+  assert(worker && "Thread not found in Process's vector");
+  
+  worker->getReturnValue(return_ptr, worker);
   debug(MINH, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
   return 0;
 }
