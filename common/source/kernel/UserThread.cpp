@@ -13,6 +13,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 {
     tid_ = tid;
 
+    size_t page_for_stack = PageManager::instance()->allocPPN();
+    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
+    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
+
     ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),(void*) (USER_BREAK - sizeof(pointer)), getKernelStackStartPointer());
     ArchThreads::setAddressSpace(this, loader_->arch_memory_);
 
@@ -27,6 +31,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
             : Thread(working_dir, name, type, loader), process_(process)
 {
     tid_ = tid;
+
+    size_t page_for_stack = PageManager::instance()->allocPPN();
+    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE, page_for_stack, 1);
+    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
     ArchThreads::createUserRegisters(user_registers_, (void*) func,
                                      (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * tid),

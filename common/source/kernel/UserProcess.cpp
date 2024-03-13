@@ -23,10 +23,6 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
         return;
     }
 
-    size_t page_for_stack = PageManager::instance()->allocPPN();
-    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
-    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
-
     threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, num_thread_));
     num_thread_++;
     debug(TAI_THREAD, "num thread %zu\n", num_thread_);
@@ -52,9 +48,6 @@ UserProcess::~UserProcess()
 
 void UserProcess::createThread(void *(*start_routine)(void*), void* arg)
 {
-    size_t page_for_stack = PageManager::instance()->allocPPN();
-    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1, page_for_stack, 1);
-    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
     UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_,
                                             ((UserThread*) currentThread)->process_, num_thread_, start_routine, arg);
