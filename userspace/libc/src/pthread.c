@@ -33,7 +33,7 @@ void pthread_exit(void *value_ptr)
  */
 int pthread_cancel(pthread_t thread)
 {
-  return -1;
+    return __syscall(sc_threadcancel, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**

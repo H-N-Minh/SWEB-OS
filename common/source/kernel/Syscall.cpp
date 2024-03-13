@@ -57,6 +57,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = pthread_create((size_t*)arg1, (size_t*)arg2, (void *(*)(void*))arg3, (void*)arg4);
       break;
 
+    case sc_threadcancel:
+        return_value = pthread_cancel((size_t*)arg1);
+        break;
+
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -202,6 +206,16 @@ int Syscall::pthread_create(size_t* thread, size_t* attr, void *(*start_routine)
     debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
     Scheduler::instance()->printThreadList();
     ((UserThread*) currentThread)->process_->createThread(start_routine, arg);
+    Scheduler::instance()->printThreadList();
+    return 0;
+}
+
+int Syscall::pthread_cancel(size_t* thread)
+{
+
+    debug(TAI_THREAD, "------------------------------------thread %p\n", thread);
+    Scheduler::instance()->printThreadList();
+    //((UserThread*) currentThread)->process_->cancelThread(thread);
     Scheduler::instance()->printThreadList();
     return 0;
 }

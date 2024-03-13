@@ -22,5 +22,6 @@ class Syscall
     static uint32 get_thread_count();
 
     static int pthread_create(size_t* thread, size_t* attr, void *(*start_routine)(void*), void* arg);
+    static int pthread_cancel(size_t* thread);
 };
 
