@@ -24,7 +24,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page_, page_for_stack, 1);
         assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),(void*)user_stack_start, getKernelStackStartPointer());
-        debug(USERTHREAD, "First thread: Stack starts at %zd(=%zx) and virtual page is%zd(=%zx)\n\n",user_stack_start, user_stack_start, virtual_page_, virtual_page_);
+        debug(USERTHREAD, "First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",user_stack_start, user_stack_start, virtual_page_, virtual_page_);
     }
     else
     {

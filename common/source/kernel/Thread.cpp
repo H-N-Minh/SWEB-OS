@@ -77,16 +77,16 @@ void Thread::kill()
     thread_gets_killed_lock_.acquire();
     thread_killed = true;
     thread_gets_killed_.signal();
-    debug(THREAD, "Thread %ld signaled that it gets killed.\n",getTID()); //should be 2
+    debug(THREAD, "Thread %ld signaled that it gets killed.\n",getTID());
     thread_gets_killed_lock_.release();
 
     
     join_thread_->recieved_join_signal_lock_.acquire(); //Todo:what if thread that wants to get joined get killed in the meantime -> we are stuck and never get killed
     while(!recieved_join_signal_bool_)
     {
-      debug(THREAD, "Waiting until join signal is received by %ld.\n",join_thread_->getTID()); //should be 1
+      debug(THREAD, "Waiting until join signal is received by %ld.\n",join_thread_->getTID());
       join_thread_->recieved_join_signal_.wait();
-      debug(THREAD, "Join signal was received by %ld.\n",join_thread_->getTID()); //should be 1
+      debug(THREAD, "Join signal was received by %ld.\n",join_thread_->getTID());
     }                                         
     join_thread_->recieved_join_signal_lock_.release(); 
   }

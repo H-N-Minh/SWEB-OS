@@ -223,7 +223,7 @@ void Syscall::pthread_exit(void* value_ptr){
 int Syscall::pthread_cancel(size_t thread_id) //probably broken
 {
   debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called with thread_id %ld.\n",thread_id);
-  currentThread->process_->threads_lock_.acquire();           // TODO: Code1
+  currentThread->process_->threads_lock_.acquire();
 
   bool thread_id_found = false;
   UserThread* thread_to_be_deleted;
