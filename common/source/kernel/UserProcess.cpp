@@ -56,3 +56,13 @@ void UserProcess::createThread(void *(*start_routine)(void*), void* arg)
     num_thread_++;
     Scheduler::instance()->addNewThread(new_thread);
 }
+
+UserThread* UserProcess::getUserThread(size_t tid)
+{
+    for (size_t i = 0; i < threads_.size(); i++)
+    {
+        if (threads_[i]->getTID() == tid)
+            return threads_[i];
+    }
+    return 0;
+}

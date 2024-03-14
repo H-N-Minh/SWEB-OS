@@ -192,3 +192,25 @@ void Thread::setState(ThreadState new_state)
 
     state_ = new_state;
 }
+
+void Thread::cancelThread()
+{
+    // Set the state of the thread to ToBeDestroyed
+    setState(ToBeDestroyed);
+}
+
+void Thread::setCancelState(CancelState state) {
+    cancel_state_ = state;
+}
+
+CancelState Thread::getCancelState() const {
+    return cancel_state_;
+}
+
+void Thread::setCancelType(CancelType type) {
+    cancel_type_ = type;
+}
+
+CancelType Thread::getCancelType() const {
+    return cancel_type_;
+}

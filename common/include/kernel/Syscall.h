@@ -2,6 +2,8 @@
 
 #include <types.h>
 
+#include "Thread.h"
+
 class Syscall
 {
   public:
@@ -22,6 +24,9 @@ class Syscall
     static uint32 get_thread_count();
 
     static int pthread_create(size_t* thread, size_t* attr, void *(*start_routine)(void*), void* arg);
-    static int pthread_cancel(size_t* thread);
+    static int pthread_cancel(size_t* thread_id);
+
+    static int pthread_setcancelstate(CancelState state, CancelState* oldstate);
+    static int pthread_setcanceltype(CancelType type, CancelType* oldtype);
 };
 

@@ -7,6 +7,10 @@
 
 enum ThreadState{Running, Sleeping, ToBeDestroyed};
 enum SystemState {BOOTING, RUNNING, KPANIC};
+
+enum CancelState {ENABLED, DISABLED};
+enum CancelType {DEFERRED, ASYNCHRONOUS};
+
 extern SystemState system_state;
 
 class Thread;
@@ -111,11 +115,22 @@ class Thread
          */
         Lock* holding_lock_list_;
 
+        void cancelThread();
+
+        void setCancelState(CancelState state);
+        CancelState getCancelState() const;
+
+        void setCancelType(CancelType type);
+        CancelType getCancelType() const;
+
     private:
         Thread(Thread const &src);
         Thread &operator=(Thread const &src);
 
         volatile ThreadState state_;
+
+        CancelState cancel_state_ = ENABLED; //default cancel state is ENABLED
+        CancelType cancel_type_ = DEFERRED; //default cancel type is DEFERRED
 
     protected:
         size_t tid_;

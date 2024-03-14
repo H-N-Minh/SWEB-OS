@@ -19,6 +19,8 @@ class UserProcess
         bool to_be_destroyed_ = false;
 
         void createThread(void *(*start_routine)(void*), void* para);
+
+        UserThread* getUserThread(size_t tid);
     private:
         int32 fd_;
         Loader* loader_;
