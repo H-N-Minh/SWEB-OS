@@ -115,6 +115,7 @@ void Syscall::exit(size_t exit_code)
     if(process->threads_[i] != currentThread)
     {
       process->threads_[i]->kill();
+      // after thread kill itself, it is removed from Vector, so we need to decrement i and vector size
       i--;
       vector_size--;
     } 
