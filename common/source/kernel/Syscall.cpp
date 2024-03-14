@@ -227,16 +227,15 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
 {
   debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called with thread_id %ld.\n",thread_id);
   currentThread->process_->threads_lock_.acquire();
-
   bool thread_id_found = false;
-  UserThread* thread_to_be_deleted;
+  UserThread* thread_to_be_canceled;
   for (auto& thread : currentThread->process_->threads_)
   {
     if(thread_id == thread->getTID())
     {
       thread->wants_to_be_canceled_ = true;
       thread_id_found = true;
-      thread_to_be_deleted = thread;
+      thread_to_be_canceled = thread;
       break;
     } 
   }
@@ -247,16 +246,16 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
   }
   currentThread->process_->threads_lock_.release();  
 
-  thread_to_be_deleted->cancel_thread_ = currentThread;
+  thread_to_be_canceled->cancel_thread_ = currentThread;
   
 
-  thread_to_be_deleted->has_reached_cancelation_point_lock_.acquire();
-  while(!thread_to_be_deleted->reached_cancelation_point_)
+  thread_to_be_canceled->has_reached_cancelation_point_lock_.acquire();
+  while(!thread_to_be_canceled->reached_cancelation_point_)
   {
-    thread_to_be_deleted->has_reached_cancelation_point_.wait();
+    thread_to_be_canceled->has_reached_cancelation_point_.wait();
     
   }
-  thread_to_be_deleted->has_reached_cancelation_point_lock_.release();
+  thread_to_be_canceled->has_reached_cancelation_point_lock_.release();
 
   
   currentThread->recieved_delete_signal_lock_.acquire();
@@ -426,27 +425,27 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
 int Syscall::execv(const char *path, char *const argv[])
 {
   debug(SYSCALL, "Currently unused %ld and %ld\n", (size_t)path, (size_t)argv);
-  
-  int32 fd = VfsSyscall::open(path, O_RDONLY);
+  UserProcess& current_process = *currentThread->process_;
+  current_process.execv_fd_ = VfsSyscall::open(path, O_RDONLY);
 
-  if (fd >= 0)
+  if (current_process.execv_fd_ >= 0)
   {
-    currentThread->process_->execv_loader_ = new Loader(fd);
+    current_process.execv_loader_ = new Loader(current_process.execv_fd_);
   }
 
-  if (!currentThread->process_->execv_loader_)
+  if (!current_process.execv_loader_)
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", path);
-    VfsSyscall::close(fd);
+    VfsSyscall::close(current_process.execv_fd_);
     return -1;
     
   }
-  if (!currentThread->process_->execv_loader_->loadExecutableAndInitProcess())
+  if (!current_process.execv_loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", path);
-    delete currentThread->process_->execv_loader_;
-    currentThread->process_->execv_loader_ = 0;
-    VfsSyscall::close(fd);
+    delete current_process.execv_loader_;
+    current_process.execv_loader_ = 0;
+    VfsSyscall::close(current_process.execv_fd_);
     return -1;
   }
 

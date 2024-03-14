@@ -4,7 +4,7 @@
 
 int main()
 {
-    const char * path = "usr/shell.sweb";   //not sure if path is right -- pretty sure it is not
+    const char * path = "usr/exec1_testprogram.sweb";
 
     int rv = execv(path, NULL);
 

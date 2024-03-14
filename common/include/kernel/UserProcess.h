@@ -33,6 +33,7 @@ class UserProcess
     ustl::string filename_;  //TODO: lock ? 
 
     Loader* execv_loader_{NULL}; //needs a loock
+    int32 execv_fd_{NULL};  //TODO: lock ?        
 
     size_t thread_counter_{0};   //gets currently also increased if thread_creation was not succesfull
 
