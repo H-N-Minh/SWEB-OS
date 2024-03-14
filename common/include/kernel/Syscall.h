@@ -28,6 +28,8 @@ class Syscall
 
     static unsigned int sleep(unsigned int seconds);
 
+    static int execv(const char *path, char *const argv[]);
+
 
     static bool check_parameter(size_t ptr, bool allowed_to_be_null = false);
 };

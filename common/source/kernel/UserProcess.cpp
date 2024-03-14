@@ -13,7 +13,6 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
         
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
-
   if (fd_ >= 0)
     loader_ = new Loader(fd_);
 
@@ -36,7 +35,6 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
 UserProcess::~UserProcess()
 {
-
   assert(Scheduler::instance()->isCurrentlyCleaningUp());
   delete loader_;
   loader_ = 0;

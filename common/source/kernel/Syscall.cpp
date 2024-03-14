@@ -87,6 +87,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_sleep:
       return_value = sleep((unsigned int)arg1);
       break;
+    case sc_execv:
+      return_value = execv((const char *)arg1, (char *const*)arg2);
+      break;
 
     default:
       return_value = -1;
@@ -418,4 +421,39 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
       return false;
     }
     return true;
+}
+
+int Syscall::execv(const char *path, char *const argv[])
+{
+  debug(SYSCALL, "Currently unused %ld and %ld\n", (size_t)path, (size_t)argv);
+  
+  int32 fd = VfsSyscall::open(path, O_RDONLY);
+
+  if (fd >= 0)
+  {
+    currentThread->process_->execv_loader_ = new Loader(fd);
+  }
+
+  if (!currentThread->process_->execv_loader_)
+  {
+    debug(USERPROCESS, "Error: loading %s failed!\n", path);
+    VfsSyscall::close(fd);
+    return -1;
+    
+  }
+  if (!currentThread->process_->execv_loader_->loadExecutableAndInitProcess())
+  {
+    debug(USERPROCESS, "Error: loading %s failed!\n", path);
+    delete currentThread->process_->execv_loader_;
+    currentThread->process_->execv_loader_ = 0;
+    VfsSyscall::close(fd);
+    return -1;
+  }
+
+  //destroy other threads
+  ((UserThread*)currentThread)->last_thread_before_exec_ = true;
+  ((UserThread*)currentThread)->kill();
+
+  
+  assert(0 && "Sucessful exec should not return");
 }

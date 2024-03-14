@@ -32,6 +32,8 @@ class UserProcess
     uint32 terminal_number_;  //TODO: lock ? 
     ustl::string filename_;  //TODO: lock ? 
 
+    Loader* execv_loader_{NULL}; //needs a loock
+
     size_t thread_counter_{0};   //gets currently also increased if thread_creation was not succesfull
 
 

@@ -13,6 +13,9 @@ class UserThread : public Thread
         ~UserThread();
 
         bool last_thread_alive_{false};
+        bool last_thread_before_exec_{false};
+
+
         bool wants_to_be_canceled_{false};
 
         size_t virtual_page_;
