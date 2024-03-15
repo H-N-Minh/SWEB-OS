@@ -141,7 +141,7 @@ class Thread
     ustl::string name_;
 
   public:
-    Thread* cancel_thread_{NULL};                 //move to userthread later ...
+    Thread* cancel_thread_{NULL};                 //move to userthread later ...  //need to be locked by thread_lock TODO
 
     bool reached_cancelation_point_{false};
     Mutex has_reached_cancelation_point_lock_;
@@ -150,11 +150,7 @@ class Thread
 
     Thread* join_thread_{NULL};
 
-    // bool recieved_join_signal_bool_{false};
-    // Mutex recieved_join_signal_lock_;
-    // Condition recieved_join_signal_;
-
-    bool thread_killed{false};
+    bool thread_killed{false};             //not the best naming: TODO
     Mutex thread_gets_killed_lock_;
     Condition thread_gets_killed_;
 

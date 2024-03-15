@@ -22,7 +22,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   }
   if(((UserThread*)currentThread)->wants_to_be_canceled_)
   {
-    cancelation_checkpoint();
+    pthread_exit(0);   //TODO: should not be 0
   }
 
   switch (syscall_number)
@@ -85,7 +85,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   }
   if(((UserThread*)currentThread)->wants_to_be_canceled_)
   {
-    cancelation_checkpoint();
+    pthread_exit(0);            //TODO: should not be 0
   }
   return return_value;
 }
@@ -96,26 +96,33 @@ void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   UserProcess& current_process = *currentThread->process_;
-  current_process.threads_lock_.acquire();
-  debug(SYSCALL, "Syscall::EXIT: Currently %ld threads in the threadlist. \n",current_process.threads_.size());
-  for (auto& thread : current_process.threads_)
+  while(1)
   {
-    if(thread != currentThread)
+    current_process.threads_lock_.acquire();
+    if(current_process.threads_.size() > 1)
     {
-      debug(SYSCALL, "Syscall::EXIT: Thread %ld gets killed. \n",thread->getTID());
-      thread->kill();         //i somehow need to deal with the lock
-    } 
+      size_t cancel_id = current_process.threads_[0]->getTID();
+      debug(SYSCALL, "Syscall::EXIT: Thread %ld gets canceled. \n",cancel_id);
+      current_process.threads_lock_.release();
+      pthread_cancel(cancel_id);
+      debug(SYSCALL, "Syscall::EXIT: Thread %ld was canceled sucessfully. \n",cancel_id);
+    }
+    else
+    {
+      current_process.threads_lock_.release();
+      break;
+    }  
   }
-  current_process.threads_.clear();
+
   ((UserThread*)currentThread)->last_thread_alive_ = true;
-  currentThread->holding_lock_list_->waiters_list_ = 0;      //TODO: Needs to locked i guess[]
-  current_process.threads_lock_.release();  // TODO://what if it is not the last thread
+  //currentThread->holding_lock_list_->waiters_list_ = 0;      //TODO: Needs to locked i guess[]
   debug(SYSCALL, "Syscall::EXIT: Last Thread %ld gets killed. \n",currentThread->getTID());
   currentThread->kill();
 
   assert(false && "This should never happen");
 
 }
+
 
 int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
 {
@@ -200,7 +207,11 @@ void Syscall::pthread_exit(void* value_ptr){
 
   ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), currentThread);
   current_process.threads_.erase(iterator);
-  
+
+  if(((UserThread*)currentThread)->wants_to_be_canceled_)
+  {
+    send_cancelation_notification();
+  }
   if(current_process.threads_.size() == 0)
   {
     ((UserThread*)currentThread)->last_thread_alive_ = true;
@@ -226,28 +237,18 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
 {
   debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called with thread_id %ld.\n",thread_id);
   UserProcess& current_process = *currentThread->process_;
-  current_process.threads_lock_.acquire();
-  bool thread_id_found = false;
   UserThread* thread_to_be_canceled;
-  for (auto& thread : current_process.threads_)
+  current_process.threads_lock_.acquire();
+  thread_to_be_canceled = current_process.get_thread_from_threadlist(thread_id);
+  if(!thread_to_be_canceled)
   {
-    if(thread_id == thread->getTID())
-    {
-      thread->wants_to_be_canceled_ = true;
-      thread_id_found = true;
-      thread_to_be_canceled = thread;
-      break;
-    } 
-  }
-
-  if(!thread_id_found)
-  {
+    current_process.threads_lock_.release();
     return -1;
   }
+  thread_to_be_canceled->wants_to_be_canceled_ = true;
+  thread_to_be_canceled->cancel_thread_ = currentThread;                  //need to check if currentThread is still valid if using cancel_thread
   current_process.threads_lock_.release();  
 
-  thread_to_be_canceled->cancel_thread_ = currentThread;
-  
 
   currentThread->has_reached_cancelation_point_lock_.acquire();
   while(!currentThread->reached_cancelation_point_)
@@ -452,11 +453,15 @@ int Syscall::execv(const char *path, char *const argv[])
 }
 
 
- void Syscall::cancelation_checkpoint()
+ void Syscall::send_cancelation_notification()
  {
+    UserProcess& current_process = *currentThread->process_;
+    if(!current_process.check_if_thread_in_threadList((UserThread*)((UserThread*)currentThread)->cancel_thread_))         //not sure if that can even happen
+    {
+      return;
+    }
     currentThread->cancel_thread_->has_reached_cancelation_point_lock_.acquire();
     currentThread->cancel_thread_->reached_cancelation_point_ = true;
     currentThread->cancel_thread_->has_reached_cancelation_point_.signal();
     currentThread->cancel_thread_->has_reached_cancelation_point_lock_.release();
-    pthread_exit(0); //should not be 0 TODO
  }

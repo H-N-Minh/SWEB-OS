@@ -71,6 +71,31 @@ int UserProcess::create_thread(size_t* thread, void *(*start_routine)(void*), vo
 }
 
 
+UserThread* UserProcess::get_thread_from_threadlist(size_t id)
+{
+  for (auto& thread : threads_)
+  {
+    if(id == thread->getTID())
+    {
+      return thread;
+    } 
+  }
+  return NULL;
+}
+
+bool UserProcess::check_if_thread_in_threadList(UserThread* test_thread)
+{
+  for (auto& thread : threads_)
+  {
+    if(test_thread == thread)
+    {
+      return true;
+    } 
+  }
+  return false;
+}
+
+
 
 
 

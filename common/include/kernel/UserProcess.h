@@ -18,6 +18,9 @@ class UserProcess
     virtual ~UserProcess();
 
     int create_thread(size_t* thread, void *(*start_routine)(void*), void *(*wrapper)(), void* arg);
+
+    UserThread* get_thread_from_threadlist(size_t id);
+    bool check_if_thread_in_threadList(UserThread* test_thread);
     
 
     ustl::vector<UserThread*> threads_;
