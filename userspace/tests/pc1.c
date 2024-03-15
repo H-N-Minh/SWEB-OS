@@ -3,7 +3,7 @@
 #include <assert.h>
 
 
-int function1(void* simple_argument)
+int function1()
 {
     return 0;
 }

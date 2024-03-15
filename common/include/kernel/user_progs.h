@@ -3,18 +3,27 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                             "/usr/shell.sweb",
+                             //"/usr/shell.sweb",
 
-                            // "/usr/multithreading1.sweb",        //pthread_create
-                            // "/usr/multithreading2.sweb",        //pthread_create
-                            // "/usr/multithreading3.sweb",        //pthread_exit
-                            // "/usr/multithreading4.sweb",        //pthread_create  
-                            // "/usr/multithreading5.sweb",        //pthread_create, pthread_join
-                            // "/usr/multithreading6.sweb",        //pthread_create
-                            // "/usr/multithreading7.sweb",        //pthread_create
-                            // "/usr/multithreading8.sweb",        //pthread_create, pthread_join
-                            // "/usr/multithreading9.sweb",        //pthread_create, pthread_join
-                            // "/usr/multithreading10.sweb",       //pthread_create, pthread_cancel
+                            // //pthread_create
+                            "/usr/pc1.sweb",                      //sanity checks
+                            "/usr/pc2.sweb",                      //simple pthread_create and check if thread id gets set
+                            "/usr/pc3.sweb",                      //starting 250 threads
+                            "/usr/pc4.sweb",                      //check if to running threads have different id
+
+                            // //pthread_exit
+                            "/usr/pe1.sweb",                      //pthread_exit in main
+
+                            // //pthread_create and pthread_exit
+                            "/usr/p1.sweb",                       //pthread_create with pthread exit in function
+
+                            // //pthread_join
+                            "/usr/pj1.sweb",                       //pthread_join for function that has already finished
+                            "/usr/pj2.sweb",                       //pthread_join where function is still running
+
+
+
+                            
 
 
                             // "/usr/exec1.sweb",

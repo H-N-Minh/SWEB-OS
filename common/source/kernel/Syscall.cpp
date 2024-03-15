@@ -24,7 +24,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   {
     if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_DEFERRED)
     {
-      pthread_exit((void*)7);   //TODO: should not be 7
+      pthread_exit((void*)-1);   //TODO: should not be 7
     }
     else
     {
@@ -99,7 +99,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   }
   if(((UserThread*)currentThread)->wants_to_be_canceled_)
   {
-    pthread_exit((void*)8);            //TODO: should not be 8
+    pthread_exit((void*)-1);            //TODO: should not be 8
   }
   return return_value;
 }
@@ -201,8 +201,10 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   while(!currentThread->thread_killed)
   {
     currentThread->thread_gets_killed_.wait();
-  }                    
+  }     
+  currentThread->thread_killed = false;               
   currentThread->thread_gets_killed_lock_.release(); 
+
 
   current_process.value_ptr_by_id_lock_.acquire();  
   iterator = current_process.value_ptr_by_id_.find(thread_id);            
@@ -212,8 +214,10 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
     current_process.value_ptr_by_id_.erase(iterator);
   }
   current_process.value_ptr_by_id_lock_.release();  
+
   if(value_ptr != NULL)
   {
+    //debug(SYSCALL,"return value is %ld\n", (size_t)return_value);
     *value_ptr = return_value;
   }
   return 0;
@@ -279,6 +283,7 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
     {
       currentThread->has_reached_cancelation_point_.wait();
     }
+    currentThread->reached_cancelation_point_ = false;
     currentThread->has_reached_cancelation_point_lock_.release();
   }
   else
@@ -299,6 +304,7 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
       {
         currentThread->has_reached_cancelation_point_.wait();
       }
+      currentThread->reached_cancelation_point_ = false;
       currentThread->has_reached_cancelation_point_lock_.release();
     }
     
