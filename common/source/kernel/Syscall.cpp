@@ -10,6 +10,7 @@
 #include "uvector.h"
 #include "Mutex.h"
 #include "Loader.h"
+#include "umap.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -107,7 +108,7 @@ void Syscall::exit(size_t exit_code)
   }
   current_process.threads_.clear();
   ((UserThread*)currentThread)->last_thread_alive_ = true;
-  currentThread->holding_lock_list_->waiters_list_ = 0;      //TODO: Needs to locked i guess
+  currentThread->holding_lock_list_->waiters_list_ = 0;      //TODO: Needs to locked i guess[]
   current_process.threads_lock_.release();  // TODO://what if it is not the last thread
   debug(SYSCALL, "Syscall::EXIT: Last Thread %ld gets killed. \n",currentThread->getTID());
   currentThread->kill();
@@ -131,9 +132,14 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   }
 
   current_process.threads_lock_.acquire();
-  current_process.value_ptr_by_id_lock_.acquire();                                                         
-  void* return_value = current_process.value_ptr_by_id_[thread_id];
-  //probably removing it from the value_ptr_by_id list would be a good idea here
+  current_process.value_ptr_by_id_lock_.acquire();  
+  ustl::map<size_t, void*>::iterator iterator = current_process.value_ptr_by_id_.find(thread_id);                                                   
+  void* return_value;
+  if(iterator != current_process.value_ptr_by_id_.end())
+  {
+    return_value = current_process.value_ptr_by_id_[thread_id];
+    current_process.value_ptr_by_id_.erase(iterator);
+  }
   current_process.value_ptr_by_id_lock_.release(); 
   if(return_value)                         //thread has already terminated
   {
@@ -173,7 +179,12 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   currentThread->thread_gets_killed_lock_.release(); 
 
   current_process.value_ptr_by_id_lock_.acquire();  
-  return_value = current_process.value_ptr_by_id_[thread_id];
+  iterator = current_process.value_ptr_by_id_.find(thread_id);            
+  if(iterator != current_process.value_ptr_by_id_.end())
+  {
+    return_value = current_process.value_ptr_by_id_[thread_id];
+    current_process.value_ptr_by_id_.erase(iterator);
+  }
   current_process.value_ptr_by_id_lock_.release();  
   if(value_ptr != NULL)
   {
