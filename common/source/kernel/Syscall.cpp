@@ -19,7 +19,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     debug(SYSCALL, "Syscall %zd called with arguments %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx) %zd(=%zx)\n",
           syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
   }
-  if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
+  if(((UserThread*)currentThread)->wants_to_be_canceled_)
   {
     cancelation_checkpoint();
   }
@@ -82,7 +82,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
-  if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
+  if(((UserThread*)currentThread)->wants_to_be_canceled_)
   {
     cancelation_checkpoint();
   }
@@ -146,14 +146,12 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   }
   
   UserThread* thread_to_be_joined;
-  size_t thread_to_be_joined_id;
 
   for (auto& thread : current_process.threads_)
   {
     if(thread_id == thread->getTID())
     {
       thread_to_be_joined = thread;
-      thread_to_be_joined_id = thread_id;
       break;
     } 
   }
@@ -164,25 +162,23 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
 
   current_process.threads_lock_.release();   //possible later release
   
+  
+
+  currentThread->thread_gets_killed_lock_.acquire();
   thread_to_be_joined->join_thread_ = currentThread; //??
-  thread_to_be_joined->thread_gets_killed_lock_.acquire();
-  while(!thread_to_be_joined->thread_killed)
+  while(!currentThread->thread_killed)
   {
-    debug(SYSCALL, "Waiting for thread %ld to get killed.\n",thread_to_be_joined->getTID()); //should be 2
-    thread_to_be_joined->thread_gets_killed_.wait();   
-    debug(SYSCALL, "Recieved from thread %ld that it get killed.\n",thread_to_be_joined->getTID());  //should be 2
-  }                  
-  thread_to_be_joined->thread_gets_killed_lock_.release(); 
+    currentThread->thread_gets_killed_.wait();
+  }                    
+  currentThread->thread_gets_killed_lock_.release(); 
 
-
-  currentThread->recieved_join_signal_lock_.acquire();
-  thread_to_be_joined->recieved_join_signal_bool_ = true;       
-  currentThread->recieved_join_signal_.signal();
-  currentThread->recieved_join_signal_lock_.release();
-  debug(SYSCALL, "Thread with id %ld joined thread with id %ld.\n", ((UserThread*)currentThread)->getTID(), thread_to_be_joined_id);
-
+  current_process.value_ptr_by_id_lock_.acquire();  
   return_value = current_process.value_ptr_by_id_[thread_id];
-  *value_ptr = return_value;
+  current_process.value_ptr_by_id_lock_.release();  
+  if(value_ptr != NULL)
+  {
+    *value_ptr = return_value;
+  }
   return 0;
 }
 
@@ -242,19 +238,12 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
   thread_to_be_canceled->cancel_thread_ = currentThread;
   
 
-  thread_to_be_canceled->has_reached_cancelation_point_lock_.acquire();
-  while(!thread_to_be_canceled->reached_cancelation_point_)
+  currentThread->has_reached_cancelation_point_lock_.acquire();
+  while(!currentThread->reached_cancelation_point_)
   {
-    thread_to_be_canceled->has_reached_cancelation_point_.wait();
-    
+    currentThread->has_reached_cancelation_point_.wait();
   }
-  thread_to_be_canceled->has_reached_cancelation_point_lock_.release();
-
-  
-  currentThread->recieved_delete_signal_lock_.acquire();
-  currentThread->recieved_delete_signal_bool_ = true;     
-  currentThread->recieved_delete_signal_.signal();
-  currentThread->recieved_delete_signal_lock_.release();
+  currentThread->has_reached_cancelation_point_lock_.release();
 
   return 0;
 }
@@ -454,18 +443,9 @@ int Syscall::execv(const char *path, char *const argv[])
 
  void Syscall::cancelation_checkpoint()
  {
-    currentThread->has_reached_cancelation_point_lock_.acquire();
-    currentThread->reached_cancelation_point_ = true;
-    currentThread->has_reached_cancelation_point_.signal();
-    currentThread->has_reached_cancelation_point_lock_.release();
-
-    currentThread->cancel_thread_->recieved_delete_signal_lock_.acquire();
-    while(!currentThread->cancel_thread_-> recieved_delete_signal_bool_)
-    {
-      currentThread->cancel_thread_->recieved_delete_signal_.wait();
-    }
-    
-    currentThread->cancel_thread_->recieved_delete_signal_lock_.release();
-
+    currentThread->cancel_thread_->has_reached_cancelation_point_lock_.acquire();
+    currentThread->cancel_thread_->reached_cancelation_point_ = true;
+    currentThread->cancel_thread_->has_reached_cancelation_point_.signal();
+    currentThread->cancel_thread_->has_reached_cancelation_point_lock_.release();
     pthread_exit(0); //should not be 0 TODO
  }

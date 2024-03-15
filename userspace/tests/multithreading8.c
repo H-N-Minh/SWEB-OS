@@ -5,7 +5,7 @@
 
 int function1()
 {
-    for(int i = 1; i < 100; i++)
+    for(int i = 1; i < 1000; i++)
     {
         printf("%d ",i);
     }
@@ -20,7 +20,6 @@ int main()
     int rv_create = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
     assert(rv_create == 0);
     assert(thread_id);
-
     int rv_join = pthread_join(thread_id, NULL);
     assert(rv_join == 0);
     

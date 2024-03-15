@@ -37,8 +37,7 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
     my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name)), 
     has_reached_cancelation_point_lock_("has_reached_cancelation_point_lock_"),
     has_reached_cancelation_point_(&has_reached_cancelation_point_lock_, "has_reached_cancelation_point_"),
-    recieved_delete_signal_lock_("recieved_delete_signal_lock_"), recieved_delete_signal_(&recieved_delete_signal_lock_, "recieved_delete_signal_"),
-    recieved_join_signal_lock_("recieved_join_signal_lock_"), recieved_join_signal_(&recieved_join_signal_lock_, "recieved_join_signal_"),
+   // recieved_join_signal_lock_("recieved_join_signal_lock_"), recieved_join_signal_(&recieved_join_signal_lock_, "recieved_join_signal_"),
     thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_")
 
 {
@@ -73,22 +72,10 @@ void Thread::kill()
 
   if(join_thread_)
   {
-    debug(THREAD, "Some other thread wants to join this thread.\n");
-    thread_gets_killed_lock_.acquire();
-    thread_killed = true;
-    thread_gets_killed_.signal();
-    debug(THREAD, "Thread %ld signaled that it gets killed.\n",getTID());
-    thread_gets_killed_lock_.release();
-
-    
-    join_thread_->recieved_join_signal_lock_.acquire(); //Todo:what if thread that wants to get joined get killed in the meantime -> we are stuck and never get killed
-    while(!recieved_join_signal_bool_)
-    {
-      debug(THREAD, "Waiting until join signal is received by %ld.\n",join_thread_->getTID());
-      join_thread_->recieved_join_signal_.wait();
-      debug(THREAD, "Join signal was received by %ld.\n",join_thread_->getTID());
-    }                                         
-    join_thread_->recieved_join_signal_lock_.release(); 
+    join_thread_->thread_gets_killed_lock_.acquire();
+    join_thread_->thread_killed = true;
+    join_thread_->thread_gets_killed_.signal();
+    join_thread_->thread_gets_killed_lock_.release();
   }
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv

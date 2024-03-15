@@ -147,16 +147,12 @@ class Thread
     Mutex has_reached_cancelation_point_lock_;
     Condition has_reached_cancelation_point_;
 
-    bool recieved_delete_signal_bool_{false};
-    Mutex recieved_delete_signal_lock_;
-    Condition recieved_delete_signal_;
-
 
     Thread* join_thread_{NULL};
 
-    bool recieved_join_signal_bool_{false};
-    Mutex recieved_join_signal_lock_;
-    Condition recieved_join_signal_;
+    // bool recieved_join_signal_bool_{false};
+    // Mutex recieved_join_signal_lock_;
+    // Condition recieved_join_signal_;
 
     bool thread_killed{false};
     Mutex thread_gets_killed_lock_;
