@@ -20,11 +20,6 @@ class Syscall
     static void trace();
 
     static uint32 get_thread_count();
-    
-    static uint32 createThread(void* func, void* para, void* tid, void* pcreate_helper);
-
-    static uint32 joinThread(size_t worker_thread, void **return_ptr);
-
-    static uint32 exitThread(void* return_value);
+    static uint32 PthreadCreate(void* start_routine, void* arg, void* thread_id);
 };
 
