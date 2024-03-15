@@ -57,7 +57,6 @@ class Thread
     const char* getName();
 
     size_t getTID();
-    void setTID(size_t tid);
 
     Terminal* getTerminal();
 
@@ -92,6 +91,8 @@ class Thread
 
     void setState(ThreadState state);
 
+    ThreadState getState() const;
+
     /**
      * A part of the single-chained waiters list for the locks.
      * It references to the next element of the list.
@@ -112,28 +113,22 @@ class Thread
      */
     Lock* holding_lock_list_;
 
-    //size_t tid_;
-    volatile ThreadState state_;
-
-
   private:
     Thread(Thread const &src);
     Thread &operator=(Thread const &src);
 
-    //volatile ThreadState state_;
+    volatile ThreadState state_;
 
-    size_t tid_;
 
-    Terminal* my_terminal_;
 
   protected:
-    ThreadState getState() const;
+    size_t tid_;
+    
+    Terminal* my_terminal_;
 
     FileSystemInfo* working_dir_;
 
     ustl::string name_;
-
-    //size_t tid_;
 
 };
 
