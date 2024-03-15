@@ -53,14 +53,46 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = get_thread_count();
       break; // you will need many debug hours if you forget the break
     case sc_pthread_create:
-      return_value = PthreadCreate((void*)arg3, (void*)arg4, (void*)arg1);
-      break;
-
+      return_value = createThread((void*) arg1, (void*) arg2, (void*) arg3, (void*) arg4);
+      break; // you will need many debug hours if you forget the break
+    case sc_pthread_join:
+      return_value = joinThread(arg1, (void**) arg2);
+      break; // you will need many debug hours if you forget the break
+    case sc_pthread_exit:
+      return_value = exitThread((void*) arg1);
+      break; // you will need many debug hours if you forget the break
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
   return return_value;
+}
+
+uint32 Syscall::exitThread(void* return_value)
+{
+  debug(SYSCALL, "Syscall::exitThread: zombie the current thread \n");
+  ((UserThread*) currentThread)->setReturnValue(return_value);
+  Scheduler::instance()->sleep();
+  return 0;
+}
+
+// TODO: handle when return_ptr is NULL
+uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
+{
+  debug(SYSCALL, "Syscall::joinThread: target_thread (%zu), para (%p) \n", worker_thread, return_ptr);
+  UserThread* worker = ((UserThread*) currentThread)->process_->getUserThread(worker_thread);
+  assert(worker && "Thread not found in Process's vector");
+  
+  worker->getReturnValue(return_ptr, worker);
+  debug(MINH, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
+  return 0;
+}
+
+uint32 Syscall::createThread(void* func, void* para, void* tid, void* pcreate_helper)
+{
+  debug(SYSCALL, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
+  ((UserThread*) currentThread)->process_->createUserThread(func, para, tid, pcreate_helper);
+  return 0;
 }
 
 void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
@@ -74,9 +106,23 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 
 void Syscall::exit(size_t exit_code)
 {
-  debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
-  delete static_cast<UserThread*>(currentThread)->process_;
-  static_cast<UserThread*>(currentThread)->process_ = 0;
+  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
+  UserProcess* process = ((UserThread*) currentThread)->process_;
+
+  size_t vector_size = process->threads_.size();
+  for (size_t i = 0; i < vector_size; ++i)
+  {
+    if(process->threads_[i] != currentThread)
+    {
+      process->threads_[i]->kill();
+      i--;
+      vector_size--;
+    } 
+  }
+
+  // Scheduler::instance()->printThreadList();
+  delete process;
+  ((UserThread*) currentThread)->process_ = 0;
   currentThread->kill();
   assert(false && "This should never happen");
 }
@@ -192,16 +238,4 @@ void Syscall::trace()
 
 uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
-}
-
-uint32 Syscall::PthreadCreate(void* func, void* arg, void* tid_address) {
-  ThreadCreateParams params = {func, arg};
-  Scheduler::instance()->printThreadList();
-  UserThread* new_thread = ((UserThread*)currentThread)->process_->createUserThread(params);
-  Scheduler::instance()->printThreadList();
-  if (new_thread != nullptr && tid_address != nullptr) {
-    *(size_t*)tid_address = new_thread->getTID();
-    debug(Fabi, "Syscall::PthreadCreate: tid is %ld\n", *((unsigned long*)tid_address));
-  }
-  return 0;
 }

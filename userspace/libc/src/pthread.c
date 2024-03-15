@@ -1,13 +1,26 @@
 #include "pthread.h"
 
+#include <stdio.h>
+
+
 /**
  * function stub
  * posix compatible signature - do not change the signature!
  */
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-                   void *(*start_routine)(void *), void *arg)
+                    void *(*start_routine)(void *), void *arg)
 {
-    return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, 0x0);
+  return __syscall(sc_pthread_create, (size_t)start_routine, (size_t)arg, (size_t) thread, (size_t) pthread_create_helper, 0x0);
+}
+
+/**
+ * after thread finished its task, this helper will exit that thread correctly
+ * TODO: setup the return value for these pthread call correctly
+*/
+void pthread_create_helper(void* start_routine, void* arg)
+{
+  void* retval = ((void* (*)(void*))start_routine)(arg);
+  pthread_exit(retval);
 }
 
 /**
@@ -25,6 +38,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
  */
 void pthread_exit(void *value_ptr)
 {
+  __syscall(sc_pthread_exit, (size_t) value_ptr, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -42,7 +56,7 @@ int pthread_cancel(pthread_t thread)
  */
 int pthread_join(pthread_t thread, void **value_ptr)
 {
-  return -1;
+  return __syscall(sc_pthread_join, (size_t) thread, (size_t) value_ptr, 0x0, 0x0, 0x0);
 }
 
 /**

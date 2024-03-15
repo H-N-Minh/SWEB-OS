@@ -6,10 +6,13 @@
 #include "PageManager.h"
 #include "Scheduler.h"
 
+#include "ArchInterrupts.h"
 
-UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
-    : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info),
-      filename_(filename), terminal_number_(terminal_number) {
+
+UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) 
+    : fd_(VfsSyscall::open(filename, O_RDONLY)), loader_(0), working_dir_(fs_info), tid_counter_(1), 
+      filename_(filename), terminal_number_(terminal_number)
+{
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
   if (fd_ >= 0)
@@ -21,8 +24,10 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
     //kill();           // This belong to Thread, not sure what to do here
     return;
   }
-  size_t new_tid = generateUniqueTid();
-  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, new_tid, NULL, NULL, (size_t)new_tid));
+  
+  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 
+                                    tid_counter_, NULL, NULL, NULL));
+  tid_counter_++;
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 }
 
@@ -37,19 +42,27 @@ UserProcess::~UserProcess()
   ProcessRegistry::instance()->processExit();
 }
 
-size_t getTID();
+void UserProcess::createUserThread(void* func, void* para, void* tid, void* pcreate_helper)
+{
+  debug(USERPROCESS, "UserProcess::createUserThread: func (%p), para (%zu) \n", func, (size_t) para);
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, 
+                                          ((UserThread*) currentThread)->process_, tid_counter_, func, para, pcreate_helper);
+  threads_.push_back(new_thread);
+  *((unsigned long*) tid) = (unsigned long) tid_counter_;
+  tid_counter_++;
 
-
-size_t UserProcess::generateUniqueTid() {
-  static size_t last_tid = 0;
-  return ++last_tid;
+  debug(USERPROCESS, "UserProcess::createUserThread: Adding new thread to scheduler\n");
+  Scheduler::instance()->addNewThread(new_thread);
 }
 
 
-UserThread* UserProcess::createUserThread(const ThreadCreateParams& params) {
-  size_t new_tid = generateUniqueTid();
-  auto new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, new_tid, params.startRoutine, params.arg, (size_t)new_tid);
-  threads_.push_back(new_thread);
-  Scheduler::instance()->addNewThread(new_thread);
+UserThread* UserProcess::getUserThread(size_t tid)
+{
+  for (size_t i = 0; i < threads_.size(); i++)
+  {
+    if (threads_[i]->getTID() == tid)
+      return threads_[i];
+  }
   return 0;
 }
+
