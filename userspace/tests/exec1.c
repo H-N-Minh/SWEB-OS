@@ -8,6 +8,8 @@ int main()
 
     int rv = execv(path, NULL);
 
+    assert(rv);
+
 
     assert(0);    //this should never be reached
 }

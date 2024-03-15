@@ -21,20 +21,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   }
   if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
   {
-    currentThread->has_reached_cancelation_point_lock_.acquire();
-    currentThread->reached_cancelation_point_ = true;
-    currentThread->has_reached_cancelation_point_.signal();
-    currentThread->has_reached_cancelation_point_lock_.release();
-
-    currentThread->cancel_thread_->recieved_delete_signal_lock_.acquire();
-    while(!currentThread->cancel_thread_-> recieved_delete_signal_bool_)
-    {
-      currentThread->cancel_thread_->recieved_delete_signal_.wait();
-    }
-    
-    currentThread->cancel_thread_->recieved_delete_signal_lock_.release();
-
-    syscall_number = 301;
+    cancelation_checkpoint();
   }
 
   switch (syscall_number)
@@ -95,6 +82,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
+  if(((UserThread*)currentThread)->wants_to_be_canceled_ && syscall_number != 1)
+  {
+    cancelation_checkpoint();
+  }
   return return_value;
 }
 
@@ -103,9 +94,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 void Syscall::exit(size_t exit_code)   
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
-  currentThread->process_->threads_lock_.acquire();
-  debug(SYSCALL, "Syscall::EXIT: Currently %ld threads in the threadlist. \n",currentThread->process_->threads_.size());
-  for (auto& thread : currentThread->process_->threads_)
+  UserProcess& current_process = *currentThread->process_;
+  current_process.threads_lock_.acquire();
+  debug(SYSCALL, "Syscall::EXIT: Currently %ld threads in the threadlist. \n",current_process.threads_.size());
+  for (auto& thread : current_process.threads_)
   {
     if(thread != currentThread)
     {
@@ -113,10 +105,10 @@ void Syscall::exit(size_t exit_code)
       thread->kill();         //i somehow need to deal with the lock
     } 
   }
-  currentThread->process_->threads_.clear();
+  current_process.threads_.clear();
   ((UserThread*)currentThread)->last_thread_alive_ = true;
   currentThread->holding_lock_list_->waiters_list_ = 0;      //TODO: Needs to locked i guess
-  currentThread->process_->threads_lock_.release();  // TODO://what if it is not the last thread
+  current_process.threads_lock_.release();  // TODO://what if it is not the last thread
   debug(SYSCALL, "Syscall::EXIT: Last Thread %ld gets killed. \n",currentThread->getTID());
   currentThread->kill();
 
@@ -127,7 +119,7 @@ void Syscall::exit(size_t exit_code)
 int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
 {
   debug(SYSCALL, "Syscall::PTHREAD_JOIN: called, thread_id: %ld\n", thread_id);
-  UserProcess* current_process = currentThread->process_;
+  UserProcess& current_process = *currentThread->process_;
   if(!check_parameter((size_t)value_ptr, true))
   {
     return -1;
@@ -138,25 +130,25 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
     return -1;
   }
 
-  current_process->threads_lock_.acquire();
-  current_process->value_ptr_by_id_lock_.acquire();                                                         
-  void* return_value = current_process->value_ptr_by_id_[thread_id];
+  current_process.threads_lock_.acquire();
+  current_process.value_ptr_by_id_lock_.acquire();                                                         
+  void* return_value = current_process.value_ptr_by_id_[thread_id];
   //probably removing it from the value_ptr_by_id list would be a good idea here
-  current_process->value_ptr_by_id_lock_.release(); 
+  current_process.value_ptr_by_id_lock_.release(); 
   if(return_value)                         //thread has already terminated
   {
     if(value_ptr != NULL)
     {
       *value_ptr = return_value;
     }
-    current_process->threads_lock_.release(); 
+    current_process.threads_lock_.release(); 
     return 0;
   }
   
   UserThread* thread_to_be_joined;
   size_t thread_to_be_joined_id;
 
-  for (auto& thread : current_process->threads_)
+  for (auto& thread : current_process.threads_)
   {
     if(thread_id == thread->getTID())
     {
@@ -170,7 +162,7 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
     return -1;
   }
 
-  currentThread->process_->threads_lock_.release();   //possible later release
+  current_process.threads_lock_.release();   //possible later release
   
   thread_to_be_joined->join_thread_ = currentThread; //??
   thread_to_be_joined->thread_gets_killed_lock_.acquire();
@@ -189,31 +181,31 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   currentThread->recieved_join_signal_lock_.release();
   debug(SYSCALL, "Thread with id %ld joined thread with id %ld.\n", ((UserThread*)currentThread)->getTID(), thread_to_be_joined_id);
 
-  return_value = current_process->value_ptr_by_id_[thread_id];
+  return_value = current_process.value_ptr_by_id_[thread_id];
   *value_ptr = return_value;
   return 0;
 }
 
 void Syscall::pthread_exit(void* value_ptr){
   debug(SYSCALL, "Syscall::PTHREAD_EXIT: called, value_ptr: %p\n", value_ptr);
-  UserProcess* current_process = currentThread->process_;
-  current_process->threads_lock_.acquire();
+  UserProcess& current_process = *currentThread->process_;
+  current_process.threads_lock_.acquire();
 
-  ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process->threads_.begin(), current_process->threads_.end(), currentThread);
-  current_process->threads_.erase(iterator);
+  ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), currentThread);
+  current_process.threads_.erase(iterator);
   
-  if(current_process->threads_.size() == 0)
+  if(current_process.threads_.size() == 0)
   {
     ((UserThread*)currentThread)->last_thread_alive_ = true;
   }
   else
   {
-    current_process->value_ptr_by_id_lock_.acquire();
-    current_process->value_ptr_by_id_[currentThread->getTID()] = value_ptr;
-    current_process->value_ptr_by_id_lock_.release();
+    current_process.value_ptr_by_id_lock_.acquire();
+    current_process.value_ptr_by_id_[currentThread->getTID()] = value_ptr;
+    current_process.value_ptr_by_id_lock_.release();
   }
   currentThread->loader_->arch_memory_.unmapPage(((UserThread*)currentThread)->virtual_page_);
-  current_process->threads_lock_.release();
+  current_process.threads_lock_.release();
   debug(SYSCALL, "Syscall::PTHREAD_EXIT: Thread %ld gets killed. \n",currentThread->getTID());
   currentThread->kill();  //TODO: i think this is fine, since is no longer on the list
   assert(false && "This should never happen");
@@ -226,10 +218,11 @@ void Syscall::pthread_exit(void* value_ptr){
 int Syscall::pthread_cancel(size_t thread_id) //probably broken
 {
   debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called with thread_id %ld.\n",thread_id);
-  currentThread->process_->threads_lock_.acquire();
+  UserProcess& current_process = *currentThread->process_;
+  current_process.threads_lock_.acquire();
   bool thread_id_found = false;
   UserThread* thread_to_be_canceled;
-  for (auto& thread : currentThread->process_->threads_)
+  for (auto& thread : current_process.threads_)
   {
     if(thread_id == thread->getTID())
     {
@@ -244,7 +237,7 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
   {
     return -1;
   }
-  currentThread->process_->threads_lock_.release();  
+  current_process.threads_lock_.release();  
 
   thread_to_be_canceled->cancel_thread_ = currentThread;
   
@@ -382,12 +375,13 @@ uint32 Syscall::get_thread_count() {
 
 int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_routine)(void*), void* arg, void *(*wrapper_address)())         
 {
+  UserProcess& current_process = *currentThread->process_;
   if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
   {
     return -1;
   }
   debug(SYSCALL, "Unused: Thread %p, Attribute %p\n", thread, attr);       //TODO
-  int rv = currentThread->process_->create_thread(thread, start_routine, wrapper_address, arg);
+  int rv = current_process.create_thread(thread, start_routine, wrapper_address, arg);
   return rv;
 }
 
@@ -456,3 +450,22 @@ int Syscall::execv(const char *path, char *const argv[])
   
   assert(0 && "Sucessful exec should not return");
 }
+
+
+ void Syscall::cancelation_checkpoint()
+ {
+    currentThread->has_reached_cancelation_point_lock_.acquire();
+    currentThread->reached_cancelation_point_ = true;
+    currentThread->has_reached_cancelation_point_.signal();
+    currentThread->has_reached_cancelation_point_lock_.release();
+
+    currentThread->cancel_thread_->recieved_delete_signal_lock_.acquire();
+    while(!currentThread->cancel_thread_-> recieved_delete_signal_bool_)
+    {
+      currentThread->cancel_thread_->recieved_delete_signal_.wait();
+    }
+    
+    currentThread->cancel_thread_->recieved_delete_signal_lock_.release();
+
+    pthread_exit(0); //should not be 0 TODO
+ }

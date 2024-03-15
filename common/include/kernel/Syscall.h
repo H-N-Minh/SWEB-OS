@@ -32,5 +32,7 @@ class Syscall
 
 
     static bool check_parameter(size_t ptr, bool allowed_to_be_null = false);
+
+    static void cancelation_checkpoint();
 };
 
