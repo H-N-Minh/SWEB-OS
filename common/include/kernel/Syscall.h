@@ -34,5 +34,8 @@ class Syscall
     static bool check_parameter(size_t ptr, bool allowed_to_be_null = false);
 
     static void send_cancelation_notification();
+
+    static int pthread_setcancelstate(int state, int *oldstate);
+    static int pthread_setcanceltype(int type, int *oldtype);
 };
 

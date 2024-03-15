@@ -86,6 +86,12 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_execv:
       return_value = execv((const char *)arg1, (char *const*)arg2);
       break;
+    case sc_pthread_setcancelstate:
+      return_value = pthread_setcancelstate((int)arg1, (int *)arg2);
+      break;
+    case sc_pthread_setcanceltype:
+      return_value = pthread_setcanceltype((int)arg1, (int *)arg2);
+      break;
 
     default:
       return_value = -1;
@@ -129,7 +135,6 @@ void Syscall::exit(size_t exit_code)
   }
 
   ((UserThread*)currentThread)->last_thread_alive_ = true;
-  //currentThread->holding_lock_list_->waiters_list_ = 0;      //TODO: Needs to locked i guess[]
   debug(SYSCALL, "Syscall::EXIT: Last Thread %ld gets killed. \n",currentThread->getTID());
   currentThread->kill();
 
@@ -508,3 +513,26 @@ int Syscall::execv(const char *path, char *const argv[])
     currentThread->cancel_thread_->has_reached_cancelation_point_.signal();
     currentThread->cancel_thread_->has_reached_cancelation_point_lock_.release();
  }
+
+int Syscall::pthread_setcancelstate(int state, int *oldstate)
+{
+  if(state != 0 && state != 1)         //what if another enum corresponding to 1
+  {
+    return -1;
+  }
+  *oldstate = (int)((UserThread*)currentThread)->cancel_state_;              //TODO: should be atomic
+  ((UserThread*)currentThread)->cancel_state_ = (CANCEL_STATE)state;
+  return 0;
+}
+
+int Syscall::pthread_setcanceltype(int type, int *oldtype)
+{
+  if(type != 0 && type != 1)         //what if another enum corresponding to 1
+  {
+    return -1;
+  }
+  *oldtype = (int)((UserThread*)currentThread)->cancel_type_;             //TODO: should be atomic
+  ((UserThread*)currentThread)->cancel_type_ = (CANCEL_TYPE)type;
+  
+  return 0;
+}
