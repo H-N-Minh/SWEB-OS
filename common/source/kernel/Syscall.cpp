@@ -54,7 +54,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break; // you will need many debug hours if you forget the break
 
     case sc_pthread_create:
-      return_value = pthread_create((size_t*)arg1, (size_t*)arg2, (void *(*)(void*))arg3, (void*)arg4);
+        return_value = createThread((void*) arg1, (void*) arg2, (void*) arg3, (void*) arg4);
       break;
 
     case sc_pthread_cancel:
@@ -66,6 +66,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
           break;
       case sc_pthread_setcanceltype:
           return_value = pthread_setcanceltype((CancelType)arg1, (CancelType*)arg2);
+          break;
+      case sc_pthread_exit:
+          return_value = exitThread((void*) arg1);
           break;
 
     default:
@@ -84,9 +87,17 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
   VfsSyscall::readdir(pathname, buffer, size);
 }
 
+uint32 Syscall::exitThread(void* return_value)
+{
+    debug(TAI_THREAD, "Syscall::exitThread: zombie the current thread \n");
+    ((UserThread*) currentThread)->setReturnValue(return_value);
+    Scheduler::instance()->sleep();
+    return 0;
+}
+
 void Syscall::exit(size_t exit_code)
 {
-  debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
+  debug(TAI_THREAD, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   delete static_cast<UserThread*>(currentThread)->process_;
   static_cast<UserThread*>(currentThread)->process_ = 0;
   //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;
@@ -207,17 +218,17 @@ uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
 }
 
-int Syscall::pthread_create(size_t* thread, size_t* attr, void *(*start_routine)(void*), void* arg)
+int Syscall::createThread(void* func, void* para, void* tid, void* pcreate_helper)
 {
 
-    debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
+    //debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
     Scheduler::instance()->printThreadList();
-    ((UserThread*) currentThread)->process_->createThread(start_routine, arg);
+    ((UserThread*) currentThread)->process_->createThread(func, para, tid, pcreate_helper);
     Scheduler::instance()->printThreadList();
     return 0;
 }
 
-int Syscall::pthread_cancel(size_t* thread_id)
+int Syscall::pthread_cancel(size_t *thread_id)
 {
 
     debug(TAI_THREAD, "Syscall::pthread_cancel: Cancelling thread %zu\n", *thread_id);

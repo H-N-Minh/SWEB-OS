@@ -23,3 +23,5 @@
 #define sc_pthread_cancel 101
 #define sc_pthread_setcancelstate 102
 #define sc_pthread_setcanceltype 103
+
+#define sc_pthread_exit 104

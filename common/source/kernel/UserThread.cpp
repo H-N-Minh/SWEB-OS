@@ -10,13 +10,13 @@
 
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                       Loader* loader, UserProcess* process, size_t tid, void *(*start_routine)(void*), void* arg)
+                       Loader* loader, UserProcess* process, size_t tid, void* func, void* arg, void* pcreate_helper)
             : Thread(working_dir, name, type, loader), process_(process)
 {
     tid_ = tid;
 
     debug(TAI_THREAD, "------------------------------------tid value %zu \n", tid);
-    debug(TAI_THREAD, "------------------------------------func in userthread is %p\n", start_routine);
+    debug(TAI_THREAD, "------------------------------------func in userthread is %p\n", func);
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
     bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - tid, page_for_stack, 1);
@@ -24,18 +24,23 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
     void* user_stack_ptr = (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid-1));
 
-    if (!start_routine) //for the first thread when we create a process
+    if (!func) //for the first thread when we create a process
     {
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
                                          (void*) (USER_BREAK - sizeof(pointer)), getKernelStackStartPointer());
     }
     else // create the thread for every pthread create
     {
-        ArchThreads::createUserRegisters(user_registers_, (void*) start_routine,
+        //pcreate_helper is the wrapper that we need to run first
+        //the wrapper will take 2 parameter
+        //first one for the function that we want to run
+        //second one is the parameter of the function
+        ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper,
                                          user_stack_ptr,
                                          getKernelStackStartPointer());
 
-        user_registers_->rdi = (size_t)arg;
+        user_registers_->rdi = (size_t)func;
+        user_registers_->rsi = (size_t)arg;
         debug(TAI_THREAD, "------------------------------------arg value %zu \n", user_registers_->rdi);
     }
 
@@ -66,4 +71,23 @@ UserThread::~UserThread()
 void UserThread::Run()
 {
 
+}
+
+// TODO: these 2 methods need locking for thread safe
+void UserThread::setReturnValue(void* return_value)
+{
+    return_value_ = return_value;
+    finished_ = 1;
+    if(joiner_)
+    {
+        debug(TAI_THREAD, "UserThread::setReturnValue: Worker (%zu) waking up Joiner (%zu)\n",
+              getTID(), joiner_->getTID());
+        Scheduler::instance()->wake(joiner_);
+    }
+    debug(TAI_THREAD, "UserThread::setReturnValue: worker (%zu) finished, return value: %zu. Going to sleep till Joined\n",
+          getTID(), (size_t) return_value);
+    Scheduler::instance()->sleep();
+
+    assert(!TAI_THREAD && "Worker should only wakes up after Joined, then kill itself\n");
+    kill();
 }

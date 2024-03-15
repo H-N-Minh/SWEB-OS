@@ -18,7 +18,11 @@ class UserProcess
         ustl::vector<UserThread*> threads_;
         bool to_be_destroyed_ = false;
 
-        void createThread(void *(*start_routine)(void*), void* para);
+        void createThread(void* func, void* para, void* tid, void* pcreate_helper);
+
+        //pcreate_helper == pthread_create_helper
+        //func is func we want to execute
+        //para is para from func
 
         UserThread* getUserThread(size_t tid);
     private:

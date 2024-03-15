@@ -23,8 +23,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
         return;
     }
 
-    threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD,
-                                      terminal_number, loader_, this, num_thread_, NULL, NULL));
+    threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this,
+                                      num_thread_, NULL, NULL, NULL));
     num_thread_++;
     debug(TAI_THREAD, "num thread %zu\n", num_thread_);
     debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
@@ -47,13 +47,16 @@ UserProcess::~UserProcess()
 //   assert(false);
 // }
 
-void UserProcess::createThread(void *(*start_routine)(void*), void* arg)
+void UserProcess::createThread(void* func, void* para, void* tid, void* pcreate_helper)
 {
-
+    debug(USERPROCESS, "UserProcess::createUserThread: func (%p), para (%zu) \n", func, (size_t) para);
     UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_,
-                                            ((UserThread*) currentThread)->process_, num_thread_, start_routine, arg);
+                                            ((UserThread*) currentThread)->process_, num_thread_, func, para, pcreate_helper);
     threads_.push_back(new_thread);
+    *((unsigned long*) tid) = (unsigned long) num_thread_;
     num_thread_++;
+
+    debug(USERPROCESS, "UserProcess::createUserThread: Adding new thread to scheduler\n");
     Scheduler::instance()->addNewThread(new_thread);
 }
 

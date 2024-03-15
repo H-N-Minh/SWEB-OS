@@ -20,6 +20,8 @@ int main()
     pthread_create(NULL, NULL, (void* (*)(void*))testFunc, (void*) x);
     printf("func is called\n");
 
+
+
     while(1)
     {
 
