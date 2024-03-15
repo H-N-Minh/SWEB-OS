@@ -25,7 +25,7 @@ class IDEDriver
         uint8 endhead;
         uint8 endcyl;
         uint8 endsect;
-        uint32 relsect; // first sector relative to start of disk - We actually need only these two params
+        uint32 relsect; // first sector relative to start of disk - We actually need only theese two params
         uint32 numsect; // number of sectors in partition
     } FP;
 
