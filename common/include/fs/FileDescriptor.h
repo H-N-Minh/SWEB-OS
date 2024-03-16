@@ -14,14 +14,18 @@ class FileDescriptor
   protected:
     size_t fd_;
     File* file_;
+    int ref_count_;
 
-  public:
+public:
     FileDescriptor ( File* file );
     virtual ~FileDescriptor();
-    uint32 getFd() { return fd_; }
-    File* getFile() { return file_; }
+    size_t getFd() const { return fd_; }
+    File* getFile() const { return file_; }
 
     friend File;
+    void incrementRefCount();
+    void decrementRefCount();
+    int getRefCount() const;
 };
 
 class FileDescriptorList
@@ -32,6 +36,7 @@ public:
 
     int add(FileDescriptor* fd);
     int remove(FileDescriptor* fd);
+    bool remove(size_t fd_num);
     FileDescriptor* getFileDescriptor(uint32 fd);
 
 private:

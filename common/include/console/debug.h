@@ -49,7 +49,8 @@ const size_t USERTHREAD         = Ansi_Yellow  | OUTPUT_ENABLED;  // added by mi
 const size_t PROCESS_REG        = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
-const size_t MINH               = Ansi_Red     | OUTPUT_ENABLED;  // added by minh
+const size_t Fabi               = Ansi_Red     | OUTPUT_ENABLED; //fabi
+const size_t LOCALFILEDESCRIPTORS               = Ansi_Cyan     | OUTPUT_ENABLED; // FABI
 
 //group memory management
 const size_t PM                 = Ansi_Green | OUTPUT_ENABLED;

@@ -84,7 +84,7 @@ uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
   assert(worker && "Thread not found in Process's vector");
   
   worker->getReturnValue(return_ptr, worker);
-  debug(MINH, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
+  debug(Fabi, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
   return 0;
 }
 

@@ -19,6 +19,7 @@ class UserProcess
     ustl::vector<UserThread*> threads_;
 
   private:
+
     int32 fd_;
     Loader* loader_;
     FileSystemInfo* working_dir_;
@@ -27,6 +28,8 @@ class UserProcess
     int32 tid_counter_;
     ustl::string filename_;
     uint32 terminal_number_;
+
+    //LocalFileDescriptorTable localFDTable;
 
   public:
     void createUserThread(void* func, void* para, void* tid, void* pcreate_helper);
