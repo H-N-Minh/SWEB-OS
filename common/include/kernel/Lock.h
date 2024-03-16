@@ -180,7 +180,6 @@ private:
    */
   const char* name_;
 
-public: //added by me
   /**
    * The single chained list of threads waiting on this lock.
    * The list can be read out while the lock is not held (for checks and prints).

@@ -30,6 +30,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     }
     else
     {
+      send_cancelation_notification(false, true);
       while(1)
       {
         Scheduler::instance()->yield();
@@ -105,7 +106,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   }
   if(((UserThread*)currentThread)->wants_to_be_canceled_)
   {
-    pthread_exit((void*)-1);            //TODO: should not be 8
+    pthread_exit((void*)-1);
   }
   return return_value;
 }
@@ -244,8 +245,8 @@ void Syscall::pthread_exit(void* value_ptr){
 
   if(((UserThread*)currentThread)->wants_to_be_canceled_)
   {
-    send_cancelation_notification();
-    value_ptr = (void*)0;
+    send_cancelation_notification(true);
+    value_ptr = (void*)-1;
   }
   if(current_process.threads_.size() == 0)
   {
@@ -325,6 +326,20 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
       }
       currentThread->reached_cancelation_point_ = false;
       currentThread->has_reached_cancelation_point_lock_.release();
+
+      current_process.threads_lock_.acquire();
+      if(currentThread->canceled_thread_wants_to_be_killed_)
+      {
+        ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), thread_to_be_canceled);
+        current_process.threads_.erase(iterator);
+
+        current_process.value_ptr_by_id_lock_.acquire();                         //not sure if this is the right place
+        current_process.value_ptr_by_id_[thread_to_be_canceled->getTID()] = (void*)-1;
+        current_process.value_ptr_by_id_lock_.release();
+      
+        thread_to_be_canceled->kill();             //do the pthread_exit stuff  
+      }
+      current_process.threads_lock_.release();
     }
     
   }
@@ -533,17 +548,31 @@ int Syscall::execv(const char *path, char *const argv[])
 }
 
 
- void Syscall::send_cancelation_notification()
+ void Syscall::send_cancelation_notification(bool already_locked, bool wants_to_be_killed)
  {
     UserProcess& current_process = *currentThread->process_;
+
+    if(!already_locked) 
+      current_process.threads_lock_.acquire();
+
     if(!current_process.check_if_thread_in_threadList((UserThread*)((UserThread*)currentThread)->cancel_thread_))         //not sure if that can even happen
     {
+      if(!already_locked) 
+        current_process.threads_lock_.release();
       return;
     }
     currentThread->cancel_thread_->has_reached_cancelation_point_lock_.acquire();
+
+    if(wants_to_be_killed)
+    {
+      currentThread->cancel_thread_->canceled_thread_wants_to_be_killed_ = true;
+    }
     currentThread->cancel_thread_->reached_cancelation_point_ = true;
     currentThread->cancel_thread_->has_reached_cancelation_point_.signal();
     currentThread->cancel_thread_->has_reached_cancelation_point_lock_.release();
+
+    if(!already_locked) 
+      current_process.threads_lock_.release();
  }
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
