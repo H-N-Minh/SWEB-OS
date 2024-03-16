@@ -13,4 +13,5 @@ int main()
     assert(rv == -1 && "Exec should fail for invalid path");
 
     printf("Exec2 successfull!\n");
+    return 0;
 }

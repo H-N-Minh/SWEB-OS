@@ -28,7 +28,6 @@ class UserThread : public Thread
         CANCEL_STATE cancel_state_{CANCEL_STATE::PTHREAD_CANCEL_ENABLE};  //currently not used
         CANCEL_TYPE cancel_type_{CANCEL_TYPE::PTHREAD_CANCEL_DEFERRED};
 
-
         void Run();
 
 };

@@ -3,7 +3,7 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                             //"/usr/shell.sweb",
+                             "/usr/shell.sweb",
 
                             // pthread_create
                             /*
@@ -19,31 +19,32 @@ char const *user_progs[] = {
                             "/usr/pe1.sweb",                      //pthread_exit in main
                             */
 
-                            // pthread_create and pthread_exit
-                            /*
-                            "/usr/p1.sweb",                       //pthread_create with pthread exit in function
-                            */
 
                             // thread_join
 
                             /*
                             "/usr/pj1.sweb",                       //pthread_join for function that has already finished
                             "/usr/pj2.sweb",                       //pthread_join where function is still running
-                            "/usr/pj3.sweb",                       //starting 2000 threads after each other and join them - tekes forever
+                            "/usr/pj3.sweb",                       //starting 2000 threads after each other and join them - takes forever
+                            "/usr/pj3.sweb",                       //try to join the same thread twice
                             */
 
 
                             //pthread_cancel
                             /*
-                             "/usr/pca1.sweb",
-                             */
-                             "/usr/pca2.sweb",
-
+                             "/usr/pca1.sweb",                     //Cancel running thread
+                             "/usr/pca2.sweb",                     //Try to cancel already dead thread
+                            */
                             
+                            // multithreading
+                            /*
+                            "/usr/p1.sweb",                       //pthread_create with pthread exit in function
+                            "/usr/p2.sweb",                       //thread that called join gets canceled the joined thread should not be detached
+                            */
 
-
-                            // "/usr/exec1.sweb",
-                            // "/usr/exec2.sweb",             
+                            //execv        
+                            // "/usr/exec1.sweb",                  //exec without arguments
+                            // "/usr/exec2.sweb",                  //exec with wrong path         
 
                             0
                            };

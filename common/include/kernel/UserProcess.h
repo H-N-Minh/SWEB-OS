@@ -33,10 +33,7 @@ class UserProcess
     Loader* loader_;  //TODO: lock ? 
     FileSystemInfo* working_dir_;  //TODO: lock ? 
     uint32 terminal_number_;  //TODO: lock ? 
-    ustl::string filename_;  //TODO: lock ? 
-
-    Loader* execv_loader_{NULL}; //needs a loock
-    int32 execv_fd_{NULL};  //TODO: lock ?        
+    ustl::string filename_;  //TODO: lock ?    
 
     size_t thread_counter_{0};   //gets currently also increased if thread_creation was not succesfull
 
@@ -44,5 +41,10 @@ class UserProcess
     Mutex thread_counter_lock_;    //locking order 1         //Todo: check if the locking order is actually followed
     Mutex threads_lock_;           //2
     Mutex value_ptr_by_id_lock_;   //3
+
+
+    Loader* execv_loader_{NULL}; //needs a loock
+    int32 execv_fd_{NULL};  //TODO: lock ?     
+    size_t execv_ppn_args_{NULL};  //TODO: lock ? 
 };
 

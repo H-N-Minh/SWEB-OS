@@ -3,6 +3,6 @@
 
 int main()
 {
-    printf("Exec 1 - Testfunction reached\n");
+    printf("Exec1 successfull!\n");
     return 0;
 }

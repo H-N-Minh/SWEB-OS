@@ -71,10 +71,12 @@ void Thread::kill()
 
   if(join_thread_)
   {
-    join_thread_->thread_gets_killed_lock_.acquire();
-    join_thread_->thread_killed = true;
-    join_thread_->thread_gets_killed_.signal();
-    join_thread_->thread_gets_killed_lock_.release();
+    Thread* join_thread = join_thread_;
+    join_thread_ = NULL;  
+    join_thread->thread_gets_killed_lock_.acquire();
+    join_thread->thread_killed = true;                                         //TODO do need to lock
+    join_thread->thread_gets_killed_.signal();
+    join_thread->thread_gets_killed_lock_.release();
   }
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv

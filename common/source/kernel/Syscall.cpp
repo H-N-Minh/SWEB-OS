@@ -11,6 +11,8 @@
 #include "Mutex.h"
 #include "Loader.h"
 #include "umap.h"
+#include "ArchMemory.h"
+#include "PageManager.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -28,7 +30,11 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     }
     else
     {
-      Scheduler::instance()->yield();
+      while(1)
+      {
+        Scheduler::instance()->yield();
+      }
+      
     }
     
   }
@@ -143,7 +149,7 @@ void Syscall::exit(size_t exit_code)
 }
 
 
-int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
+int Syscall::pthread_join(size_t thread_id, void**value_ptr)
 {
   debug(SYSCALL, "Syscall::PTHREAD_JOIN: called, thread_id: %ld\n", thread_id);
   UserProcess& current_process = *currentThread->process_;
@@ -152,11 +158,13 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
     return -1;
   }
 
-  if(currentThread->getTID() == thread_id)                   //checks if I not accidentally join myself
+  //checks if I not accidentally join myself
+  if(currentThread->getTID() == thread_id)                         
   {
     return -1;
   }
 
+  //check if thread has already terminated
   current_process.threads_lock_.acquire();
   current_process.value_ptr_by_id_lock_.acquire();  
   ustl::map<size_t, void*>::iterator iterator = current_process.value_ptr_by_id_.find(thread_id);                                                   
@@ -165,20 +173,18 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   {
     return_value = current_process.value_ptr_by_id_[thread_id];
     current_process.value_ptr_by_id_.erase(iterator);
-  }
-  current_process.value_ptr_by_id_lock_.release(); 
-  if(return_value)                         //thread has already terminated
-  {
     if(value_ptr != NULL)
     {
       *value_ptr = return_value;
     }
+    current_process.value_ptr_by_id_lock_.release();
     current_process.threads_lock_.release(); 
     return 0;
   }
-  
-  UserThread* thread_to_be_joined;
+  current_process.value_ptr_by_id_lock_.release();
 
+  //find thread in threadlist
+  UserThread* thread_to_be_joined;
   for (auto& thread : current_process.threads_)
   {
     if(thread_id == thread->getTID())
@@ -189,15 +195,15 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   }
   if(!thread_to_be_joined)
   {
+    current_process.threads_lock_.release();
     return -1;
   }
 
-  current_process.threads_lock_.release();   //possible later release
-  
-  
-
   currentThread->thread_gets_killed_lock_.acquire();
-  thread_to_be_joined->join_thread_ = currentThread; //??
+  thread_to_be_joined->join_thread_ = currentThread;  //Todo: lock when use??
+
+  current_process.threads_lock_.release();
+  
   while(!currentThread->thread_killed)
   {
     currentThread->thread_gets_killed_.wait();
@@ -212,14 +218,18 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr) //probably broken
   {
     return_value = current_process.value_ptr_by_id_[thread_id];
     current_process.value_ptr_by_id_.erase(iterator);
+    if(value_ptr != NULL)
+    {
+      *value_ptr = return_value;
+    }
+  }
+  else
+  {
+    assert(0 && "No returnvalue found");
   }
   current_process.value_ptr_by_id_lock_.release();  
 
-  if(value_ptr != NULL)
-  {
-    //debug(SYSCALL,"return value is %ld\n", (size_t)return_value);
-    *value_ptr = return_value;
-  }
+
   return 0;
 }
 
@@ -292,7 +302,7 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
   else
   {
     current_process.threads_lock_.acquire();
-    if(thread_to_be_canceled->switch_to_userspace_ == 1)
+    if(thread_to_be_canceled->switch_to_userspace_ == 1)        
     {
       ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), thread_to_be_canceled);
       current_process.threads_.erase(iterator);
@@ -305,7 +315,7 @@ int Syscall::pthread_cancel(size_t thread_id) //probably broken
 
       current_process.threads_lock_.release();
     }
-    else
+    else                                             //TODO: what if it kernel but after cancelation point or in kernel before cancelation
     {
       current_process.threads_lock_.release();
       currentThread->has_reached_cancelation_point_lock_.acquire();
@@ -506,6 +516,13 @@ int Syscall::execv(const char *path, char *const argv[])
     VfsSyscall::close(current_process.execv_fd_);
     return -1;
   }
+
+  //map arguments to identity mapping
+  current_process.execv_ppn_args_ = PageManager::instance()->allocPPN();
+  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(current_process.execv_ppn_args_);
+  *((char*)virtual_address) = 3;
+
+
 
   //destroy other threads
   ((UserThread*)currentThread)->last_thread_before_exec_ = true;
