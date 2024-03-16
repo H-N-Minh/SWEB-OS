@@ -15,5 +15,5 @@ public:
 
 private:
   ustl::vector<LocalFileDescriptor*> local_fds_;
-  int generateLocalFD();
+  size_t generateLocalFD();
 };

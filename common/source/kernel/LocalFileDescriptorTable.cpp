@@ -12,7 +12,7 @@ LocalFileDescriptorTable::~LocalFileDescriptorTable() {
 
 LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset) {
   int local_fd_id = generateLocalFD();
-  LocalFileDescriptor* local_fd = new LocalFileDescriptor(global_fd, mode, offset);
+  LocalFileDescriptor* local_fd = new LocalFileDescriptor(global_fd, mode, offset, local_fd_id);
   local_fds_.push_back(local_fd);
   return local_fd;
 }
@@ -41,7 +41,7 @@ void LocalFileDescriptorTable::closeLocalFileDescriptor(LocalFileDescriptor* loc
 
 LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_fd_id) const {
   for (auto fd : local_fds_) {
-    if (fd->getLocalFD() == local_fd_id) {
+    if (fd->getLocalFD() == (size_t)local_fd_id) {
       return fd;
     }
   }
@@ -54,7 +54,7 @@ void LocalFileDescriptorTable::closeAllFileDescriptors() {
   }
 }
 
-int LocalFileDescriptorTable::generateLocalFD() {
+size_t LocalFileDescriptorTable::generateLocalFD() {
   static int next_fd = 0;
   return next_fd++;
 }

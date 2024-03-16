@@ -1,8 +1,9 @@
 #include "LocalFileDescriptor.h"
+#include "LocalFileDescriptorTable.h"
 
-LocalFileDescriptor::LocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset)
-    : global_fd_(global_fd), mode_(mode), offset_(offset) {
-}
+LocalFileDescriptor::LocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset, size_t local_fd_id)
+    : global_fd_(global_fd), mode_(mode), offset_(offset), localFD_(local_fd_id)
+{}
 
 LocalFileDescriptor::~LocalFileDescriptor() {
 }
@@ -21,4 +22,8 @@ void LocalFileDescriptor::setOffset(size_t offset) {
 
 size_t LocalFileDescriptor::getOffset() const {
   return offset_;
+}
+
+size_t LocalFileDescriptor::getLocalFD() const {
+  return localFD_;
 }

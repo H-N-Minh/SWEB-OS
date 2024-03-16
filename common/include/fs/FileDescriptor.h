@@ -19,7 +19,7 @@ class FileDescriptor
 public:
     FileDescriptor ( File* file );
     virtual ~FileDescriptor();
-    size_t getFd() const { return fd_; }
+    uint32 getFd() const { return fd_; }
     File* getFile() const { return file_; }
 
     friend File;
