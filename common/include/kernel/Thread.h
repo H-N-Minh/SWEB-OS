@@ -155,10 +155,10 @@ class Thread
     Condition thread_gets_killed_;
 
 
-    bool kill_allowed_{true};
-    Mutex kill_allowed_lock_;
 
     bool canceled_thread_wants_to_be_killed_{false};
+
+    Thread::TYPE type_;
     
 
 };

@@ -58,6 +58,7 @@ int UserProcess::create_thread(size_t* thread, void *(*start_routine)(void*), vo
   if(new_thread)
   {
     threads_.push_back(new_thread);
+    new_thread->switch_to_userspace_ = 1; 
     Scheduler::instance()->addNewThread(new_thread);
     *thread = new_thread->getTID();
     threads_lock_.release();  

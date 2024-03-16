@@ -37,8 +37,7 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
     my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name)), 
     has_reached_cancelation_point_lock_("has_reached_cancelation_point_lock_"),
     has_reached_cancelation_point_(&has_reached_cancelation_point_lock_, "has_reached_cancelation_point_"),
-    thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
-    kill_allowed_lock_("kill_allowed_lock_")
+    thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), type_(type)
 
 {
   debug(THREAD, "Thread ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);

@@ -14,6 +14,7 @@
 #include "ustring.h"
 #include "Lock.h"
 #include "ProcessRegistry.h"
+#include "Syscall.h"
 
 ArchThreadRegisters *currentThreadRegisters;
 Thread *currentThread;
@@ -49,6 +50,12 @@ void Scheduler::schedule()
   {
     if((*it)->schedulable())
     {
+      if(((*it)->type_ == Thread::USER_THREAD) && ((UserThread*)*it)->wants_to_be_canceled_ && (((UserThread*)*it)->switch_to_userspace_ == 1) &&  (((UserThread*)*it)->cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS))
+      {
+        (*it)->kernel_registers_->rip     = (size_t)Syscall::pthread_exit;   //maybe add registers
+        ((UserThread*)*it)->switch_to_userspace_ = 0;
+      }
+
       currentThread = *it;
       break;
     }
