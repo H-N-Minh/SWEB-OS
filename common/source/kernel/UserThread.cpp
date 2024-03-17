@@ -53,6 +53,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number)
     : Thread(other), process_(new_process), return_value_(0), finished_(0), joiner_(0)
 {
+    Scheduler::instance()->printThreadList();
     debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
 
@@ -60,7 +61,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, u
 
     // copy registers of parent thread, except for RAX (for different fork()-return-value)
     debug(USERTHREAD, "UserThread COPY-Constructor: copying registers from parent to child thread \n");
-    ArchThreads::copyUserRegisters(other.user_registers_, user_registers_);
+    ArchThreads::copyUserRegisters(other.user_registers_, user_registers_, getKernelStackStartPointer());
     ArchThreads::setupForkReturnValue(other.user_registers_, user_registers_, new_process->pid_);
 
     // Setting up AddressSpace and Terminal

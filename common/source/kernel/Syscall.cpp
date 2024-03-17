@@ -75,21 +75,25 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 uint32 Syscall::forkProcess()
 {
-  UserProcess parent = *(((UserThread*) currentThread)->process_);
-  UserProcess* child = new UserProcess(parent);
+
+  Scheduler::instance()->printThreadList();
+  debug(SYSCALL, "Syscall::forkProcess: start focking \n");
+  UserProcess* parent = ((UserThread*) currentThread)->process_;
+  UserProcess* child = new UserProcess(*parent);
 
   uint32 retval;
   if (!child)
   {
+    debug(SYSCALL, "Syscall::forkProcess: fock failed \n");
     retval = -1;
   }
   else
   {
     retval = (uint32) currentThread->user_registers_->rax;
+    debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", retval);
   }
 
   return retval;
-
 }
 
 uint32 Syscall::exitThread(void* return_value)

@@ -94,7 +94,7 @@ void ArchThreads::createUserRegisters(ArchThreadRegisters *&info, void* start_fu
   assert(info->cr3);
 }
 
-void ArchThreads::copyUserRegisters(const ArchThreadRegisters* source, ArchThreadRegisters* destination)
+void ArchThreads::copyUserRegisters(const ArchThreadRegisters* source, ArchThreadRegisters* &destination, void* kernel_stack)
 {
   destination = new ArchThreadRegisters{};
 
@@ -115,14 +115,14 @@ void ArchThreads::copyUserRegisters(const ArchThreadRegisters* source, ArchThrea
   destination->ds = source->ds;
   destination->es = source->es;
   destination->ss = source->ss;
-  destination->rsp0 = source->rsp0;
+  destination->rsp0 = (size_t)kernel_stack;
 }
 
 void ArchThreads::setupForkReturnValue(ArchThreadRegisters* parent, ArchThreadRegisters* child, uint32 child_process_id)
 {
   assert(child_process_id && "Child id must be non-zero");
-  child->rax = 0;
   parent->rax = child_process_id;
+  child->rax = 0;
 }
 
 void ArchThreads::changeInstructionPointer(ArchThreadRegisters *info, void* function)
