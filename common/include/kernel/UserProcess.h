@@ -46,5 +46,6 @@ class UserProcess
     Loader* execv_loader_{NULL}; //needs a loock
     int32 execv_fd_{NULL};  //TODO: lock ?     
     size_t execv_ppn_args_{NULL};  //TODO: lock ? 
+    size_t exec_argc_{0};  //TODO: lock ? 
 };
 

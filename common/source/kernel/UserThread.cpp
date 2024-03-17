@@ -15,32 +15,24 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
             void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter, bool execv):Thread(working_dir, name, type, loader)
 {
     process_ = process;
+    size_t array_offset = 3500;
 
-    size_t argv = 0;
-    size_t argc = 0;
     if(execv)
     {
         size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(process_->execv_ppn_args_);
         debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
-        //assert(0);
 
 
         size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
         bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , process_->execv_ppn_args_, 1);
         assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-        debug(USERTHREAD, "virtual address identity mapping is %ld(=%zx)\n", virtual_address, virtual_address);
-        debug(USERTHREAD, "virtual address userspace is %ld(=%zx)\n", (size_t)(USER_BREAK - PAGE_SIZE), (size_t)(USER_BREAK - PAGE_SIZE));
-        size_t difference = virtual_address - (USER_BREAK - PAGE_SIZE);
-        debug(USERTHREAD, "Difference is %ld(=%zx)\n",difference, difference);
+        for(size_t i = 0; i < process_->exec_argc_; i++)
+        {
+            *(size_t*)(virtual_address + array_offset + i * sizeof(pointer)) += (USER_BREAK - PAGE_SIZE);
+        }
         
-        *(size_t*)(virtual_address + 32) = (USER_BREAK - PAGE_SIZE);
-        //debug(USERTHREAD, "New addresss is %ld(=%zx)\n", *((size_t*)(virtual_address + (size_t)32) ), *((size_t*)(virtual_address + (size_t)32) ));
-        
-        argv =  USER_BREAK - PAGE_SIZE + 32;
-        argc = 1;
 
-        //assert(0);
 
         thread_counter++;
     }
@@ -70,8 +62,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
     if(execv)
     {
-        user_registers_->rdi = argc;
-        user_registers_->rsi = argv;
+        user_registers_->rdi = process_->exec_argc_;
+        user_registers_->rsi = USER_BREAK - PAGE_SIZE + array_offset;
     }
 
     

@@ -473,12 +473,25 @@ int Syscall::execv(const char *path, char *const argv[])
   //map arguments to identity mapping
   current_process.execv_ppn_args_ = PageManager::instance()->allocPPN();
   size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(current_process.execv_ppn_args_);
-  char message[] = "Hallo ich heisse Stefanie";
-  memcpy((char*)virtual_address, message, strlen(message));
-  char* message2[] = {message};
-  memcpy((char*)virtual_address+32, message2, sizeof(pointer) * 1);
-  
 
+  size_t array_offset = 3500; //choose a good value
+
+  size_t index = 0;
+  size_t offset = 0;
+  while(1)
+  {
+    if(argv[index] == NULL)
+    {
+      break;
+    }
+
+    memcpy((char*)virtual_address + offset, argv[index], strlen(argv[index])+1);
+    memcpy((void*)(virtual_address + array_offset + index * sizeof(pointer)), &offset, sizeof(pointer));
+
+    offset += strlen(argv[index]) + 1;
+    index++;
+  }
+  current_process.exec_argc_ = index;
 
 
   //destroy other threads
