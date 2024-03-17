@@ -17,26 +17,26 @@ LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDes
   return local_fd;
 }
 
-void LocalFileDescriptorTable::closeLocalFileDescriptor(LocalFileDescriptor* local_fd) {
-  if (local_fd) {
-    FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor();
-
-    global_fd->decrementRefCount();
-
-    if (global_fd->getRefCount() == 0) {
-      global_fd_list.remove(global_fd->getFd());
-
-      delete global_fd;
-    }
-
-    auto it = ustl::find(local_fds_.begin(), local_fds_.end(), local_fd);
-    if (it != local_fds_.end()) {
-      local_fds_.erase(it);
-    }
-
-    delete local_fd;
-  }
-}
+//void LocalFileDescriptorTable::closeLocalFileDescriptor(LocalFileDescriptor* local_fd) {
+//  if (local_fd) {
+//    FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor();
+//
+//    global_fd->decrementRefCount();
+//
+//    if (global_fd->getRefCount() == 0) {
+//      global_fd_list.remove(global_fd->getFd());
+//
+//      delete global_fd;
+//    }
+//
+//    auto it = ustl::find(local_fds_.begin(), local_fds_.end(), local_fd);
+//    if (it != local_fds_.end()) {
+//      local_fds_.erase(it);
+//    }
+//
+//    delete local_fd;
+//  }
+//}
 
 
 LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_fd_id) const {
@@ -48,11 +48,11 @@ LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_
   return nullptr;
 }
 
-void LocalFileDescriptorTable::closeAllFileDescriptors() {
-  for (auto fd : local_fds_) {
-    closeLocalFileDescriptor(fd);
-  }
-}
+//void LocalFileDescriptorTable::closeAllFileDescriptors() {
+//  for (auto fd : local_fds_) {
+//    closeLocalFileDescriptor(fd);
+//  }
+//}
 
 size_t LocalFileDescriptorTable::generateLocalFD() {
   static int next_fd = 0;

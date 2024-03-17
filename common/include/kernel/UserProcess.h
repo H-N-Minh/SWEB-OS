@@ -2,7 +2,7 @@
 #include "UserThread.h"
 #include "uvector.h"
 #include "types.h"
-#include "LocalFileDescriptorTable.h"
+//#include "LocalFileDescriptorTable.h"
 
 class UserProcess
 {
@@ -30,12 +30,12 @@ class UserProcess
     ustl::string filename_;
     uint32 terminal_number_;
 
-    LocalFileDescriptorTable local_fd_table_;
+    //LocalFileDescriptorTable local_fd_table_;
 
   public:
     void createUserThread(void* func, void* para, void* tid, void* pcreate_helper);
 
-    size_t openFile(const ustl::string& path, uint32_t mode);
+    //size_t openFile(const ustl::string& path, uint32_t mode);
 
     UserThread* getUserThread(size_t tid);
 
