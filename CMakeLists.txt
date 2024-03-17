@@ -135,7 +135,8 @@ set(LIBRARY_FILENAMES)
 set(ENV{LIBRARY_NAMES})
 
 #Create target for userspace libc (Need to to that here because some files (e.g. syscall.c) are all over the place)
-add_library(userspace_libc "")
+add_library(userspace_libc ""
+        common/include/kernel/Pipe.h)
 target_compile_options(userspace_libc PUBLIC ${ARCH_USERSPACE_COMPILE_OPTIONS})
 
 #Add the source directories

@@ -126,7 +126,7 @@ int creat(const char *path, mode_t mode)
  */
 int pipe(int file_descriptor_array[2])
 {
-  return -1;
+  return __syscall(sc_pipe, (size_t) file_descriptor_array, 0x0, 0x0, 0x0, 0x0);
 }
 
 

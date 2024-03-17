@@ -7,6 +7,9 @@
 #include "ProcessRegistry.h"
 #include "File.h"
 #include "Scheduler.h"
+#include "Pipe.h"
+#include "FileDescriptorManager.h"
+#include "FileOperations.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -61,12 +64,40 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pthread_exit:
       return_value = exitThread((void*) arg1);
       break; // you will need many debug hours if you forget the break
+    case sc_pipe:
+      return_value = pipe((int*) arg1);
+      break; // you will need many debug hours if you forget the break
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
   return return_value;
 }
+
+uint32 Syscall::pipe(int file_descriptor_array[2])
+{
+  debug(SYSCALL, "Syscall::pipe called\n");
+
+  Pipe* new_pipe = new Pipe();
+
+  int read_fd = FileDescriptorManager::getInstance().allocateDescriptor(new_pipe, READ);
+  int write_fd = FileDescriptorManager::getInstance().allocateDescriptor(new_pipe, WRITE);
+
+
+  if (read_fd == -1 || write_fd == -1) {
+    debug(SYSCALL, "Syscall::pipe failed to allocate file descriptors\n");
+    delete new_pipe;
+    return -1;
+  }
+
+  file_descriptor_array[0] = read_fd;
+  file_descriptor_array[1] = write_fd;
+
+  debug(SYSCALL, "Syscall::pipe allocated file descriptors: read_fd = %d, write_fd = %d\n", read_fd, write_fd);
+
+  return 0;
+}
+
 
 uint32 Syscall::exitThread(void* return_value)
 {
@@ -82,7 +113,7 @@ uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
   debug(SYSCALL, "Syscall::joinThread: target_thread (%zu), para (%p) \n", worker_thread, return_ptr);
   UserThread* worker = ((UserThread*) currentThread)->process_->getUserThread(worker_thread);
   assert(worker && "Thread not found in Process's vector");
-  
+
   worker->getReturnValue(return_ptr, worker);
   debug(Fabi, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
   return 0;
@@ -117,7 +148,7 @@ void Syscall::exit(size_t exit_code)
       process->threads_[i]->kill();
       i--;
       vector_size--;
-    } 
+    }
   }
 
   // Scheduler::instance()->printThreadList();
