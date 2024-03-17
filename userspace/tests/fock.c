@@ -1,10 +1,24 @@
-#include <stdio.h>
+#include "stdio.h"
+#include "types.h"
+#include "unistd.h"
 
 int main() {
-    int x = 42;
-    x = 43;
-    (void) x;
+    pid_t pid;
 
-    // printf("The value of x is: %d\n", x);
+    // Create a child process
+    pid = fork();
+
+    if (pid < 0) {
+        // Fork failed
+        printf("Fork failed\n");
+        return 1;
+    } else if (pid == 0) {
+        // Child process
+        printf("Hello from the child process!\n");
+    } else {
+        // Parent process
+        printf("Hello from the parent process!\n");
+    }
+
     return 0;
 }

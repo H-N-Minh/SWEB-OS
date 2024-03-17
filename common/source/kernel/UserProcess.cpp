@@ -39,9 +39,12 @@ UserProcess::UserProcess(const UserProcess& other)
 
   debug(USERPROCESS, "Copy-ctor: Creating new thread for forked process");
   UserThread curr_thread = *((UserThread*) currentThread);
-  threads_.push_back(new UserThread(curr_thread, this, tid_counter_, terminal_number_));
+  UserThread* new_thread = new UserThread(curr_thread, this, tid_counter_, terminal_number_);
+  threads_.push_back(new_thread);
+
+  debug(USERPROCESS, "ctor: Done loading %s, now adding new thread id (%zu) to the Scheduler\n", filename_.c_str(), new_thread->getTID());
+  Scheduler::instance()->addNewThread(new_thread);
   tid_counter_++;
-  debug(USERPROCESS, "ctor: Done loading %s\n", filename_.c_str());
 }
 
 

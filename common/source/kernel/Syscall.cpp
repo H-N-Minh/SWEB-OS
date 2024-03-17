@@ -61,11 +61,22 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pthread_exit:
       return_value = exitThread((void*) arg1);
       break; // you will need many debug hours if you forget the break
+    case sc_fork:
+      return_value = forkProcess();
+      break; // you will need many debug hours if you forget the break
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
   return return_value;
+}
+
+uint32 Syscall::forkProcess()
+{
+  // UserProcess parent = *(((UserThread*) currentThread)->process_);
+  // UserProcess* child = new UserProcess(parent);
+  return 0;
+
 }
 
 uint32 Syscall::exitThread(void* return_value)
