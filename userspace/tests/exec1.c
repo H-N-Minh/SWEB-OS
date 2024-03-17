@@ -2,6 +2,7 @@
 #include "unistd.h"
 
 
+//Exec without arguments
 int main()
 {
     const char * path = "usr/exec1_testprogram.sweb";
