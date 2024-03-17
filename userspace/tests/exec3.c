@@ -5,7 +5,7 @@
 //Test: exec with arguments
 int main()
 {
-    const char * path = "usr/exec1_testprogram.sweb";
+    const char * path = "usr/exec3_testprogram.sweb";
 
     int rv = execv(path, NULL);
 

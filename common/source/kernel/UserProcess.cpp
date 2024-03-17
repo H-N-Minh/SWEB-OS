@@ -25,7 +25,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   thread_counter_lock_.acquire();
   thread_counter_++;
   threads_lock_.acquire(); 
-  UserThread* new_thread = new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, thread_counter_);
+  UserThread* new_thread = new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, thread_counter_, false);
   thread_counter_lock_.release();
   threads_.push_back(new_thread); 
   new_thread->switch_to_userspace_ = 1; 
@@ -53,7 +53,7 @@ int UserProcess::create_thread(size_t* thread, void *(*start_routine)(void*), vo
   thread_counter_lock_.acquire();
   thread_counter_++;
   threads_lock_.acquire();  
-  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, wrapper, arg, thread_counter_);
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, wrapper, arg, thread_counter_, false);
   thread_counter_lock_.release();
   if(new_thread)
   {
