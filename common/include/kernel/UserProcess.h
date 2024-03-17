@@ -24,7 +24,7 @@ class UserProcess
     FileSystemInfo* working_dir_;
 
     ////////////////////////////////////////////////////////////////////////////////////////
-    int32 tid_counter_;
+    static int32 tid_counter_;
     ustl::string filename_;
     uint32 terminal_number_;
 

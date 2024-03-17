@@ -8,9 +8,10 @@
 
 #include "ArchInterrupts.h"
 
+int32 UserProcess::tid_counter_ = 1;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) 
-    : fd_(VfsSyscall::open(filename, O_RDONLY)), loader_(0), working_dir_(fs_info), tid_counter_(1), 
+    : fd_(VfsSyscall::open(filename, O_RDONLY)), loader_(0), working_dir_(fs_info), 
       filename_(filename), terminal_number_(terminal_number)
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -30,6 +31,31 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   tid_counter_++;
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 }
+
+// UserProcess::UserProcess(const UserProcess& other)
+//   : fd_(other.fd_), working_dir_(other.working_dir_),
+//     tid_counter_(other.tid_counter_), filename_(other.filename_), terminal_number_(other.terminal_number_)
+// {
+//   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
+
+//   if (fd_ >= 0)
+//     loader_ = new Loader(fd_);
+
+//   if (!loader_ || !loader_->loadExecutableAndInitProcess())
+//   {
+//     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
+//     //kill();           // This belong to Thread, not sure what to do here
+//     return;
+//   }
+
+//   // Copy the threads
+//   for (size_t i = 0; i < other.threads_.size(); i++)
+//   {
+//     UserThread* thread = new UserThread(*other.threads_[i]);
+//     threads_.push_back(thread);
+//   }
+// }
+
 
 UserProcess::~UserProcess()
 {
