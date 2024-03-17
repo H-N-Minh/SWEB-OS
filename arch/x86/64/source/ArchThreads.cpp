@@ -80,6 +80,30 @@ void ArchThreads::createUserRegisters(ArchThreadRegisters *&info, void* start_fu
   assert(info->cr3);
 }
 
+void ArchThreads::copyUserRegisters(ArchThreadRegisters *&source, ArchThreadRegisters *&destination)
+{
+  destination = new ArchThreadRegisters{};
+
+  destination->rflags = source->rflags;
+  destination->cr3 = source->cr3;
+  destination->rsp = source->rsp;
+  destination->rbp = source->rbp;
+  destination->rip = source->rip;
+  destination->fpu[0] = source->fpu[0];
+  destination->fpu[1] = source->fpu[1];
+  destination->fpu[2] = source->fpu[2];
+  destination->fpu[3] = source->fpu[3];
+  destination->fpu[4] = source->fpu[4];
+  destination->fpu[5] = source->fpu[5];
+  destination->fpu[6] = source->fpu[6];
+
+  destination->cs = source->cs;
+  destination->ds = source->ds;
+  destination->es = source->es;
+  destination->ss = source->ss;
+  destination->rsp0 = source->rsp0;
+}
+
 void ArchThreads::changeInstructionPointer(ArchThreadRegisters *info, void* function)
 {
   info->rip = (size_t)function;

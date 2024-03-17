@@ -81,6 +81,11 @@ public:
   static void createUserRegisters(ArchThreadRegisters *&info, void* start_function, void* user_stack, void* kernel_stack);
 
 /**
+ * Copy the exact registers of parent (source) to child (destination). Used for fork.
+*/
+  static void copyUserRegisters(ArchThreadRegisters *&source, ArchThreadRegisters *&destination);
+
+/**
  * changes an existing ArchThreadRegisters so that execution will start / continue
  * at the function specified
  * it does not change anything else, and if the thread info / thread was currently

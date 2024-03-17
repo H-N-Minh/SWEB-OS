@@ -56,7 +56,7 @@ class Thread
 
     const char* getName();
 
-    size_t getTID();
+    size_t getTID() const;
 
     Terminal* getTerminal();
 

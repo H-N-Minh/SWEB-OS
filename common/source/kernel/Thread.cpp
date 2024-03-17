@@ -187,7 +187,7 @@ const char *Thread::getName()
   return name_.c_str();
 }
 
-size_t Thread::getTID()
+size_t Thread::getTID() const
 {
   return tid_;
 }

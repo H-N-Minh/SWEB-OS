@@ -50,11 +50,38 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     switch_to_userspace_ = 1;
 }
 
-// Copy Constructor for UserThread
-// UserThread::UserThread(const UserThread& other)
-//     : Thread(other), process_(other.process_), return_value_(other.return_value_), finished_(other.finished_), joiner_(other.joiner_)
+
+// UserThread::UserThread(const UserThread& other, UserProcess* process, int32 tid)
+//     : Thread(other), process_(process), return_value_(0), finished_(0), joiner_(0)
 // {
-//     // Copy user registers
+//     debug(USERTHREAD, "UserThread COPY-Constructor: copying from thread (%zu) \n", other.getTID();
+//     tid_ = tid;
+
+//     // copy constructor for Archmemory
+
+//     // Setting up Registers
+//     void* start_func_ptr;
+//     void* user_stack_ptr = (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid-1));
+//     if (!func)
+//     {
+//         // create first thread of process => start the "main" func
+//         start_func_ptr = loader_->getEntryFunction();
+//     }
+//     else
+//     {
+//         // Create another thread for a process
+//         start_func_ptr = pcreate_helper;
+//     }
+//     ArchThreads::createUserRegisters(user_registers_, start_func_ptr, user_stack_ptr, getKernelStackStartPointer());
+//     if (func)
+//     {
+//         user_registers_->rdi = (size_t)func;
+//         user_registers_->rsi = (size_t)para;
+//     }
+
+
+
+//     /////////////////////////////// Copy user registers
 //     user_registers_ = new ArchThreads::Registers();
 //     *user_registers_ = *(other.user_registers_);
 
