@@ -29,6 +29,8 @@ class UserProcess
     uint32 terminal_number_;
 
   public:
+    UserProcess(const UserProcess& other);
+
     void createUserThread(void* func, void* para, void* tid, void* pcreate_helper);
 
     UserThread* getUserThread(size_t tid);
