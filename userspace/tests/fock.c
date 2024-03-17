@@ -3,7 +3,7 @@
 #include "unistd.h"
 
 int main() {
-    pid_t pid = 0;
+    pid_t pid = 5;
 
     // Create a child process
     printf("calling fork() from user space\n");
@@ -16,15 +16,15 @@ int main() {
     } else if (pid == 0) {
         // Child process
         printf("Hello from the child process!\n");
+        while (1)
+        {
+            /* code */
+        }
     } else {
         // Parent process
         printf("Hello from the parent process!\n");
     }
 
-    while (1)
-    {
-        /* code */
-    }
     
     return 0;
 }

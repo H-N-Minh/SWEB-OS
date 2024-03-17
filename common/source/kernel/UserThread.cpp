@@ -53,7 +53,6 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number)
     : Thread(other), process_(new_process), return_value_(0), finished_(0), joiner_(0)
 {
-    Scheduler::instance()->printThreadList();
     debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
 

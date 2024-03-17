@@ -75,8 +75,6 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 uint32 Syscall::forkProcess()
 {
-
-  Scheduler::instance()->printThreadList();
   debug(SYSCALL, "Syscall::forkProcess: start focking \n");
   UserProcess* parent = ((UserThread*) currentThread)->process_;
   UserProcess* child = new UserProcess(*parent);
@@ -135,6 +133,7 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
+  
   UserProcess* process = ((UserThread*) currentThread)->process_;
 
   size_t vector_size = process->threads_.size();
@@ -149,7 +148,7 @@ void Syscall::exit(size_t exit_code)
     } 
   }
 
-  // Scheduler::instance()->printThreadList();
+  Scheduler::instance()->printThreadList();
   delete process;
   ((UserThread*) currentThread)->process_ = 0;
   currentThread->kill();
