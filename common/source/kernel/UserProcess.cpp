@@ -47,12 +47,7 @@ UserProcess::UserProcess(const UserProcess& other)
     return;
   }
 
-  // // Copy the threads
-  // for (size_t i = 0; i < other.threads_.size(); i++)
-  // {
-  //   UserThread* thread = new UserThread(*other.threads_[i]);
-  //   threads_.push_back(thread);
-  // }
+  // TODO: copy constructor for USerthread then add to scheduler
 }
 
 

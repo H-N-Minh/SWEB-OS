@@ -55,39 +55,26 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 //     : Thread(other), process_(process), return_value_(0), finished_(0), joiner_(0)
 // {
 //     debug(USERTHREAD, "UserThread COPY-Constructor: copying from thread (%zu) \n", other.getTID();
-//     tid_ = tid;
+//     tid_ = other.getTID();
 
-//     // copy constructor for Archmemory
+//     // TODO: copy constructor for Archmemory
 
-//     // Setting up Registers
-//     void* start_func_ptr;
-//     void* user_stack_ptr = (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid-1));
-//     if (!func)
-//     {
-//         // create first thread of process => start the "main" func
-//         start_func_ptr = loader_->getEntryFunction();
-//     }
-//     else
-//     {
-//         // Create another thread for a process
-//         start_func_ptr = pcreate_helper;
-//     }
-//     ArchThreads::createUserRegisters(user_registers_, start_func_ptr, user_stack_ptr, getKernelStackStartPointer());
-//     if (func)
-//     {
-//         user_registers_->rdi = (size_t)func;
-//         user_registers_->rsi = (size_t)para;
-//     }
+//     // copy registers of parent thread
+//     ArchThreads::copyUserRegisters(other.user_registers_, user_registers_);
+//     // TODO: setting rax register differently for both child and parent
 
+//     // Setting up AddressSpace and Terminal
+//     ArchThreads::setAddressSpace(this, loader_->arch_memory_);   
+//     if (main_console->getTerminal(terminal_number))
+//         setTerminal(main_console->getTerminal(terminal_number));
 
-
-//     /////////////////////////////// Copy user registers
-//     user_registers_ = new ArchThreads::Registers();
-//     *user_registers_ = *(other.user_registers_);
-
-//     // Copy loader
-//     loader_ = new Loader(*(other.loader_));
+//     switch_to_userspace_ = 1;
 // }
+
+
+
+
+
 
 
 // TODO: these 2 methods need locking for thread safe

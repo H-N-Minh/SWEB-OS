@@ -36,6 +36,20 @@ void ArchThreads::setAddressSpace(Thread *thread, ArchMemory& arch_memory)
   }
 }
 
+void ArchThreads::copyAddressSpace(Thread *source, Thread *destination)
+{
+  assert(source->kernel_registers_->cr3);
+  destination->kernel_registers_->cr3 = source->kernel_registers_->cr3;
+  if (destination->user_registers_)
+    destination->user_registers_->cr3 = source->user_registers_->cr3;
+
+  if(destination == currentThread)
+  {
+          asm volatile("movq %[new_cr3], %%cr3\n"
+                       ::[new_cr3]"r"(source->kernel_registers_->cr3));
+  }
+}
+
 void ArchThreads::createBaseThreadRegisters(ArchThreadRegisters *&info, void* start_function, void* stack)
 {
   info = new ArchThreadRegisters{};
@@ -80,7 +94,7 @@ void ArchThreads::createUserRegisters(ArchThreadRegisters *&info, void* start_fu
   assert(info->cr3);
 }
 
-void ArchThreads::copyUserRegisters(ArchThreadRegisters *&source, ArchThreadRegisters *&destination)
+void ArchThreads::copyUserRegisters(const ArchThreadRegisters *&source, ArchThreadRegisters *&destination)
 {
   destination = new ArchThreadRegisters{};
 

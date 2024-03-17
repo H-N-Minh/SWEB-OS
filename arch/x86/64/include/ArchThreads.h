@@ -83,7 +83,7 @@ public:
 /**
  * Copy the exact registers of parent (source) to child (destination). Used for fork.
 */
-  static void copyUserRegisters(ArchThreadRegisters *&source, ArchThreadRegisters *&destination);
+  static void copyUserRegisters(const ArchThreadRegisters *&source, ArchThreadRegisters *&destination);
 
 /**
  * changes an existing ArchThreadRegisters so that execution will start / continue
@@ -110,6 +110,11 @@ public:
  * @param arch_memory the arch memory object for the address space
  */
   static void setAddressSpace(Thread *thread, ArchMemory& arch_memory);
+
+/**
+ * right after fork(), parent thread (source) and child thread (destination) should share the same address space
+ */
+  static void copyAddressSpace(Thread *source, Thread *destination);
 
 /**
  * uninterruptable locked operation
