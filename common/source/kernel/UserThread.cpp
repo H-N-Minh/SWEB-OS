@@ -50,6 +50,18 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     switch_to_userspace_ = 1;
 }
 
+// Copy Constructor for UserThread
+// UserThread::UserThread(const UserThread& other)
+//     : Thread(other), process_(other.process_), return_value_(other.return_value_), finished_(other.finished_), joiner_(other.joiner_)
+// {
+//     // Copy user registers
+//     user_registers_ = new ArchThreads::Registers();
+//     *user_registers_ = *(other.user_registers_);
+
+//     // Copy loader
+//     loader_ = new Loader(*(other.loader_));
+// }
+
 
 // TODO: these 2 methods need locking for thread safe
 void UserThread::setReturnValue(void* return_value)
