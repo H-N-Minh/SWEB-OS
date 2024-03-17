@@ -20,7 +20,6 @@ class UserProcess
 
   private:
     int32 fd_;
-    Loader* loader_;
     FileSystemInfo* working_dir_;
 
     ////////////////////////////////////////////////////////////////////////////////////////
@@ -29,6 +28,8 @@ class UserProcess
     uint32 terminal_number_;
 
   public:
+    Loader* loader_;
+    
     UserProcess(const UserProcess& other);
 
     void createUserThread(void* func, void* para, void* tid, void* pcreate_helper);

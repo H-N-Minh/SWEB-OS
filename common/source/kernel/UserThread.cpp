@@ -53,24 +53,24 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 UserThread::UserThread(UserThread& other, UserProcess* process, int32 tid, uint32 terminal_number)
     : Thread(other), process_(process), return_value_(0), finished_(0), joiner_(0)
 {
-    debug(USERTHREAD, "UserThread COPY-Constructor: copying from thread (%zu) \n", other.getTID());
+    debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
 
     // TODO: copy constructor for Archmemory (to set the bits of page table)
 
-    // copy registers of parent thread
+    // copy registers of parent thread, except for RAX (for different fork()-return-value)
+    debug(USERTHREAD, "UserThread COPY-Constructor: copying registers from parent to child thread \n");
     ArchThreads::copyUserRegisters(other.user_registers_, user_registers_);
-    // TODO: setting rax register differently for both child and parent
+    ArchThreads::setupForkReturnValue(other.user_registers_, user_registers_, tid_);
 
     // Setting up AddressSpace and Terminal
+    debug(USERTHREAD, "UserThread COPY-Constructor: copying CR3 from parent to child thread \n");
     ArchThreads::copyAddressSpace(&other, this);   
     if (main_console->getTerminal(terminal_number))
         setTerminal(main_console->getTerminal(terminal_number));
 
     switch_to_userspace_ = 1;
 }
-
-
 
 
 

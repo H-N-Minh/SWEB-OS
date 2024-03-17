@@ -163,7 +163,7 @@ public:
    */
   static void debugCheckNewThread(Thread* thread);
 
-  void setupForkReturnValue(ArchThreadRegisters* parent, ArchThreadRegisters* child, uint32 child_id);
+  static void setupForkReturnValue(ArchThreadRegisters* parent, ArchThreadRegisters* child, uint32 child_id);
 
 private:
   /**
