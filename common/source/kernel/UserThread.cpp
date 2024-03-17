@@ -32,8 +32,6 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
             *(size_t*)(virtual_address + array_offset + i * sizeof(pointer)) += (USER_BREAK - PAGE_SIZE);
         }
         
-
-
         thread_counter++;
     }
 
