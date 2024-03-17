@@ -50,26 +50,25 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     switch_to_userspace_ = 1;
 }
 
+UserThread::UserThread(UserThread& other, UserProcess* process, int32 tid, uint32 terminal_number)
+    : Thread(other), process_(process), return_value_(0), finished_(0), joiner_(0)
+{
+    debug(USERTHREAD, "UserThread COPY-Constructor: copying from thread (%zu) \n", other.getTID());
+    tid_ = tid;
 
-// UserThread::UserThread(const UserThread& other, UserProcess* process, int32 tid)
-//     : Thread(other), process_(process), return_value_(0), finished_(0), joiner_(0)
-// {
-//     debug(USERTHREAD, "UserThread COPY-Constructor: copying from thread (%zu) \n", other.getTID();
-//     tid_ = other.getTID();
+    // TODO: copy constructor for Archmemory (to set the bits of page table)
 
-//     // TODO: copy constructor for Archmemory
+    // copy registers of parent thread
+    ArchThreads::copyUserRegisters(other.user_registers_, user_registers_);
+    // TODO: setting rax register differently for both child and parent
 
-//     // copy registers of parent thread
-//     ArchThreads::copyUserRegisters(other.user_registers_, user_registers_);
-//     // TODO: setting rax register differently for both child and parent
+    // Setting up AddressSpace and Terminal
+    ArchThreads::copyAddressSpace(&other, this);   
+    if (main_console->getTerminal(terminal_number))
+        setTerminal(main_console->getTerminal(terminal_number));
 
-//     // Setting up AddressSpace and Terminal
-//     ArchThreads::setAddressSpace(this, loader_->arch_memory_);   
-//     if (main_console->getTerminal(terminal_number))
-//         setTerminal(main_console->getTerminal(terminal_number));
-
-//     switch_to_userspace_ = 1;
-// }
+    switch_to_userspace_ = 1;
+}
 
 
 

@@ -113,8 +113,9 @@ class Thread
      */
     Lock* holding_lock_list_;
 
+    Thread(Thread &src);
+    
   private:
-    Thread(Thread const &src);
     Thread &operator=(Thread const &src);
 
     volatile ThreadState state_;

@@ -41,7 +41,7 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
   kernel_stack_[0] = STACK_CANARY;
 }
 
-Thread::Thread(Thread const &src) 
+Thread::Thread(Thread &src) 
     : kernel_registers_(0), user_registers_(0), switch_to_userspace_(1), loader_(src.loader_), 
     next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
     my_terminal_(0), working_dir_(src.working_dir_), name_(ustl::move(src.name_))
