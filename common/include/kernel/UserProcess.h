@@ -24,11 +24,14 @@ class UserProcess
 
     ////////////////////////////////////////////////////////////////////////////////////////
     static int32 tid_counter_;
+    static int32 pid_counter_;
     ustl::string filename_;
     uint32 terminal_number_;
 
   public:
     Loader* loader_;
+
+    int32 pid_;
     
     UserProcess(const UserProcess& other);
 

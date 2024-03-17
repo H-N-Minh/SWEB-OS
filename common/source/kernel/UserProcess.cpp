@@ -9,10 +9,11 @@
 #include "ArchInterrupts.h"
 
 int32 UserProcess::tid_counter_ = 1;
+int32 UserProcess::pid_counter_ = 1;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) 
     : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), 
-      filename_(filename), terminal_number_(terminal_number), loader_(0)
+      filename_(filename), terminal_number_(terminal_number), loader_(0), pid_(pid_counter_++)
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
@@ -33,7 +34,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 }
 
 UserProcess::UserProcess(const UserProcess& other)
-  : fd_(other.fd_), working_dir_(other.working_dir_), filename_(other.filename_), terminal_number_(other.terminal_number_), loader_(other.loader_)
+  : fd_(other.fd_), working_dir_(other.working_dir_), filename_(other.filename_), terminal_number_(other.terminal_number_), 
+    loader_(other.loader_), pid_(pid_counter_++)
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 

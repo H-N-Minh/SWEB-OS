@@ -8,6 +8,8 @@
 #include "File.h"
 #include "Scheduler.h"
 
+#include "ArchThreads.h"
+
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
   size_t return_value = 0;
@@ -73,9 +75,20 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 uint32 Syscall::forkProcess()
 {
-  // UserProcess parent = *(((UserThread*) currentThread)->process_);
-  // UserProcess* child = new UserProcess(parent);
-  return 0;
+  UserProcess parent = *(((UserThread*) currentThread)->process_);
+  UserProcess* child = new UserProcess(parent);
+
+  uint32 retval;
+  if (!child)
+  {
+    retval = -1;
+  }
+  else
+  {
+    retval = (uint32) currentThread->user_registers_->rax;
+  }
+
+  return retval;
 
 }
 
