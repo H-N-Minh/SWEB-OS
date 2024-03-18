@@ -42,13 +42,7 @@ UserProcess::UserProcess(const UserProcess& other)
   if (fd_ >= 0)
   loader_ = new Loader(fd_);
 
-  if (!loader_ || !loader_->loadExecutableAndInitProcess())
-  {
-    debug(USERPROCESS, "Error: loading %s failed!\n", filename_.c_str());
-    //kill();           // This belong to Thread, not sure what to do here
-    return;
-  }
-
+  
 
   debug(USERPROCESS, "ctor: Done loading %s, now Creating new thread for forked process\n", filename_.c_str());
   UserThread* curr_thread = (UserThread*) currentThread;  
