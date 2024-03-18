@@ -34,18 +34,28 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 }
 
 UserProcess::UserProcess(const UserProcess& other)
-  : fd_(other.fd_), working_dir_(other.working_dir_), filename_(other.filename_), terminal_number_(other.terminal_number_), 
+  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(other.working_dir_), filename_(other.filename_), terminal_number_(other.terminal_number_), 
     loader_(other.loader_), pid_(pid_counter_++)
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
-  debug(USERPROCESS, "Copy-ctor: Creating new thread for forked process");
+  if (fd_ >= 0)
+  loader_ = new Loader(fd_);
 
+  if (!loader_ || !loader_->loadExecutableAndInitProcess())
+  {
+    debug(USERPROCESS, "Error: loading %s failed!\n", filename_.c_str());
+    //kill();           // This belong to Thread, not sure what to do here
+    return;
+  }
+
+
+  debug(USERPROCESS, "ctor: Done loading %s, now Creating new thread for forked process\n", filename_.c_str());
   UserThread* curr_thread = (UserThread*) currentThread;  
   UserThread* new_thread = new UserThread(*curr_thread, this, tid_counter_, terminal_number_);
   threads_.push_back(new_thread);
 
-  debug(USERPROCESS, "ctor: Done loading %s, now adding new thread id (%zu) to the Scheduler\n", filename_.c_str(), new_thread->getTID());
+  debug(USERPROCESS, "Copy-ctor: adding new thread id (%zu) to the Scheduler", new_thread->getTID());
   Scheduler::instance()->addNewThread(new_thread);
   tid_counter_++;
 }

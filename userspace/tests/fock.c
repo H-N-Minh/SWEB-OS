@@ -16,13 +16,13 @@ int main() {
     } else if (pid == 0) {
         // Child process
         printf("Hello from the child process!\n");
-        while (1)
-        {
-            /* code */
-        }
     } else {
         // Parent process
         printf("Hello from the parent process!\n");
+    }
+    while (1)
+    {
+        /* code */
     }
 
     
