@@ -11,6 +11,6 @@ int main()
 
     assert(rv == -1);            //not sure if this is right TODO
 
-
+    printf("exec 1 successfull\n");
     //assert(0);    //this should never be reached
 }

@@ -495,7 +495,7 @@ int Syscall::execv(const char *path, char *const argv[])
     {
       break;
     }
-    if(!check_parameter((size_t)argv[index], true))
+    if(!check_parameter((size_t)argv[index], true) || (offset +  strlen(argv[index]) + 1) >= array_offset || index >= 300)
     {
       delete current_process.execv_loader_;
       current_process.execv_loader_ = 0;
@@ -509,14 +509,6 @@ int Syscall::execv(const char *path, char *const argv[])
 
     offset += strlen(argv[index]) + 1;
 
-    if(offset >= array_offset || index >= 300)         //todo: find a good range
-    {
-      delete current_process.execv_loader_;
-      current_process.execv_loader_ = 0;
-      VfsSyscall::close(current_process.execv_fd_);
-      PageManager::instance()->freePPN(current_process.execv_ppn_args_);
-      return -1;
-    }
     index++;
   }
   current_process.exec_argc_ = index;

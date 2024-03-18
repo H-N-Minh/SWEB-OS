@@ -25,23 +25,22 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
         size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
         bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , process_->execv_ppn_args_, 1);
-        assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
+        assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
 
         for(size_t i = 0; i < process_->exec_argc_; i++)
         {
             *(size_t*)(virtual_address + array_offset + i * sizeof(pointer)) += (USER_BREAK - PAGE_SIZE);
         }
         
-        thread_counter++;
     }
 
 
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
-    virtual_page_ = USER_BREAK / PAGE_SIZE - thread_counter;
-    size_t user_stack_start = USER_BREAK - sizeof(pointer) - PAGE_SIZE * (thread_counter - 1);
+    virtual_page_ = USER_BREAK / PAGE_SIZE - thread_counter - 1;
+    size_t user_stack_start = USER_BREAK - sizeof(pointer) - PAGE_SIZE * (thread_counter);
     bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page_ , page_for_stack, 1);
-    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
+    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in thread");
     
     if(wrapper == 0)
     {
