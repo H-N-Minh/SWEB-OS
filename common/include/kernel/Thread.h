@@ -5,6 +5,7 @@
 #include "debug.h"
 #include "Condition.h"
 #include "Mutex.h"
+#include "uvector.h"
 
 #define STACK_CANARY ((uint32)0xDEADDEAD ^ (uint32)(size_t)this)
 
@@ -141,11 +142,11 @@ class Thread
     ustl::string name_;
 
   public:
-    Thread* cancel_thread_{NULL};                 //move to userthread later ...  //need to be locked by thread_lock TODO
+    ustl::vector<Thread*> cancel_threads_;                //TODO:needs to be cleaned somewhere
 
-    bool reached_cancelation_point_{false};
-    Mutex has_reached_cancelation_point_lock_;
-    Condition has_reached_cancelation_point_;
+    bool recieved_pthread_exit_notification_{false};
+    Mutex has_recieved_pthread_exit_notification_lock_;
+    Condition has_recieved_pthread_exit_notification_;
 
 
     Thread* join_thread_{NULL};
