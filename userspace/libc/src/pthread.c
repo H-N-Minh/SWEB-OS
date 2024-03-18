@@ -215,3 +215,38 @@ int pthread_setcanceltype(int type, int *oldtype)
 int get_thread_count(void) {
     return __syscall(sc_threadcount, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
+
+//------------MUTEX-------------------------
+//typedef struct {
+//    int locked;
+//    pthread_t held_by;
+//    pthread_t* sleepers;
+//} Mutex;
+//
+//void mutex_init(Mutex* mutex) {
+//    mutex->locked = 0;
+//    mutex->held_by = 0;
+//    mutex->sleepers = NULL;
+//}
+//
+//void mutex_lock(Mutex* mutex)
+//{
+//    pthread_t self = pthread_self(); <--assume we implemented pthread_self() in userspace(get the tid of the current thread)
+//    while ((&mutex->locked, 1))
+//    {
+//        //mutex is locked, add current thread to the sleepers list
+//        //mutex is locked wait until it becomes available
+//        pthread_yield();
+//    }
+//    //mutex acquired, update held_by pointer
+//    mutex->held_by = self;
+//}
+//
+//void mutex_unlock(Mutex* mutex) {
+//    if (mutex->held_by != pthread_self())
+//    {
+//        //attempting to unlock mutex not held by current thread
+//    }
+//    // Release the lock
+//    mutex->held_by = 0;
+//}
