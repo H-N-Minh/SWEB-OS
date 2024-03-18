@@ -62,6 +62,14 @@ extern int pthread_setcanceltype(int type, int *oldtype);
 
 extern int get_thread_count(void);
 
+extern int pthread_spin_init(pthread_spinlock_t *lock, int pshared);
+
+extern int pthread_spin_lock(pthread_spinlock_t *lock);
+
+extern int pthread_spin_trylock(pthread_spinlock_t *lock);
+
+extern int pthread_spin_unlock(pthread_spinlock_t *lock);
+
 
 #ifdef __cplusplus
 }
