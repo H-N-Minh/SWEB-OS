@@ -239,7 +239,8 @@ int Syscall::pthread_cancel(size_t *thread_id)
         //cancel the thread
         thread->cancelThread();
         return 0; //successful cancellation
-    } else
+    }
+    else
     {
         debug(TAI_THREAD, "Syscall::pthread_cancel: Thread %zu not found\n", *thread_id);
         return -1; //hread not found

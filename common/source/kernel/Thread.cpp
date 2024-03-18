@@ -193,10 +193,17 @@ void Thread::setState(ThreadState new_state)
     state_ = new_state;
 }
 
+//asyncro be careful when cancel the thread if its holding a lock
+//need cancelation point (only )
+
 void Thread::cancelThread()
 {
     // Set the state of the thread to ToBeDestroyed
-    setState(ToBeDestroyed);
+
+    //if(cancelation is reach || type = asyn
+        setState(ToBeDestroyed);
+
+        //for example we dont want thread B to kill itself, we want the thread B to call pthread_exit
 }
 
 void Thread::setCancelState(CancelState state) {

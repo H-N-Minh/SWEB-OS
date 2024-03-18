@@ -144,6 +144,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
  */
 int pthread_spin_destroy(pthread_spinlock_t *lock)
 {
+  //free(lock)
   return -1;
 }
 
@@ -153,10 +154,16 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
  */
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 {
+    //spin lock = malloc()
     if (lock == ((void*)0))
         return 1; //error
     *lock = 0; //initialize the spinlock to an unlocked state
     return 0; //success
+
+    if(pshared == 1)
+    {
+        //share between processes;
+    }
 }
 
 /**
@@ -218,12 +225,13 @@ int get_thread_count(void) {
 
 //------------MUTEX-------------------------
 //typedef struct {
-//    int locked;
+//    bool locked;
 //    pthread_t held_by;
 //    pthread_t* sleepers;
 //} Mutex;
 //
 //void mutex_init(Mutex* mutex) {
+//      Mutex lock = malloc()
 //    mutex->locked = 0;
 //    mutex->held_by = 0;
 //    mutex->sleepers = NULL;
@@ -236,13 +244,16 @@ int get_thread_count(void) {
 //    {
 //        //mutex is locked, add current thread to the sleepers list
 //        //mutex is locked wait until it becomes available
-//        pthread_yield();
+//        syscall(yield)
 //    }
 //    //mutex acquired, update held_by pointer
+//
 //    mutex->held_by = self;
+//      bool locked = 1;
 //}
 //
-//void mutex_unlock(Mutex* mutex) {
+//void mutex_unlock(Mutex* mutex)
+// {
 //    if (mutex->held_by != pthread_self())
 //    {
 //        //attempting to unlock mutex not held by current thread
@@ -250,3 +261,7 @@ int get_thread_count(void) {
 //    // Release the lock
 //    mutex->held_by = 0;
 //}
+
+//lock
+//do sth here
+//unlock
