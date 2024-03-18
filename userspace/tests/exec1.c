@@ -9,8 +9,8 @@ int main()
 
     int rv = execv(path, NULL);
 
-    assert(rv);
+    assert(rv == -1);            //not sure if this is right TODO
 
 
-    assert(0);    //this should never be reached
+    //assert(0);    //this should never be reached
 }

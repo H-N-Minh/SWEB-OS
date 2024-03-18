@@ -96,7 +96,9 @@ UserThread::~UserThread()
         process_->execv_loader_ = 0;
 
         if (process_->fd_ > 0)
+        {
             VfsSyscall::close(process_->fd_);
+        }
         process_->fd_ = process_->execv_fd_;
 
         // delete working_dir_;     //not sure if i have to close thise

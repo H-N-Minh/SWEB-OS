@@ -7,7 +7,7 @@
 class UserProcess;
 
 enum CANCEL_STATE {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum CANCEL_TYPE {PTHREAD_CANCEL_DEFERRED, PTHREAD_CANCEL_ASYNCHRONOUS};
+enum CANCEL_TYPE {PTHREAD_CANCEL_DEFERRED, PTHREAD_CANCEL_ASYNCHRONOUS, PTHREAD_CANCEL_EXIT};
 
 class UserThread : public Thread
 {
@@ -24,6 +24,8 @@ class UserThread : public Thread
         bool wants_to_be_canceled_{false};
 
         size_t virtual_page_;
+
+        bool exit_send_cancelation_{false};
         
 
         CANCEL_STATE cancel_state_{CANCEL_STATE::PTHREAD_CANCEL_ENABLE};  //currently not used

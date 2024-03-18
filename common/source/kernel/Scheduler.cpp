@@ -51,7 +51,7 @@ void Scheduler::schedule()
     if((*it)->schedulable())
     {
       if(((*it)->type_ == Thread::USER_THREAD) && ((UserThread*)*it)->wants_to_be_canceled_ && (((UserThread*)*it)->switch_to_userspace_ == 1) 
-      &&  (((UserThread*)*it)->cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS) && ((UserThread*)*it)->cancel_state_ == PTHREAD_CANCEL_ENABLE)
+      &&  (((UserThread*)*it)->cancel_type_ != PTHREAD_CANCEL_DEFERRED) && ((UserThread*)*it)->cancel_state_ == PTHREAD_CANCEL_ENABLE)
       {
         (*it)->kernel_registers_->rip     = (size_t)Syscall::pthread_exit;
         (*it)->kernel_registers_->rsi     = (size_t)-1;
