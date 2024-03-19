@@ -65,7 +65,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, u
 
     // Setting up AddressSpace and Terminal
     debug(USERTHREAD, "UserThread COPY-Constructor: copying CR3 from parent to child thread \n");
-    ArchThreads::copyAddressSpace(&other, this);   
+    ArchThreads::setAddressSpace(this, loader_->arch_memory_);    
     if (main_console->getTerminal(terminal_number))
         setTerminal(main_console->getTerminal(terminal_number));
 

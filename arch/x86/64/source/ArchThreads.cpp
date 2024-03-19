@@ -36,19 +36,21 @@ void ArchThreads::setAddressSpace(Thread *thread, ArchMemory& arch_memory)
   }
 }
 
-void ArchThreads::copyAddressSpace(Thread *source, Thread *destination)
-{
-  assert(source->kernel_registers_->cr3);
-  destination->kernel_registers_->cr3 = source->kernel_registers_->cr3;
-  if (destination->user_registers_)
-    destination->user_registers_->cr3 = source->user_registers_->cr3;
 
-  if(destination == currentThread)
-  {
-          asm volatile("movq %[new_cr3], %%cr3\n"
-                       ::[new_cr3]"r"(source->kernel_registers_->cr3));
-  }
-}
+// MIMH: This method might be needed for implementing CoW (for fork)
+// void ArchThreads::copyAddressSpace(Thread *source, Thread *destination)
+// {
+//   assert(source->kernel_registers_->cr3);
+//   destination->kernel_registers_->cr3 = source->kernel_registers_->cr3;
+//   if (destination->user_registers_)
+//     destination->user_registers_->cr3 = source->user_registers_->cr3;
+
+//   if(destination == currentThread)
+//   {
+//           asm volatile("movq %[new_cr3], %%cr3\n"
+//                        ::[new_cr3]"r"(source->kernel_registers_->cr3));
+//   }
+// }
 
 void ArchThreads::createBaseThreadRegisters(ArchThreadRegisters *&info, void* start_function, void* stack)
 {

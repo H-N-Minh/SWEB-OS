@@ -35,21 +35,21 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(other.working_dir_), filename_(other.filename_), terminal_number_(other.terminal_number_), 
-    loader_(other.loader_), pid_(pid_counter_++)
+    loader_(0), pid_(pid_counter_++)
 {
+  debug(USERPROCESS, "Copy-ctor: start copying from process (%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
-  if (fd_ >= 0)
-  loader_ = new Loader(fd_);
+  assert(fd_ < 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
+  debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
+  loader_ = new Loader(fd_, other.loader_->arch_memory_);
 
-  
-
-  debug(USERPROCESS, "ctor: Done loading %s, now Creating new thread for forked process\n", filename_.c_str());
+  debug(USERPROCESS, "Copy-ctor: Done loading with new ArchMemory, now calling copy-ctor for Thread\n");
   UserThread* curr_thread = (UserThread*) currentThread;  
   UserThread* new_thread = new UserThread(*curr_thread, this, tid_counter_, terminal_number_);
   threads_.push_back(new_thread);
 
-  debug(USERPROCESS, "Copy-ctor: adding new thread id (%zu) to the Scheduler", new_thread->getTID());
+  debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", new_thread->getTID());
   Scheduler::instance()->addNewThread(new_thread);
   tid_counter_++;
 }
