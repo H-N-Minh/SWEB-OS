@@ -116,24 +116,44 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
 ArchMemory::ArchMemory(ArchMemory const &src)
 {
-  // Copy the page map level 4 entry
+  debug(A_MEMORY, "ArchMemory::copy-constructor starts \n");
   page_map_level_4_ = PageManager::instance()->allocPPN();
-  PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
-  PageMapLevel4Entry* src_pml4 = src.page_map_level_4_;
-  memcpy((void*) new_pml4, (void*) src_pml4, PAGE_SIZE);
+    // get Virtual address of pml4 of child (NEW) and parent (SOURCE)
+  PageMapLevel4Entry* NEW_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
+  PageMapLevel4Entry* SOURCE_pml4 = src.page_map_level_4_;
 
-  PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
-  for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // free only lower half
+  debug(A_MEMORY, "ArchMemory::copying all pages\n");
+  // Copy the page map level 4
+  memcpy((void*) NEW_pml4, (void*) SOURCE_pml4, PAGE_SIZE);
+  for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // copy only lower half (userspace)
   {
-    if (pml4[pml4i].present)
+    if (SOURCE_pml4[pml4i].present)
     {
-      PageDirPointerTableEntry* pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(pml4[pml4i].page_ppn);
+      // copy the page directory pointer table
+      NEW_pml4[pml4i].present = 1;
+      NEW_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
+      PageDirPointerTableEntry* NEW_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(NEW_pml4[pml4i].page_ppn);
+      PageDirPointerTableEntry* SOURCE_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(SOURCE_pml4[pml4i].page_ppn);
+      memcpy((void*) NEW_pdpt, (void*) SOURCE_pdpt, PAGE_SIZE);
+      
       for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
       {
-        if (pdpt[pdpti].pd.present)
+        if (SOURCE_pdpt[pdpti].pd.present)
         {
-          assert(pdpt[pdpti].pd.size == 0);
-          PageDirEntry* pd = (PageDirEntry*) getIdentAddressOfPPN(pdpt[pdpti].pd.page_ppn);
+          assert(SOURCE_pdpt[pdpti].pd.size == 0);    //????
+          // copy the page directory
+          NEW_pdpt[pdpti].pd.present = 1;
+          NEW_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
+          PageDirEntry* NEW_pd = (PageDirEntry*) getIdentAddressOfPPN(NEW_pdpt[pdpti].pd.page_ppn);
+          PageDirEntry* SOURCE_pd = (PageDirEntry*) getIdentAddressOfPPN(SOURCE_pdpt[pdpti].pd.page_ppn);
+          memcpy((void*) NEW_pd, (void*) SOURCE_pd, PAGE_SIZE);
+      
+
+
+
+
+
+
           for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
           {
             if (pd[pdi].pt.present)
