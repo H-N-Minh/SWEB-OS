@@ -125,6 +125,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
   debug(A_MEMORY, "ArchMemory::copying all pages\n");
   // Copy the page map level 4
   memcpy((void*) NEW_pml4, (void*) SOURCE_pml4, PAGE_SIZE);
+  // Loop through the pml4 to get each pdpt
   for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // copy only lower half (userspace)
   {
     if (SOURCE_pml4[pml4i].present)
@@ -136,6 +137,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
       PageDirPointerTableEntry* SOURCE_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(SOURCE_pml4[pml4i].page_ppn);
       memcpy((void*) NEW_pdpt, (void*) SOURCE_pdpt, PAGE_SIZE);
       
+      // loop through pdpt to get each pd
       for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
       {
         if (SOURCE_pdpt[pdpti].pd.present)
@@ -148,22 +150,34 @@ ArchMemory::ArchMemory(ArchMemory const &src)
           PageDirEntry* SOURCE_pd = (PageDirEntry*) getIdentAddressOfPPN(SOURCE_pdpt[pdpti].pd.page_ppn);
           memcpy((void*) NEW_pd, (void*) SOURCE_pd, PAGE_SIZE);
       
-
-
-
-
-
-
+          // loop through pd to get each pt
           for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
           {
-            if (pd[pdi].pt.present)
+            if (SOURCE_pd[pdi].pt.present)
             {
-              assert(pd[pdi].pt.size == 0);
-              PageTableEntry* pt = (PageTableEntry*) getIdentAddressOfPPN(pd[pdi].pt.page_ppn);
+              assert(SOURCE_pd[pdi].pt.size == 0);    //????
+              // copy the page table
+              NEW_pd[pdi].pt.present = 1;
+              NEW_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
+              PageTableEntry* NEW_pt = (PageTableEntry*) getIdentAddressOfPPN(NEW_pd[pdi].pt.page_ppn);
+              PageTableEntry* SOURCE_pt = (PageTableEntry*) getIdentAddressOfPPN(SOURCE_pd[pdi].pt.page_ppn);
+              memcpy((void*) NEW_pt, (void*) SOURCE_pt, PAGE_SIZE);
+
+              // loop through pt to get each page
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
-                if (pt[pti].present)
+                if (SOURCE_pt[pti].present)
                 {
+                  // copy the page
+                  NEW_pt[pti].present = 1;
+                  NEW_pt[pdi].page_ppn = PageManager::instance()->allocPPN();
+                  (pointer) NEW_page = (pointer) getIdentAddressOfPPN(NEW_pt[pdi].page_ppn);
+                  PageTableEntry* SOURCE_page = (PageTableEntry*) getIdentAddressOfPPN(SOURCE_pt[pdi].page_ppn);
+                  memcpy((void*) NEW_page, (void*) SOURCE_page, PAGE_SIZE);
+
+
+
+
                   pt[pti].present = 0;
                   PageManager::instance()->freePPN(pt[pti].page_ppn);
                 }
