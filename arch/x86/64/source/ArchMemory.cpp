@@ -120,7 +120,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
   page_map_level_4_ = PageManager::instance()->allocPPN();
     // get Virtual address of pml4 of child (NEW) and parent (SOURCE)
   PageMapLevel4Entry* NEW_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
-  PageMapLevel4Entry* SOURCE_pml4 = src.page_map_level_4_;
+  PageMapLevel4Entry* SOURCE_pml4 = (PageMapLevel4Entry*) src.page_map_level_4_;
 
   debug(A_MEMORY, "ArchMemory::copying all pages\n");
   // Copy the page map level 4
@@ -171,69 +171,19 @@ ArchMemory::ArchMemory(ArchMemory const &src)
                   // copy the page
                   NEW_pt[pti].present = 1;
                   NEW_pt[pdi].page_ppn = PageManager::instance()->allocPPN();
-                  (pointer) NEW_page = (pointer) getIdentAddressOfPPN(NEW_pt[pdi].page_ppn);
-                  PageTableEntry* SOURCE_page = (PageTableEntry*) getIdentAddressOfPPN(SOURCE_pt[pdi].page_ppn);
+                  pointer NEW_page = getIdentAddressOfPPN(NEW_pt[pdi].page_ppn);
+                  pointer SOURCE_page = getIdentAddressOfPPN(SOURCE_pt[pdi].page_ppn);
                   memcpy((void*) NEW_page, (void*) SOURCE_page, PAGE_SIZE);
-
-
-
-
-                  pt[pti].present = 0;
-                  PageManager::instance()->freePPN(pt[pti].page_ppn);
                 }
               }
-              pd[pdi].pt.present = 0;
-              PageManager::instance()->freePPN(pd[pdi].pt.page_ppn);
-            }
-          }
-          pdpt[pdpti].pd.present = 0;
-          PageManager::instance()->freePPN(pdpt[pdpti].pd.page_ppn);
-        }
-      }
-      pml4[pml4i].present = 0;
-      PageManager::instance()->freePPN(pml4[pml4i].page_ppn);
-    }
-  }
-  PageManager::instance()->freePPN(page_map_level_4_);
-  ////////////////////////////////////////////////////////////////////////////////
-
-  // Copy the page directory pointer table entries
-  for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
-  {
-    if (other.kernel_page_directory_pointer_table[pdpti].pd.present)
-    {
-      kernel_page_directory_pointer_table[pdpti].pd.present = 1;
-      kernel_page_directory_pointer_table[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
-      memcpy(getIdentAddressOfPPN(kernel_page_directory_pointer_table[pdpti].pd.page_ppn),
-             getIdentAddressOfPPN(other.kernel_page_directory_pointer_table[pdpti].pd.page_ppn), PAGE_SIZE);
-
-      // Copy the page directory entries
-      PageDirEntry* pd = (PageDirEntry*)getIdentAddressOfPPN(kernel_page_directory_pointer_table[pdpti].pd.page_ppn);
-      for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
-      {
-        if (other.kernel_page_directory[pdi].pt.present)
-        {
-          pd[pdi].pt.present = 1;
-          pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
-          memcpy(getIdentAddressOfPPN(pd[pdi].pt.page_ppn),
-                 getIdentAddressOfPPN(other.kernel_page_directory[pdi].pt.page_ppn), PAGE_SIZE);
-
-          // Copy the page table entries
-          PageTableEntry* pt = (PageTableEntry*)getIdentAddressOfPPN(pd[pdi].pt.page_ppn);
-          for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
-          {
-            if (other.kernel_page_table[pti].present)
-            {
-              pt[pti].present = 1;
-              pt[pti].page_ppn = PageManager::instance()->allocPPN();
-              memcpy(getIdentAddressOfPPN(pt[pti].page_ppn),
-                     getIdentAddressOfPPN(other.kernel_page_table[pti].page_ppn), PAGE_SIZE);
             }
           }
         }
       }
     }
   }
+
+  debug(A_MEMORY, "ArchMemory::copy-constructor finished \n");
 }
 
 ArchMemory::~ArchMemory()
