@@ -97,12 +97,27 @@ uint32 Syscall::exitThread(void* return_value)
 
 void Syscall::exit(size_t exit_code)
 {
-  debug(TAI_THREAD, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
-  delete static_cast<UserThread*>(currentThread)->process_;
-  static_cast<UserThread*>(currentThread)->process_ = 0;
-  //static_cast<UserThread*>(currentThread)->process_->to_be_destroyed_ = true;
-  currentThread->kill();
-  assert(false && "This should never happen");
+    debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
+
+    UserProcess* process = ((UserThread*) currentThread)->process_;
+
+    size_t vector_size = process->threads_.size();
+    for (size_t i = 0; i < vector_size; ++i)
+    {
+        if(process->threads_[i] != currentThread)
+        {
+            process->threads_[i]->kill();
+            // after thread kill itself, it is removed from Vector, so we need to decrement i and vector size
+            i--;
+            vector_size--;
+        }
+    }
+
+    Scheduler::instance()->printThreadList();
+    delete process;
+    ((UserThread*) currentThread)->process_ = 0;
+    currentThread->kill();
+    assert(false && "This should never happen");
 }
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
