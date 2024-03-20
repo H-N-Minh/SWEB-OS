@@ -120,7 +120,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
   page_map_level_4_ = PageManager::instance()->allocPPN();
     // get Virtual address of pml4 of child (NEW) and parent (SOURCE)
   PageMapLevel4Entry* NEW_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
-  PageMapLevel4Entry* SOURCE_pml4 = (PageMapLevel4Entry*) src.page_map_level_4_;
+  PageMapLevel4Entry* SOURCE_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
 
   debug(A_MEMORY, "ArchMemory::copying all pages\n");
   // Copy the page map level 4

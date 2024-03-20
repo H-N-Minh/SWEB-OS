@@ -40,7 +40,7 @@ UserProcess::UserProcess(const UserProcess& other)
   debug(USERPROCESS, "Copy-ctor: start copying from process (%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
-  assert(fd_ < 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
+  assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
   loader_ = new Loader(fd_, other.loader_->arch_memory_);
 
