@@ -3,7 +3,7 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                             "/usr/shell.sweb",
+                             // "/usr/shell.sweb",
 
                             // pthread_create
                             
@@ -44,7 +44,10 @@ char const *user_progs[] = {
 
                             //execv        
                             // "/usr/exec1.sweb",                  //exec without arguments
-                            // "/usr/exec2.sweb",                  //exec with wrong path         
+                            // "/usr/exec2.sweb",                  //exec with wrong path     
+
+                            //fork
+                            "/usr/fork1.sweb",    
 
                             0
                            };

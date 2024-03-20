@@ -37,5 +37,7 @@ class Syscall
 
     static int pthread_setcancelstate(int state, int *oldstate);
     static int pthread_setcanceltype(int type, int *oldtype);
+
+    static long int fork();
 };
 

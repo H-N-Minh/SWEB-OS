@@ -10,8 +10,19 @@
 #include "FileDescriptor.h"
 #include "Scheduler.h"
 
-Loader::Loader(ssize_t fd) : fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0)
+Loader::Loader(ssize_t fd) : fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0){}
+
+Loader::Loader(Loader const &src) :  
+      arch_memory_(src.arch_memory_), fd_(src.fd_), hdr_(src.hdr_), phdrs_(src.phdrs_), program_binary_lock_("program_binary_lock"),
+      userspace_debug_info_(src.userspace_debug_info_)
 {
+  debug(FORK, "Copy constructor Loader\n");
+  // arch_memory_
+  // fd_
+  // hdr_
+  // phdrs_
+  // program_binary_lock_
+  // userspace_debug_info_
 }
 
 Loader::~Loader()

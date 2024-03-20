@@ -34,16 +34,32 @@ extern "C" void threadStartHack()
 Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type, Loader* loader) :
     kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader),
     next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
-    my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name)), 
-    has_recieved_pthread_exit_notification_lock_("has_recieved_pthread_exit_notification_lock_"),
-    has_recieved_pthread_exit_notification_(&has_recieved_pthread_exit_notification_lock_, "has_recieved_pthread_exit_notification_"),
-    thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), type_(type)
+    my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name)), type_(type)
 
 {
   debug(THREAD, "Thread ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
   ArchThreads::createKernelRegisters(kernel_registers_, (void*) (type == Thread::USER_THREAD ? 0 : threadStartHack), getKernelStackStartPointer());
   kernel_stack_[2047] = STACK_CANARY;
   kernel_stack_[0] = STACK_CANARY;
+}
+
+Thread::Thread(Thread const &src, UserProcess* process): 
+      kernel_registers_(src.kernel_registers_), user_registers_(src.user_registers_), switch_to_userspace_(src.switch_to_userspace_), 
+      loader_(process->loader_),  next_thread_in_lock_waiters_list_(NULL), lock_waiting_on_(NULL), holding_lock_list_(NULL), 
+      state_ (src.state_), tid_ (src.tid_), my_terminal_(src.my_terminal_), working_dir_(src.working_dir_), name_(src.name_), type_(src.type_)
+{
+    debug(FORK, "Copy constructor Thread\n");
+    //kernel_stack_ !!
+    //kernel_registers_
+    //user_registers_
+    
+   
+    //tid maybe
+    //terminal
+    //working dir
+    //name maybe
+    //cancel threads
+
 }
 
 Thread::~Thread()
@@ -69,15 +85,6 @@ void Thread::kill()
   debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
         currentThread, getName(), this);
 
-  if(join_thread_)
-  {
-    Thread* join_thread = join_thread_;
-    join_thread_ = NULL;  
-    join_thread->thread_gets_killed_lock_.acquire();
-    join_thread->thread_killed = true;                                         //TODO do need to lock
-    join_thread->thread_gets_killed_.signal();
-    join_thread->thread_gets_killed_lock_.release();
-  }
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
 

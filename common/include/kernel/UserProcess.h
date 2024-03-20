@@ -15,10 +15,11 @@ class UserProcess
      *
      */
     UserProcess(ustl::string minixfs_filename, FileSystemInfo *fs_info, uint32 terminal_number = 0);
+    UserProcess(UserProcess const &src);
+
     virtual ~UserProcess();
 
     int create_thread(size_t* thread, void *(*start_routine)(void*), void *(*wrapper)(), void* arg);
-
     UserThread* get_thread_from_threadlist(size_t id);
     bool check_if_thread_in_threadList(UserThread* test_thread);
     
@@ -27,18 +28,16 @@ class UserProcess
     ustl::map<size_t, void*> value_ptr_by_id_;
 
 
-    
-
     int32 fd_;  //TODO: lock ?                   
     Loader* loader_;  //TODO: lock ? 
     FileSystemInfo* working_dir_;  //TODO: lock ? 
     uint32 terminal_number_;  //TODO: lock ? 
     ustl::string filename_;  //TODO: lock ?    
 
-    size_t thread_counter_{0};   //gets currently also increased if thread_creation was not succesfull
+    size_t thread_counter_{0};   //TODO: not really counts the thread
 
 
-    Mutex thread_counter_lock_;    //locking order 1         //Todo: check if the locking order is actually followed
+    Mutex thread_counter_lock_;    //1         //Todo: check if the locking order is actually followed
     Mutex threads_lock_;           //2
     Mutex value_ptr_by_id_lock_;   //3
 
@@ -47,5 +46,11 @@ class UserProcess
     int32 execv_fd_{NULL};  //TODO: lock ?     
     size_t execv_ppn_args_{NULL};  //TODO: lock ? 
     size_t exec_argc_{0};  //TODO: lock ? 
+
+    static size_t pid_counter_; //lock lock
+    size_t pid_;              //TODO should not be zero
+    size_t parent_pid_{0};
+
+   
 };
 

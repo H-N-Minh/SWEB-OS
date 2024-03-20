@@ -6,6 +6,9 @@
 #include "PageManager.h"
 #include "Scheduler.h"
 #include "Mutex.h"
+#include "UserProcess.h"
+
+size_t UserProcess::pid_counter_ = 0;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) : fd_(VfsSyscall::open(filename, O_RDONLY)), 
         working_dir_(fs_info), terminal_number_(terminal_number), filename_(filename), thread_counter_lock_("thread_counter_lock_"),
@@ -22,16 +25,52 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
     //kill();           //TODO
     return;
   }
-  thread_counter_lock_.acquire();
-  thread_counter_++;
-  threads_lock_.acquire(); 
+  thread_counter_++;            //should be fine without locking since we are still singlethreaded
   UserThread* new_thread = new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, thread_counter_, false);
-  thread_counter_lock_.release();
   threads_.push_back(new_thread); 
-  new_thread->switch_to_userspace_ = 1; 
-  threads_lock_.release();
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
+
+  pid_counter_++;         //Todo:locking
+  pid_ = pid_counter_;
 }
+
+UserProcess::UserProcess(UserProcess const &src):    
+    fd_(src.fd_), working_dir_(src.working_dir_), terminal_number_(src.terminal_number_), filename_(src.filename_), thread_counter_(0),
+    thread_counter_lock_("thread_counter_lock_"), threads_lock_("thread_lock_"), value_ptr_by_id_lock_("value_ptr_by_id_lock_"),
+    execv_loader_(0), execv_fd_(0), execv_ppn_args_(0), exec_argc_(0), parent_pid_(src.pid_)
+{
+  debug(FORK, "Copy constructor UserProcess\n");
+
+  ProcessRegistry::instance()->processStart();
+
+  pid_counter_++;          //Todo:locking
+  pid_ = pid_counter_;
+
+  loader_ = new Loader(*src.loader_);
+  // if (!loader_ || !loader_->loadExecutableAndInitProcess())
+  // {
+  //   assert(0 && "This would be bad.");
+  // }
+
+  thread_counter_++;
+  UserThread& currentUserThread = *(UserThread*)currentThread;
+  UserThread* new_thread = new UserThread(currentUserThread, this, thread_counter_);
+  threads_.push_back(new_thread); 
+  
+ 
+
+  //working_dir
+  //fd
+
+  //filename
+  //terminal_number
+  //thread_counter
+
+
+
+
+}
+
 
 UserProcess::~UserProcess()
 {
@@ -58,7 +97,6 @@ int UserProcess::create_thread(size_t* thread, void *(*start_routine)(void*), vo
   if(new_thread)
   {
     threads_.push_back(new_thread);
-    new_thread->switch_to_userspace_ = 1; 
     Scheduler::instance()->addNewThread(new_thread);
     *thread = new_thread->getTID();
     threads_lock_.release();  

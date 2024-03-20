@@ -39,7 +39,7 @@ class Thread
      * @param type The type of the thread (user or kernel thread)
      */
     Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader=0);
-
+    Thread(Thread const &src, UserProcess* process = NULL);
     virtual ~Thread();
 
     /**
@@ -53,8 +53,7 @@ class Thread
      */
     virtual void Run() = 0;
 
-    //virtual UserProcess* getProcess(){assert(0);}
-    //virtual void setProcess(UserProcess* process){assert(0); debug(THREAD, "Unused %p",(void*)process);}
+
 
     void* getKernelStackStartPointer();
 
@@ -65,15 +64,12 @@ class Thread
     const char* getName();
 
     size_t getTID();
-
     void setTID(size_t tid);
 
     Terminal* getTerminal();
-
     void setTerminal(Terminal *my_term);
 
     FileSystemInfo* getWorkingDirInfo();
-
     void setWorkingDirInfo(FileSystemInfo* working_dir);
 
     /**
@@ -121,12 +117,10 @@ class Thread
      */
     Lock* holding_lock_list_;
 
-    UserProcess* process_{0};
+
 
 
   private:
-    Thread(Thread const &src);
-    Thread &operator=(Thread const &src);
 
     volatile ThreadState state_;
 
@@ -142,25 +136,7 @@ class Thread
     ustl::string name_;
 
   public:
-    ustl::vector<Thread*> cancel_threads_;                //TODO:needs to be cleaned somewhere
-
-    bool recieved_pthread_exit_notification_{false};
-    Mutex has_recieved_pthread_exit_notification_lock_;
-    Condition has_recieved_pthread_exit_notification_;
-
-
-    Thread* join_thread_{NULL};
-
-    bool thread_killed{false};             //not the best naming: TODO
-    Mutex thread_gets_killed_lock_;
-    Condition thread_gets_killed_;
-
-
-
-    bool canceled_thread_wants_to_be_killed_{false};
-
     Thread::TYPE type_;
     
-
 };
 

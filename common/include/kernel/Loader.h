@@ -13,6 +13,7 @@ class Loader
 {
   public:
     Loader(ssize_t fd);
+    Loader(Loader const &src);
     ~Loader();
 
     /**
