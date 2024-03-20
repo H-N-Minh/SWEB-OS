@@ -111,11 +111,11 @@ public:
  */
   static void setAddressSpace(Thread *thread, ArchMemory& arch_memory);
 
-/**
- * right after fork(), parent thread (source) and child thread (destination) should share the same address space.
- * This is done by copying CR3 register from parent to child.
- */
-  static void copyAddressSpace(Thread *source, Thread *destination);
+// /**
+//  * right after fork(), parent thread (source) and child thread (destination) should share the same address space.
+//  * This is done by copying CR3 register from parent to child.
+//  */
+//   static void copyAddressSpace(Thread *source, Thread *destination);
 
 /**
  * uninterruptable locked operation

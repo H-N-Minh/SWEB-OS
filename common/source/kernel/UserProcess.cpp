@@ -7,9 +7,11 @@
 #include "Scheduler.h"
 
 #include "ArchInterrupts.h"
+#include "types.h"
 
 int32 UserProcess::tid_counter_ = 1;
 int32 UserProcess::pid_counter_ = 1;
+//todo: use ArchThreads::atomic_add
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) 
     : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), 
@@ -48,6 +50,19 @@ UserProcess::UserProcess(const UserProcess& other)
   UserThread* curr_thread = (UserThread*) currentThread;  
   UserThread* new_thread = new UserThread(*curr_thread, this, tid_counter_, terminal_number_, loader_);
   threads_.push_back(new_thread);
+
+  // DEBUGGING, can be deleted
+  // new_thread->loader_->arch_memory_.checkAddressValid((pointer) 0xfffff00000400000);
+  // new_thread->loader_->arch_memory_.checkAddressValid(0xfffff00000401000);
+  // new_thread->loader_->arch_memory_.checkAddressValid(0xfffff00000402000);
+  // new_thread->loader_->arch_memory_.checkAddressValid(0xfffff00000403000);
+  // new_thread->loader_->arch_memory_.checkAddressValid(0xfffff00000407000);
+
+  // currentThread->loader_->arch_memory_.checkAddressValid(0xfffff00000400000);
+  // currentThread->loader_->arch_memory_.checkAddressValid(0xfffff00000401000);
+  // currentThread->loader_->arch_memory_.checkAddressValid(0xfffff00000402000);
+  // currentThread->loader_->arch_memory_.checkAddressValid(0xfffff00000403000);
+  // currentThread->loader_->arch_memory_.checkAddressValid(0xfffff00000407000);
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", new_thread->getTID());
   Scheduler::instance()->addNewThread(new_thread);

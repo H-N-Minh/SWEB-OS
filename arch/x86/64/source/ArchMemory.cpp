@@ -135,9 +135,13 @@ ArchMemory::ArchMemory(ArchMemory const &src)
     {
       // setup new page directory pointer table
       NEW_pml4[pml4i].present = 1;
+      NEW_pml4[pml4i].writeable = 1;
+      NEW_pml4[pml4i].user_access = 1;
+      NEW_pml4[pml4i].accessed = 1;
       NEW_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
       PageDirPointerTableEntry* NEW_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(NEW_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* SOURCE_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(SOURCE_pml4[pml4i].page_ppn);
+      // checkAddressValid((pointer) NEW_pdpt);   // DEBUGGING, can be deleted
 
       // loop through pdpt to get each pd
       for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
@@ -147,10 +151,14 @@ ArchMemory::ArchMemory(ArchMemory const &src)
           assert(SOURCE_pdpt[pdpti].pd.size == 0);    //????
           // setup new page directory
           NEW_pdpt[pdpti].pd.present = 1;
+          NEW_pdpt[pdpti].pd.writeable = 1;
+          NEW_pdpt[pdpti].pd.user_access = 1;
+          NEW_pdpt[pdpti].pd.accessed = 1;
           NEW_pdpt[pdpti].pd.size = 0;
           NEW_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
           PageDirEntry* NEW_pd = (PageDirEntry*) getIdentAddressOfPPN(NEW_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* SOURCE_pd = (PageDirEntry*) getIdentAddressOfPPN(SOURCE_pdpt[pdpti].pd.page_ppn);
+          // checkAddressValid((pointer) NEW_pd);   // DEBUGGING, can be deleted
 
           // loop through pd to get each pt
           for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
@@ -160,10 +168,14 @@ ArchMemory::ArchMemory(ArchMemory const &src)
               assert(SOURCE_pd[pdi].pt.size == 0);    //????
               // setup new page table
               NEW_pd[pdi].pt.present = 1;
+              NEW_pd[pdi].pt.writeable = 1;
+              NEW_pd[pdi].pt.user_access = 1;
+              NEW_pd[pdi].pt.accessed = 1;
               NEW_pd[pdi].pt.size = 0;
               NEW_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
               PageTableEntry* NEW_pt = (PageTableEntry*) getIdentAddressOfPPN(NEW_pd[pdi].pt.page_ppn);
               PageTableEntry* SOURCE_pt = (PageTableEntry*) getIdentAddressOfPPN(SOURCE_pd[pdi].pt.page_ppn);
+              // checkAddressValid((pointer) NEW_pt);   // DEBUGGING, can be deleted
 
               // loop through pt to get each page
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
@@ -172,10 +184,14 @@ ArchMemory::ArchMemory(ArchMemory const &src)
                 {
                   // setup new page and copy from parent
                   NEW_pt[pti].present = 1;
+                  NEW_pt[pti].writeable = 1;
+                  NEW_pt[pti].user_access = 1;
+                  NEW_pt[pti].accessed = 1;
                   NEW_pt[pdi].page_ppn = PageManager::instance()->allocPPN();
                   pointer NEW_page = getIdentAddressOfPPN(NEW_pt[pdi].page_ppn);
                   pointer SOURCE_page = getIdentAddressOfPPN(SOURCE_pt[pdi].page_ppn);
                   memcpy((void*) NEW_page, (void*) SOURCE_page, PAGE_SIZE);
+                  checkAddressValid(NEW_page);    // DEBUGGING, can be deleted
                 }
               }
             }
