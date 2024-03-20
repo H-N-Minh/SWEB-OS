@@ -56,8 +56,6 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, u
     debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
 
-    // TODO: copy constructor for Archmemory (to set the bits of page table)
-
     // copy registers of parent thread, except for RAX (for different fork()-return-value)
     debug(USERTHREAD, "UserThread COPY-Constructor: copying registers from parent to child thread \n");
     ArchThreads::copyUserRegisters(other.user_registers_, user_registers_, getKernelStackStartPointer());

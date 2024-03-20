@@ -73,25 +73,23 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
+// TODO: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
   debug(SYSCALL, "Syscall::forkProcess: start focking \n");
   UserProcess* parent = ((UserThread*) currentThread)->process_;
   UserProcess* child = new UserProcess(*parent);
 
-  uint32 retval;
   if (!child)
   {
     debug(SYSCALL, "Syscall::forkProcess: fock failed \n");
-    retval = -1;
+    return -1;
   }
   else
   {
-    retval = (uint32) currentThread->user_registers_->rax;
-    debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", retval);
+    debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
+    return (uint32) currentThread->user_registers_->rax;
   }
-
-  return retval;
 }
 
 uint32 Syscall::exitThread(void* return_value)
