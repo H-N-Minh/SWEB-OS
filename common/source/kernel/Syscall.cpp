@@ -119,12 +119,9 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   }
   current_process.threads_lock_.release();
 
-  if(!from_exec)
-  {
-    debug(SYSCALL, "EXIT: Last Thread %ld calls pthread exit. \n",currentThread->getTID());
-    pthread_exit((void*)exit_code);
-    assert(false && "This should never happen");
-  }
+  debug(SYSCALL, "EXIT: Last Thread %ld calls pthread exit. \n",currentThread->getTID());
+  pthread_exit((void*)exit_code, from_exec);
+  assert(false && "This should never happen");
 }
 
 
@@ -207,7 +204,7 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr)
   return 0;
 }
 
-void Syscall::pthread_exit(void* value_ptr){
+void Syscall::pthread_exit(void* value_ptr, bool from_exec){
   debug(SYSCALL, "Syscall::PTHREAD_EXIT: called, value_ptr: %p\n", value_ptr);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
@@ -224,7 +221,15 @@ void Syscall::pthread_exit(void* value_ptr){
 
   if(current_process.threads_.size() == 0)
   {
-    ((UserThread*)currentThread)->last_thread_alive_ = true;
+    if(!from_exec)
+    {
+      ((UserThread*)currentThread)->last_thread_alive_ = true;
+    }
+    else
+    {
+      ((UserThread*)currentThread)->last_thread_before_exec_ = true;
+    }
+    
   }
   else
   {

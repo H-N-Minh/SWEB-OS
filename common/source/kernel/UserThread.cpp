@@ -138,12 +138,8 @@ UserThread::~UserThread()
         }
         process_->fd_ = process_->execv_fd_;
 
-        // delete working_dir_;     //not sure if i have to close thise
-        // working_dir_ = 0;
-
-        assert(process_->threads_.size() == 1);
-        process_->threads_.clear();
-        process_->thread_counter_++;          //TODO: not sure if i have to lock since it should be singlethreaded (same for next lines)
+        assert(process_->threads_.size() == 0);
+        process_->thread_counter_++;
         UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_, 0, 0, 0, process_->thread_counter_, true);
         process_->threads_.push_back(new_thread);
         Scheduler::instance()->addNewThread(new_thread);
