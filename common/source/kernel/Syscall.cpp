@@ -133,6 +133,7 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
+  Scheduler::instance()->printThreadList();
   
   UserProcess* process = ((UserThread*) currentThread)->process_;
 
@@ -148,7 +149,6 @@ void Syscall::exit(size_t exit_code)
     } 
   }
 
-  Scheduler::instance()->printThreadList();
   delete process;
   ((UserThread*) currentThread)->process_ = 0;
   currentThread->kill();

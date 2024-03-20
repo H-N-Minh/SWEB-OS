@@ -50,8 +50,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     switch_to_userspace_ = 1;
 }
 
-UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number)
-    : Thread(other), process_(new_process), return_value_(0), finished_(0), joiner_(0)
+UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number, Loader* loader)
+    : Thread(other, loader), process_(new_process), return_value_(0), finished_(0), joiner_(0)
 {
     debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
@@ -64,7 +64,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, u
     ArchThreads::setupForkReturnValue(other.user_registers_, user_registers_, new_process->pid_);
 
     // Setting up AddressSpace and Terminal
-    debug(USERTHREAD, "UserThread COPY-Constructor: copying CR3 from parent to child thread \n");
+    debug(USERTHREAD, "UserThread COPY-Constructor: setting up Child with its own CR3\n");
     ArchThreads::setAddressSpace(this, loader_->arch_memory_);    
     if (main_console->getTerminal(terminal_number))
         setTerminal(main_console->getTerminal(terminal_number));

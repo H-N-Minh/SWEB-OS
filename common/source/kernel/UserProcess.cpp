@@ -46,7 +46,7 @@ UserProcess::UserProcess(const UserProcess& other)
 
   debug(USERPROCESS, "Copy-ctor: Done loading with new ArchMemory, now calling copy-ctor for Thread\n");
   UserThread* curr_thread = (UserThread*) currentThread;  
-  UserThread* new_thread = new UserThread(*curr_thread, this, tid_counter_, terminal_number_);
+  UserThread* new_thread = new UserThread(*curr_thread, this, tid_counter_, terminal_number_, loader_);
   threads_.push_back(new_thread);
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", new_thread->getTID());

@@ -35,6 +35,11 @@ class Thread
      */
     Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader=0);
 
+    /**
+     * Copy constructor, used for fork()
+     */
+    Thread(Thread &src, Loader* loader);
+
     virtual ~Thread();
 
     /**
@@ -112,8 +117,6 @@ class Thread
      * Changing the list has to be done atomic, else it cannot be ensured that the list is valid at any moment!
      */
     Lock* holding_lock_list_;
-
-    Thread(Thread &src);
     
   private:
     Thread &operator=(Thread const &src);

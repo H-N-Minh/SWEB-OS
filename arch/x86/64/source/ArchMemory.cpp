@@ -16,7 +16,7 @@ ArchMemory::ArchMemory()
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
-  memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety
+  memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
 }
 
 template<typename T>
@@ -114,6 +114,7 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 }
 
 
+// any var with "NEW_" represent the VA of the page tables of the new child, "SOURCE_" for the parent
 ArchMemory::ArchMemory(ArchMemory const &src)
 {
   debug(A_MEMORY, "ArchMemory::copy-constructor starts \n");
@@ -122,53 +123,54 @@ ArchMemory::ArchMemory(ArchMemory const &src)
   PageMapLevel4Entry* NEW_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* SOURCE_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
 
+    // setup the new pml4
+  memcpy((void*) NEW_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
+  memset(NEW_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
+
   debug(A_MEMORY, "ArchMemory::copying all pages\n");
-  // Copy the page map level 4
-  memcpy((void*) NEW_pml4, (void*) SOURCE_pml4, PAGE_SIZE);
   // Loop through the pml4 to get each pdpt
   for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // copy only lower half (userspace)
   {
     if (SOURCE_pml4[pml4i].present)
     {
-      // copy the page directory pointer table
+      // setup new page directory pointer table
       NEW_pml4[pml4i].present = 1;
       NEW_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
       PageDirPointerTableEntry* NEW_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(NEW_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* SOURCE_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(SOURCE_pml4[pml4i].page_ppn);
-      memcpy((void*) NEW_pdpt, (void*) SOURCE_pdpt, PAGE_SIZE);
-      
+
       // loop through pdpt to get each pd
       for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
       {
         if (SOURCE_pdpt[pdpti].pd.present)
         {
           assert(SOURCE_pdpt[pdpti].pd.size == 0);    //????
-          // copy the page directory
+          // setup new page directory
           NEW_pdpt[pdpti].pd.present = 1;
+          NEW_pdpt[pdpti].pd.size = 0;
           NEW_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
           PageDirEntry* NEW_pd = (PageDirEntry*) getIdentAddressOfPPN(NEW_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* SOURCE_pd = (PageDirEntry*) getIdentAddressOfPPN(SOURCE_pdpt[pdpti].pd.page_ppn);
-          memcpy((void*) NEW_pd, (void*) SOURCE_pd, PAGE_SIZE);
-      
+
           // loop through pd to get each pt
           for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
           {
             if (SOURCE_pd[pdi].pt.present)
             {
               assert(SOURCE_pd[pdi].pt.size == 0);    //????
-              // copy the page table
+              // setup new page table
               NEW_pd[pdi].pt.present = 1;
+              NEW_pd[pdi].pt.size = 0;
               NEW_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
               PageTableEntry* NEW_pt = (PageTableEntry*) getIdentAddressOfPPN(NEW_pd[pdi].pt.page_ppn);
               PageTableEntry* SOURCE_pt = (PageTableEntry*) getIdentAddressOfPPN(SOURCE_pd[pdi].pt.page_ppn);
-              memcpy((void*) NEW_pt, (void*) SOURCE_pt, PAGE_SIZE);
 
               // loop through pt to get each page
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
                 if (SOURCE_pt[pti].present)
                 {
-                  // copy the page
+                  // setup new page and copy from parent
                   NEW_pt[pti].present = 1;
                   NEW_pt[pdi].page_ppn = PageManager::instance()->allocPPN();
                   pointer NEW_page = getIdentAddressOfPPN(NEW_pt[pdi].page_ppn);
