@@ -23,7 +23,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
           syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
   }
   UserThread& currentUserThread = *((UserThread*)currentThread);
-  if(currentUserThread.wants_to_be_canceled_ && currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE)
+  if(currentUserThread.wants_to_be_canceled_ && currentUserThread.cancel_type_ == PTHREAD_CANCEL_DEFERRED && currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE)
   {
     pthread_exit((void*)-1);
   }
@@ -100,7 +100,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 }
 
 
-void Syscall::exit(size_t exit_code)   
+void Syscall::exit(size_t exit_code, bool from_exec)
 {
   debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   UserThread& currentUserThread = *((UserThread*)currentThread);
@@ -112,7 +112,6 @@ void Syscall::exit(size_t exit_code)
     if(thread != &currentUserThread)
     {
       thread->cancel_type_ = PTHREAD_CANCEL_EXIT;                                     //TODO not atomic
-      thread->cancel_state_ = PTHREAD_CANCEL_ENABLE;                                  //TODO not atomic
       debug(SYSCALL, "EXIT: Thread %ld gets canceled. \n",thread->getTID());
       pthread_cancel(thread->getTID(), true);
       debug(SYSCALL, "EXIT: Thread %ld was canceled sucessfully. \n",thread->getTID());
@@ -120,9 +119,12 @@ void Syscall::exit(size_t exit_code)
   }
   current_process.threads_lock_.release();
 
-  debug(SYSCALL, "EXIT: Last Thread %ld calls pthread exit. \n",currentThread->getTID());
-  pthread_exit(0);
-  assert(false && "This should never happen");
+  if(!from_exec)
+  {
+    debug(SYSCALL, "EXIT: Last Thread %ld calls pthread exit. \n",currentThread->getTID());
+    pthread_exit((void*)exit_code);
+    assert(false && "This should never happen");
+  }
 }
 
 
@@ -493,44 +495,7 @@ int Syscall::execv(const char *path, char *const argv[])
   }
   current_process.exec_argc_ = index;
 
-
-//////
-  while(1)
-  {
-    current_process.threads_lock_.acquire();
-    size_t threads_left = current_process.threads_.size();
-    UserThread* thread_to_be_canceled;
-
-      for(size_t cancel_index = 0; cancel_index < threads_left; cancel_index++)
-      {
-        thread_to_be_canceled = current_process.threads_[cancel_index];
-        if(thread_to_be_canceled != currentThread || !(thread_to_be_canceled->exit_send_cancelation_))
-        {
-          break;
-        }
-        else
-        {
-          thread_to_be_canceled = 0;
-        }
-      }
-      if(!thread_to_be_canceled)
-      {
-        current_process.threads_lock_.release();
-        break;
-      }
-
-      size_t cancel_id = thread_to_be_canceled->getTID();
-      ((UserThread*)thread_to_be_canceled)->exit_send_cancelation_ = true;
-      ((UserThread*)thread_to_be_canceled)->cancel_type_ = PTHREAD_CANCEL_EXIT; //TODO should be done assyncronous
-      ((UserThread*)thread_to_be_canceled)->cancel_state_ = PTHREAD_CANCEL_ENABLE;
-      current_process.threads_lock_.release();
-     
-      pthread_cancel(cancel_id);
-      debug(SYSCALL, "EXIT: Thread %ld was canceled sucessfully. \n",cancel_id);
-
-  }
-
-/////
+  exit(0, true);
 
   ((UserThread*)currentThread)->last_thread_before_exec_ = true;
   ((UserThread*)currentThread)->kill();
