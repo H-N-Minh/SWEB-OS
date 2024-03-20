@@ -202,7 +202,124 @@ ArchMemory::ArchMemory(ArchMemory const &src)
   }
 
   debug(A_MEMORY, "ArchMemory::copy-constructor finished \n");
+
+  // DEBUGGING, can be deleted
+  // unsigned long addr = 0x80000cb;
+  // uint64 data = *(uint64*)addr;
+  // debug(MINH, "cr3 of parent reads: (%zu)", data);
+
+  // currentThread->user_registers_->cr3 = page_map_level_4_ * PAGE_SIZE;
+  // asm volatile("movq %[new_cr3], %%cr3\n"
+  //   ::[new_cr3]"r"(page_map_level_4_ * PAGE_SIZE));
+
+  // unsigned long addr2 = 0x80000cb;
+  // uint64 data2 = *(uint64*)addr2;
+  // debug(MINH, "cr3 of child reads: (%zu)", data2);
 }
+
+// Debugging function, can be deleted
+void cmpcr3(ArchMemory const &src)
+{
+  debug(A_MEMORY, "ArchMemory::copy-constructor starts \n");
+  page_map_level_4_ = PageManager::instance()->allocPPN();
+    // get Virtual address of pml4 of child (NEW) and parent (SOURCE)
+  PageMapLevel4Entry* NEW_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
+  PageMapLevel4Entry* SOURCE_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
+
+    // setup the new pml4
+  memcpy((void*) NEW_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
+  memset(NEW_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
+
+  debug(A_MEMORY, "ArchMemory::copying all pages\n");
+  // Loop through the pml4 to get each pdpt
+  for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // copy only lower half (userspace)
+  {
+    if (SOURCE_pml4[pml4i].present)
+    {
+      // setup new page directory pointer table
+      NEW_pml4[pml4i].present = 1;
+      NEW_pml4[pml4i].writeable = 1;
+      NEW_pml4[pml4i].user_access = 1;
+      NEW_pml4[pml4i].accessed = 1;
+      NEW_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
+      PageDirPointerTableEntry* NEW_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(NEW_pml4[pml4i].page_ppn);
+      PageDirPointerTableEntry* SOURCE_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(SOURCE_pml4[pml4i].page_ppn);
+      // checkAddressValid((pointer) NEW_pdpt);   // DEBUGGING, can be deleted
+
+      // loop through pdpt to get each pd
+      for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
+      {
+        if (SOURCE_pdpt[pdpti].pd.present)
+        {
+          assert(SOURCE_pdpt[pdpti].pd.size == 0);    //????
+          // setup new page directory
+          NEW_pdpt[pdpti].pd.present = 1;
+          NEW_pdpt[pdpti].pd.writeable = 1;
+          NEW_pdpt[pdpti].pd.user_access = 1;
+          NEW_pdpt[pdpti].pd.accessed = 1;
+          NEW_pdpt[pdpti].pd.size = 0;
+          NEW_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
+          PageDirEntry* NEW_pd = (PageDirEntry*) getIdentAddressOfPPN(NEW_pdpt[pdpti].pd.page_ppn);
+          PageDirEntry* SOURCE_pd = (PageDirEntry*) getIdentAddressOfPPN(SOURCE_pdpt[pdpti].pd.page_ppn);
+          // checkAddressValid((pointer) NEW_pd);   // DEBUGGING, can be deleted
+
+          // loop through pd to get each pt
+          for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
+          {
+            if (SOURCE_pd[pdi].pt.present)
+            {
+              assert(SOURCE_pd[pdi].pt.size == 0);    //????
+              // setup new page table
+              NEW_pd[pdi].pt.present = 1;
+              NEW_pd[pdi].pt.writeable = 1;
+              NEW_pd[pdi].pt.user_access = 1;
+              NEW_pd[pdi].pt.accessed = 1;
+              NEW_pd[pdi].pt.size = 0;
+              NEW_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
+              PageTableEntry* NEW_pt = (PageTableEntry*) getIdentAddressOfPPN(NEW_pd[pdi].pt.page_ppn);
+              PageTableEntry* SOURCE_pt = (PageTableEntry*) getIdentAddressOfPPN(SOURCE_pd[pdi].pt.page_ppn);
+              // checkAddressValid((pointer) NEW_pt);   // DEBUGGING, can be deleted
+
+              // loop through pt to get each page
+              for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+              {
+                if (SOURCE_pt[pti].present)
+                {
+                  // setup new page and copy from parent
+                  NEW_pt[pti].present = 1;
+                  NEW_pt[pti].writeable = 1;
+                  NEW_pt[pti].user_access = 1;
+                  NEW_pt[pti].accessed = 1;
+                  NEW_pt[pdi].page_ppn = PageManager::instance()->allocPPN();
+                  pointer NEW_page = getIdentAddressOfPPN(NEW_pt[pdi].page_ppn);
+                  pointer SOURCE_page = getIdentAddressOfPPN(SOURCE_pt[pdi].page_ppn);
+                  memcpy((void*) NEW_page, (void*) SOURCE_page, PAGE_SIZE);
+                  checkAddressValid(NEW_page);    // DEBUGGING, can be deleted
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+
+  debug(A_MEMORY, "ArchMemory::copy-constructor finished \n");
+
+  // DEBUGGING, can be deleted
+  // unsigned long addr = 0x80000cb;
+  // uint64 data = *(uint64*)addr;
+  // debug(MINH, "cr3 of parent reads: (%zu)", data);
+
+  // currentThread->user_registers_->cr3 = page_map_level_4_ * PAGE_SIZE;
+  // asm volatile("movq %[new_cr3], %%cr3\n"
+  //   ::[new_cr3]"r"(page_map_level_4_ * PAGE_SIZE));
+
+  // unsigned long addr2 = 0x80000cb;
+  // uint64 data2 = *(uint64*)addr2;
+  // debug(MINH, "cr3 of child reads: (%zu)", data2);
+}
+
 
 ArchMemory::~ArchMemory()
 {

@@ -6,6 +6,7 @@
 #include "PageManager.h"
 #include "Scheduler.h"
 
+#include "ArchThreads.h"
 #include "ArchInterrupts.h"
 #include "types.h"
 
@@ -63,6 +64,10 @@ UserProcess::UserProcess(const UserProcess& other)
   // currentThread->loader_->arch_memory_.checkAddressValid(0xfffff00000402000);
   // currentThread->loader_->arch_memory_.checkAddressValid(0xfffff00000403000);
   // currentThread->loader_->arch_memory_.checkAddressValid(0xfffff00000407000);
+
+
+
+  ArchThreads::debugCheckNewThread(new_thread);
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", new_thread->getTID());
   Scheduler::instance()->addNewThread(new_thread);
