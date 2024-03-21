@@ -4,6 +4,7 @@
 #include "sys/syscall.h"
 #include "../../../common/include/kernel/syscall-definitions.h"
 
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -16,8 +17,14 @@ typedef unsigned int pthread_attr_t;
 typedef unsigned int pthread_mutex_t;
 typedef unsigned int pthread_mutexattr_t;
 
+struct pthread_spinlock_struct { 
+    size_t  locked_; 
+    size_t initialized_;
+    void* held_by_;
+}; 
+
 //pthread spinlock typedefs
-typedef unsigned int pthread_spinlock_t;
+typedef struct pthread_spinlock_struct pthread_spinlock_t;
 
 //pthread cond typedefs
 typedef unsigned int pthread_cond_t;
@@ -66,6 +73,17 @@ extern void pthread_testcancel(void);
 extern int get_thread_count(void);
 
 void pthread_create_wrapper(void *(*start_routine)(void*), void* arg);
+
+
+extern int pthread_spin_destroy(pthread_spinlock_t *lock);
+
+extern int pthread_spin_init(pthread_spinlock_t *lock, int pshared);
+
+extern int pthread_spin_lock(pthread_spinlock_t *lock);
+
+extern int pthread_spin_trylock(pthread_spinlock_t *lock);
+
+extern int pthread_spin_unlock(pthread_spinlock_t *lock);
 
 
 #ifdef __cplusplus

@@ -1,5 +1,7 @@
 #include "pthread.h"
 #include "stdio.h"
+#include "sched.h"
+#include "assert.h"
 
 /**
  * function stub
@@ -134,7 +136,18 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
  */
 int pthread_spin_destroy(pthread_spinlock_t *lock)
 {
-  return -1;
+  if(!lock->initialized_ )
+  {
+    return -1;
+  }
+  if(lock->locked_)
+  {
+    return -1;
+  }
+
+  lock->initialized_ = 0;
+  lock->held_by_ = NULL;
+  return 0;
 }
 
 /**
@@ -143,7 +156,13 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
  */
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 {
-  return -1;
+  if(lock->initialized_)
+  {
+    return -1;
+  }
+  lock->locked_ = 0;
+  lock->initialized_ = 1;
+  return 0;
 }
 
 /**
@@ -152,7 +171,26 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
  */
 int pthread_spin_lock(pthread_spinlock_t *lock)
 {
-  return -1;
+  if(!lock->initialized_ )
+  {
+    return -1;
+  }
+  // if(lock->held_by_ == currentThread)
+  // {
+  //   return -1;
+  // }
+
+
+  size_t old_val = 1;
+  do
+  {
+    asm("xchg %0,%1"
+    : "=r" (old_val)
+    : "m" (lock->locked_), "0" (old_val)
+    : "memory");
+  } while(old_val && !sched_yield());
+  //lock->held_by_ = self;
+  return old_val;
 }
 
 /**
@@ -161,7 +199,18 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
  */
 int pthread_spin_trylock(pthread_spinlock_t *lock)
 {
-  return -1;
+  if(!lock->initialized_ )
+  {
+    return -1;
+  }
+
+  size_t old_val = 1;
+  asm("xchg %0,%1"
+  : "=r" (old_val)
+  : "m" (lock->locked_), "0" (old_val)
+  : "memory");
+  //lock->held_by_ = self;
+  return old_val;
 }
 
 /**
@@ -170,7 +219,21 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
  */
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
-  return -1;
+  if(lock->initialized_ == 0)
+  {
+    return -1;
+  }
+  if(lock->locked_ == 0)  //Todo not held by current thread
+  {
+    return -1;
+  }
+  
+  size_t old_val = 0;
+  asm("xchg %0,%1"
+  : "=r" (old_val)
+  : "m" (lock->locked_), "0" (old_val)
+  : "memory");
+  return 0;
 }
 
 /**
