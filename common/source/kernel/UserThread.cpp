@@ -15,9 +15,9 @@
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, 
             void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter, bool execv):
-            Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
-            thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_state_type_lock_("cancel_state_type_lock_"),
-            has_recieved_pthread_exit_notification_lock_("has_recieved_pthread_exit_notification_lock_"),
+            Thread(working_dir, name, type, loader), process_(process), join_threads_lock_("join_threads_lock_"), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
+            thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_threads_lock_("cancel_threads_lock_"),
+            cancel_state_type_lock_("cancel_state_type_lock_"), has_recieved_pthread_exit_notification_lock_("has_recieved_pthread_exit_notification_lock_"),
             has_recieved_pthread_exit_notification_(&has_recieved_pthread_exit_notification_lock_, "has_recieved_pthread_exit_notification_")
 {
     size_t array_offset = 3500;
@@ -81,8 +81,9 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 UserThread::UserThread(UserThread const &src, UserProcess* process, size_t thread_counter) : 
             Thread(src, process), process_(process), last_thread_alive_(false), last_thread_before_exec_(false), wants_to_be_canceled_(false),
-            exit_send_cancelation_(false), join_thread_(NULL), thread_killed(false), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
+            exit_send_cancelation_(false), join_threads_lock_("join_threads_lock_"), thread_killed(false), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
             thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), canceled_thread_wants_to_be_killed_(false), 
+            cancel_threads_lock_("cancel_threads_lock_"),
             cancel_threads_(NULL), cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(src.cancel_state_), cancel_type_(src.cancel_type_), 
             recieved_pthread_exit_notification_(false), has_recieved_pthread_exit_notification_lock_("has_recieved_pthread_exit_notification_lock_"),
             has_recieved_pthread_exit_notification_(&has_recieved_pthread_exit_notification_lock_, "has_recieved_pthread_exit_notification_")
@@ -135,15 +136,11 @@ void UserThread::kill()
   debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
         currentThread, getName(), this);
 
-  if(join_thread_)
-  {
-    UserThread& join_thread = *join_thread_;
-    join_thread_ = NULL;  
-    join_thread.thread_gets_killed_lock_.acquire();
-    join_thread.thread_killed = true;                                         //TODO do need to lock
-    join_thread.thread_gets_killed_.signal();
-    join_thread.thread_gets_killed_lock_.release();
-  }
+    assert(currentThread == this);
+
+    this->process_->threads_lock_.acquire();
+    send_kill_notification();
+    this->process_->threads_lock_.release();
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
 
@@ -158,3 +155,25 @@ void UserThread::kill()
 void UserThread::Run(){
     assert(0);
 }
+
+
+ void UserThread::send_kill_notification()
+ {
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  currentUserThread.join_threads_lock_.acquire();
+  for(UserThread* join_thread : currentUserThread.join_threads_)
+  {
+    if(!current_process.check_if_thread_in_threadList(join_thread))
+    {
+      currentUserThread.join_threads_lock_.release();
+      return;
+    }
+    join_thread->thread_gets_killed_lock_.acquire();
+    join_thread->thread_killed = true;
+    join_thread->thread_gets_killed_.signal();
+    join_thread->thread_gets_killed_lock_.release();
+  }
+  currentUserThread.join_threads_lock_.release();
+ }

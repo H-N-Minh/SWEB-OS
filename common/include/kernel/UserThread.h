@@ -8,7 +8,7 @@
 class UserProcess;
 
 enum CANCEL_STATE {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum CANCEL_TYPE {PTHREAD_CANCEL_DEFERRED=3, PTHREAD_CANCEL_ASYNCHRONOUS=4, PTHREAD_CANCEL_EXIT=5};
+enum CANCEL_TYPE {PTHREAD_CANCEL_DEFERRED, PTHREAD_CANCEL_ASYNCHRONOUS, PTHREAD_CANCEL_EXIT};
 
 class UserThread : public Thread
 {
@@ -32,7 +32,8 @@ class UserThread : public Thread
         bool exit_send_cancelation_{false};
 
 
-        UserThread* join_thread_{NULL};
+        Mutex join_threads_lock_;
+        ustl::vector<UserThread*> join_threads_;                //TODO:needs to be cleaned somewhere
         bool thread_killed{false};             //not the best naming: TODO
         Mutex thread_gets_killed_lock_;
         Condition thread_gets_killed_;
@@ -41,6 +42,7 @@ class UserThread : public Thread
 
         bool canceled_thread_wants_to_be_killed_{false};   
         
+        Mutex cancel_threads_lock_;
         ustl::vector<UserThread*> cancel_threads_;                //TODO:needs to be cleaned somewhere
 
         Mutex cancel_state_type_lock_;
@@ -51,6 +53,8 @@ class UserThread : public Thread
         bool recieved_pthread_exit_notification_{false};
         Mutex has_recieved_pthread_exit_notification_lock_;
         Condition has_recieved_pthread_exit_notification_;
+
+        void send_kill_notification();
 
 
         void Run();

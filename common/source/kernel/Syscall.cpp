@@ -191,7 +191,10 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr)
   }
 
   currentUserThread.thread_gets_killed_lock_.acquire();
-  thread_to_be_joined->join_thread_ = &currentUserThread;  //Todo: lock when use??
+  thread_to_be_joined->join_threads_lock_.acquire();
+  thread_to_be_joined->join_threads_.push_back(&currentUserThread);
+  thread_to_be_joined->join_threads_lock_.release();
+
 
   current_process.threads_lock_.release();
   
@@ -285,7 +288,9 @@ int Syscall::pthread_cancel(size_t thread_id, bool exit_cancel) //probably broke
   }
 
   thread_to_be_canceled->wants_to_be_canceled_ = true;
+  thread_to_be_canceled->cancel_threads_lock_.acquire();
   thread_to_be_canceled->cancel_threads_.push_back(&currentUserThread);
+  thread_to_be_canceled->cancel_threads_lock_.release();
 
   if(!exit_cancel){current_process.threads_lock_.release();}
   
@@ -550,10 +555,12 @@ int Syscall::execv(const char *path, char *const argv[])
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
+  currentUserThread.cancel_threads_lock_.acquire();
   for(UserThread* cancel_thread : currentUserThread.cancel_threads_)
   {
     if(!current_process.check_if_thread_in_threadList(cancel_thread))         //not sure if that can even happen
     {
+      currentUserThread.cancel_threads_lock_.release();
       return;
     }
     cancel_thread->has_recieved_pthread_exit_notification_lock_.acquire();
@@ -565,8 +572,7 @@ int Syscall::execv(const char *path, char *const argv[])
     cancel_thread->has_recieved_pthread_exit_notification_.signal();
     cancel_thread->has_recieved_pthread_exit_notification_lock_.release();
   }
-
-
+  currentUserThread.cancel_threads_lock_.release();
  }
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
