@@ -191,12 +191,16 @@ int pthread_setcanceltype(int type, int *oldtype)
   return __syscall(sc_pthread_setcanceltype, (size_t)type, (size_t)oldtype, 0x0, 0x0, 0x0);
 }
 
+void pthread_testcancel(void)
+{
+  __syscall(sc_pthread_testcancel, 0x0, 0x0, 0x0, 0x0, 0x0);
+}
+
+
 
 int get_thread_count(void) {
     return __syscall(sc_threadcount, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
-
-
 
 void pthread_create_wrapper(void *(*start_routine)(void*), void* arg){
   size_t rv = (size_t)start_routine(arg);

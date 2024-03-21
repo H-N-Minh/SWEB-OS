@@ -90,6 +90,8 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pthread_setcanceltype:
       return_value = pthread_setcanceltype((int)arg1, (int *)arg2);
       break;
+    case sc_pthread_testcancel:
+      break;
     case sc_fork:
       return_value = fork();
       break; // you will need many debug hours if you forget the break
@@ -555,7 +557,7 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
 
 int Syscall::pthread_setcanceltype(int type, int *oldtype)
 {
-  if(type != 0 && type != 1) 
+  if(type != 3 && type != 4) 
   {
     return -1;
   }
@@ -563,6 +565,7 @@ int Syscall::pthread_setcanceltype(int type, int *oldtype)
   currentUserThread.cancel_state_type_lock_.acquire();
   if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
   {
+    currentUserThread.cancel_state_type_lock_.release();
     return - 1;
   }
   *oldtype = (int)currentUserThread.cancel_type_;

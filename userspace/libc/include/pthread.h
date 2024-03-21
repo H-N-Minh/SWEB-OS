@@ -24,7 +24,7 @@ typedef unsigned int pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
 
 enum CANCEL_STATE {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum CANCEL_TYPE {PTHREAD_CANCEL_DEFERRED, PTHREAD_CANCEL_ASYNCHRONOUS};
+enum CANCEL_TYPE {PTHREAD_CANCEL_DEFERRED=3, PTHREAD_CANCEL_ASYNCHRONOUS=4};
 
 extern int pthread_create(pthread_t *thread,
          const pthread_attr_t *attr, void *(*start_routine)(void *),
@@ -60,6 +60,8 @@ extern int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex);
 extern int pthread_setcancelstate(int state, int *oldstate);
 
 extern int pthread_setcanceltype(int type, int *oldtype);
+
+extern void pthread_testcancel(void);
 
 extern int get_thread_count(void);
 
