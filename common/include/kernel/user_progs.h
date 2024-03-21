@@ -18,7 +18,9 @@ char const *user_progs[] = {
                             
                            // "/usr/pe1.sweb",                      //pthread_exit in main
                             
-
+                           // exit
+                            
+                           // "/usr/e1.sweb",                      //exit in main
 
                             // thread_join
 
@@ -34,7 +36,7 @@ char const *user_progs[] = {
                             
                              //"/usr/pca1.sweb",                     //Cancel running thread
                              //"/usr/pca2.sweb",                     //Try to cancel already dead thread
-                            
+                             //"/usr/pca3.sweb",                     //Deffered cancel in while should not work
                             
                             // multithreading
                             

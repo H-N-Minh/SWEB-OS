@@ -124,7 +124,9 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   {
     if(thread != &currentUserThread)
     {
-      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;                                     //TODO not atomic
+      currentUserThread.cancel_state_type_lock_.acquire();
+      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
+      currentUserThread.cancel_state_type_lock_.release();
       debug(SYSCALL, "EXIT: Thread %ld gets canceled. \n",thread->getTID());
       pthread_cancel(thread->getTID(), true);
       debug(SYSCALL, "EXIT: Thread %ld was canceled sucessfully. \n",thread->getTID());
@@ -235,16 +237,6 @@ void Syscall::pthread_exit(void* value_ptr, bool from_exec){
   ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), currentThread);
   current_process.threads_.erase(iterator);
 
-  if(value_ptr == (void*)-1111111111 || value_ptr == (void*)-2222222222)
-  {
-    send_cancelation_notification();
-  }
-  else if(currentUserThread.wants_to_be_canceled_)
-  {
-    send_cancelation_notification(true);
-  }
-
-
   if(current_process.threads_.size() == 0)
   {
     if(!from_exec)
@@ -271,51 +263,20 @@ void Syscall::pthread_exit(void* value_ptr, bool from_exec){
 }
 
 
-int Syscall::pthread_cancel(size_t thread_id, bool exit_cancel) //probably broken
+int Syscall::pthread_cancel(size_t thread_id, bool exit_cancel)
 {
   debug(SYSCALL, "Syscall::PTHREAD_CANCEL: called with thread_id %ld.\n",thread_id);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-
-
   if(!exit_cancel){current_process.threads_lock_.acquire();}
-  
   UserThread* thread_to_be_canceled = current_process.get_thread_from_threadlist(thread_id);
   if(!thread_to_be_canceled)
   {
     if(!exit_cancel){current_process.threads_lock_.release();}
     return -1;
   }
-
   thread_to_be_canceled->wants_to_be_canceled_ = true;
-  thread_to_be_canceled->cancel_threads_lock_.acquire();
-  thread_to_be_canceled->cancel_threads_.push_back(&currentUserThread);
-  thread_to_be_canceled->cancel_threads_lock_.release();
-
   if(!exit_cancel){current_process.threads_lock_.release();}
-  
-  //currentUserThread.cancel_state_type_lock_.acquire();
-  // if(thread_to_be_canceled->cancel_type_ == PTHREAD_CANCEL_DEFERRED)
-  // {
-  //   currentUserThread.cancel_state_type_lock_.release();
-  //   currentUserThread.has_recieved_pthread_exit_notification_lock_.acquire();
-  //   while(!currentUserThread.recieved_pthread_exit_notification_ && !currentUserThread.wants_to_be_canceled_)
-  //   {
-  //     currentUserThread.has_recieved_pthread_exit_notification_.wait();
-  //   }
-  //   currentUserThread.recieved_pthread_exit_notification_ = false;
-  //   if(currentUserThread.to_late_for_cancel_)
-  //   {
-  //     currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
-  //     currentUserThread.to_late_for_cancel_ = false;
-  //     return -1;
-  //   }
-  //   currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
-  // }
-  // else
-  // {
-  //   currentUserThread.cancel_state_type_lock_.release();
-  // }
   return 0;
 }
 
@@ -548,32 +509,6 @@ int Syscall::execv(const char *path, char *const argv[])
   
   assert(0 && "Sucessful exec should not return");
 }
-
-
- void Syscall::send_cancelation_notification(bool to_late)
- {
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  UserProcess& current_process = *currentUserThread.process_;
-
-  currentUserThread.cancel_threads_lock_.acquire();
-  for(UserThread* cancel_thread : currentUserThread.cancel_threads_)
-  {
-    if(!current_process.check_if_thread_in_threadList(cancel_thread))         //not sure if that can even happen
-    {
-      currentUserThread.cancel_threads_lock_.release();
-      return;
-    }
-    cancel_thread->has_recieved_pthread_exit_notification_lock_.acquire();
-    if(to_late)
-    {
-      cancel_thread->to_late_for_cancel_ = true;
-    }
-    cancel_thread->recieved_pthread_exit_notification_ = true;
-    cancel_thread->has_recieved_pthread_exit_notification_.signal();
-    cancel_thread->has_recieved_pthread_exit_notification_lock_.release();
-  }
-  currentUserThread.cancel_threads_lock_.release();
- }
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
 {

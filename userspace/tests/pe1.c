@@ -1,5 +1,5 @@
 #include "pthread.h"
-#include <assert.h>
+#include "assert.h"
 
 
 int main()

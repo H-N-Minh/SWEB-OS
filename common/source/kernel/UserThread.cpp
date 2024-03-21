@@ -16,9 +16,7 @@
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, 
             void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter, bool execv):
             Thread(working_dir, name, type, loader), process_(process), join_threads_lock_("join_threads_lock_"), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
-            thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_threads_lock_("cancel_threads_lock_"),
-            cancel_state_type_lock_("cancel_state_type_lock_"), has_recieved_pthread_exit_notification_lock_("has_recieved_pthread_exit_notification_lock_"),
-            has_recieved_pthread_exit_notification_(&has_recieved_pthread_exit_notification_lock_, "has_recieved_pthread_exit_notification_")
+            thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_state_type_lock_("cancel_state_type_lock_")
 {
     size_t array_offset = 3500;
 
@@ -83,10 +81,7 @@ UserThread::UserThread(UserThread const &src, UserProcess* process, size_t threa
             Thread(src, process), process_(process), last_thread_alive_(false), last_thread_before_exec_(false), wants_to_be_canceled_(false),
             exit_send_cancelation_(false), join_threads_lock_("join_threads_lock_"), thread_killed(false), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
             thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), canceled_thread_wants_to_be_killed_(false), 
-            cancel_threads_lock_("cancel_threads_lock_"),
-            cancel_threads_(NULL), cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(src.cancel_state_), cancel_type_(src.cancel_type_), 
-            recieved_pthread_exit_notification_(false), has_recieved_pthread_exit_notification_lock_("has_recieved_pthread_exit_notification_lock_"),
-            has_recieved_pthread_exit_notification_(&has_recieved_pthread_exit_notification_lock_, "has_recieved_pthread_exit_notification_")
+            cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(src.cancel_state_), cancel_type_(src.cancel_type_)
 {
     debug(FORK, "Copy constructor UserThread\n");
 

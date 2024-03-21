@@ -1,6 +1,6 @@
 #include "stdio.h"
 #include "pthread.h"
-#include <assert.h>
+#include "assert.h"
 
 int function1(char* simple_argument)
 {
@@ -8,6 +8,8 @@ int function1(char* simple_argument)
     return 34;
 }
 
+
+//Test: pthread create with simple argument
 int main()
 {
     pthread_t thread_id;

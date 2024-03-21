@@ -42,17 +42,11 @@ class UserThread : public Thread
 
         bool canceled_thread_wants_to_be_killed_{false};   
         
-        Mutex cancel_threads_lock_;
-        ustl::vector<UserThread*> cancel_threads_;                //TODO:needs to be cleaned somewhere
 
         Mutex cancel_state_type_lock_;
         CANCEL_STATE cancel_state_{CANCEL_STATE::PTHREAD_CANCEL_ENABLE};  //currently not used
         CANCEL_TYPE cancel_type_{CANCEL_TYPE::PTHREAD_CANCEL_DEFERRED};
         bool to_late_for_cancel_{false};
-
-        bool recieved_pthread_exit_notification_{false};
-        Mutex has_recieved_pthread_exit_notification_lock_;
-        Condition has_recieved_pthread_exit_notification_;
 
         void send_kill_notification();
 

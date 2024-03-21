@@ -1,6 +1,6 @@
 #include "stdio.h"
 #include "pthread.h"
-#include <assert.h>
+#include "assert.h"
 
 
 int function1()
@@ -20,7 +20,6 @@ int main()
     assert(thread_id != 0 && "UserThread has ID of KernelThread");
 
     printf("pc2 successful!\n");
-
 
     return 0;
 }
