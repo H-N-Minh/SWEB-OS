@@ -37,8 +37,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 }
 
 UserProcess::UserProcess(const UserProcess& other)
-  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(other.working_dir_), filename_(other.filename_), terminal_number_(other.terminal_number_), 
-    loader_(0), pid_(pid_counter_)
+  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), 
+    filename_(other.filename_), terminal_number_(other.terminal_number_), loader_(0), pid_(pid_counter_)
 {
   debug(USERPROCESS, "Copy-ctor: start copying from process (%u) \n", other.pid_);
   ArchThreads::atomic_add(pid_counter_, 1);
@@ -63,7 +63,8 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-  delete working_dir_;
+  if (working_dir_)
+    delete working_dir_;
   working_dir_ = 0;
 
   ProcessRegistry::instance()->processExit();

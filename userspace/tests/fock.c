@@ -4,6 +4,7 @@
 
 int main() {
     pid_t pid = 5;
+    size_t i = 0;
 
     // Create a child process
     printf("calling fork() from user space\n");
@@ -15,15 +16,17 @@ int main() {
         return 1;
     } else if (pid == 0) {
         // Child process
-        printf("Hello from the child process!\n");
+        i += 10;
+        printf("Child reads: (%zu) (should be 10)\n", i);
     } else {
         // Parent process
-        printf("Hello from the parent process!\n");
+        i += 69;
+        printf("parent reads: (%zu) (should be 69)\n", i);
     }
-    while (1)
-    {
-        /* code */
-    }
+    // while (1)
+    // {
+    //     /* code */
+    // }
 
     
     return 0;
