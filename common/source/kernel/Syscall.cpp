@@ -294,28 +294,28 @@ int Syscall::pthread_cancel(size_t thread_id, bool exit_cancel) //probably broke
 
   if(!exit_cancel){current_process.threads_lock_.release();}
   
-  currentUserThread.cancel_state_type_lock_.acquire();
-  if(thread_to_be_canceled->cancel_type_ == PTHREAD_CANCEL_DEFERRED)
-  {
-    currentUserThread.cancel_state_type_lock_.release();
-    currentUserThread.has_recieved_pthread_exit_notification_lock_.acquire();
-    while(!currentUserThread.recieved_pthread_exit_notification_ && !currentUserThread.wants_to_be_canceled_)
-    {
-      currentUserThread.has_recieved_pthread_exit_notification_.wait();
-    }
-    currentUserThread.recieved_pthread_exit_notification_ = false;
-    if(currentUserThread.to_late_for_cancel_)
-    {
-      currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
-      currentUserThread.to_late_for_cancel_ = false;
-      return -1;
-    }
-    currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
-  }
-  else
-  {
-    currentUserThread.cancel_state_type_lock_.release();
-  }
+  //currentUserThread.cancel_state_type_lock_.acquire();
+  // if(thread_to_be_canceled->cancel_type_ == PTHREAD_CANCEL_DEFERRED)
+  // {
+  //   currentUserThread.cancel_state_type_lock_.release();
+  //   currentUserThread.has_recieved_pthread_exit_notification_lock_.acquire();
+  //   while(!currentUserThread.recieved_pthread_exit_notification_ && !currentUserThread.wants_to_be_canceled_)
+  //   {
+  //     currentUserThread.has_recieved_pthread_exit_notification_.wait();
+  //   }
+  //   currentUserThread.recieved_pthread_exit_notification_ = false;
+  //   if(currentUserThread.to_late_for_cancel_)
+  //   {
+  //     currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
+  //     currentUserThread.to_late_for_cancel_ = false;
+  //     return -1;
+  //   }
+  //   currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
+  // }
+  // else
+  // {
+  //   currentUserThread.cancel_state_type_lock_.release();
+  // }
   return 0;
 }
 
