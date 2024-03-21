@@ -124,9 +124,9 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   {
     if(thread != &currentUserThread)
     {
-      currentUserThread.cancel_state_type_lock_.acquire();
+      thread->cancel_state_type_lock_.acquire();
       thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
-      currentUserThread.cancel_state_type_lock_.release();
+      thread->cancel_state_type_lock_.release();
       debug(SYSCALL, "EXIT: Thread %ld gets canceled. \n",thread->getTID());
       pthread_cancel(thread->getTID(), true);
       debug(SYSCALL, "EXIT: Thread %ld was canceled sucessfully. \n",thread->getTID());
