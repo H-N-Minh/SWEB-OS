@@ -9,9 +9,9 @@ public:
   ~LocalFileDescriptorTable();
 
   LocalFileDescriptor* createLocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset);
-//  void closeLocalFileDescriptor(LocalFileDescriptor* local_fd);
+  void closeLocalFileDescriptor(LocalFileDescriptor* local_fd);
   LocalFileDescriptor* getLocalFileDescriptor(int local_fd_id) const;
-//  void closeAllFileDescriptors();
+  void closeAllFileDescriptors();
 
 
 private:

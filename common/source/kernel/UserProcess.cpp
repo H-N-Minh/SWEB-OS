@@ -68,23 +68,28 @@ UserThread* UserProcess::getUserThread(size_t tid)
   return 0;
 }
 
-//size_t UserProcess::openFile(const ustl::string& path, uint32_t mode) {
-//  int global_fd_id = VfsSyscall::open(path, mode);
-//  if (global_fd_id < 0) {
-//    return -1;
-//  }
-//
-//  FileDescriptor* global_fd = global_fd_list.getFileDescriptor(global_fd_id);
-//  if (!global_fd) {
-//    return -1;
-//  }
-//
-//  LocalFileDescriptor* local_fd = local_fd_table_.createLocalFileDescriptor(global_fd, mode, 0);
-//  if (!local_fd) {
-//    VfsSyscall::close(global_fd_id);
-//    return -1;
-//  }
-//
-//  return local_fd->getLocalFD();
-//}
+size_t UserProcess::openFile(const ustl::string& path, uint32_t mode) {
+  debug(USERPROCESS, "openFile: Attempting to open file: %s with mode: %u\n", path.c_str(), mode);
 
+  int global_fd_id = VfsSyscall::open(path, mode);
+  if (global_fd_id < 0) {
+    debug(USERPROCESS, "openFile: Failed to open global file descriptor. VfsSyscall::open returned: %d\n", global_fd_id);
+    return -1;
+  }
+
+  FileDescriptor* global_fd = global_fd_list.getFileDescriptor(global_fd_id);
+  if (!global_fd) {
+    debug(USERPROCESS, "openFilme: Failed to get global file descriptor from global_fd_list. getFileDescriptor returned NULL.\n");
+    return -1;
+  }
+
+  LocalFileDescriptor* local_fd = local_fd_table_.createLocalFileDescriptor(global_fd, mode, 0);
+  if (!local_fd) {
+    debug(USERPROCESS, "openFile: Failed to create local file descriptor. createLocalFileDescriptor returned NULL.\n");
+    VfsSyscall::close(global_fd_id);
+    return -1;
+  }
+
+  debug(USERPROCESS, "openFile: Successfully opened file: %s with mode: %u. Local FD: %u\n", path.c_str(), mode, local_fd->getLocalFD());
+  return local_fd->getLocalFD();
+}

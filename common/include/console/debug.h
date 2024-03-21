@@ -45,12 +45,12 @@ const size_t SYSCALL            = Ansi_Blue    | OUTPUT_ENABLED;
 const size_t MAIN               = Ansi_Red     | OUTPUT_ENABLED;
 const size_t THREAD             = Ansi_Magenta | OUTPUT_ENABLED;
 const size_t USERPROCESS        = Ansi_Cyan    | OUTPUT_ENABLED;
-const size_t USERTHREAD         = Ansi_Yellow  | OUTPUT_ENABLED;  // added by minh
+const size_t USERTHREAD         = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t PROCESS_REG        = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
-const size_t Fabi               = Ansi_Red     | OUTPUT_ENABLED; //fabi
-const size_t LOCALFILEDESCRIPTORS               = Ansi_Cyan     | OUTPUT_ENABLED; // FABI
+const size_t Fabi               = Ansi_Red     | OUTPUT_ENABLED;
+
 
 //group memory management
 const size_t PM                 = Ansi_Green | OUTPUT_ENABLED;
@@ -79,7 +79,7 @@ const size_t DENTRY             = Ansi_Blue;
 const size_t INODE              = Ansi_Blue;
 const size_t PATHWALKER         = Ansi_Yellow;
 const size_t PSEUDOFS           = Ansi_Yellow;
-const size_t VFSSYSCALL         = Ansi_Yellow;
+const size_t VFSSYSCALL         = Ansi_Yellow | OUTPUT_ENABLED;;
 const size_t VFS                = Ansi_Yellow | OUTPUT_ENABLED;
 const size_t VFS_FILE           = Ansi_Yellow;
 const size_t SUPERBLOCK         = Ansi_Yellow;
