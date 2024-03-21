@@ -60,7 +60,14 @@ void Scheduler::schedule()
             break;
           }
           currentUserThread.kernel_registers_->rip     = (size_t)Syscall::pthread_exit;
-          currentUserThread.kernel_registers_->rsi     = (size_t)-1;
+          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
+          {
+            currentUserThread.kernel_registers_->rsi     = (size_t)-2222222222;
+          }
+          else{
+            currentUserThread.kernel_registers_->rsi     = (size_t)-1111111111;
+          }
+          
           currentUserThread.switch_to_userspace_ = 0;
         }
       }

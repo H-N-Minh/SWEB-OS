@@ -24,10 +24,18 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   }
   UserThread& currentUserThread = *((UserThread*)currentThread);
   currentUserThread.cancel_state_type_lock_.acquire();
-  if(currentUserThread.wants_to_be_canceled_ && (currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE || currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT))
+  if(currentUserThread.wants_to_be_canceled_)
   {
-    currentUserThread.cancel_state_type_lock_.release();
-    pthread_exit((void*)-1);
+    if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
+    {
+      currentUserThread.cancel_state_type_lock_.release();
+      pthread_exit((void*)-2222222222);
+    }
+    else if (currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE)
+    {
+      currentUserThread.cancel_state_type_lock_.release();
+      pthread_exit((void*)-1111111111);
+    }
   }
   currentUserThread.cancel_state_type_lock_.release();
 
@@ -154,6 +162,7 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr)
   if(iterator != current_process.value_ptr_by_id_.end())
   {
     return_value = current_process.value_ptr_by_id_[thread_id];
+    
     current_process.value_ptr_by_id_.erase(iterator);
     if(value_ptr != NULL)
     {
@@ -199,6 +208,11 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr)
   if(iterator != current_process.value_ptr_by_id_.end())
   {
     return_value = current_process.value_ptr_by_id_[thread_id];
+    if(return_value == (void*)-2222222222)  //maybe is not the best joince
+    {
+      current_process.value_ptr_by_id_lock_.release();  
+      pthread_exit((void*)currentUserThread.getTID());
+    }
     current_process.value_ptr_by_id_.erase(iterator);
     if(value_ptr != NULL)
     {
@@ -218,11 +232,15 @@ void Syscall::pthread_exit(void* value_ptr, bool from_exec){
   ustl::vector<UserThread*>::iterator iterator = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), currentThread);
   current_process.threads_.erase(iterator);
 
-  if(((UserThread*)currentThread)->wants_to_be_canceled_)
+  if(value_ptr == (void*)-1111111111 || value_ptr == (void*)-2222222222)
   {
-    value_ptr = (void*)-1;
     send_cancelation_notification();
   }
+  else if(currentUserThread.wants_to_be_canceled_)
+  {
+    send_cancelation_notification(true);
+  }
+
 
   if(current_process.threads_.size() == 0)
   {
@@ -276,11 +294,17 @@ int Syscall::pthread_cancel(size_t thread_id, bool exit_cancel) //probably broke
   {
     currentUserThread.cancel_state_type_lock_.release();
     currentUserThread.has_recieved_pthread_exit_notification_lock_.acquire();
-    while(!currentUserThread.recieved_pthread_exit_notification_)
+    while(!currentUserThread.recieved_pthread_exit_notification_ && !currentUserThread.wants_to_be_canceled_)
     {
       currentUserThread.has_recieved_pthread_exit_notification_.wait();
     }
     currentUserThread.recieved_pthread_exit_notification_ = false;
+    if(currentUserThread.to_late_for_cancel_)
+    {
+      currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
+      currentUserThread.to_late_for_cancel_ = false;
+      return -1;
+    }
     currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
   }
   else
@@ -521,7 +545,7 @@ int Syscall::execv(const char *path, char *const argv[])
 }
 
 
- void Syscall::send_cancelation_notification()
+ void Syscall::send_cancelation_notification(bool to_late)
  {
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
@@ -533,6 +557,10 @@ int Syscall::execv(const char *path, char *const argv[])
       return;
     }
     cancel_thread->has_recieved_pthread_exit_notification_lock_.acquire();
+    if(to_late)
+    {
+      cancel_thread->to_late_for_cancel_ = true;
+    }
     cancel_thread->recieved_pthread_exit_notification_ = true;
     cancel_thread->has_recieved_pthread_exit_notification_.signal();
     cancel_thread->has_recieved_pthread_exit_notification_lock_.release();
