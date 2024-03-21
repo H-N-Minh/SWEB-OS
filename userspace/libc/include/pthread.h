@@ -27,6 +27,10 @@ extern int pthread_create(pthread_t *thread,
          const pthread_attr_t *attr, void *(*start_routine)(void *),
          void *arg);
 
+extern int multi_pthread_create(pthread_t *threads,
+                                const pthread_attr_t *attr, void *(*start_routine)(void *),
+                                void *arg, size_t count);
+
 extern void pthread_create_helper(void* func, void* para);
 
 extern void pthread_exit(void *value_ptr);

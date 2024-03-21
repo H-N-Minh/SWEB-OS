@@ -11,7 +11,7 @@ class UserThread : public Thread
                     Loader* loader, UserProcess* process, int32 tid, void* func, void* para, void* pcreate_helper);
         ~UserThread();
         UserProcess* process_;
-        void Run();
+        void Run() override;
         void kill() override;
 
         void* return_value_;

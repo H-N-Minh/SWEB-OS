@@ -67,11 +67,26 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pipe:
       return_value = pipe((int*) arg1);
       break; // you will need many debug hours if you forget the break
+    case sc_multi_pthread_create:
+      return_value = multiCreateThread((void*) arg1, (void*) arg2, (void*) arg3, (void*) arg4, (size_t)arg5);
+      break; // you will need many debug hours if you forget the break
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
   return return_value;
+}
+
+
+uint32 Syscall::multiCreateThread(void* func, void* para, void* tid, void* pcreate_helper, size_t count)
+{
+  debug(SYSCALL, "Syscall::multiCreateThread: Creating %d threads with func (%p), para (%zu) \n", count, func, (size_t)para);
+
+  for(size_t i = 0; i < count; ++i){
+    ((UserThread*) currentThread)->process_->createUserThread(func, para, tid, pcreate_helper);
+  }
+
+  return 0;
 }
 
 uint32 Syscall::pipe(int file_descriptor_array[2])

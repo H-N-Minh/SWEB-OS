@@ -24,3 +24,5 @@
 #define sc_pthread_exit 1002
 
 #define sc_pipe 1500
+
+#define sc_multi_pthread_create 1003

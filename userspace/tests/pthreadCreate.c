@@ -27,7 +27,7 @@ int main()
     pthread_join(thread1, (void**) &i);
     pthread_join(thread2, (void**) &i);
     printf("both thread has finished\n");
-    
+
 
     return 0;
 }
