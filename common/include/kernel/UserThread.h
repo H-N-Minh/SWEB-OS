@@ -42,6 +42,8 @@ class UserThread : public Thread
         bool canceled_thread_wants_to_be_killed_{false};   
         
         ustl::vector<UserThread*> cancel_threads_;                //TODO:needs to be cleaned somewhere
+
+        Mutex cancel_state_type_lock_;
         CANCEL_STATE cancel_state_{CANCEL_STATE::PTHREAD_CANCEL_ENABLE};  //currently not used
         CANCEL_TYPE cancel_type_{CANCEL_TYPE::PTHREAD_CANCEL_DEFERRED};
 

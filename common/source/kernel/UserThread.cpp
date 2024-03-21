@@ -16,7 +16,7 @@
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, 
             void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter, bool execv):
             Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
-            thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), 
+            thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_state_type_lock_("cancel_state_type_lock_"),
             has_recieved_pthread_exit_notification_lock_("has_recieved_pthread_exit_notification_lock_"),
             has_recieved_pthread_exit_notification_(&has_recieved_pthread_exit_notification_lock_, "has_recieved_pthread_exit_notification_")
 {
@@ -83,28 +83,11 @@ UserThread::UserThread(UserThread const &src, UserProcess* process, size_t threa
             Thread(src, process), process_(process), last_thread_alive_(false), last_thread_before_exec_(false), wants_to_be_canceled_(false),
             exit_send_cancelation_(false), join_thread_(NULL), thread_killed(false), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
             thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), canceled_thread_wants_to_be_killed_(false), 
-            cancel_threads_(NULL), cancel_state_(src.cancel_state_), cancel_type_(src.cancel_type_), 
+            cancel_threads_(NULL), cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(src.cancel_state_), cancel_type_(src.cancel_type_), 
             recieved_pthread_exit_notification_(false), has_recieved_pthread_exit_notification_lock_("has_recieved_pthread_exit_notification_lock_"),
             has_recieved_pthread_exit_notification_(&has_recieved_pthread_exit_notification_lock_, "has_recieved_pthread_exit_notification_")
 {
     debug(FORK, "Copy constructor UserThread\n");
-
-
-
-    //size_t page_for_stack = PageManager::instance()->allocPPN();
-    //virtual_page_ = USER_BREAK / PAGE_SIZE - thread_counter - 1;
-    //size_t user_stack_start = USER_BREAK - sizeof(pointer) - PAGE_SIZE * (thread_counter);
-    //bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page_ , page_for_stack, 1);
-    //assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in thread");
-    
-
-    //ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),(void*)user_stack_start, getKernelStackStartPointer());
-    //debug(USERTHREAD, "First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",user_stack_start, user_stack_start, virtual_page_, virtual_page_);
-    
-
-    //ArchThreads::setAddressSpace(this, loader_->arch_memory_); 
-    //if (main_console->getTerminal(terminal_number))
-    //    setTerminal(main_console->getTerminal(terminal_number));
 
     setTID(thread_counter);
     switch_to_userspace_ = 1; 

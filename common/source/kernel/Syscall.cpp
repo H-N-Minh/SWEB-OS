@@ -23,10 +23,13 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
           syscall_number, arg1, arg1, arg2, arg2, arg3, arg3, arg4, arg4, arg5, arg5);
   }
   UserThread& currentUserThread = *((UserThread*)currentThread);
-  if(currentUserThread.wants_to_be_canceled_ && currentUserThread.cancel_type_ == PTHREAD_CANCEL_DEFERRED && currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE)
+  currentUserThread.cancel_state_type_lock_.acquire();
+  if(currentUserThread.wants_to_be_canceled_ && (currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE || currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT))
   {
+    currentUserThread.cancel_state_type_lock_.release();
     pthread_exit((void*)-1);
   }
+  currentUserThread.cancel_state_type_lock_.release();
 
   switch (syscall_number)
   {
@@ -266,8 +269,10 @@ int Syscall::pthread_cancel(size_t thread_id, bool exit_cancel) //probably broke
 
   if(!exit_cancel){current_process.threads_lock_.release();}
   
+  currentUserThread.cancel_state_type_lock_.acquire();
   if(thread_to_be_canceled->cancel_type_ == PTHREAD_CANCEL_DEFERRED)
   {
+    currentUserThread.cancel_state_type_lock_.release();
     currentUserThread.has_recieved_pthread_exit_notification_lock_.acquire();
     while(!currentUserThread.recieved_pthread_exit_notification_)
     {
@@ -275,6 +280,10 @@ int Syscall::pthread_cancel(size_t thread_id, bool exit_cancel) //probably broke
     }
     currentUserThread.recieved_pthread_exit_notification_ = false;
     currentUserThread.has_recieved_pthread_exit_notification_lock_.release();
+  }
+  else
+  {
+    currentUserThread.cancel_state_type_lock_.release();
   }
   return 0;
 }
@@ -532,39 +541,37 @@ int Syscall::execv(const char *path, char *const argv[])
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
 {
-  if(state != 0 && state != 1)         //what if another enum corresponding to 1
+  if(state != 0 && state != 1)
   {
     return -1;
   }
-  //TODO: maybe this is better
-  *oldstate = (int)((UserThread*)currentThread)->cancel_state_;              //TODO: should be atomic
-  ((UserThread*)currentThread)->cancel_state_ = (CANCEL_STATE)state;
+  UserThread& currentUserThread = *(UserThread*)currentThread;
+  currentUserThread.cancel_state_type_lock_.acquire();
+  *oldstate = (int)currentUserThread.cancel_state_;
+  currentUserThread.cancel_state_ = (CANCEL_STATE)state;
+  currentUserThread.cancel_state_type_lock_.release();
   return 0;
 }
 
 int Syscall::pthread_setcanceltype(int type, int *oldtype)
 {
-  if(type != 0 && type != 1)         //what if another enum corresponding to 1
+  if(type != 0 && type != 1) 
   {
     return -1;
   }
-   //TODO: maybe this is better
-  *oldtype = (int)((UserThread*)currentThread)->cancel_type_;             //TODO: should be atomic
-  ((UserThread*)currentThread)->cancel_type_ = (CANCEL_TYPE)type;
-  
+  UserThread& currentUserThread = *(UserThread*)currentThread;
+  currentUserThread.cancel_state_type_lock_.acquire();
+  if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
+  {
+    return - 1;
+  }
+  *oldtype = (int)currentUserThread.cancel_type_;
+  currentUserThread.cancel_type_ = (CANCEL_TYPE)type;
+  currentUserThread.cancel_state_type_lock_.release();
   return 0;
 }
 
 long int Syscall::fork()
 {
-  return -1; //TODO
-  debug(FORK, "SYSCALL: Fork called\n");
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  UserProcess& current_process = *currentUserThread.process_;
-  
-  UserProcess* new_process = new UserProcess(current_process);
-  assert(0 && "not implemented");
-
-
-  return (long int)new_process; //todo
+  return -1;
 }
