@@ -13,7 +13,10 @@ enum CANCEL_TYPE {PTHREAD_CANCEL_DEFERRED, PTHREAD_CANCEL_ASYNCHRONOUS, PTHREAD_
 class UserThread : public Thread
 {
     public: 
+
+
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter, bool execv);
+        UserThread(UserThread const &src, UserProcess* process = NULL, size_t thread_counter = 0);
         ~UserThread();
 
         UserProcess* process_{0};

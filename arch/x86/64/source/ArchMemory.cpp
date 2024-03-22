@@ -19,11 +19,11 @@ ArchMemory::ArchMemory()
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety
 }
 
-// ArchMemory::ArchMemory(ArchMemory const &src)
-// {
-//   debug(FORK, "Copy constructor ArchMemory\n");
-//   page_map_level_4_ = src.page_map_level_4_;    //todo - pretty sure this is not how we do it
-// }
+ArchMemory::ArchMemory(ArchMemory const &src)
+{
+  debug(FORK, "Copy constructor ArchMemory\n");
+  page_map_level_4_ = src.page_map_level_4_;    //todo - pretty sure this is not how we do it
+}
 
 
 

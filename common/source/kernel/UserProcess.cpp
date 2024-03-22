@@ -25,7 +25,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
     //kill();           //TODO
     return;
   }
-  thread_counter_++;
+  thread_counter_++;            //should be fine without locking since we are still singlethreaded
   UserThread* new_thread = new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, thread_counter_, false);
   threads_.push_back(new_thread); 
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
@@ -34,6 +34,42 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   pid_ = pid_counter_;
 }
 
+UserProcess::UserProcess(UserProcess const &src):    
+    fd_(src.fd_), working_dir_(src.working_dir_), terminal_number_(src.terminal_number_), filename_(src.filename_), thread_counter_(0),
+    thread_counter_lock_("thread_counter_lock_"), threads_lock_("thread_lock_"), value_ptr_by_id_lock_("value_ptr_by_id_lock_"),
+    execv_loader_(0), execv_fd_(0), execv_ppn_args_(0), exec_argc_(0), parent_pid_(src.pid_)
+{
+  debug(FORK, "Copy constructor UserProcess\n");
+
+  ProcessRegistry::instance()->processStart();
+
+  pid_counter_++;          //Todo:locking
+  pid_ = pid_counter_;
+
+  loader_ = new Loader(*src.loader_);
+  // if (!loader_ || !loader_->loadExecutableAndInitProcess())
+  // {
+  //   assert(0 && "This would be bad.");
+  // }
+
+  thread_counter_++;
+  UserThread& currentUserThread = *(UserThread*)currentThread;
+  UserThread* new_thread = new UserThread(currentUserThread, this, thread_counter_);
+  threads_.push_back(new_thread); 
+  
+ 
+
+  //working_dir
+  //fd
+
+  //filename
+  //terminal_number
+  //thread_counter
+
+
+
+
+}
 
 
 UserProcess::~UserProcess()
