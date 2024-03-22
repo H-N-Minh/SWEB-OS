@@ -6,44 +6,53 @@
 #include "debug.h"
 #include "Scheduler.h"
 #include "PageManager.h"
+
 #include "ArchInterrupts.h"
 
 #include "uvector.h"
 
-UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, 
-                        Loader* loader, UserProcess* process, int32 tid, void* func, void* para, void* pcreate_helper)
-    : Thread(working_dir, name, type, loader), process_(process), return_value_(0), finished_(0), joiner_(0)
+
+
+UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
+                       Loader* loader, UserProcess* process, size_t tid, void* func, void* arg, void* pcreate_helper)
+            : Thread(working_dir, name, type, loader), process_(process)
 {
-    debug(USERTHREAD, "UserThread Constructor: creating new thread with func (%p), para (%zu) \n", func, (size_t) para);
     tid_ = tid;
 
-    // allocate physical page for stack and map to virtual memory
+    debug(TAI_THREAD, "------------------------------------tid value %zu \n", tid);
+    debug(TAI_THREAD, "------------------------------------func in userthread is %p\n", func);
+
     size_t page_for_stack = PageManager::instance()->allocPPN();
     bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - tid, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    // Setting up Registers
-    void* start_func_ptr;
     void* user_stack_ptr = (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid-1));
-    if (!func)
+
+    if (!func) //for the first thread when we create a process
     {
-        // create first thread of process => start the "main" func
-        start_func_ptr = loader_->getEntryFunction();
+        ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
+                                         (void*) (USER_BREAK - sizeof(pointer)), getKernelStackStartPointer());
     }
-    else
+    else // create the thread for every pthread create
     {
-        // Create another thread for a process
-        start_func_ptr = pcreate_helper;
-    }
-    ArchThreads::createUserRegisters(user_registers_, start_func_ptr, user_stack_ptr, getKernelStackStartPointer());
-    if (func)
-    {
+        //pcreate_helper is the wrapper that we need to run first
+        //the wrapper will take 2 parameter
+        //first one for the function that we want to run
+        //second one is the parameter of the function
+        ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper,
+                                         user_stack_ptr,
+                                         getKernelStackStartPointer());
+
         user_registers_->rdi = (size_t)func;
-        user_registers_->rsi = (size_t)para;
+        user_registers_->rsi = (size_t)arg;
+        debug(TAI_THREAD, "------------------------------------arg value %zu \n", user_registers_->rdi);
     }
 
-    // Setting up AddressSpace and Terminal
-    ArchThreads::setAddressSpace(this, loader_->arch_memory_);   
+
+    debug(TAI_THREAD, "----------------------para value %zu \n", (size_t)arg);
+
+    ArchThreads::setAddressSpace(this, loader_->arch_memory_);
+
     if (main_console->getTerminal(terminal_number))
         setTerminal(main_console->getTerminal(terminal_number));
 
@@ -51,7 +60,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 
 UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number, Loader* loader)
-    : Thread(other, loader), process_(new_process), return_value_(0), finished_(0), joiner_(0)
+        : Thread(other, loader), process_(new_process), return_value_(0), finished_(0), joiner_(0)
 {
     debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
@@ -63,12 +72,13 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, u
 
     // Setting up AddressSpace and Terminal
     debug(USERTHREAD, "UserThread COPY-Constructor: setting up Child with its own CR3\n");
-    ArchThreads::setAddressSpace(this, loader_->arch_memory_);    
+    ArchThreads::setAddressSpace(this, loader_->arch_memory_);
     if (main_console->getTerminal(terminal_number))
         setTerminal(main_console->getTerminal(terminal_number));
 
     switch_to_userspace_ = 1;
 }
+
 
 
 
@@ -81,11 +91,11 @@ void UserThread::setReturnValue(void* return_value)
     finished_ = 1;
     if(joiner_)
     {
-        debug(USERTHREAD, "UserThread::setReturnValue: Worker (%zu) waking up Joiner (%zu)\n", 
+        debug(USERTHREAD, "UserThread::setReturnValue: Worker (%zu) waking up Joiner (%zu)\n",
                             getTID(), joiner_->getTID());
         Scheduler::instance()->wake(joiner_);
     }
-    debug(USERTHREAD, "UserThread::setReturnValue: worker (%zu) finished, return value: %zu. Going to sleep till Joined\n", 
+    debug(USERTHREAD, "UserThread::setReturnValue: worker (%zu) finished, return value: %zu. Going to sleep till Joined\n",
                         getTID(), (size_t) return_value);
     Scheduler::instance()->sleep();
 
@@ -98,7 +108,7 @@ void UserThread::getReturnValue(void** return_value, UserThread* worker)
     if(!finished_)
     {
         joiner_ = (UserThread*) currentThread;
-        debug(USERTHREAD, "UserThread::getReturnValue: Worker (%zu) is not finished, Joiner (%zu) going to sleep\n", 
+        debug(USERTHREAD, "UserThread::getReturnValue: Worker (%zu) is not finished, Joiner (%zu) going to sleep\n",
                             getTID(), currentThread->getTID());
         Scheduler::instance()->sleep();
 
@@ -144,6 +154,8 @@ void UserThread::kill()
 
 UserThread::~UserThread()
 {
+    //delete process_;
+    //process_->to_be_destroyed_ = true;
     if(!process_)
     {
         assert(Scheduler::instance()->isCurrentlyCleaningUp());
@@ -154,4 +166,5 @@ UserThread::~UserThread()
 
 void UserThread::Run()
 {
+
 }

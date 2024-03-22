@@ -54,14 +54,27 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_threadcount:
       return_value = get_thread_count();
       break; // you will need many debug hours if you forget the break
+
     case sc_pthread_create:
-      return_value = createThread((void*) arg1, (void*) arg2, (void*) arg3, (void*) arg4);
-      break; // you will need many debug hours if you forget the break
+        return_value = createThread((void*) arg1, (void*) arg2, (size_t*) arg3, (void*) arg4);
+      break;
+
+    case sc_pthread_cancel:
+        return_value = cancelThread((size_t)arg1);
+        break;
+
+      case sc_pthread_setcancelstate:
+          return_value = pthread_setcancelstate((int)arg1, (int *)arg2);
+          break;
+      case sc_pthread_setcanceltype:
+          return_value = pthread_setcanceltype((int)arg1, (int *)arg2);
+          break;
+      case sc_pthread_exit:
+          return_value = exitThread((void*) arg1);
+          break;
+
     case sc_pthread_join:
       return_value = joinThread(arg1, (void**) arg2);
-      break; // you will need many debug hours if you forget the break
-    case sc_pthread_exit:
-      return_value = exitThread((void*) arg1);
       break; // you will need many debug hours if you forget the break
     case sc_fork:
       return_value = forkProcess();
@@ -106,7 +119,7 @@ uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
   debug(SYSCALL, "Syscall::joinThread: target_thread (%zu), para (%p) \n", worker_thread, return_ptr);
   UserThread* worker = ((UserThread*) currentThread)->process_->getUserThread(worker_thread);
   assert(worker && "Thread not found in Process's vector");
-  
+
   worker->getReturnValue(return_ptr, worker);
   debug(MINH, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
   return 0;
@@ -132,7 +145,7 @@ void Syscall::exit(size_t exit_code)
 {
   debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
   Scheduler::instance()->printThreadList();
-  
+
   UserProcess* process = ((UserThread*) currentThread)->process_;
 
   size_t vector_size = process->threads_.size();
@@ -144,7 +157,7 @@ void Syscall::exit(size_t exit_code)
       // after thread kill itself, it is removed from Vector, so we need to decrement i and vector size
       i--;
       vector_size--;
-    } 
+    }
   }
 
   delete process;
@@ -264,4 +277,77 @@ void Syscall::trace()
 
 uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
+}
+
+int Syscall::createThread(void* func, void* para, size_t* tid, void* pcreate_helper)
+{
+
+    //debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
+    Scheduler::instance()->printThreadList();
+    debug(TAI_THREAD, "--------------------- TID %zu \n", *tid);
+    ((UserThread*) currentThread)->process_->createThread(func, para, tid, pcreate_helper);
+    Scheduler::instance()->printThreadList();
+    return 0;
+}
+
+int Syscall::cancelThread(size_t thread_id)
+{
+
+    debug(TAI_THREAD, "--------------------Cancelling thread %zu\n", thread_id);
+    UserThread* canceled_thread = ((UserThread*)currentThread)->process_->getUserThread(thread_id);
+    debug(TAI_THREAD, "--------------can_be_cancelled value before %d\n", canceled_thread->can_be_canceled_);
+    debug(TAI_THREAD, "--------------------canceled_thread %p\n", canceled_thread);
+
+    if (!canceled_thread)
+    {
+        debug(TAI_THREAD, "------------------Syscall::pthread_cancel: Thread %zu not found\n", thread_id);
+        return -1; //hread not found
+    }
+
+    //cancel the thread
+    canceled_thread->can_be_canceled_ = true;
+    debug(TAI_THREAD, "--------------can_be_cancelled value after %d\n", canceled_thread->can_be_canceled_);
+    return 0; //successful cancellation
+
+
+}
+
+int Syscall::pthread_setcancelstate(int state, int *oldstate)
+{
+    if(state != 0 && state != 1) //not enable or disable in userspace
+    {
+        debug(TAI_THREAD, "------------------Call cancel state fail\n");
+        return -1;
+    }
+
+    CancelState previous_state = ((UserThread*) currentThread)->getCancelState(); //the state the its currently have
+    *oldstate = (int)previous_state;
+
+    ((UserThread*) currentThread)->setCancelState((CancelState)state);
+
+    debug(TAI_THREAD, "----------------current state %s, previous state %s\n",
+          state == CancelState::PTHREAD_CANCEL_ENABLE ? "ENABLED" : "DISABLED",
+          *oldstate == CancelState::PTHREAD_CANCEL_ENABLE ? "ENABLED" : "DISABLED");
+
+    return 0; //success
+}
+
+int Syscall::pthread_setcanceltype(int type, int *oldtype)
+{
+    if(type != 2 && type != 3) //not ASYNCHRONOUS or DEFERRED in userspace
+    {
+        debug(TAI_THREAD, "------------------Call cancel type fail\n");
+        return -1;
+    }
+
+    CancelType previous_type = ((UserThread*) currentThread)->getCancelType(); //the type the its currently have
+    *oldtype = (int)previous_type;
+
+    ((UserThread*) currentThread)->setCancelType((CancelType)type);
+
+    debug(TAI_THREAD, "------------------current type %s, previous type %s\n",
+          type == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS",
+          *oldtype == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS");
+
+    return 0; //success
 }

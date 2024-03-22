@@ -19,6 +19,11 @@
 
 #define sc_threadcount 2048
 
-#define sc_pthread_create 1000
+#define sc_pthread_create 100
+#define sc_pthread_cancel 101
+#define sc_pthread_setcancelstate 102
+#define sc_pthread_setcanceltype 103
+
+#define sc_pthread_exit 104
 #define sc_pthread_join 1001
-#define sc_pthread_exit 1002
+

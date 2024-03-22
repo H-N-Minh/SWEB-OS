@@ -88,3 +88,6 @@ const size_t M_STORAGE_MANAGER  = Ansi_Yellow;
 const size_t M_INODE            = Ansi_Yellow;
 const size_t M_SB               = Ansi_Yellow;
 const size_t M_ZONE             = Ansi_Yellow;
+
+//Tai's debug
+const size_t TAI_THREAD               = Ansi_Yellow  | OUTPUT_ENABLED;

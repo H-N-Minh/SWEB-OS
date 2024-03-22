@@ -54,6 +54,22 @@ void Scheduler::schedule()
     }
   }
 
+//    for(; it != threads_.end(); ++it)
+//    {
+//        if((*it)->schedulable())
+//        {
+//            UserThread& currentUserThread = *((UserThread*)*it);
+//            if(currentUserThread.can_be_canceled_ && currentUserThread.switch_to_userspace_ && currentUserThread.cancel_type_ != PTHREAD_CANCEL_DEFERRED)
+//            {
+//                if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && currentUserThread.cancel_state_ == PTHREAD_CANCEL_DISABLE)
+//                    break;
+//
+//                //call pthread exit here?
+//
+//                currentUserThread.switch_to_userspace_ = 0;
+//            }
+//        }
+
   assert(it != threads_.end() && "No schedulable thread found");
   ustl::rotate(threads_.begin(), it + 1, threads_.end()); // no new/delete here - important because interrupts are disabled
   //debug(SCHEDULER, "Scheduler::schedule: new currentThread is %p %s, switch_to_userspace: %d\n", currentThread, currentThread->getName(), currentThread->switch_to_userspace_);
