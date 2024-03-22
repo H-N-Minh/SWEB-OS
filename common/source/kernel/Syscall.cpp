@@ -80,7 +80,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 uint32 Syscall::multiCreateThread(void* func, void* para, void* tid, void* pcreate_helper, size_t count)
 {
-  debug(SYSCALL, "Syscall::multiCreateThread: Creating %d threads with func (%p), para (%zu) \n", count, func, (size_t)para);
+  debug(SYSCALL, "Syscall::multiCreateThread: Creating %d threads with func (%p), para (%zu) \n", (int)count, func, (size_t)para);
 
   for(size_t i = 0; i < count; ++i){
     ((UserThread*) currentThread)->process_->createUserThread(func, para, tid, pcreate_helper);

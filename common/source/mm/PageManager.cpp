@@ -14,6 +14,13 @@ PageManager pm;
 
 PageManager* PageManager::instance_ = nullptr;
 
+/**
+ * @brief Retrieves the instance of the PageManager class.
+ *
+ * If an instance does not exist, it creates a new instance using placement new and returns it.
+ *
+ * @return A pointer to the instance of the PageManager class.
+ */
 PageManager* PageManager::instance()
 {
   if (unlikely(!instance_))
@@ -21,6 +28,16 @@ PageManager* PageManager::instance()
   return instance_;
 }
 
+/**
+ * @class PageManager
+ * @brief The PageManager class represents a manager for pages.
+ *
+ * The PageManager class manages the creation, deletion, and locking of pages.
+ * It provides thread-safe access to the pages using a lock.
+ *
+ * The lock is created in the constructor and is passed a name to uniquely identify it.
+ * This allows for easier debugging and tracking of locks.
+ */
 PageManager::PageManager() : lock_("PageManager::lock_")
 {
   assert(!instance_);
@@ -102,7 +119,7 @@ PageManager::PageManager() : lock_("PageManager::lock_")
     for (size_t k = Min(start_page, number_of_pages_); k <= Min(end_page, number_of_pages_ - 1); ++k)
     {
       Bitmap::setBit(page_usage_table, used_pages, k);
-      if (ArchMemory::get_PPN_Of_VPN_In_KernelMapping(PHYSICAL_TO_VIRTUAL_OFFSET / PAGE_SIZE + k, 0, 0) == 0)
+      if (ArchMemory::get_PPN_Of_VPN_In_KernelMapping(PHYSICAL_TO_VIRTUAL_OFFSET / PAGE_SIZE + k, nullptr, nullptr) == 0)
         ArchMemory::mapKernelPage(PHYSICAL_TO_VIRTUAL_OFFSET / PAGE_SIZE + k,k);
     }
   }
@@ -123,7 +140,7 @@ PageManager::PageManager() : lock_("PageManager::lock_")
   {
     while (!Bitmap::setBit(page_usage_table, used_pages, free_page))
       free_page++;
-    if ((temp_page_size = ArchMemory::get_PPN_Of_VPN_In_KernelMapping(start_vpn,0,0)) == 0)
+    if ((temp_page_size = ArchMemory::get_PPN_Of_VPN_In_KernelMapping(start_vpn,nullptr,0)) == 0)
       ArchMemory::mapKernelPage(start_vpn,free_page++);
     start_vpn++;
   }
@@ -165,16 +182,32 @@ PageManager::PageManager() : lock_("PageManager::lock_")
   KernelMemoryManager::pm_ready_ = 1;
 }
 
+/**
+ * @class PageManager
+ *
+ * This class represents the PageManager in SWEB. It manages the allocation and freeing
+ * of physical pages in the system.
+ */
 uint32 PageManager::getTotalNumPages() const
 {
   return number_of_pages_;
 }
 
+/**
+ * @brief The PageManager class is responsible for managing physical pages.
+ *
+ * This class provides methods to retrieve information about the physical pages,
+ * allocate and free physical pages, and manage the page usage table.
+ */
 uint32 PageManager::getNumFreePages() const
 {
   return page_usage_table_->getNumFreeBits();
 }
 
+/**
+ * @class PageManager
+ * @brief Manages the allocation and deallocation of physical pages
+ */
 bool PageManager::reservePages(uint32 ppn, uint32 num)
 {
   assert(lock_.heldBy() == currentThread);
@@ -189,6 +222,10 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
   return false;
 }
 
+/**
+ * @class PageManager
+ * @brief Manages physical pages in the SWEB operating system
+ */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
   uint32 p;
@@ -227,6 +264,16 @@ uint32 PageManager::allocPPN(uint32 page_size)
   return found;
 }
 
+/**
+ * @brief Free a physical page in the page manager
+ *
+ * This function frees a physical page in the page manager by marking it as unused in the page usage table. If the page number
+ * is greater than the total number of pages, an assertion error is thrown. The memory of the page is then set to 0xFF to clear
+ * any existing data. The lowest unreserved page is updated if necessary. The function acquires the lock to ensure thread safety.
+ *
+ * @param page_number The physical page number to free
+ * @param page_size The size of the page to free (must be a multiple of PAGE_SIZE)
+ */
 void PageManager::freePPN(uint32 page_number, uint32 page_size)
 {
   assert((page_size % PAGE_SIZE) == 0);
@@ -248,11 +295,22 @@ void PageManager::freePPN(uint32 page_number, uint32 page_size)
   lock_.release();
 }
 
+/**
+ * @brief Prints the bitmap representation of the page_usage_table_.
+ *
+ * This function prints the bitmap representation of the page_usage_table_ to the console.
+ * The page_usage_table_ keeps track of the usage status of physical pages.
+ */
 void PageManager::printBitmap()
 {
   page_usage_table_->bmprint();
 }
 
+/**
+ * @class PageManager
+ * The PageManager class is responsible for managing physical pages in SWEB.
+ * It provides various methods to allocate and free physical pages.
+ */
 uint32 PageManager::getNumPagesForUser() const
 {
   return num_pages_for_user_;

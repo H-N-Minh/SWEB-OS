@@ -21,7 +21,6 @@ int main()
   multi_pthread_create(threads, NULL, (void* (*)(void*))printNumber, (void*) x, 2);
   pthread_create(&threads[1], NULL, (void* (*)(void*))printNumber, (void*) y);
 
-  size_t i = 0;
   void* return_value = 0x0;
 
   for (size_t j = 0; j < 2; j++) {

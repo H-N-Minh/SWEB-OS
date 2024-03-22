@@ -9,12 +9,15 @@ public:
   ~LocalFileDescriptorTable();
 
   LocalFileDescriptor* createLocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset);
-  void closeLocalFileDescriptor(LocalFileDescriptor* local_fd);
-  LocalFileDescriptor* getLocalFileDescriptor(int local_fd_id) const;
-  void closeAllFileDescriptors();
+
+  //[[maybe_unused]] static void closeLocalFileDescriptor(LocalFileDescriptor* local_fd);
+
+  [[maybe_unused]] [[nodiscard]] LocalFileDescriptor* getLocalFileDescriptor(int local_fd_id) const;
+
+  [[maybe_unused]] void closeAllFileDescriptors();
 
 
 private:
   ustl::vector<LocalFileDescriptor*> local_fds_;
-  size_t generateLocalFD();
+  static size_t generateLocalFD();
 };

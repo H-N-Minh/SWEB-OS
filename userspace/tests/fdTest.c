@@ -1,11 +1,24 @@
 #include "fcntl.h"
-#include "unistd.h"
 #include "string.h"
 #include "stdio.h"
 
-#define TEST_FILE "/home/fabian/Desktop/bss24c1/userspace/tests/test.txt"
+#define TEST_FILE "/home/fabian/Desktop/bss24c1/userspace/tests/binary.bin"
 #define BUF_SIZE  128
 
+/**
+ * @brief Main function for opening a file
+ *
+ * This function opens a file and prints a message indicating whether the
+ * file was successfully opened or not.
+ *
+ * @return 0 on success, negative value on failure
+ *
+ * @remarks This function uses the following external functions:
+ * - memset: to initialize the buffer with zeros
+ * - printf: to print the message
+ * - open: to open the file
+ *
+ */
 int main() {
   char buf[BUF_SIZE];
   memset(buf, 0, BUF_SIZE);
@@ -17,7 +30,5 @@ int main() {
     printf("Failed to open file");
     return fd;
   }
-
-
   return 0;
 }

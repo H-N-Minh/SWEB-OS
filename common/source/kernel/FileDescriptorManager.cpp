@@ -15,7 +15,7 @@ int FileDescriptorManager::allocateDescriptor(void* associatedObject, int flags)
   return descriptor;
 }
 
-void* FileDescriptorManager::getAssociatedObject(int fileDescriptor) {
+[[maybe_unused]] void* FileDescriptorManager::getAssociatedObject(int fileDescriptor) {
   for (auto& entry : descriptors) {
     if (entry.descriptor == fileDescriptor) {
       return entry.associatedObject;
@@ -24,7 +24,7 @@ void* FileDescriptorManager::getAssociatedObject(int fileDescriptor) {
   return nullptr;
 }
 
-void FileDescriptorManager::freeDescriptor(int fileDescriptor) {
+[[maybe_unused]] void FileDescriptorManager::freeDescriptor(int fileDescriptor) {
   for (auto it = descriptors.begin(); it != descriptors.end(); ++it) {
     if (it->descriptor == fileDescriptor) {
       descriptors.erase(it);

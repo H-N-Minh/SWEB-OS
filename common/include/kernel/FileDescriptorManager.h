@@ -24,8 +24,10 @@ public:
   }
 
   int allocateDescriptor(void* associatedObject, int flags);
-  void* getAssociatedObject(int fileDescriptor);
-  void freeDescriptor(int fileDescriptor);
+
+  [[maybe_unused]] void* getAssociatedObject(int fileDescriptor);
+
+  [[maybe_unused]] void freeDescriptor(int fileDescriptor);
 
   FileDescriptorManager(FileDescriptorManager const&) = delete;
   void operator=(FileDescriptorManager const&) = delete;

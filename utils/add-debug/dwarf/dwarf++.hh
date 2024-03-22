@@ -329,7 +329,7 @@ public:
  */
 class die
 {
-        // XXX Make this class better for use in maps.  Currently dies
+        // XXX Make this class better for use in maps. Currently, dies
         // are fairly big and expensive to copy, but most of that
         // information can be constructed lazily.  This is also bad
         // for use in caches since it will keep the DWARF file alive.

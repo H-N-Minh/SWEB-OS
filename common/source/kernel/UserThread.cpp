@@ -10,9 +10,9 @@
 
 #include "uvector.h"
 
-UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, 
+UserThread::UserThread(FileSystemInfo* working_dir, [[maybe_unused]] ustl::string name, Thread::TYPE type, uint32 terminal_number,
                         Loader* loader, UserProcess* process, int32 tid, void* func, void* para, void* pcreate_helper)
-    : Thread(working_dir, name, type, loader), process_(process), return_value_(0), finished_(0), joiner_(0)
+    : Thread(working_dir, name, type, loader), process_(process), return_value_(nullptr), finished_(0), joiner_(nullptr)
 {
     debug(USERTHREAD, "UserThread Constructor: creating new thread with func (%p), para (%zu) \n", func, (size_t) para);
     tid_ = tid;
@@ -125,7 +125,7 @@ UserThread::~UserThread()
     {
         assert(Scheduler::instance()->isCurrentlyCleaningUp());
         delete loader_;
-        loader_ = 0;
+        loader_ = nullptr;
     }
 }
 

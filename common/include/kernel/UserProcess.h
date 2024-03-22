@@ -35,7 +35,7 @@ class UserProcess
   public:
     void createUserThread(void* func, void* para, void* tid, void* pcreate_helper);
 
-    size_t openFile(const ustl::string& path, uint32_t mode);
+  [[maybe_unused]] size_t openFile(const ustl::string& path, uint32_t mode);
 
     UserThread* getUserThread(size_t tid);
 
