@@ -33,8 +33,6 @@ class Syscall
 
     static uint32 joinThread(size_t worker_thread, void **return_ptr);
 
-    static uint32 exitThread(void* return_value);
-
     static uint32 forkProcess();
 };
 

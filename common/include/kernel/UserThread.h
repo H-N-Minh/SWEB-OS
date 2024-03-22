@@ -14,9 +14,9 @@ class UserThread : public Thread
 
         ~UserThread();
         UserProcess* process_;
-        void Run();
+        void Run() override;
 
-        //void kill() override; //from Minh
+        void kill() override; //from Minh
 
         void* return_value_;
         uint32 finished_;

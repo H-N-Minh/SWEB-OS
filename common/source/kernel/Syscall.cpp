@@ -89,20 +89,22 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 // TODO: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
-  debug(SYSCALL, "Syscall::forkProcess: start focking \n");
-  UserProcess* parent = ((UserThread*) currentThread)->process_;
-  UserProcess* child = new UserProcess(*parent);
+//  debug(SYSCALL, "Syscall::forkProcess: start focking \n");
+//  UserProcess* parent = ((UserThread*) currentThread)->process_;
+//  UserProcess* child = new UserProcess(*parent);
+//
+//  if (!child)
+//  {
+//    debug(SYSCALL, "Syscall::forkProcess: fock failed \n");
+//    return -1;
+//  }
+//  else
+//  {
+//    debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
+//    return (uint32) currentThread->user_registers_->rax;
+//  }
 
-  if (!child)
-  {
-    debug(SYSCALL, "Syscall::forkProcess: fock failed \n");
-    return -1;
-  }
-  else
-  {
-    debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
-    return (uint32) currentThread->user_registers_->rax;
-  }
+    return 0;
 }
 
 uint32 Syscall::exitThread(void* return_value)
@@ -125,11 +127,14 @@ uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
   return 0;
 }
 
-uint32 Syscall::createThread(void* func, void* para, void* tid, void* pcreate_helper)
+int Syscall::createThread(void* func, void* para, size_t* tid, void* pcreate_helper)
 {
-  debug(SYSCALL, "Syscall::createThread: func (%p), para (%zu) \n", func, (size_t) para);
-  ((UserThread*) currentThread)->process_->createUserThread(func, para, tid, pcreate_helper);
-  return 0;
+    //debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
+    Scheduler::instance()->printThreadList();
+    debug(TAI_THREAD, "--------------------- TID %zu \n", *tid);
+    ((UserThread*) currentThread)->process_->createThread(func, para, tid, pcreate_helper);
+    Scheduler::instance()->printThreadList();
+    return 0;
 }
 
 void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
@@ -279,16 +284,6 @@ uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
 }
 
-int Syscall::createThread(void* func, void* para, size_t* tid, void* pcreate_helper)
-{
-
-    //debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
-    Scheduler::instance()->printThreadList();
-    debug(TAI_THREAD, "--------------------- TID %zu \n", *tid);
-    ((UserThread*) currentThread)->process_->createThread(func, para, tid, pcreate_helper);
-    Scheduler::instance()->printThreadList();
-    return 0;
-}
 
 int Syscall::cancelThread(size_t thread_id)
 {
