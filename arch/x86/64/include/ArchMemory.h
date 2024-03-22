@@ -30,7 +30,7 @@ class ArchMemory
 {
   public:
     ArchMemory();  
-    ArchMemory(ArchMemory const &src);
+    //ArchMemory(ArchMemory const &src);
     ~ArchMemory();
 
     uint64 page_map_level_4_;

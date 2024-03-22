@@ -223,7 +223,7 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
   {
     return -1;
   }
-  if(lock->locked_ == 0)  //Todo not held by current thread
+  if(lock->locked_ == 0)  //locked by another thread
   {
     return -1;
   }

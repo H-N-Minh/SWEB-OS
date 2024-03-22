@@ -15,7 +15,6 @@ class UserProcess
      *
      */
     UserProcess(ustl::string minixfs_filename, FileSystemInfo *fs_info, uint32 terminal_number = 0);
-    UserProcess(UserProcess const &src);
 
     virtual ~UserProcess();
 
@@ -40,6 +39,7 @@ class UserProcess
     Mutex thread_counter_lock_;    //1         //Todo: check if the locking order is actually followed
     Mutex threads_lock_;           //2
     Mutex value_ptr_by_id_lock_;   //3
+  
 
 
     Loader* execv_loader_{NULL}; //needs a loock
@@ -48,7 +48,7 @@ class UserProcess
     size_t exec_argc_{0};  //TODO: lock ? 
 
     static size_t pid_counter_; //lock lock
-    size_t pid_;              //TODO should not be zero
+    size_t pid_;                //Todo: lock
     size_t parent_pid_{0};
 
    

@@ -402,9 +402,8 @@ int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_ro
   {
     return -1;
   }
-  debug(SYSCALL, "Unused: Thread %p, Attribute %p\n", thread, attr);       //TODO
-  int rv = current_process.create_thread(thread, start_routine, wrapper_address, arg);
-  return rv;
+  debug(SYSCALL, "Unused: Attribute %p\n", attr);
+  return current_process.create_thread(thread, start_routine, wrapper_address, arg);
 }
 
 
@@ -420,7 +419,7 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 
 unsigned int Syscall::sleep(unsigned int seconds)
 {
-  return seconds;
+  return seconds;  //Todo
 }
 
 
@@ -430,7 +429,6 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
     {
       return false;
     }
-    debug(SYSCALL, "Ptr %p USER_BREAK %p.\n",(void*)ptr, (void*)USER_BREAK);
     if(ptr >= USER_BREAK)
     {
       return false;
