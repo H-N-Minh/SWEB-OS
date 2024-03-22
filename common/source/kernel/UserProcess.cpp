@@ -47,13 +47,14 @@ UserProcess::~UserProcess()
 //   assert(false);
 // }
 
-void UserProcess::createThread(void* func, void* para, void* tid, void* pcreate_helper)
+void UserProcess::createThread(void* func, void* para, size_t* tid, void* pcreate_helper)
 {
     debug(USERPROCESS, "UserProcess::createUserThread: func (%p), para (%zu) \n", func, (size_t) para);
     UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_,
                                             ((UserThread*) currentThread)->process_, num_thread_, func, para, pcreate_helper);
     threads_.push_back(new_thread);
     *((unsigned long*) tid) = (unsigned long) num_thread_;
+    debug(TAI_THREAD, "--------------------- TID %zu \n", *tid);
     num_thread_++;
 
     debug(USERPROCESS, "UserProcess::createUserThread: Adding new thread to scheduler\n");

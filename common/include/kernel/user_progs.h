@@ -7,7 +7,7 @@ char const *user_progs[] = {
 //                            "/usr/smallpthreadcreate.sweb",
 //                            "/usr/small_cancel_test.sweb",
 //                            "/usr/stateTypeTest.sweb",
-                            "/usr/spinTest.sweb",
+//                            "/usr/spinTest.sweb",
                             0
                            };
 

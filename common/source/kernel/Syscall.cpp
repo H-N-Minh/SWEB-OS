@@ -54,7 +54,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break; // you will need many debug hours if you forget the break
 
     case sc_pthread_create:
-        return_value = createThread((void*) arg1, (void*) arg2, (void*) arg3, (void*) arg4);
+        return_value = createThread((void*) arg1, (void*) arg2, (size_t*) arg3, (void*) arg4);
       break;
 
     case sc_pthread_cancel:
@@ -233,11 +233,12 @@ uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
 }
 
-int Syscall::createThread(void* func, void* para, void* tid, void* pcreate_helper)
+int Syscall::createThread(void* func, void* para, size_t* tid, void* pcreate_helper)
 {
 
     //debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
     Scheduler::instance()->printThreadList();
+    debug(TAI_THREAD, "--------------------- TID %zu \n", *tid);
     ((UserThread*) currentThread)->process_->createThread(func, para, tid, pcreate_helper);
     Scheduler::instance()->printThreadList();
     return 0;
@@ -248,7 +249,7 @@ int Syscall::cancelThread(size_t thread_id)
 
     debug(TAI_THREAD, "--------------------Cancelling thread %zu\n", thread_id);
     UserThread* canceled_thread = ((UserThread*)currentThread)->process_->getUserThread(thread_id);
-
+    debug(TAI_THREAD, "--------------can_be_cancelled value before %d\n", canceled_thread->can_be_canceled_);
     debug(TAI_THREAD, "--------------------canceled_thread %p\n", canceled_thread);
 
     if (!canceled_thread)
@@ -259,7 +260,7 @@ int Syscall::cancelThread(size_t thread_id)
 
     //cancel the thread
     canceled_thread->can_be_canceled_ = true;
-    //debug(TAI_THREAD, "--------------Can be cancelled value after %d\n", canceled_thread->can_be_canceled_);
+    debug(TAI_THREAD, "--------------can_be_cancelled value after %d\n", canceled_thread->can_be_canceled_);
     return 0; //successful cancellation
 
 
@@ -287,7 +288,7 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
 
 int Syscall::pthread_setcanceltype(int type, int *oldtype)
 {
-    if(type != 3 && type != 4) //not ASYNCHRONOUS or DEFERRED in userspace
+    if(type != 2 && type != 3) //not ASYNCHRONOUS or DEFERRED in userspace
     {
         debug(TAI_THREAD, "------------------Call cancel type fail\n");
         return -1;
@@ -301,9 +302,6 @@ int Syscall::pthread_setcanceltype(int type, int *oldtype)
     debug(TAI_THREAD, "------------------current type %s, previous type %s\n",
           type == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS",
           *oldtype == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS");
-
-    return 0; //success
-
 
     return 0; //success
 }

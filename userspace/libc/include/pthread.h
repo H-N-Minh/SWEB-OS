@@ -30,7 +30,7 @@ typedef unsigned int pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
 
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum CancelType {PTHREAD_CANCEL_DEFERRED = 3, PTHREAD_CANCEL_ASYNCHRONOUS = 4};
+enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
 extern int pthread_create(pthread_t *thread,
          const pthread_attr_t *attr, void *(*start_routine)(void *),

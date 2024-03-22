@@ -13,6 +13,8 @@ int main() {
 
     pthread_create(&thread, NULL, addition, (void*)numbers);
 
+    printf("%zu\n", thread);
+
     // create a delay to make sure this thread Join after worker thread finished.
     for (size_t i = 0; i < 100000000; i++)
     {

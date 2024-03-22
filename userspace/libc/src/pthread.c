@@ -45,7 +45,7 @@ void pthread_exit(void *value_ptr)
  */
 int pthread_cancel(pthread_t thread)
 {
-    return __syscall(sc_pthread_cancel, 0x0, 0x0, 0x0, 0x0, 0x0);
+    return __syscall(sc_pthread_cancel, thread, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -208,7 +208,7 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
  */
 int pthread_setcancelstate(int state, int *oldstate)
 {
-    return __syscall(sc_pthread_setcancelstate, state, (size_t)oldstate, 0x0, 0x0, 0x0);
+    return __syscall(sc_pthread_setcancelstate, (size_t)state, (size_t)oldstate, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -217,7 +217,7 @@ int pthread_setcancelstate(int state, int *oldstate)
  */
 int pthread_setcanceltype(int type, int *oldtype)
 {
-    return __syscall(sc_pthread_setcanceltype, type, (size_t)oldtype, 0x0, 0x0, 0x0);
+    return __syscall(sc_pthread_setcanceltype, (size_t)type, (size_t)oldtype, 0x0, 0x0, 0x0);
 }
 
 int get_thread_count(void) {

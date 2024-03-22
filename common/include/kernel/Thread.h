@@ -9,7 +9,7 @@ enum ThreadState{Running, Sleeping, ToBeDestroyed};
 enum SystemState {BOOTING, RUNNING, KPANIC};
 
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum CancelType {PTHREAD_CANCEL_DEFERRED, PTHREAD_CANCEL_ASYNCHRONOUS};
+enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
 extern SystemState system_state;
 
