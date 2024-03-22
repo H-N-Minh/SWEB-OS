@@ -62,10 +62,12 @@ void UserProcess::createThread(void* func, void* para, void* tid, void* pcreate_
 
 UserThread* UserProcess::getUserThread(size_t tid)
 {
-    for (size_t i = 0; i < threads_.size(); i++)
+    for (auto& thread : threads_)
     {
-        if (threads_[i]->getTID() == tid)
-            return threads_[i];
+        if(tid == thread->getTID())
+        {
+            return thread;
+        }
     }
-    return 0;
+    return nullptr;
 }

@@ -17,5 +17,7 @@ class UserThread : public Thread
         uint32 finished_;
         UserThread* joiner_;
 
+        bool can_be_canceled_ = false;
+
         void setReturnValue(void* return_value);
 };

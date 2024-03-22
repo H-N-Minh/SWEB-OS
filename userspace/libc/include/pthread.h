@@ -17,11 +17,20 @@ typedef unsigned int pthread_mutex_t;
 typedef unsigned int pthread_mutexattr_t;
 
 //pthread spinlock typedefs
-typedef unsigned int pthread_spinlock_t;
+struct spinlock_struct {
+    size_t  locked_;
+    size_t initialized_;
+    void* held_by_;
+};
+
+typedef struct spinlock_struct pthread_spinlock_t;
 
 //pthread cond typedefs
 typedef unsigned int pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
+
+enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
+enum CancelType {PTHREAD_CANCEL_DEFERRED = 3, PTHREAD_CANCEL_ASYNCHRONOUS = 4};
 
 extern int pthread_create(pthread_t *thread,
          const pthread_attr_t *attr, void *(*start_routine)(void *),

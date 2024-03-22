@@ -8,8 +8,8 @@
 enum ThreadState{Running, Sleeping, ToBeDestroyed};
 enum SystemState {BOOTING, RUNNING, KPANIC};
 
-enum CancelState {ENABLED, DISABLED};
-enum CancelType {DEFERRED, ASYNCHRONOUS};
+enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
+enum CancelType {PTHREAD_CANCEL_DEFERRED, PTHREAD_CANCEL_ASYNCHRONOUS};
 
 extern SystemState system_state;
 
@@ -129,8 +129,9 @@ class Thread
 
         volatile ThreadState state_;
 
-        CancelState cancel_state_ = ENABLED; //default cancel state is ENABLED
-        CancelType cancel_type_ = DEFERRED; //default cancel type is DEFERRED
+        CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};  //default cancel state is ENABLED
+        CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED}; //default cancel type is DEFERRED
+
 
     protected:
         size_t tid_;

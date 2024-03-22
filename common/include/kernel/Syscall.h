@@ -26,9 +26,9 @@ class Syscall
     static uint32 exitThread(void* return_value);
 
     static int createThread(void* func, void* para, void* tid, void* pcreate_helper);
-    static int pthread_cancel(size_t* thread_id);
+    static int cancelThread(size_t thread_id);
 
-    static int pthread_setcancelstate(CancelState state, CancelState* oldstate);
-    static int pthread_setcanceltype(CancelType type, CancelType* oldtype);
+    static int pthread_setcancelstate(int state, int *oldstate);
+    static int pthread_setcanceltype(int type, int *oldtype);
 };
 

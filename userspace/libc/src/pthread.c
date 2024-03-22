@@ -144,8 +144,8 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
  */
 int pthread_spin_destroy(pthread_spinlock_t *lock)
 {
-  //free(lock)
-  return -1;
+    lock->initialized_ = 0;
+    return 0;
 }
 
 /**
@@ -154,16 +154,13 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
  */
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 {
-    //spin lock = malloc()
-    if (lock == ((void*)0))
-        return 1; //error
-    *lock = 0; //initialize the spinlock to an unlocked state
-    return 0; //success
-
-    if(pshared == 1)
+    if(lock->initialized_)
     {
-        //share between processes;
+        return -1;
     }
+    lock->locked_ = 0;
+    lock->initialized_ = 1;
+    return 0;
 }
 
 /**
@@ -176,7 +173,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
     do {
         asm("xchg %0,%1"
                 : "=r" (old_val)
-                : "m" (*lock), "0" (old_val)
+                : "m" (lock->locked_), "0" (old_val)
                 : "memory");
     } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
     return 0; // Success
@@ -197,8 +194,12 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
  */
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
-    *lock = 0; //release the lock
-    return 0; //
+    size_t old_val = 0;
+    asm("xchg %0,%1"
+            : "=r" (old_val)
+            : "m" (lock->locked_), "0" (old_val)
+            : "memory");
+    return 0;
 }
 
 /**
