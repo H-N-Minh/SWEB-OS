@@ -77,6 +77,18 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 
 
+UserThread::UserThread(UserThread const &src, UserProcess* process, size_t thread_counter) : 
+            Thread(src, process), process_(process), last_thread_alive_(false), last_thread_before_exec_(false), wants_to_be_canceled_(false),
+            exit_send_cancelation_(false), join_threads_lock_("join_threads_lock_"), thread_killed(false), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
+            thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), canceled_thread_wants_to_be_killed_(false), 
+            cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(src.cancel_state_), cancel_type_(src.cancel_type_)
+{
+    debug(FORK, "Copy constructor UserThread\n");
+
+    setTID(thread_counter);
+    switch_to_userspace_ = 1; 
+}
+
 
 
 
@@ -93,15 +105,19 @@ UserThread::~UserThread()
 
     if(unlikely(last_thread_before_exec_))
     {
-        assert(process_->threads_.size() == 0 && "There are still other threads running.");
         debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
+        assert(Scheduler::instance()->isCurrentlyCleaningUp());
         delete loader_;
         process_->loader_ = process_->execv_loader_;
         process_->execv_loader_ = 0;
-        assert(process_->fd_ <= 0 && "No file to close");
-        VfsSyscall::close(process_->fd_);
+
+        if (process_->fd_ > 0)
+        {
+            VfsSyscall::close(process_->fd_);
+        }
         process_->fd_ = process_->execv_fd_;
 
+        assert(process_->threads_.size() == 0);
         process_->thread_counter_++;
         UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_, 0, 0, 0, process_->thread_counter_, true);
         process_->threads_.push_back(new_thread);

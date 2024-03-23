@@ -43,24 +43,24 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
   kernel_stack_[0] = STACK_CANARY;
 }
 
-// Thread::Thread(Thread const &src, UserProcess* process): 
-//       kernel_registers_(src.kernel_registers_), user_registers_(src.user_registers_), switch_to_userspace_(src.switch_to_userspace_), 
-//       loader_(process->loader_),  next_thread_in_lock_waiters_list_(NULL), lock_waiting_on_(NULL), holding_lock_list_(NULL), 
-//       state_ (src.state_), tid_ (src.tid_), my_terminal_(src.my_terminal_), working_dir_(src.working_dir_), name_(src.name_), type_(src.type_)
-// {
-//     debug(FORK, "Copy constructor Thread\n");
-//     //kernel_stack_ !!
-//     //kernel_registers_
-//     //user_registers_
+Thread::Thread(Thread const &src, UserProcess* process): 
+      kernel_registers_(src.kernel_registers_), user_registers_(src.user_registers_), switch_to_userspace_(src.switch_to_userspace_), 
+      loader_(process->loader_),  next_thread_in_lock_waiters_list_(NULL), lock_waiting_on_(NULL), holding_lock_list_(NULL), 
+      state_ (src.state_), tid_ (src.tid_), my_terminal_(src.my_terminal_), working_dir_(src.working_dir_), name_(src.name_), type_(src.type_)
+{
+    debug(FORK, "Copy constructor Thread\n");
+    //kernel_stack_ !!
+    //kernel_registers_
+    //user_registers_
     
    
-//     //tid maybe
-//     //terminal
-//     //working dir
-//     //name maybe
-//     //cancel threads
+    //tid maybe
+    //terminal
+    //working dir
+    //name maybe
+    //cancel threads
 
-// }
+}
 
 Thread::~Thread()
 {
