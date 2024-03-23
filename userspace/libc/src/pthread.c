@@ -1,7 +1,7 @@
 #include "pthread.h"
-#include "stdio.h"
-#include "sched.h"
-#include "assert.h"
+
+#include <stdio.h>
+
 
 /**
  * function stub
@@ -10,9 +10,7 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                     void *(*start_routine)(void *), void *arg)
 {
-  //Syscall pthread Stefanie
-  return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
-  //Syscall pthread Minh/tai
+    return __syscall(sc_pthread_create, (size_t)start_routine, (size_t)arg, (size_t) thread, (size_t) pthread_create_helper, 0x0);
   return __syscall(sc_pthread_create, (size_t)start_routine, (size_t)arg, (size_t) thread, (size_t) pthread_create_helper, 0x0);
 }
 
@@ -47,7 +45,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
  */
 void pthread_exit(void *value_ptr)
 {
-  __syscall(sc_pthread_exit, (size_t)value_ptr, 0x0, 0x0, 0x0, 0x0);
+    __syscall(sc_pthread_exit, (size_t) value_ptr, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -56,7 +54,7 @@ void pthread_exit(void *value_ptr)
  */
 int pthread_cancel(pthread_t thread)
 {
-  return __syscall(sc_pthread_cancel, thread, 0x0, 0x0, 0x0, 0x0);
+    return __syscall(sc_pthread_cancel, thread, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -65,7 +63,7 @@ int pthread_cancel(pthread_t thread)
  */
 int pthread_join(pthread_t thread, void **value_ptr)
 {
-  return __syscall(sc_pthread_join, (size_t)thread, (size_t)value_ptr, 0x0, 0x0, 0x0);
+  return __syscall(sc_pthread_join, (size_t) thread, (size_t) value_ptr, 0x0, 0x0, 0x0);
 }
 
 /**
@@ -155,17 +153,8 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
  */
 int pthread_spin_destroy(pthread_spinlock_t *lock)
 {
-  if(!lock->initialized_ )
-  {
-    return -1;
-  }
-  if(lock->locked_)
-  {
-    return -1;
-  }
     lock->initialized_ = 0;
     return 0;
-
 }
 
 /**
@@ -189,10 +178,6 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
  */
 int pthread_spin_lock(pthread_spinlock_t *lock)
 {
-    if(!lock->initialized_ )
-    {
-      return -1;
-    }
     size_t old_val = 1;
     do {
         asm("xchg %0,%1"
@@ -209,17 +194,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
  */
 int pthread_spin_trylock(pthread_spinlock_t *lock)
 {
-  if(!lock->initialized_ )
-  {
-    return -1;
-  }
-
-  size_t old_val = 1;
-  asm("xchg %0,%1"
-  : "=r" (old_val)
-  : "m" (lock->locked_), "0" (old_val)
-  : "memory");
-  return old_val;
+  return -1;
 }
 
 /**
@@ -228,14 +203,6 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
  */
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
-  if(lock->initialized_ == 0)
-  {
-    return -1;
-  }
-  if(lock->locked_ == 0)
-  {
-    return -1;
-  }
     size_t old_val = 0;
     asm("xchg %0,%1"
             : "=r" (old_val)
@@ -261,13 +228,6 @@ int pthread_setcanceltype(int type, int *oldtype)
 {
     return __syscall(sc_pthread_setcanceltype, (size_t)type, (size_t)oldtype, 0x0, 0x0, 0x0);
 }
-
-void pthread_testcancel(void)
-{
-  __syscall(sc_pthread_testcancel, 0x0, 0x0, 0x0, 0x0, 0x0);
-}
-
-
 
 int get_thread_count(void) {
     return __syscall(sc_threadcount, 0x0, 0x0, 0x0, 0x0, 0x0);
@@ -315,7 +275,3 @@ int get_thread_count(void) {
 //lock
 //do sth here
 //unlock
-void pthread_create_wrapper(void *(*start_routine)(void*), void* arg){
-  size_t rv = (size_t)start_routine(arg);
-  pthread_exit((void*)rv);
-}

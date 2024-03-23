@@ -14,7 +14,6 @@
 #include "ustring.h"
 #include "Lock.h"
 #include "ProcessRegistry.h"
-#include "Syscall.h"
 
 ArchThreadRegisters *currentThreadRegisters;
 Thread *currentThread;
@@ -50,32 +49,26 @@ void Scheduler::schedule()
   {
     if((*it)->schedulable())
     {
-      if((*it)->type_ == Thread::USER_THREAD)
-      {
-        UserThread& currentUserThread = *((UserThread*)*it);
-        if(currentUserThread.wants_to_be_canceled_ && currentUserThread.switch_to_userspace_ && currentUserThread.cancel_type_ != PTHREAD_CANCEL_DEFERRED) 
-        {
-          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && currentUserThread.cancel_state_ == PTHREAD_CANCEL_DISABLE)
-          {
-            break;
-          }
-          currentUserThread.kernel_registers_->rip     = (size_t)Syscall::pthread_exit;
-          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
-          {
-            currentUserThread.kernel_registers_->rsi     = (size_t)-2222222222;
-          }
-          else{
-            currentUserThread.kernel_registers_->rsi     = (size_t)-1111111111;
-          }
-          
-          currentUserThread.switch_to_userspace_ = 0;
-        }
-      }
-
       currentThread = *it;
       break;
     }
   }
+
+//    for(; it != threads_.end(); ++it)
+//    {
+//        if((*it)->schedulable())
+//        {
+//            UserThread& currentUserThread = *((UserThread*)*it);
+//            if(currentUserThread.can_be_canceled_ && currentUserThread.switch_to_userspace_ && currentUserThread.cancel_type_ != PTHREAD_CANCEL_DEFERRED)
+//            {
+//                if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && currentUserThread.cancel_state_ == PTHREAD_CANCEL_DISABLE)
+//                    break;
+//
+//                //call pthread exit here?
+//
+//                currentUserThread.switch_to_userspace_ = 0;
+//            }
+//        }
 
   assert(it != threads_.end() && "No schedulable thread found");
   ustl::rotate(threads_.begin(), it + 1, threads_.end()); // no new/delete here - important because interrupts are disabled
@@ -105,6 +98,7 @@ void Scheduler::sleep()
 
 void Scheduler::wake(Thread* thread_to_wake)
 {
+  // wait until the thread is sleeping
   while(thread_to_wake->getState() != Sleeping)
     yield();
   thread_to_wake->setState(Running);

@@ -29,7 +29,7 @@ struct ArchMemoryMapping
 class ArchMemory
 {
   public:
-    ArchMemory();  
+    ArchMemory();
     ~ArchMemory();
 
     uint64 page_map_level_4_;

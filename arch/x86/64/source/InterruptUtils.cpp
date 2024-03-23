@@ -355,10 +355,7 @@ extern "C" void errorHandler(size_t num, size_t eip, size_t cs, size_t spurious)
     if (currentThread->user_registers_)
       Syscall::exit(888);
     else
-    {
       currentThread->kill();
-    }
-
   }
 }
 

@@ -11,7 +11,6 @@
 #include "KernelMemoryManager.h"
 #include "Stabs2DebugInfo.h"
 #include "UserProcess.h"
-#include "debug.h"
 
 #define BACKTRACE_MAX_FRAMES 20
 
@@ -32,10 +31,9 @@ extern "C" void threadStartHack()
 }
 
 Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type, Loader* loader) :
-    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader),
-    next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
-    my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name)) //, type_(type)
-
+        kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader),
+        next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
+        my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name))
 {
     debug(THREAD, "Thread ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
     ArchThreads::createKernelRegisters(kernel_registers_, (void*) (type == Thread::USER_THREAD ? 0 : threadStartHack), getKernelStackStartPointer());
@@ -193,11 +191,6 @@ const char *Thread::getName()
 size_t Thread::getTID() const
 {
     return tid_;
-}
-
-void Thread::setTID(size_t tid)
-{
-  tid_ = tid;
 }
 
 ThreadState Thread::getState() const

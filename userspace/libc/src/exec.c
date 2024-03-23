@@ -50,7 +50,8 @@ pid_t fork()
  */
 int execv(const char *path __attribute__((unused)), char *const argv[] __attribute__((unused)))
 {
-  return __syscall(sc_execv, (size_t)path,  (size_t)argv, 0x00, 0x00, 0x00);
+
+  return 0;
 }
 
 /**

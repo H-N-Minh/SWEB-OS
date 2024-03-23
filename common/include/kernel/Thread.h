@@ -2,10 +2,6 @@
 
 #include "types.h"
 #include "fs/FileSystemInfo.h"
-#include "debug.h"
-#include "Condition.h"
-#include "Mutex.h"
-#include "uvector.h"
 
 #define STACK_CANARY ((uint32)0xDEADDEAD ^ (uint32)(size_t)this)
 
@@ -13,11 +9,10 @@ enum ThreadState{Running, Sleeping, ToBeDestroyed};
 enum SystemState {BOOTING, RUNNING, KPANIC};
 
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};
+enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
 extern SystemState system_state;
 
-class UserProcess;
 class Thread;
 class ArchThreadRegisters;
 class Loader;
@@ -50,7 +45,6 @@ class Thread
         Thread(Thread &src, Loader* loader);
 
         virtual ~Thread();
-        void setTID(size_t tid);
 
 
         /**
@@ -142,7 +136,7 @@ class Thread
         Thread &operator=(Thread const &src);
 
         volatile ThreadState state_;
-    public:
+
         CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};  //default cancel state is ENABLED
         CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED}; //default cancel type is DEFERRED
 
@@ -157,8 +151,5 @@ class Thread
 
         ustl::string name_;
 
-  public:
-    Thread::TYPE type_;
-    
 };
 
