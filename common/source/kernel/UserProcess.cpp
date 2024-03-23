@@ -5,6 +5,8 @@
 #include "File.h"
 #include "PageManager.h"
 #include "Scheduler.h"
+#include "Mutex.h"
+#include "UserProcess.h"
 
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"
@@ -17,30 +19,35 @@ int64 UserProcess::pid_counter_ = 1;
 //--------------------------MINH PART----------------------------
 //UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
 //        : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info),
-//          filename_(filename), terminal_number_(terminal_number), loader_(0), pid_(pid_counter_++)
+//          filename_(filename), terminal_number_(terminal_number), loader_(0), pid_(pid_counter_++), 
+            // thread_counter_lock_("thread_counter_lock_"),
+            // threads_lock_("thread_lock_"), value_ptr_by_id_lock_("value_ptr_by_id_lock_")
+        
 
-UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
-            : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), num_thread_(1),
-              filename_(filename), terminal_number_(terminal_number)
-{
-    ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
+// UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
+//             : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), num_thread_(1),
+//               filename_(filename), terminal_number_(terminal_number)
+            // thread_counter_lock_("thread_counter_lock_"),
+            // threads_lock_("thread_lock_"), value_ptr_by_id_lock_("value_ptr_by_id_lock_")
+// {
+//     ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
-    if (fd_ >= 0)
-        loader_ = new Loader(fd_);
+//     if (fd_ >= 0)
+//         loader_ = new Loader(fd_);
 
-    if (!loader_ || !loader_->loadExecutableAndInitProcess())
-    {
-        debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
-        //kill();           //!
-        //to_be_destroyed_ = true;     //123
-        return;
-    }
+//     if (!loader_ || !loader_->loadExecutableAndInitProcess())
+//     {
+//         debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
+//         //kill();           //!
+//         //to_be_destroyed_ = true;     //123
+//         return;
+//     }
 
-    threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this,
-                                      num_thread_, NULL, NULL, NULL));
-    num_thread_++;
-    debug(TAI_THREAD, "num thread %zu\n", num_thread_);
-    debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
+//     threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this,
+//                                       num_thread_, NULL, NULL, NULL));
+//     num_thread_++;
+//     debug(TAI_THREAD, "num thread %zu\n", num_thread_);
+//     debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 
     //---------------------MINH part------------------
 //    if (!loader_ || !loader_->loadExecutableAndInitProcess())
@@ -54,7 +61,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 //                                    tid_counter_, NULL, NULL, NULL));
 //  ArchThreads::atomic_add(tid_counter_, 1);
 //  debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
-}
+//}
 
 //--------------------------MINH PART----------------------------
 //Note: tid_counter is num_thread in Tais case
@@ -80,14 +87,45 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 //  ArchThreads::atomic_add(tid_counter_, 1);
 //}
 
+//from Steffi
+//size_t UserProcess::pid_counter_ = 0;
+
+UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number) : fd_(VfsSyscall::open(filename, O_RDONLY)), 
+        working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number), thread_counter_lock_("thread_counter_lock_"),
+        threads_lock_("thread_lock_"), value_ptr_by_id_lock_("value_ptr_by_id_lock_")
+        
+{
+  ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
+  if (fd_ >= 0)
+    loader_ = new Loader(fd_);
+
+  if (!loader_ || !loader_->loadExecutableAndInitProcess())
+  {
+    debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
+    //kill();           //TODO
+    return;
+  }
+  thread_counter_++;            //should be fine without locking since we are still singlethreaded
+  UserThread* new_thread = new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, thread_counter_, false);
+  threads_.push_back(new_thread); 
+  debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
+
+  pid_counter_++;         //Todo:locking
+  pid_ = pid_counter_;
+}
+
+
 
 UserProcess::~UserProcess()
 {
-    if (fd_ > 0)
-        VfsSyscall::close(fd_);
+  assert(Scheduler::instance()->isCurrentlyCleaningUp());
+  delete loader_;
+  loader_ = 0;
 
-  if (working_dir_)
-    delete working_dir_;
+  if (fd_ > 0)
+    VfsSyscall::close(fd_);
+
+  delete working_dir_;
   working_dir_ = 0;
 
     ProcessRegistry::instance()->processExit();
@@ -102,6 +140,59 @@ UserThread* UserProcess::getUserThread(size_t tid)
   }
   return 0;
 }
+
+//from steffi
+int UserProcess::create_thread(size_t* thread, void *(*start_routine)(void*), void *(*wrapper)(), void* arg)
+{
+  debug(USERPROCESS, "Unused %p, %p, %p, %p", thread, start_routine, wrapper, arg);
+  thread_counter_lock_.acquire();
+  thread_counter_++;
+  threads_lock_.acquire();  
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, wrapper, arg, thread_counter_, false);
+  thread_counter_lock_.release();
+  if(new_thread)
+  {
+    threads_.push_back(new_thread);
+    Scheduler::instance()->addNewThread(new_thread);
+    *thread = new_thread->getTID();
+    threads_lock_.release();  
+    return 0;
+  }
+  else
+  {
+    threads_lock_.release();  
+    return -1;
+  }
+}
+
+
+UserThread* UserProcess::get_thread_from_threadlist(size_t id)
+{
+  for (auto& thread : threads_)
+  {
+    if(id == thread->getTID())
+    {
+      return thread;
+    } 
+  }
+  return NULL;
+}
+
+bool UserProcess::check_if_thread_in_threadList(UserThread* test_thread)
+{
+  for (auto& thread : threads_)
+  {
+    if(test_thread == thread)
+    {
+      return true;
+    } 
+  }
+  return false;
+}
+
+
+
+
 
 void UserProcess::createThread(void* func, void* para, size_t* tid, void* pcreate_helper)
 {
