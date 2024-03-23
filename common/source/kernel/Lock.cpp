@@ -263,17 +263,20 @@ Thread* Lock::popBackThreadFromWaitersList()
   Thread* thread = 0;
   if(waiters_list_ == 0)
   {
+    //debug(LOCK, "Lock waiters list is empty");
     // the waiters list is empty
   }
   else if(waiters_list_->next_thread_in_lock_waiters_list_ == 0)
   {
     // this thread is the only one in the waiters list
+    //debug(LOCK, "Only one thread in thread waiters list");
     thread = waiters_list_;
     ArchThreads::atomic_set((pointer&)(waiters_list_), (pointer)(0));
     waiters_list_ = 0;
   }
   else
   {
+    //debug(LOCK, "More than one thread in waiters list");
     // there is more than one thread in the waiters list
     // search for the thread before the last thread in the list
     Thread* previous;

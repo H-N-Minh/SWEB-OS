@@ -4,7 +4,7 @@
 #include "Thread.h"
 #include "Mutex.h"
 #include "Condition.h"
-#include "uvector.h"
+//#include "uvector.h"
 
 class ProcessRegistry : public Thread
 {
@@ -40,7 +40,6 @@ class ProcessRegistry : public Thread
     static ProcessRegistry* instance();
     void createProcess(const char* path);
 
-    //ustl::vector<UserProcess*> processes_;       //123
 
   private:
 

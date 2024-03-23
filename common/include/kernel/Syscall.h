@@ -9,7 +9,7 @@ class Syscall
   public:
     static size_t syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5);
 
-    static void exit(size_t exit_code);
+    static void exit(size_t exit_code, bool from_exec = false);
     static void outline(size_t port, pointer text);
 
     static size_t write(size_t fd, pointer buffer, size_t size);
@@ -18,15 +18,28 @@ class Syscall
     static size_t open(size_t path, size_t flags);
     static void pseudols(const char *pathname, char *buffer, size_t size);
 
-    static size_t createprocess(size_t path, size_t sleep);
+    static size_t createprocess(size_t path, size_t sleep);   //duplicate
     static void trace();
 
     static uint32 get_thread_count();
 
-    static uint32 exitThread(void* return_value);
+    static uint32 exitThread(void* return_value);  //duplicate
 
-    static int createThread(void* func, void* para, size_t* tid, void* pcreate_helper);
-    static int cancelThread(size_t thread_id);
+    static int createThread(void* func, void* para, size_t* tid, void* pcreate_helper);  //duplicate
+    static int cancelThread(size_t thread_id);  //duplicate
+    static int pthread_create(size_t* thread, unsigned int* attr, void *(*start_routine)(void*), void* arg, void *(*pthread_create_wrapper)());  //duplicate
+    static void pthread_exit(void* value_ptr, bool from_exec = false);  //duplicate
+    static int pthread_join(size_t thread_id, void**value_ptr);  //duplicate
+    static int pthread_cancel(size_t thread_id, bool exit_cancel = false);  //duplicate
+
+    static unsigned int sleep(unsigned int seconds);
+
+    static int execv(const char *path, char *const argv[]);
+
+
+    static bool check_parameter(size_t ptr, bool allowed_to_be_null = false);
+
+    static void send_cancelation_notification(bool to_late = false);
 
     static int pthread_setcancelstate(int state, int *oldstate);
     static int pthread_setcanceltype(int type, int *oldtype);
