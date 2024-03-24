@@ -1,40 +1,60 @@
 #pragma once
 
 #include "RingBuffer.h"
+#include "Mutex.h"
+#include "ScopeLock.h"
+#include "Condition.h"
+#include "sistream.h"
 
 class Pipe {
 public:
-  Pipe() : buffer_(256), closed_(false) {}
+
+  Pipe() : buffer_(256), closed_(false), mtx("Pipe Mutex"), cond_empty(&mtx, "Pipe Empty Condition"), cond_full(&mtx, "Pipe Full Condition") {}
 
   bool read(char &c) {
-    //could be impl: wait if buffer is empty
-    if (buffer_.get(c)) {
-      return true;
+    ScopeLock l(mtx);
+
+    while (!closed_ && !buffer_.get(c)) {
+      cond_empty.wait();
     }
 
-    // case if pipe already closed:
-    if (closed_) {
-      //error or message or smthing
+    if (closed_ && !buffer_.get(c)) {
+      c = EOF;
+    } else {
+      cond_full.signal();
     }
 
-    //more blockings or error handling
+    cond_full.signal();
+    return true;
   }
 
-  void write(char c) {
-    //could be impl: wait if buffer is full
-    if (!closed_) {
-      buffer_.put(c);
-    } else {
-      //error for example error -1 as return
+  bool write(char c) {
+    ScopeLock l(mtx);
+
+    while (!closed_ && buffer_.isFull()) {
+      cond_full.wait();
     }
+
+    if (closed_) {
+      return false;
+    }
+
+    buffer_.put(c);
+    cond_empty.signal();
+    return true;
   }
 
   void close() {
+    ScopeLock l(mtx);
     closed_ = true;
+    cond_empty.signal();
+    cond_full.signal();
   }
 
 private:
   RingBuffer<char> buffer_;
   bool closed_;
-  //synchronization and locking is ofc missing now
+  Mutex mtx;
+  Condition cond_empty;
+  Condition cond_full;
 };

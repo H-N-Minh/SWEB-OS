@@ -168,7 +168,7 @@ void Syscall::exit(size_t exit_code)
 
   // Scheduler::instance()->printThreadList();
   delete process;
-  ((UserThread*) currentThread)->process_ = 0;
+  ((UserThread*) currentThread)->process_ = nullptr;
   currentThread->kill();
   assert(false && "This should never happen");
 }
@@ -180,6 +180,15 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
   {
     return -1U;
   }
+
+  if (fd >=3 && fd <= 1024) {  // Adjust this condition based on your actual file descriptor range for pipes.
+    Pipe* pipe = static_cast<Pipe *>(FileDescriptorManager::getInstance().getAssociatedObject((int)fd));
+    for (size_t i = 0; i < size; i++) {
+      pipe->write(reinterpret_cast<char *>(buffer)[i]);
+    }
+    return size;
+  }
+
 
   size_t num_written = 0;
 
@@ -205,16 +214,24 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 
   size_t num_read = 0;
 
-  if (fd == fd_stdin)
+  if (fd >= 3 && fd <= 1024) {  //unsure about number
+    Pipe* pipe = static_cast<Pipe *>(FileDescriptorManager::getInstance().getAssociatedObject((int)fd));
+    size_t i = 0;
+    char c;
+
+    while (i < count && pipe->read(c)) {
+      reinterpret_cast<char *>(buffer)[i++] = c;
+    }
+    return i;
+  }
+  else if (fd == fd_stdin)
   {
-    //this doesn't! terminate a string with \0, gotta do that yourself
     num_read = currentThread->getTerminal()->readLine((char*) buffer, count);
     debug(SYSCALL, "Syscall::read: %.*s\n", (int)num_read, (char*) buffer);
+    return num_read;
   }
-  else
-  {
-    num_read = VfsSyscall::read(fd, (char*) buffer, count);
-  }
+
+  num_read = VfsSyscall::read(fd, (char*) buffer, count);
   return num_read;
 }
 

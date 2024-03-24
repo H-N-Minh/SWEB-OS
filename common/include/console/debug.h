@@ -39,9 +39,9 @@ const size_t KPRINTF            = Ansi_Yellow;
 
 //group kernel
 const size_t LOCK               = Ansi_Yellow  | OUTPUT_ENABLED;
-const size_t LOADER             = Ansi_White   ;
-const size_t SCHEDULER          = Ansi_Yellow  ;
-const size_t SYSCALL            = Ansi_Blue    ;
+const size_t LOADER             = Ansi_White   | OUTPUT_ENABLED;
+const size_t SCHEDULER          = Ansi_Yellow  | OUTPUT_ENABLED;
+const size_t SYSCALL            = Ansi_Blue    | OUTPUT_ENABLED;
 const size_t MAIN               = Ansi_Red     | OUTPUT_ENABLED;
 const size_t THREAD             = Ansi_Magenta ;
 const size_t USERPROCESS        = Ansi_Cyan    | OUTPUT_ENABLED;
@@ -73,16 +73,16 @@ const size_t A_KB_MANAGER       = Ansi_Yellow;
 const size_t A_INTERRUPTS       = Ansi_Yellow;
 
 //group file system
-const size_t FS                 = Ansi_Yellow| OUTPUT_ENABLED;
-const size_t RAMFS              = Ansi_White| OUTPUT_ENABLED;
-const size_t DENTRY             = Ansi_Blue| OUTPUT_ENABLED;
-const size_t INODE              = Ansi_Blue| OUTPUT_ENABLED;
-const size_t PATHWALKER         = Ansi_Yellow| OUTPUT_ENABLED;
-const size_t PSEUDOFS           = Ansi_Yellow| OUTPUT_ENABLED;
-const size_t VFSSYSCALL         = Ansi_Yellow | OUTPUT_ENABLED;;
-const size_t VFS                = Ansi_Yellow | OUTPUT_ENABLED;
-const size_t VFS_FILE           = Ansi_Yellow| OUTPUT_ENABLED;
-const size_t SUPERBLOCK         = Ansi_Yellow| OUTPUT_ENABLED;
+const size_t FS                 = Ansi_Yellow;
+const size_t RAMFS              = Ansi_White;
+const size_t DENTRY             = Ansi_Blue;
+const size_t INODE              = Ansi_Blue;
+const size_t PATHWALKER         = Ansi_Yellow;
+const size_t PSEUDOFS           = Ansi_Yellow;
+const size_t VFSSYSCALL         = Ansi_Yellow;
+const size_t VFS                = Ansi_Yellow;
+const size_t VFS_FILE           = Ansi_Yellow;
+const size_t SUPERBLOCK         = Ansi_Yellow;
 
 //group minix
 const size_t M_STORAGE_MANAGER  = Ansi_Yellow;

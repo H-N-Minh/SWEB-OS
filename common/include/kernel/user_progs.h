@@ -4,7 +4,7 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
-                            "/usr/fdTest.sweb",
+                            "/usr/pipeTest.sweb",
                             nullptr
                            };
 
