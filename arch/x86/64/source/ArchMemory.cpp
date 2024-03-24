@@ -83,7 +83,6 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
 
 bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
 {
-  debug(A_MEMORY, "MapPage: page_map_level_4_: %zx virtual_page_: %zx physical_page: %zx user_access: %zx\n", page_map_level_4_, virtual_page, physical_page, user_access);
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
   assert((m.page_size == 0) || (m.page_size == PAGE_SIZE));
 

@@ -77,8 +77,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = get_thread_count();
       break;
     case sc_pthread_create:
-      return_value = pthread_create((size_t*)arg1, (unsigned int*)arg2, (void *(*)(void*))arg3, (void*)arg4, (void *(*)())arg5);
-      //return_value = createThread((void*) arg1, (void*) arg2, (size_t*) arg3, (void*) arg4); from Minh
+      return_value = pthread_create((size_t*)arg1, (unsigned int*) arg2, (void*) arg3, (void*) arg4, (void*)arg5);
       break;
     case sc_pthread_exit:
       pthread_exit((void*)arg1);
@@ -134,7 +133,6 @@ uint32 Syscall::forkProcess()
 //    debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
 //    return (uint32) currentThread->user_registers_->rax;
 //  }
-
     return 0;
 }
 
@@ -158,14 +156,18 @@ uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
   return 0;
 }
 
-int Syscall::createThread(void* func, void* para, size_t* tid, void* pcreate_helper)
+
+int Syscall::pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address)         
 {
-    //debug(TAI_THREAD, "------------------------------------thread %p, attribute %p, func %p args %p\n", thread, attr, start_routine, arg);
-    Scheduler::instance()->printThreadList();
-    debug(TAI_THREAD, "--------------------- TID %zu \n", *tid);
-    ((UserThread*) currentThread)->process_->createThread(func, para, tid, pcreate_helper);
-    Scheduler::instance()->printThreadList();
-    return 0;
+  debug(SYSCALL, "Syscall::Pthread_CREATE Pthread_created called\n");
+  if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) 
+      && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
+  {
+    return -1;
+  }
+  int rv = ((UserThread*) currentThread)->process_->createThread(thread, start_routine, wrapper_address, arg);
+  debug(SYSCALL, "Syscall::Pthread_CREATE: finished with return (%d) for thread (%zu)\n", rv, *thread);
+  return rv;
 }
 
 
@@ -239,23 +241,23 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr)
 
   // //check if thread has already terminated
   // current_process.threads_lock_.acquire();
-  // current_process.value_ptr_by_id_lock_.acquire();  
-  // ustl::map<size_t, void*>::iterator iterator = current_process.value_ptr_by_id_.find(thread_id);                                                   
+  // current_process.thread_retval_map_lock_.acquire();  
+  // ustl::map<size_t, void*>::iterator iterator = current_process.thread_retval_map_.find(thread_id);                                                   
   // void* return_value;
-  // if(iterator != current_process.value_ptr_by_id_.end())
+  // if(iterator != current_process.thread_retval_map_.end())
   // {
-  //   return_value = current_process.value_ptr_by_id_[thread_id];
+  //   return_value = current_process.thread_retval_map_[thread_id];
     
-  //   current_process.value_ptr_by_id_.erase(iterator);
+  //   current_process.thread_retval_map_.erase(iterator);
   //   if(value_ptr != NULL)
   //   {
   //     *value_ptr = return_value;
   //   }
-  //   current_process.value_ptr_by_id_lock_.release();
+  //   current_process.thread_retval_map_lock_.release();
   //   current_process.threads_lock_.release(); 
   //   return 0;
   // }
-  // current_process.value_ptr_by_id_lock_.release();
+  // current_process.thread_retval_map_lock_.release();
 
   // //find thread in threadlist
   // UserThread* thread_to_be_joined;
@@ -289,23 +291,23 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr)
   // currentUserThread.thread_gets_killed_lock_.release(); 
 
 
-  // current_process.value_ptr_by_id_lock_.acquire();  
-  // iterator = current_process.value_ptr_by_id_.find(thread_id);            
-  // if(iterator != current_process.value_ptr_by_id_.end())
+  // current_process.thread_retval_map_lock_.acquire();  
+  // iterator = current_process.thread_retval_map_.find(thread_id);            
+  // if(iterator != current_process.thread_retval_map_.end())
   // {
-  //   return_value = current_process.value_ptr_by_id_[thread_id];
+  //   return_value = current_process.thread_retval_map_[thread_id];
   //   if(return_value == (void*)-2222222222)  //maybe is not the best joince
   //   {
-  //     current_process.value_ptr_by_id_lock_.release();  
+  //     current_process.thread_retval_map_lock_.release();  
   //     pthread_exit((void*)currentUserThread.getTID());
   //   }
-  //   current_process.value_ptr_by_id_.erase(iterator);
+  //   current_process.thread_retval_map_.erase(iterator);
   //   if(value_ptr != NULL)
   //   {
   //     *value_ptr = return_value;
   //   }
   // }
-  // current_process.value_ptr_by_id_lock_.release();  
+  // current_process.thread_retval_map_lock_.release();  
   return 0;
 }
 
@@ -332,9 +334,9 @@ void Syscall::pthread_exit(void* value_ptr, bool from_exec){
   }
   else
   {
-    current_process.value_ptr_by_id_lock_.acquire();
-    current_process.value_ptr_by_id_[currentThread->getTID()] = value_ptr;
-    current_process.value_ptr_by_id_lock_.release();
+    current_process.thread_retval_map_lock_.acquire();
+    current_process.thread_retval_map_[currentThread->getTID()] = value_ptr;
+    current_process.thread_retval_map_lock_.release();
   }
   currentThread->loader_->arch_memory_.unmapPage(((UserThread*)currentThread)->virtual_page_);
   current_process.threads_lock_.release();
@@ -350,7 +352,7 @@ int Syscall::pthread_cancel(size_t thread_id, bool exit_cancel)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
   if(!exit_cancel){current_process.threads_lock_.acquire();}
-  UserThread* thread_to_be_canceled = current_process.get_thread_from_threadlist(thread_id);
+  UserThread* thread_to_be_canceled = current_process.getUserThread(thread_id);
   if(!thread_to_be_canceled)
   {
     if(!exit_cancel){current_process.threads_lock_.release();}
@@ -475,18 +477,6 @@ uint32 Syscall::get_thread_count() {
     return Scheduler::instance()->getThreadCount();
 }
 
-int Syscall::pthread_create(size_t* thread, unsigned int* attr, void *(*start_routine)(void*), void* arg, void *(*wrapper_address)())         
-{
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  UserProcess& current_process = *currentUserThread.process_;
-  if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
-  {
-    return -1;
-  }
-  debug(SYSCALL, "Unused: Thread %p, Attribute %p\n", thread, attr);       //TODO
-  int rv = current_process.create_thread(thread, start_routine, wrapper_address, arg);
-  return rv;
-}
 
 
 void Syscall::pseudols(const char *pathname, char *buffer, size_t size)

@@ -12,35 +12,31 @@ class UserThread : public Thread
 {
     public:
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                    Loader* loader, UserProcess* process, size_t tid, void* func, void* para, void* pcreate_helper); //thread for pthread_create
+                    Loader* loader, UserProcess* process, size_t tid, void* func, void* para, void* pcreate_helper, bool execv = false);
 
-        UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number, Loader* loader, UserProcess* process, 
-            void *(*start_routine)(void*), void *(*wrapper)(), void* arg, size_t thread_counter, bool execv); //from Steffi
-
+        // COPY CONSTRUCTOR
         UserThread(UserThread& other, UserProcess* process, int32 tid, uint32 terminal_number, Loader* loader);
-
-
 
         ~UserThread();
         UserProcess* process_{0};
         void Run(){}
 
-        void kill() override; //from Minh
+        void kill() override;
 
+        // FOR PTHREAD_JOIN//////////////////////////////
         void* return_value_;
         uint32 finished_;
         UserThread* joiner_;
         bool can_be_canceled_ = false;
-
         /**
          * set the return value after thread finished, wake up joiner-thread if necessary
         */
         void setReturnValue(void* return_value);
-
         /**
          * retrieve the return value of a thread, if it is not finished, the joiner will be stored and then sleep
         */
         void getReturnValue(void** return_value, UserThread* joiner);
+        // FOR PTHREAD_JOIN//////////////////////////////
 
 
 

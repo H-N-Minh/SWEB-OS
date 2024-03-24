@@ -37,7 +37,13 @@ extern int pthread_create(pthread_t *thread,
          const pthread_attr_t *attr, void *(*start_routine)(void *),
          void *arg);
 
-extern void pthread_create_helper(void* func, void* para);
+
+/**pthread_create_wrapper is the wrapper that we need to run first
+//the wrapper will take 2 parameter
+//first one for the function that we want to run
+//second one is the parameter of the function */
+void pthread_create_wrapper(void* start_routine, void* arg);
+
 
 extern void pthread_exit(void *value_ptr);
 
@@ -74,7 +80,6 @@ extern void pthread_testcancel(void);
 
 extern int get_thread_count(void);
 
-void pthread_create_wrapper(void *(*start_routine)(void*), void* arg);
 
 extern int pthread_spin_destroy(pthread_spinlock_t *lock);
 

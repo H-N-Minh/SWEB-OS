@@ -10,27 +10,15 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                     void *(*start_routine)(void *), void *arg)
 {
-  //Syscall pthread Stefanie
   return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
-  //Syscall pthread Minh/tai
-  return __syscall(sc_pthread_create, (size_t)start_routine, (size_t)arg, (size_t) thread, (size_t) pthread_create_helper, 0x0);
 }
 
-/**
- * after thread finished its task, this helper will exit that thread correctly
- * TODO: setup the return value for these pthread call correctly
-*/
-
-//-------------------------------------------------------
 //wrapper function. In pthread create
-void pthread_create_helper(void* start_routine, void* arg)
+void pthread_create_wrapper(void* start_routine, void* arg)
 {
-    void* retval = ((void* (*)(void*))start_routine)(arg);
-    pthread_exit(retval);
+  void* retval = ((void* (*)(void*))start_routine)(arg);
+  pthread_exit(retval);
 }
-
-//-------------------------------------------------------?
-
 
 /**
  * function stub
@@ -311,11 +299,3 @@ int get_thread_count(void) {
 //    // Release the lock
 //    mutex->held_by = 0;
 //}
-
-//lock
-//do sth here
-//unlock
-void pthread_create_wrapper(void *(*start_routine)(void*), void* arg){
-  size_t rv = (size_t)start_routine(arg);
-  pthread_exit((void*)rv);
-}

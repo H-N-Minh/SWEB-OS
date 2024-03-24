@@ -25,9 +25,8 @@ class Syscall
 
     static uint32 exitThread(void* return_value);  //duplicate
 
-    static int createThread(void* func, void* para, size_t* tid, void* pcreate_helper);  //duplicate
     static int cancelThread(size_t thread_id);  //duplicate
-    static int pthread_create(size_t* thread, unsigned int* attr, void *(*start_routine)(void*), void* arg, void *(*pthread_create_wrapper)());  //duplicate
+    static int pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
     static void pthread_exit(void* value_ptr, bool from_exec = false);  //duplicate
     static int pthread_join(size_t thread_id, void**value_ptr);  //duplicate
     static int pthread_cancel(size_t thread_id, bool exit_cancel = false);  //duplicate
@@ -36,7 +35,9 @@ class Syscall
 
     static int execv(const char *path, char *const argv[]);
 
-
+    /**
+     * check if the given pointer is user space and not null
+    */
     static bool check_parameter(size_t ptr, bool allowed_to_be_null = false);
 
     static void send_cancelation_notification(bool to_late = false);
