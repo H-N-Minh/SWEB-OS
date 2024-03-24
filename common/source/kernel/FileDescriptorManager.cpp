@@ -20,7 +20,7 @@ FileDescriptorManager& FileDescriptorManager::getInstance() {
  * The initial value of 3 is chosen because file descriptors 0, 1, and 2 are typically reserved for stdin, stdout, and stderr.
  */
 FileDescriptorManager::FileDescriptorManager() : nextDescriptor(3) {
-  //starts with 3 because others for stdin etc.
+  descriptors.reserve(4096);
 }
 
 /**
@@ -49,10 +49,29 @@ FileDescriptorManager::~FileDescriptorManager() = default;
  * @remark The associated object can be retrieved later using the `getAssociatedObject()` function.
  */
 int FileDescriptorManager::allocateDescriptor(void* associatedObject, int flags) {
-  int descriptor = findFreeDescriptor();
-  if (descriptor != -1) {
-    descriptors.push_back(FileDescriptorEntry(descriptor, associatedObject, flags));
+
+  if (descriptors.capacity() == 0) {
+    descriptors.reserve(4096);
   }
+
+  debug(Fabi, "FileDescriptorManager::allocateDescriptor called\n");
+  debug(Fabi, "Descriptor vector size: %lu, Capacity: %lu\n", descriptors.size(), descriptors.capacity());
+  int descriptor = findFreeDescriptor();
+  if (descriptor < 0) {
+    debug(Fabi, "FileDescriptorManager::allocateDescriptor negative descriptor returned from findFreeDescriptor\n");
+    return -1;
+  }
+
+  // Check available capacity before push_back
+  if (descriptors.size() < descriptors.capacity()) {
+    descriptors.push_back(FileDescriptorEntry(descriptor, associatedObject, flags));
+  } else {
+    debug(Fabi, "FileDescriptorManager::allocateDescriptor descriptor vector is full\n");
+    return -1;
+  }
+
+  debug(Fabi, "FileDescriptorManager::allocateDescriptor allocated descriptor: %d\n", descriptor);
+
   return descriptor;
 }
 
@@ -67,7 +86,7 @@ int FileDescriptorManager::allocateDescriptor(void* associatedObject, int flags)
    *
    * @remark The associated object can be set using the `allocateDescriptor()` function. If the file descriptor is not found, nullptr is returned.
    */
-[[maybe_unused]] void* FileDescriptorManager::getAssociatedObject(int fileDescriptor) {
+void* FileDescriptorManager::getAssociatedObject(int fileDescriptor) {
   for (auto& entry : descriptors) {
     if (entry.descriptor == fileDescriptor) {
       return entry.associatedObject;
@@ -104,8 +123,15 @@ int FileDescriptorManager::allocateDescriptor(void* associatedObject, int flags)
  * @return An integer value representing the next available file descriptor.
  */
 int FileDescriptorManager::findFreeDescriptor() {
-//probably needs a better mechanism -> this is basic
-  return nextDescriptor++;
+  debug(Fabi, "FileDescriptorManager::findFreeDescriptor called\n");
+
+  int nextDescInt = static_cast<int>(nextDescriptor);
+  assert(nextDescInt >= 0 && "Next descriptor value overflowed!");
+
+  int free_descriptor = nextDescriptor++;
+  debug(Fabi, "FileDescriptorManager::findFreeDescriptor free_descriptor: %d\n", free_descriptor);
+
+  return free_descriptor;
 }
 
 

@@ -47,7 +47,7 @@ public:
    * @note The associated object will not be deleted or released. It is the
    * responsibility of the caller to manage the associated object's lifetime.
    */
-  [[maybe_unused]] void* getAssociatedObject(int fileDescriptor);
+  void* getAssociatedObject(int fileDescriptor);
 
   /**
    * @brief Frees a file descriptor and removes it from the manager.

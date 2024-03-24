@@ -83,7 +83,7 @@ size_t LocalFileDescriptorTable::generateLocalFD()
   return next_fd++;
 }
 
-//[[maybe_unused]] void LocalFileDescriptorTable::closeLocalFileDescriptor(LocalFileDescriptor *local_fd) {
+//void LocalFileDescriptorTable::closeLocalFileDescriptor(LocalFileDescriptor *local_fd) {
 //  local_fd = nullptr;
 //}
 

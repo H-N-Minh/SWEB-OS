@@ -5,13 +5,24 @@
 #include "ScopeLock.h"
 #include "Condition.h"
 #include "sistream.h"
+#include "debug.h"
 
 class Pipe {
 public:
 
-  Pipe() : buffer_(256), closed_(false), mtx("Pipe Mutex"), cond_empty(&mtx, "Pipe Empty Condition"), cond_full(&mtx, "Pipe Full Condition") {}
+  Pipe()
+      : buffer_(256),
+        closed_(false),
+        mtx("Pipe Mutex"),
+        cond_empty(&mtx, "Pipe Empty Condition"),
+        cond_full(&mtx, "Pipe Full Condition")
+  {
+    debug(Fabi, "Pipe::Pipe called\n");
+  }
 
   bool read(char &c) {
+    debug(Fabi, "Pipe::read called\n");
+
     ScopeLock l(mtx);
 
     while (!closed_ && !buffer_.get(c)) {
@@ -29,6 +40,8 @@ public:
   }
 
   bool write(char c) {
+    debug(Fabi, "Pipe::write called with char: %c\n", c);
+
     ScopeLock l(mtx);
 
     while (!closed_ && buffer_.isFull()) {
@@ -45,6 +58,8 @@ public:
   }
 
   void close() {
+    debug(Fabi, "Pipe::close called\n");
+
     ScopeLock l(mtx);
     closed_ = true;
     cond_empty.signal();

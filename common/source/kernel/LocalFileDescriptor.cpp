@@ -1,5 +1,5 @@
 #include "LocalFileDescriptor.h"
-//#include "LocalFileDescriptorTable.h"
+#include "LocalFileDescriptorTable.h"
 
 /**
  * @brief LocalFileDescriptor class represents a local file descriptor.
@@ -39,7 +39,7 @@ FileDescriptor *LocalFileDescriptor::getGlobalFileDescriptor() const {
  *
  * @return The mode of the LocalFileDescriptor as an unsigned 32-bit integer.
  */
-[[maybe_unused]] uint32_t LocalFileDescriptor::getMode() const {
+uint32_t LocalFileDescriptor::getMode() const {
   return mode_;
 }
 
@@ -50,7 +50,7 @@ FileDescriptor *LocalFileDescriptor::getGlobalFileDescriptor() const {
  * The LocalFileDescriptor class is used to manage local file descriptors in a file system.
  * It allows setting and retrieving the offset of the file descriptor.
  */
-[[maybe_unused]] void LocalFileDescriptor::setOffset(size_t offset) {
+void LocalFileDescriptor::setOffset(size_t offset) {
   offset_ = offset;
 }
 
@@ -61,7 +61,7 @@ FileDescriptor *LocalFileDescriptor::getGlobalFileDescriptor() const {
  *
  * @return The offset value of the LocalFileDescriptor
  */
-[[maybe_unused]] size_t LocalFileDescriptor::getOffset() const {
+size_t LocalFileDescriptor::getOffset() const {
   return offset_;
 }
 
