@@ -95,6 +95,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, u
 {
     debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
+    virtual_page_ = other.virtual_page_;
 
     // copy registers of parent thread, except for RAX (for different fork()-return-value)
     debug(USERTHREAD, "UserThread COPY-Constructor: copying registers from parent to child thread \n");

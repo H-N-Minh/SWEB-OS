@@ -46,10 +46,10 @@ int main() {
         i += 69;
         printf("parent reads: (%zu) (should be 69)\n", i);
     }
-    while (1)
-    {
-        /* code */
-    }
+    // while (1)
+    // {
+    //     /* code */
+    // }
 
     
     return 0;

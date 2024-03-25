@@ -12,7 +12,6 @@ int main()
     {
         printf("Hello from the child.\n");
     }
-
     else if(pid == 0)
     {
         printf("Hello from the parent.\n");
