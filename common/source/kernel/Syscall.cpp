@@ -152,10 +152,12 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
   {
     if(!from_exec)
     {
+      debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
       currentUserThread.last_thread_alive_ = true;
     }
     else
     {
+       debug(SYSCALL, "Syscall::pthreadExit: last thread before exec\n");
       currentUserThread.last_thread_before_exec_ = true;
     }
   }
@@ -296,9 +298,9 @@ void Syscall::exit(size_t exit_code, bool from_exec)
       thread->cancel_state_type_lock_.acquire();
       thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
       thread->cancel_state_type_lock_.release();
-      // debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread->getTID());
+      debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread->getTID());
       pthread_cancel(thread->getTID(), true);
-      // debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread->getTID());
+      debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread->getTID());
     } 
   }
   current_process.threads_lock_.release();
