@@ -75,7 +75,7 @@ UserProcess::~UserProcess()
   delete working_dir_;
   working_dir_ = 0;
 
-    ProcessRegistry::instance()->processExit();
+  ProcessRegistry::instance()->processExit();
 }
 
 UserThread* UserProcess::getUserThread(size_t tid)
