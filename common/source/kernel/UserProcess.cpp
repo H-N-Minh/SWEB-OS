@@ -40,10 +40,11 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   debug(USERPROCESS, "ctor: Done creating Thread\n");
 }
 
-// COPY CONSTRUCTOR TODO MINH
+
+// COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)),
-    filename_(other.filename_), terminal_number_(other.terminal_number_), loader_(0),
+    filename_(other.filename_), terminal_number_(other.terminal_number_),
     threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_") 
 {
   debug(USERPROCESS, "Copy-ctor: start copying from process (%u) \n", other.pid_);
@@ -53,15 +54,25 @@ UserProcess::UserProcess(const UserProcess& other)
   assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
   loader_ = new Loader(fd_, other.loader_->arch_memory_);
+  if (!loader_)
+  {
+    debug(USERPROCESS, "Error: loading %s failed!\n", filename_.c_str());
+    //kill();           // TODO: clean process when no loader
+    return;
+  }
 
   debug(USERPROCESS, "Copy-ctor: Done loading with new ArchMemory, now calling copy-ctor for Thread\n");
   int64 tid_counter = ArchThreads::atomic_add(tid_counter_, 1);
-  UserThread* new_thread = new UserThread(*(UserThread*) currentThread, this, tid_counter, terminal_number_, loader_);
-  threads_.push_back(new_thread);
+  UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this, tid_counter, terminal_number_, loader_);
+  threads_.push_back(child_thread);
 
-  debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", new_thread->getTID());
-  Scheduler::instance()->addNewThread(new_thread);
+  debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", child_thread->getTID());
+  Scheduler::instance()->addNewThread(child_thread);
 }
+
+
+
+
 
 UserProcess::~UserProcess()
 {

@@ -117,12 +117,12 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 // TODO: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
-  Scheduler::instance()->printThreadList();
+  // Scheduler::instance()->printThreadList();
   debug(SYSCALL, "Syscall::forkProcess: start focking \n");
   UserProcess* parent = ((UserThread*) currentThread)->process_;
   UserProcess* child = new UserProcess(*parent);
 
-  Scheduler::instance()->printThreadList();
+  // Scheduler::instance()->printThreadList();
 
   if (!child)
   {
@@ -134,7 +134,6 @@ uint32 Syscall::forkProcess()
     debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
     return (uint32) currentThread->user_registers_->rax;
   }
-  return 0;
 }
 
 

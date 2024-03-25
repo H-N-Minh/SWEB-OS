@@ -124,6 +124,7 @@ void setupPageEntry(T& entry) {
     entry.page_ppn = PageManager::instance()->allocPPN();
 }
 
+// COPY CONSTRUCTOR 
 ArchMemory::ArchMemory(ArchMemory const &src)
 {
   debug(A_MEMORY, "ArchMemory::copy-constructor starts \n");
