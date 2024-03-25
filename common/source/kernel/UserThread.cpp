@@ -23,9 +23,10 @@
 // TODO: explain calculation related to execv()
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                        Loader* loader, UserProcess* process, size_t tid, void* func, void* arg, void* pcreate_helper, bool execv)
-            : Thread(working_dir, name, type, loader), process_(process) , cancel_state_type_lock_("cancel_state_type_lock_")
-                // TODO: add these. NOTE: PUT BEFORE cancel_state_type_lock_: join_threads_lock_("join_threads_lock_"), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
-                //thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_")
+            :   Thread(working_dir, name, type, loader), process_(process), join_threads_lock_("join_threads_lock_"),
+                thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_,
+                "thread_gets_killed_"), cancel_state_type_lock_("cancel_state_type_lock_")
+
 {
     tid_ = tid;
     size_t array_offset = 3500;
@@ -91,7 +92,9 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 // TODO MINH: correct this to fit new constructor
 UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number, Loader* loader)
-        : Thread(other, loader), process_(new_process), cancel_state_type_lock_("cancel_state_type_lock_")
+        : Thread(other, loader), process_(new_process), join_threads_lock_("join_threads_lock_"),
+            thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_,
+            "thread_gets_killed_"),cancel_state_type_lock_("cancel_state_type_lock_")
 {
     debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
@@ -155,9 +158,9 @@ void UserThread::kill()
     assert(currentThread == this && "Only the thread itself can kill itself\n");
 
     // FOR PTHREAD JOIN
-    // this->process_->threads_lock_.acquire();
-    // send_kill_notification();
-    // this->process_->threads_lock_.release();
+    this->process_->threads_lock_.acquire();
+    send_kill_notification();
+    this->process_->threads_lock_.release();
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
 
@@ -169,28 +172,25 @@ void UserThread::kill()
   }
 }
 
-// void UserThread::Run(){
-//     assert(0);
-// }
 
 
-//  void UserThread::send_kill_notification()
-//  {
-//   UserThread& currentUserThread = *((UserThread*)currentThread);
-//   UserProcess& current_process = *currentUserThread.process_;
+ void UserThread::send_kill_notification()
+ {
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
 
-//   currentUserThread.join_threads_lock_.acquire();
-//   for(UserThread* join_thread : currentUserThread.join_threads_)
-//   {
-//     if(!current_process.isThreadInVector(join_thread))
-//     {
-//       currentUserThread.join_threads_lock_.release();
-//       return;
-//     }
-//     join_thread->thread_gets_killed_lock_.acquire();
-//     join_thread->thread_killed = true;
-//     join_thread->thread_gets_killed_.signal();
-//     join_thread->thread_gets_killed_lock_.release();
-//   }
-//   currentUserThread.join_threads_lock_.release();
-//  }
+  currentUserThread.join_threads_lock_.acquire();
+  for(UserThread* join_thread : currentUserThread.join_threads_)
+  {
+    if(!current_process.isThreadInVector(join_thread))
+    {
+      currentUserThread.join_threads_lock_.release();
+      return;
+    }
+    join_thread->thread_gets_killed_lock_.acquire();
+    join_thread->thread_killed = true;
+    join_thread->thread_gets_killed_.signal();
+    join_thread->thread_gets_killed_lock_.release();
+  }
+  currentUserThread.join_threads_lock_.release();
+ }
