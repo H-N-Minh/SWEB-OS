@@ -177,65 +177,10 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
 }
 
 
-
-// TODO: handle when return_ptr is NULL
-uint32 Syscall::joinThread(size_t worker_thread, void **return_ptr)
-{
-  debug(SYSCALL, "Syscall::joinThread: target_thread (%zu), para (%p) \n", worker_thread, return_ptr);
-  // UserThread* worker = ((UserThread*) currentThread)->process_->getUserThread(worker_thread);
-  // assert(worker && "Thread not found in Process's vector");
-
-  // worker->getReturnValue(return_ptr, worker);
-  // debug(MINH, "GOT RESULT IT IS (%zu) \n", (size_t) *return_ptr);
-  return 0;
-}
-
-
-int Syscall::pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address)         
-{
-  debug(SYSCALL, "Syscall::Pthread_CREATE Pthread_created called\n");
-  if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) 
-      && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
-  {
-    return -1;
-  }
-  int rv = ((UserThread*) currentThread)->process_->createThread(thread, start_routine, wrapper_address, arg);
-  debug(SYSCALL, "Syscall::Pthread_CREATE: finished with return (%d) for thread (%zu)\n", rv, *thread);
-  return rv;
-}
-
-
-void Syscall::exit(size_t exit_code, bool from_exec)
-{
-  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd and from exec %d\n", currentThread->getTID(), exit_code, from_exec);
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  UserProcess& current_process = *currentUserThread.process_;
-
-  current_process.threads_lock_.acquire();
-  for (auto& thread : current_process.threads_)
-  {
-    if(thread != &currentUserThread)
-    {
-      thread->cancel_state_type_lock_.acquire();
-      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
-      thread->cancel_state_type_lock_.release();
-      // debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread->getTID());
-      pthread_cancel(thread->getTID(), true);
-      // debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread->getTID());
-    } 
-  }
-  current_process.threads_lock_.release();
-
-  debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
-  pthreadExit((void*)exit_code, from_exec);
-  assert(false && "This should never happen");
-}
-
-
 int Syscall::pthread_join(size_t thread_id, void**value_ptr)
 {
   //From Steffi
-  debug(SYSCALL, "Syscall::PTHREAD_JOIN: called, thread_id: %ld and %p\n", thread_id, value_ptr);
+  debug(SYSCALL, "Syscall::PTHREAD_JOIN: called, thread_id: %zu and %p\n", thread_id, value_ptr);
   // UserThread& currentUserThread = *((UserThread*)currentThread);
   // UserProcess& current_process = *currentUserThread.process_;
   // if(!check_parameter((size_t)value_ptr, true))
@@ -319,6 +264,49 @@ int Syscall::pthread_join(size_t thread_id, void**value_ptr)
   // }
   // current_process.thread_retval_map_lock_.release();  
   return 0;
+}
+
+
+
+int Syscall::pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address)         
+{
+  debug(SYSCALL, "Syscall::Pthread_CREATE Pthread_created called\n");
+  if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) 
+      && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
+  {
+    return -1;
+  }
+  int rv = ((UserThread*) currentThread)->process_->createThread(thread, start_routine, wrapper_address, arg);
+  debug(SYSCALL, "Syscall::Pthread_CREATE: finished with return (%d) for thread (%zu)\n", rv, *thread);
+  return rv;
+}
+
+
+
+void Syscall::exit(size_t exit_code, bool from_exec)
+{
+  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd and from exec %d\n", currentThread->getTID(), exit_code, from_exec);
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  current_process.threads_lock_.acquire();
+  for (auto& thread : current_process.threads_)
+  {
+    if(thread != &currentUserThread)
+    {
+      thread->cancel_state_type_lock_.acquire();
+      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
+      thread->cancel_state_type_lock_.release();
+      // debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread->getTID());
+      pthread_cancel(thread->getTID(), true);
+      // debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread->getTID());
+    } 
+  }
+  current_process.threads_lock_.release();
+
+  debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
+  pthreadExit((void*)exit_code, from_exec);
+  assert(false && "This should never happen");
 }
 
 

@@ -47,8 +47,6 @@ class Syscall
     static int pthread_setcancelstate(int state, int *oldstate);
     static int pthread_setcanceltype(int type, int *oldtype);
 
-    static uint32 joinThread(size_t worker_thread, void **return_ptr);
-
     static uint32 forkProcess();
 };
 
