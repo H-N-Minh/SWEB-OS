@@ -17,7 +17,7 @@ int main() {
     } else if (pid == 0) {
         // Child process
         i += 10;
-        printf("Child reads: (%zu) (should be 10)\n", i);
+        printf("Child reads: (%zu) (should be 10)..\n", i);
     } else {
         // Parent process
         i += 69;
