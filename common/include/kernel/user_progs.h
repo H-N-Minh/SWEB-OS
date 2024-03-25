@@ -21,9 +21,9 @@ char const *user_progs[] = {
                            // "/usr/pc5.sweb",                      //pthread create with simple argument
                             
 
-                            // pthread_exit
+                            // pthreadExit
                             
-                           // "/usr/pe1.sweb",                      //pthread_exit in main
+                           // "/usr/pe1.sweb",                      //pthreadExit in main
                             
                            // exit
                             

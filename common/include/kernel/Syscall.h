@@ -23,13 +23,15 @@ class Syscall
 
     static uint32 get_thread_count();
 
-    static uint32 exitThread(void* return_value);  //duplicate
-
-    static int cancelThread(size_t thread_id);  //duplicate
     static int pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
-    static void pthread_exit(void* value_ptr, bool from_exec = false);  //duplicate
+    static void pthreadExit(void* value_ptr, bool from_exec = false);  //duplicate
     static int pthread_join(size_t thread_id, void**value_ptr);  //duplicate
-    static int pthread_cancel(size_t thread_id, bool exit_cancel = false);  //duplicate
+
+    /**
+      * @param is_tVector_locked_in_Exit if true: threads_ vector already locked (locked in Exit()).
+      * @return -1 if thread doesnt exist in vector. else return 0: set the flag wants_to_be_canceled_ to true.
+    */
+    static int pthread_cancel(size_t thread_id, bool is_tVector_locked_in_Exit = false);  //duplicate
 
     static unsigned int sleep(unsigned int seconds);
 

@@ -112,75 +112,6 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, u
 
 
 
-// TODO: these 2 methods need locking for thread safe
-// THESE 2 RELATED TO PTHEAD JOIN
-void UserThread::setReturnValue(void* return_value)
-{
-    return_value_ = return_value;
-    finished_ = 1;
-    if(joiner_)
-    {
-        debug(USERTHREAD, "UserThread::setReturnValue: Worker (%zu) waking up Joiner (%zu)\n",
-                            getTID(), joiner_->getTID());
-        Scheduler::instance()->wake(joiner_);
-    }
-    debug(USERTHREAD, "UserThread::setReturnValue: worker (%zu) finished, return value: %zu. Going to sleep till Joined\n",
-                        getTID(), (size_t) return_value);
-    Scheduler::instance()->sleep();
-
-    assert(!finished_ && "Worker should only wakes up after Joined, then kill itself\n");
-    kill();
-}
-
-void UserThread::getReturnValue(void** return_value, UserThread* worker)
-{
-    if(!finished_)
-    {
-        joiner_ = (UserThread*) currentThread;
-        debug(USERTHREAD, "UserThread::getReturnValue: Worker (%zu) is not finished, Joiner (%zu) going to sleep\n",
-                            getTID(), currentThread->getTID());
-        Scheduler::instance()->sleep();
-
-        assert(finished_ && "Joiner should wakes up only when the result is finished");
-    }
-    *return_value = return_value_;
-    finished_ = 0;  // reset the finished flag so the worker thread can wake up and kill itself
-    if (worker->getState() == ThreadState::Sleeping)
-    {
-        debug(USERTHREAD, "UserThread::getReturnValue: Joiner (%zu) waking up Worker (%zu)\n",
-                            currentThread->getTID(), worker->getTID());
-        Scheduler::instance()->wake(worker);
-    }
-}
-
-
-// DO NOT use new / delete in this Method, as it is sometimes called from an Interrupt Handler with Interrupts disabled
-// void UserThread::kill()
-// {
-//   debug(THREAD, "kill: Called by <%s (%zu)>. Preparing Thread <%s (%zu)> for destruction\n", currentThread->getName(),
-//         currentThread->getTID(), getName(), this->getTID());
-
-//   // remove itself from list of threads in process
-//   if (((UserThread*) currentThread)->process_)
-//   {
-//     UserProcess* process = ((UserThread*) currentThread)->process_;
-//     auto thread = ustl::find(process->threads_.begin(), process->threads_.end(), currentThread);
-//     if (thread != process->threads_.end()) {
-//         process->threads_.erase(thread);
-//     }
-//   }
-
-//   // exactly like original kill()
-//   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
-
-//   if (currentThread == this)
-//   {
-//     ArchInterrupts::enableInterrupts();
-//     Scheduler::instance()->yield();
-//     assert(false && "This should never happen, how are we still alive?");
-//   }
-// }
-
 UserThread::~UserThread()
 {
     debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
@@ -214,14 +145,15 @@ UserThread::~UserThread()
     }
 }
 
-//from Stefanie
+
 void UserThread::kill()
 {
   debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
         currentThread, getName(), this);
 
-    assert(currentThread == this);
+    assert(currentThread == this && "Only the thread itself can kill itself\n");
 
+    // FOR PTHREAD JOIN
     // this->process_->threads_lock_.acquire();
     // send_kill_notification();
     // this->process_->threads_lock_.release();

@@ -223,7 +223,7 @@ void Thread::cancelThread()
     //if(cancelation is reach || type = asyn
         setState(ToBeDestroyed);
 
-        //for example we dont want thread B to kill itself, we want the thread B to call pthread_exit
+        //for example we dont want thread B to kill itself, we want the thread B to call pthreadExit
 }
 
 void Thread::setCancelState(CancelState state) {
