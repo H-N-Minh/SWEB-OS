@@ -117,10 +117,10 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 /** Helper for copy constructor*/
 template <typename T>
 void setupPageEntry(T& entry) {
-    entry.present = 1;
-    entry.writeable = 1;
-    entry.user_access = 1;
-    entry.accessed = 1;
+    // entry.present = 1;
+    // entry.writeable = 1;
+    // entry.user_access = 1;
+    // entry.accessed = 1;
     entry.page_ppn = PageManager::instance()->allocPPN();
 }
 
@@ -143,31 +143,32 @@ ArchMemory::ArchMemory(ArchMemory const &src)
     if (PARENT_pml4[pml4i].present)
     {
       // setup new page directory pointer table
-      setupPageEntry(CHILD_pml4[pml4i]);
+      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* PARENT_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(PARENT_pml4[pml4i].page_ppn);
+      memcpy((void*) CHILD_pdpt, (void*) kernel_page_directory_pointer_table, PAGE_SIZE);
 
       // loop through pdpt to get each pd
       for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
       {
         if (PARENT_pdpt[pdpti].pd.present)
         {
-          assert(PARENT_pdpt[pdpti].pd.size == 0);    //????
           // setup new page directory
-          setupPageEntry(CHILD_pdpt[pdpti].pd);
+          CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
+          memcpy((void*) CHILD_pd, (void*) kernel_page_directory, PAGE_SIZE);
 
           // loop through pd to get each pt
           for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
           {
             if (PARENT_pd[pdi].pt.present)
             {
-              assert(PARENT_pd[pdi].pt.size == 0);    //????
               // setup new page table
-              setupPageEntry(CHILD_pd[pdi].pt);
+              CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
               PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
               PageTableEntry* PARENT_pt = (PageTableEntry*) getIdentAddressOfPPN(PARENT_pd[pdi].pt.page_ppn);
+              memcpy((void*) CHILD_pt, (void*) kernel_page_table, PAGE_SIZE);
 
               // loop through pt to get each page
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
@@ -175,7 +176,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
                 if (PARENT_pt[pti].present)
                 {
                   // setup new page and copy from parent
-                  setupPageEntry(CHILD_pt[pti]);
+                  CHILD_pt[pti].page_ppn = PageManager::instance()->allocPPN();
                   pointer CHILD_page = getIdentAddressOfPPN(CHILD_pt[pti].page_ppn);
                   pointer PARENT_page = getIdentAddressOfPPN(PARENT_pt[pti].page_ppn);
                   memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
