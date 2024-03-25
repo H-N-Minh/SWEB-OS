@@ -17,8 +17,8 @@ int64 UserProcess::pid_counter_ = 1;
 
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
-            : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
-            threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_")
+  : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
+    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_")
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
 
@@ -41,27 +41,27 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 }
 
 // COPY CONSTRUCTOR TODO MINH
-// UserProcess::UserProcess(const UserProcess& other)
-//  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)),
-//    filename_(other.filename_), terminal_number_(other.terminal_number_), loader_(0), pid_(pid_counter_),
-//    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_") 
-// {
-//  debug(USERPROCESS, "Copy-ctor: start copying from process (%u) \n", other.pid_);
-//  ArchThreads::atomic_add(pid_counter_, 1);
-//  ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
+UserProcess::UserProcess(const UserProcess& other)
+  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)),
+    filename_(other.filename_), terminal_number_(other.terminal_number_), loader_(0),
+    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_") 
+{
+  debug(USERPROCESS, "Copy-ctor: start copying from process (%u) \n", other.pid_);
+  ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
+  pid_ = ArchThreads::atomic_add(pid_counter_, 1);
 
-//  assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
-//  debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
-//  loader_ = new Loader(fd_, other.loader_->arch_memory_);
+  assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
+  debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
+  loader_ = new Loader(fd_, other.loader_->arch_memory_);
 
-//  debug(USERPROCESS, "Copy-ctor: Done loading with new ArchMemory, now calling copy-ctor for Thread\n");
-//  UserThread* new_thread = new UserThread(*(UserThread*) currentThread, this, tid_counter_, terminal_number_, loader_);
-//  threads_.push_back(new_thread);
+  debug(USERPROCESS, "Copy-ctor: Done loading with new ArchMemory, now calling copy-ctor for Thread\n");
+  int64 tid_counter = ArchThreads::atomic_add(tid_counter_, 1);
+  UserThread* new_thread = new UserThread(*(UserThread*) currentThread, this, tid_counter, terminal_number_, loader_);
+  threads_.push_back(new_thread);
 
-//  debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", new_thread->getTID());
-//  Scheduler::instance()->addNewThread(new_thread);
-//  ArchThreads::atomic_add(tid_counter_, 1);
-// }
+  debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", new_thread->getTID());
+  Scheduler::instance()->addNewThread(new_thread);
+}
 
 UserProcess::~UserProcess()
 {

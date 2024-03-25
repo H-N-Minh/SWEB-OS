@@ -91,7 +91,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 // TODO MINH: correct this to fit new constructor
 UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number, Loader* loader)
-        : Thread(other, loader), process_(new_process), return_value_(0), finished_(0), joiner_(0), cancel_state_type_lock_("cancel_state_type_lock_")
+        : Thread(other, loader), process_(new_process), cancel_state_type_lock_("cancel_state_type_lock_")
 {
     debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
     tid_ = tid;
