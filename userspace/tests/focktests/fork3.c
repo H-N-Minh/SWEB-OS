@@ -2,51 +2,51 @@
 #include "types.h"
 #include "unistd.h"
 #include "pthread.h"
+#include "assert.h"
+
+#define PARENT_SUCCESS 0    // parent process returns 0 on success
+#define CHILD_SUCCESS 69    // child process returns 69 on success
+
+
+int fork3_global_var = 0;
 
 int function1()
 {
-    printf("Hello from child threads friend\n");
-    
+    fork3_global_var += 369;
     return 0;
 }
 
-
-
+// this tests fork together with pthread_create
 int fork3() {
-    // size_t i = 0;
+    pid_t pid = fork();
 
+    if (pid < 0) 
+    {
+        printf("Error\n");
+    }
+    else if (pid == 0) // child
+    {
+        pthread_t thread_id;
 
-    // //Test1: Simple pthread_create and check if thread id gets set
+        int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
+        assert(rv == 0 && "child process failed to use pthread_create");
 
-    // // Create a child process
-    // printf("calling fork() from user space\n");
-    // pid_t pid = fork();
+        pthread_join(thread_id, NULL);
+        assert(fork3_global_var == 369 && "pthread_create of child process should have changed fork3_global_var to 369");
 
-    // if (pid < 0) 
-    // {
-    //     printf("Error\n");
-    // }
-    // else if (pid == 0) 
-    // {
-    //     // Child process
-    //     i += 10;
-    //     printf("Child reads: (%zu) (should be 10)..\n", i);
+        return CHILD_SUCCESS;
 
+    } else {    // parent
+        pthread_t thread_id;
 
-    //     pthread_t thread_id = 424242;
-    //     pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
+        fork3_global_var += 111;    // so parent and child has different values of fork3_global_var before pthread_create
+        int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
+        assert(rv == 0 && "child process failed to use pthread_create");
 
+        pthread_join(thread_id, NULL);
+        assert(fork3_global_var == 480 && "pthread_create of child process should have changed fork3_global_var to 480");
 
-    // } else {
-    //     // Parent process
-    //     i += 69;
-    //     printf("parent reads: (%zu) (should be 69)..\n", pid);
-    // }
-    // // while (1)
-    // // {
-    // //     /* code */
-    // // }
-
-    
+        return PARENT_SUCCESS;
+    }
     return 0;
 }

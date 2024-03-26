@@ -11,9 +11,9 @@ extern int fork3();
 
 
 // set to 1 to test, 0 to skip
-#define FORK1 1
-#define FORK2 0
-#define FORK3 0
+#define FORK1 1     // note: this test also prints 2 lines
+#define FORK2 1
+#define FORK3 1
 
 
 int main()
