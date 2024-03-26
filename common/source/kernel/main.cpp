@@ -41,14 +41,14 @@ extern "C" void startup()
   removeBootTimeIdentMapping();
   system_state = BOOTING;
 
-  PageManager::instance();
+  PageManager::instance(); //creation of the Kernel Memory Manager and the Page Manager
   writeLine2Bochs("PageManager and KernelMemoryManager created \n");
 
   main_console = ArchCommon::createConsole(1);
   writeLine2Bochs("Console created \n");
 
   Terminal *term_0 = main_console->getTerminal(0); // add more if you need more...
-  term_0->initTerminalColors(Console::GREEN, Console::BLACK);
+  term_0->initTerminalColors(Console::BRIGHT_WHITE, Console::BLUE);
   kprintfd("Init debug printf\n");
   term_0->writeString("This is on term 0, you should see me now\n");
 
@@ -56,7 +56,7 @@ extern "C" void startup()
 
   kprintf("Kernel end address is %p\n", &kernel_end_address);
 
-  Scheduler::instance();
+  Scheduler::instance(); //Scheduler is created
 
   //needs to be done after scheduler and terminal, but prior to enableInterrupts
   kprintf_init();

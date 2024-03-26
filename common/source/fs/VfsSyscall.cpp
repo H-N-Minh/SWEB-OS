@@ -294,6 +294,8 @@ int32 VfsSyscall::open(const char* pathname, uint32 flag)
   Path target_path;
   Path parent_dir_path;
   int32 path_walk_status = PathWalker::pathWalk(pathname, fs_info, target_path, &parent_dir_path);
+  debug(VFSSYSCALL, "(open) path_walk_status: %d\n", path_walk_status);
+  debug(VFSSYSCALL, "(open) Target path: %s\n", target_path.getAbsolutePath().c_str());
 
   if (path_walk_status == PW_SUCCESS)
   {
@@ -315,6 +317,7 @@ int32 VfsSyscall::open(const char* pathname, uint32 flag)
   }
   else if ((path_walk_status == PW_ENOTFOUND) && (flag & O_CREAT))
   {
+    debug(VFSSYSCALL, "(open) target does not exist, creating new file\n");
     if (!parent_dir_path.dentry_)
     {
       debug(VFSSYSCALL, "(open) ERROR: unable to create file, directory does not exist\n");

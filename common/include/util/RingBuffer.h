@@ -22,6 +22,7 @@ class RingBuffer
     bool get ( T &c );
     void put ( T c );
     void clear();
+    bool isFull() const;
 
   private:
 
@@ -77,3 +78,7 @@ bool RingBuffer<T>::get ( T &c )
   return true;
 }
 
+template <class T>
+bool RingBuffer<T>::isFull() const {
+  return ((write_pos_ + 1) % buffer_size_) == read_pos_;
+}

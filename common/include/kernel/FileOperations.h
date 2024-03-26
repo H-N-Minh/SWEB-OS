@@ -1,0 +1,7 @@
+#ifndef FILE_OPERATIONS_H
+#define FILE_OPERATIONS_H
+
+#define READ 0x0001
+#define WRITE 0x0002
+
+#endif // FILE_OPERATIONS_H

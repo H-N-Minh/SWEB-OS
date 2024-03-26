@@ -19,6 +19,17 @@
 
 #define sc_threadcount 2048
 
-#define sc_pthread_create 1000
-#define sc_pthread_join 1001
-#define sc_pthread_exit 1002
+#define sc_pipe 1500
+
+#define sc_sleep 500
+
+#define sc_pthread_create 300
+#define sc_pthread_exit 301
+#define sc_pthread_join 302
+#define sc_pthread_cancel 303
+#define sc_pthread_setcanceltype 304
+#define sc_pthread_setcancelstate 305
+#define sc_pthread_testcancel 306
+
+#define sc_execv 400
+

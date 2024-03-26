@@ -70,9 +70,9 @@ int32 PathWalker::pathWalk(const char* pathname, const Path& pwd, const Path& ro
     char segment[segment_len + 1];
     strncpy(segment, pathname, segment_len + 1);
     segment[segment_len] = 0;
-
+    debug(PATHWALKER, "Current segment: %s\n", segment);
     pathname += segment_len;
-
+    debug(PATHWALKER, "Remaining path: %s\n", pathname);
     while (*pathname == SEPARATOR)
         pathname++;
 

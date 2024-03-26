@@ -24,10 +24,15 @@ int main()
 
     // no pthread_join so have to loop forever to keep the process alive
     size_t i = 0;
+    while (1)
+    {
+        /* code */
+    }
+    
     pthread_join(thread1, (void**) &i);
     pthread_join(thread2, (void**) &i);
     printf("both thread has finished\n");
-    
+
 
     return 0;
 }

@@ -118,6 +118,9 @@ class Inode
      */
     virtual File* open(Dentry* /*dentry*/, uint32 /*flag*/)
     {
+      debug(INODE, "Opening Inode - Type: %d\n", getType());
+      debug(INODE, "Opening Inode - Number of opened files: %d\n", getNumOpenedFile());
+      debug(INODE, "Opening Inode - Size: %d\n", getSize());
       return 0;
     }
 
