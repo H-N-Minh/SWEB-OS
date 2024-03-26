@@ -17,7 +17,7 @@ int function1()
 }
 
 // this tests fork together with pthread_create
-int fork3() {
+int fork3() {    
     pid_t pid = fork();
 
     if (pid < 0) 

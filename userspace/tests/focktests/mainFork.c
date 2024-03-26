@@ -5,15 +5,17 @@
 extern int fork1();
 extern int fork2();
 extern int fork3();
+extern int fork4();
 
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
 
 
 // set to 1 to test, 0 to skip
-#define FORK1 1     // note: this test also prints 2 lines
-#define FORK2 1
-#define FORK3 1
+#define FORK1 0     // note: this test also prints 2 lines
+#define FORK2 0
+#define FORK3 0
+#define FORK4 1
 
 
 int main()
@@ -42,6 +44,14 @@ int main()
         if (retval == PARENT_SUCCESS)         { printf("fork3 successful!\n"); } 
         else if (retval == CHILD_SUCCESS)     { return 0; }                      
         else                                  { printf("fork3 failed!\n"); return -1;}
+    }
+
+    if (FORK4)
+    {
+        retval = fork4();
+        if (retval == PARENT_SUCCESS)         { printf("fork4 successful!\n"); } 
+        else if (retval == CHILD_SUCCESS)     { return 0; }                      
+        else                                  { printf("fork4 failed!\n"); return -1;}
     }
 
     return 0;
