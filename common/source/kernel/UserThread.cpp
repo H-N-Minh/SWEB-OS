@@ -6,19 +6,9 @@
 #include "debug.h"
 #include "Scheduler.h"
 #include "PageManager.h"
-
 #include "ArchInterrupts.h"
-
 #include "uvector.h"
-
-// #include "ProcessRegistry.h"
-// #include "debug.h"
-// #include "PageManager.h"
 #include "VfsSyscall.h"
-// #include "ustring.h"
-// #include "UserProcess.h"
-// #include "ArchInterrupts.h"
-
 
 // TODO: explain calculation related to execv()
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
@@ -90,26 +80,29 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 
 // TODO MINH: correct this to fit new constructor
-UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number, Loader* loader)
-        : Thread(other, loader), process_(new_process), virtual_page_(other.virtual_page_), cancel_state_type_lock_("cancel_state_type_lock_")
+UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid)
+        : Thread(other, new_process->loader_), process_(new_process), virtual_page_(other.virtual_page_), cancel_state_type_lock_("cancel_state_type_lock_")
 {
-    debug(USERTHREAD, "UserThread COPY-Constructor: start copying from thread (%zu) \n", other.getTID());
+    debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
     tid_ = tid;
+    working_dir_ = new_process->working_dir_;
 
     // copy registers of parent thread, except for RAX (for different fork()-return-value)
     debug(USERTHREAD, "UserThread COPY-Constructor: copying registers from parent to child thread \n");
-    ArchThreads::copyUserRegisters(other.user_registers_, user_registers_, getKernelStackStartPointer());
+    ArchThreads::copyUserRegisters(other.user_registers_, user_registers_, getKernelStackStartPointer(), &new_process->loader_->arch_memory_);
     ArchThreads::setupForkReturnValue(other.user_registers_, user_registers_, new_process->pid_);
 
     // Setting up AddressSpace and Terminal
     debug(USERTHREAD, "UserThread COPY-Constructor: setting up Child with its own CR3\n");
-    ArchThreads::setAddressSpace(this, loader_->arch_memory_);
-    if (main_console->getTerminal(terminal_number))
-        setTerminal(main_console->getTerminal(terminal_number));
+    ArchThreads::setAddressSpace(this, new_process->loader_->arch_memory_);
+    if (main_console->getTerminal(new_process->terminal_number_))
+        setTerminal(main_console->getTerminal(new_process->terminal_number_));
 
     switch_to_userspace_ = 1;
 }
 
+
+//virtual page
 
 
 UserThread::~UserThread()
@@ -120,7 +113,7 @@ UserThread::~UserThread()
     {
         debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
         delete process_;
-        process_ = 0;
+        process_ = 0;;
     }
 
     if(unlikely(last_thread_before_exec_))

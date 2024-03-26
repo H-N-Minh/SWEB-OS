@@ -21,7 +21,7 @@ class UserProcess
         // COPY CONSTRUCTOR
         UserProcess(const UserProcess& other);
 
-        ustl::vector<UserThread*> threads_;
+       
 
         UserThread* getUserThread(size_t tid);
 
@@ -29,7 +29,7 @@ class UserProcess
 
         bool isThreadInVector(UserThread* test_thread);
 
-
+        ustl::vector<UserThread*> threads_;
         int32 fd_;
         FileSystemInfo* working_dir_;
         ustl::string filename_;

@@ -15,7 +15,7 @@ class UserThread : public Thread
                     Loader* loader, UserProcess* process, size_t tid, void* func, void* para, void* pcreate_helper, bool execv = false);
 
         // COPY CONSTRUCTOR
-        UserThread(UserThread& other, UserProcess* process, int32 tid, uint32 terminal_number, Loader* loader);
+        UserThread(UserThread& other, UserProcess* process, int32 tid);
 
         ~UserThread();
         UserProcess* process_{0};

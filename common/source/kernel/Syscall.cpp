@@ -118,7 +118,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 uint32 Syscall::forkProcess()
 {
   // Scheduler::instance()->printThreadList();
-  debug(SYSCALL, "Syscall::forkProcess: start focking \n");
+  debug(FORK, "Syscall::forkProcess: start focking \n");
   UserProcess* parent = ((UserThread*) currentThread)->process_;
   UserProcess* child = new UserProcess(*parent);
 
@@ -170,8 +170,8 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
   }
 
   // TODO: Lock arch_memory_, also be careful with locking order to prevent deadlock
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
-  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.virtual_page_);
+  //debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
+  //currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.virtual_page_);
   current_process.threads_lock_.release();
   currentUserThread.kill();
   assert(false && "This should never happen");

@@ -1,5 +1,6 @@
 #include "stdio.h"
 #include "unistd.h"
+#include "pthread.h"
 #include "assert.h"
 
 
@@ -11,17 +12,20 @@ int main()
     if(pid > 0)
     {
         printf("Hello from the parent.\n");
-        while(1){}
+        pthread_t thread_id;
+        
     }
     else if(pid == 0)
     {
         printf("Hello from the child.\n"); 
-        while(1){}
+
+        pthread_t thread_id;
     }
     else
     {
         printf("Error\n");
     }
+
     return 0;
 }
  
