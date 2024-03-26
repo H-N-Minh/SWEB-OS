@@ -132,9 +132,9 @@ uint32 Syscall::forkProcess()
 }
 
 
-void Syscall::pthreadExit(void* value_ptr, bool from_exec)
+void Syscall::pthreadExit(void* value_ptr)
 {
-  debug(SYSCALL, "Syscall::pthreadExit: called, value_ptr: %p and from exec %d\n", value_ptr, from_exec);
+  debug(SYSCALL, "Syscall::pthreadExit: called, value_ptr: %p.\n", value_ptr);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
@@ -145,16 +145,8 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
 
   if(current_process.threads_.size() == 0)  // last thread in process
   {
-    if(!from_exec)
-    {
       debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
       currentUserThread.last_thread_alive_ = true;
-    }
-    else
-    {
-       debug(SYSCALL, "Syscall::pthreadExit: last thread before exec\n");
-      currentUserThread.last_thread_before_exec_ = true;
-    }
   }
   else  // not last thread in process, saving return values in thread_retval_map_
   {
@@ -225,9 +217,13 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   }
   current_process.threads_lock_.release();
 
-  debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
-  pthreadExit((void*)exit_code, from_exec);
-  assert(false && "This should never happen");
+  if(!from_exec)
+  {
+    debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
+    pthreadExit((void*)exit_code);
+    assert(false && "This should never happen");
+  }
+
 }
 
 
@@ -401,74 +397,13 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
 
 int Syscall::execv(const char *path, char *const argv[])
 {
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
   if(!check_parameter((size_t)argv, false))
   {
     return -1;
   }
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  UserProcess& current_process = *currentUserThread.process_;
-  current_process.execv_fd_ = VfsSyscall::open(path, O_RDONLY);
-
-  if (current_process.execv_fd_ >= 0)
-  {
-    current_process.execv_loader_ = new Loader(current_process.execv_fd_);
-  }
-
-  if (!current_process.execv_loader_)
-  {
-    debug(USERPROCESS, "Error: loading %s failed!\n", path);
-    VfsSyscall::close(current_process.execv_fd_);
-    return -1;
-    
-  }
-  if (!current_process.execv_loader_->loadExecutableAndInitProcess())
-  {
-    debug(USERPROCESS, "Error: loading %s failed!\n", path);
-    delete current_process.execv_loader_;
-    current_process.execv_loader_ = 0;
-    VfsSyscall::close(current_process.execv_fd_);
-    return -1;
-  }
-
-  //map arguments to identity mapping
-  current_process.execv_ppn_args_ = PageManager::instance()->allocPPN();
-  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(current_process.execv_ppn_args_);
-
-  size_t array_offset = 3500; //choose a good value
-
-  size_t index = 0;
-  size_t offset = 0;
-  while(1)
-  {
-    if(argv[index] == NULL)
-    {
-      break;
-    }
-    if(!check_parameter((size_t)argv[index], true) || (offset +  strlen(argv[index]) + 1) >= array_offset || index >= 300)
-    {
-      delete current_process.execv_loader_;
-      current_process.execv_loader_ = 0;
-      VfsSyscall::close(current_process.execv_fd_);
-      PageManager::instance()->freePPN(current_process.execv_ppn_args_);
-      return -1;
-    }
-
-    memcpy((char*)virtual_address + offset, argv[index], strlen(argv[index])+1);
-    memcpy((void*)(virtual_address + array_offset + index * sizeof(pointer)), &offset, sizeof(pointer));
-
-    offset += strlen(argv[index]) + 1;
-
-    index++;
-  }
-  current_process.exec_argc_ = index;
-
-  exit(0, true);
-
-  ((UserThread*)currentThread)->last_thread_before_exec_ = true;
-  ((UserThread*)currentThread)->kill();
-
-  
-  assert(0 && "Sucessful exec should not return");
+  return current_process.execvProcess(path, argv);
 }
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)

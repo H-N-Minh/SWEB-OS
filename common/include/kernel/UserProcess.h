@@ -26,6 +26,8 @@ class UserProcess
         int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
         int joinThread(size_t thread_id, void**value_ptr);
 
+        int execvProcess(const char *path, char *const argv[]);
+
 
         ustl::vector<UserThread*> threads_;
         int32 fd_;
@@ -42,9 +44,10 @@ class UserProcess
         Mutex threads_lock_;           //2         //Todo: check if the locking order is actually followed
         Mutex thread_retval_map_lock_;   //3
 
-        Loader* execv_loader_{NULL}; //needs a loock
-        int32 execv_fd_{NULL};  //TODO: lock ?     
-        size_t execv_ppn_args_{NULL};  //TODO: lock ? 
-        size_t exec_argc_{0};  //TODO: lock ?     
+        Mutex execv_lock_;   //todo locking
+        Loader* execv_loader_{NULL};
+        int32 execv_fd_{NULL};  
+        size_t execv_ppn_args_{NULL};  
+        size_t exec_argc_{0};    
 };
 

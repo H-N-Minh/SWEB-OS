@@ -19,7 +19,7 @@ int64 UserProcess::pid_counter_ = 1;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
-    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_")
+    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_"),  execv_lock_(" execv_lock_")
 {
   ProcessRegistry::instance()->processStart();
   if (fd_ >= 0)
@@ -44,7 +44,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 // COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), terminal_number_(other.terminal_number_),
-    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_") 
+    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_"),  execv_lock_(" execv_lock_")
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -183,7 +183,91 @@ int UserProcess::joinThread(size_t thread_id, void**value_ptr)
   int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
   thread_retval_map_lock_.release();  
 
-  threads_lock_.acquire();  //ugly way to ensure that we dont go back to userspace if exit
+  threads_lock_.acquire();  //TODO: ugly way to ensure that we dont go back to userspace if exit
   threads_lock_.release();
   return thread_in_retval_map;
+}
+
+
+int UserProcess::execvProcess(const char *path, char *const argv[])
+{
+  execv_lock_.acquire();
+  execv_fd_ = VfsSyscall::open(path, O_RDONLY);
+  if (execv_fd_ >= 0)
+  {
+    execv_loader_ = new Loader(execv_fd_);
+  }
+  else
+  {
+    //Error no file descriptor
+    execv_lock_.release();
+    return -1;
+  }
+
+  //Error no loader
+  if (!execv_loader_ || !execv_loader_->loadExecutableAndInitProcess())
+  {
+    debug(USERPROCESS, "Error: loading %s failed!\n", path);
+    delete execv_loader_;
+    execv_loader_ = 0;
+    VfsSyscall::close(execv_fd_);
+    execv_lock_.release();
+    return -1;
+  }
+
+  //map arguments to identity mapping
+  execv_ppn_args_ = PageManager::instance()->allocPPN();
+  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(execv_ppn_args_);
+
+  size_t array_offset = 3500; //choose a good value
+
+  size_t index = 0;
+  size_t offset = 0;
+  while(1)
+  {
+    if(argv[index] == NULL)
+    {
+      break;
+    }
+    if(!Syscall::check_parameter((size_t)argv[index], true) || (offset +  strlen(argv[index]) + 1) >= array_offset || index >= 300)
+    {
+      delete execv_loader_;
+      execv_loader_ = 0;
+      VfsSyscall::close(execv_fd_);
+      PageManager::instance()->freePPN(execv_ppn_args_);
+      execv_lock_.release();
+      return -1;
+    }
+
+    memcpy((char*)virtual_address + offset, argv[index], strlen(argv[index])+1);
+    memcpy((void*)(virtual_address + array_offset + index * sizeof(pointer)), &offset, sizeof(pointer));
+
+    offset += strlen(argv[index]) + 1;
+
+    index++;
+  }
+  exec_argc_ = index;
+
+  Syscall::exit(0, true);
+  
+  while(1)            //TODO should not be busy wait
+  {
+    threads_lock_.acquire();
+    if(threads_.size() == 1)
+    {
+      threads_lock_.release();
+      break;
+    }
+    threads_lock_.release();
+  }
+
+  execv_lock_.release();
+  ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);
+  threads_.erase(exiting_thread);
+  ((UserThread*)currentThread)->last_thread_before_exec_ = true;
+  ((UserThread*)currentThread)->kill();
+
+  
+  assert(0 && "Sucessful exec should not return");
+
 }
