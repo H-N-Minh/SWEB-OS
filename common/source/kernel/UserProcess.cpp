@@ -53,7 +53,7 @@ UserProcess::UserProcess(const UserProcess& other)
   assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
   loader_ = new Loader(fd_, other.loader_->arch_memory_);
-  if (!loader_)
+  if (!loader_ || !loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename_.c_str());
     //kill();           // TODO: clean process when no loader

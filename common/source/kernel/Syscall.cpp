@@ -148,12 +148,9 @@ uint32 Syscall::pipe(int file_descriptor_array[2])
 // TODO: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
-  // Scheduler::instance()->printThreadList();
   debug(SYSCALL, "Syscall::forkProcess: start focking \n");
   UserProcess* parent = ((UserThread*) currentThread)->process_;
   UserProcess* child = new UserProcess(*parent);
-
-  // Scheduler::instance()->printThreadList();
 
   if (!child)
   {

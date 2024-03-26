@@ -114,14 +114,23 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 }
 
 
-/** Helper for copy constructor*/
+/** Helper for copy constructor, copy every bit of parent entry to child*/
 template <typename T>
-void setupPageEntry(T& entry) {
-    entry.present = 1;
-    entry.writeable = 1;
-    entry.user_access = 1;
-    entry.accessed = 1;
-    entry.page_ppn = PageManager::instance()->allocPPN();
+void setupPageEntry(T& child_entry, T& parent_entry) {
+  child_entry.present = parent_entry.present;
+  child_entry.writeable = parent_entry.writeable;
+  child_entry.user_access = parent_entry.user_access;
+  child_entry.write_through = parent_entry.write_through;
+  child_entry.cache_disabled = parent_entry.cache_disabled;
+  child_entry.accessed = parent_entry.accessed;
+  // child_entry.dirty = parent_entry.dirty;
+  child_entry.size = parent_entry.size;
+  // child_entry.global = parent_entry.global;
+  child_entry.ignored_2 = parent_entry.ignored_2;
+  child_entry.page_ppn = PageManager::instance()->allocPPN();
+  child_entry.reserved_1 = parent_entry.reserved_1;
+  child_entry.ignored_1 = parent_entry.ignored_1;
+  child_entry.execution_disabled = parent_entry.execution_disabled;
 }
 
 // COPY CONSTRUCTOR 
@@ -143,7 +152,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
     if (PARENT_pml4[pml4i].present)
     {
       // setup new page directory pointer table
-      setupPageEntry(CHILD_pml4[pml4i]);
+      setupPageEntry(CHILD_pml4[pml4i], PARENT_pml4[pml4i]);
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* PARENT_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(PARENT_pml4[pml4i].page_ppn);
 
@@ -154,7 +163,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
         {
           assert(PARENT_pdpt[pdpti].pd.size == 0);    //????
           // setup new page directory
-          setupPageEntry(CHILD_pdpt[pdpti].pd);
+          setupPageEntry(CHILD_pdpt[pdpti].pd, PARENT_pdpt[pdpti].pd);
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
 
@@ -165,7 +174,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
             {
               assert(PARENT_pd[pdi].pt.size == 0);    //????
               // setup new page table
-              setupPageEntry(CHILD_pd[pdi].pt);
+              setupPageEntry(CHILD_pd[pdi].pt, PARENT_pd[pdi].pt);
               PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
               PageTableEntry* PARENT_pt = (PageTableEntry*) getIdentAddressOfPPN(PARENT_pd[pdi].pt.page_ppn);
 
@@ -175,7 +184,7 @@ ArchMemory::ArchMemory(ArchMemory const &src)
                 if (PARENT_pt[pti].present)
                 {
                   // setup new page and copy from parent
-                  setupPageEntry(CHILD_pt[pti]);
+                  setupPageEntry(CHILD_pt[pti], PARENT_pt[pti]);
                   pointer CHILD_page = getIdentAddressOfPPN(CHILD_pt[pti].page_ppn);
                   pointer PARENT_page = getIdentAddressOfPPN(PARENT_pt[pti].page_ppn);
                   memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
