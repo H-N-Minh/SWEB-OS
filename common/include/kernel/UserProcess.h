@@ -17,17 +17,15 @@ class UserProcess
          */
         UserProcess(ustl::string minixfs_filename, FileSystemInfo *fs_info, uint32 terminal_number = 0);
         virtual ~UserProcess();
-
-        // COPY CONSTRUCTOR
         UserProcess(const UserProcess& other);
 
-       
-
         UserThread* getUserThread(size_t tid);
+        bool isThreadInVector(UserThread* test_thread);
+        int removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr);
 
         int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
+        int joinThread(size_t thread_id, void**value_ptr);
 
-        bool isThreadInVector(UserThread* test_thread);
 
         ustl::vector<UserThread*> threads_;
         int32 fd_;

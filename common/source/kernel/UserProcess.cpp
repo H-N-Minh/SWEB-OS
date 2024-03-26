@@ -11,6 +11,7 @@
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"
 #include "types.h"
+#include "Syscall.h"
 
 int64 UserProcess::tid_counter_ = 1;
 int64 UserProcess::pid_counter_ = 1;
@@ -20,14 +21,14 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
     threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_")
 {
-  ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
+  ProcessRegistry::instance()->processStart();
   if (fd_ >= 0)
     loader_ = new Loader(fd_);
 
   if (!loader_ || !loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
-    //kill();           // TODO: clean process when no loader
+    // TODO: clean process when no loader (kill();)
     return;
   }
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
@@ -61,8 +62,6 @@ UserProcess::UserProcess(const UserProcess& other)
 }
 
 
-
-
 UserProcess::~UserProcess()
 {
   assert(Scheduler::instance()->isCurrentlyCleaningUp());
@@ -89,6 +88,27 @@ UserThread* UserProcess::getUserThread(size_t tid)
   return 0;
 }
 
+
+int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr)
+{
+  ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);                                                   
+  if(iterator != thread_retval_map_.end())
+  {
+    void *return_value = thread_retval_map_[tid];
+    thread_retval_map_.erase(iterator);
+    if(value_ptr != NULL)
+    {
+      *value_ptr = return_value;
+    }
+    return 0;
+  }
+  else
+  {
+    return -1;
+  }
+}
+
+
 bool UserProcess::isThreadInVector(UserThread* test_thread)
 {
   for (auto& thread : threads_)
@@ -100,7 +120,6 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
   }
   return false;
 }
-
 
 int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg)
 {
@@ -125,4 +144,46 @@ int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper
     threads_lock_.release();  
     return -1;
   }
+}
+
+int UserProcess::joinThread(size_t thread_id, void**value_ptr)
+{
+  debug(SYSCALL, "UserProcess:joinThread: called, thread_id: %zu and %p\n", thread_id, value_ptr);
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+
+  threads_lock_.acquire();
+
+  //find thread in threadlist
+  UserThread* thread_to_be_joined = getUserThread(thread_id);
+  if(!thread_to_be_joined)
+  {
+    //Check if thread has already terminated
+    thread_retval_map_lock_.acquire(); 
+    int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
+    thread_retval_map_lock_.release(); 
+    threads_lock_.release();
+    return thread_in_retval_map;
+  }
+  currentUserThread.thread_gets_killed_lock_.acquire();
+  thread_to_be_joined->join_threads_lock_.acquire();
+  thread_to_be_joined->join_threads_.push_back(&currentUserThread);
+  thread_to_be_joined->join_threads_lock_.release();
+  threads_lock_.release();
+  
+  //wait for thread get killed
+  while(!currentUserThread.thread_killed)
+  {
+    currentUserThread.thread_gets_killed_.wait();
+  }     
+  currentUserThread.thread_killed = false;               
+  currentUserThread.thread_gets_killed_lock_.release(); 
+
+
+  thread_retval_map_lock_.acquire();  
+  int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
+  thread_retval_map_lock_.release();  
+
+  threads_lock_.acquire();  //ugly way to ensure that we dont go back to userspace if exit
+  threads_lock_.release();
+  return thread_in_retval_map;
 }
