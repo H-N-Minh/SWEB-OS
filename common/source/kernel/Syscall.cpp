@@ -180,90 +180,89 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
 
 int Syscall::pthread_join(size_t thread_id, void**value_ptr)
 {
-  //From Steffi
   debug(SYSCALL, "Syscall::PTHREAD_JOIN: called, thread_id: %zu and %p\n", thread_id, value_ptr);
-  // UserThread& currentUserThread = *((UserThread*)currentThread);
-  // UserProcess& current_process = *currentUserThread.process_;
-  // if(!check_parameter((size_t)value_ptr, true))
-  // {
-  //   return -1;
-  // }
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+  if(!check_parameter((size_t)value_ptr, true))
+  {
+    return -1;
+  }
 
-  // //checks if I not accidentally join myself
-  // if(currentThread->getTID() == thread_id)                         
-  // {
-  //   return -1;
-  // }
+  //checks if I not accidentally join myself
+  if(currentThread->getTID() == thread_id)                         
+  {
+    return -1;
+  }
 
-  // //check if thread has already terminated
-  // current_process.threads_lock_.acquire();
-  // current_process.thread_retval_map_lock_.acquire();  
-  // ustl::map<size_t, void*>::iterator iterator = current_process.thread_retval_map_.find(thread_id);                                                   
-  // void* return_value;
-  // if(iterator != current_process.thread_retval_map_.end())
-  // {
-  //   return_value = current_process.thread_retval_map_[thread_id];
+  //check if thread has already terminated
+  current_process.threads_lock_.acquire();
+  current_process.thread_retval_map_lock_.acquire();  
+  ustl::map<size_t, void*>::iterator iterator = current_process.thread_retval_map_.find(thread_id);                                                   
+  void* return_value;
+  if(iterator != current_process.thread_retval_map_.end())
+  {
+    return_value = current_process.thread_retval_map_[thread_id];
     
-  //   current_process.thread_retval_map_.erase(iterator);
-  //   if(value_ptr != NULL)
-  //   {
-  //     *value_ptr = return_value;
-  //   }
-  //   current_process.thread_retval_map_lock_.release();
-  //   current_process.threads_lock_.release(); 
-  //   return 0;
-  // }
-  // current_process.thread_retval_map_lock_.release();
+    current_process.thread_retval_map_.erase(iterator);
+    if(value_ptr != NULL)
+    {
+      *value_ptr = return_value;
+    }
+    current_process.thread_retval_map_lock_.release();
+    current_process.threads_lock_.release(); 
+    return 0;
+  }
+  current_process.thread_retval_map_lock_.release();
 
-  // //find thread in threadlist
-  // UserThread* thread_to_be_joined;
-  // for (auto& thread : current_process.threads_)
-  // {
-  //   if(thread_id == thread->getTID())
-  //   {
-  //     thread_to_be_joined = thread;
-  //     break;
-  //   } 
-  // }
-  // if(!thread_to_be_joined)
-  // {
-  //   current_process.threads_lock_.release();
-  //   return -1;
-  // }
+  //find thread in threadlist
+  UserThread* thread_to_be_joined;
+  for (auto& thread : current_process.threads_)
+  {
+    if(thread_id == thread->getTID())
+    {
+      thread_to_be_joined = thread;
+      break;
+    } 
+  }
+  if(!thread_to_be_joined)
+  {
+    current_process.threads_lock_.release();
+    return -1;
+  }
 
-  // currentUserThread.thread_gets_killed_lock_.acquire();
-  // thread_to_be_joined->join_threads_lock_.acquire();
-  // thread_to_be_joined->join_threads_.push_back(&currentUserThread);
-  // thread_to_be_joined->join_threads_lock_.release();
+  currentUserThread.thread_gets_killed_lock_.acquire();
+  thread_to_be_joined->join_threads_lock_.acquire();
+  thread_to_be_joined->join_threads_.push_back(&currentUserThread);
+  thread_to_be_joined->join_threads_lock_.release();
 
 
-  // current_process.threads_lock_.release();
+  current_process.threads_lock_.release();
   
-  // while(!currentUserThread.thread_killed)
-  // {
-  //   currentUserThread.thread_gets_killed_.wait();
-  // }     
-  // currentUserThread.thread_killed = false;               
-  // currentUserThread.thread_gets_killed_lock_.release(); 
+  while(!currentUserThread.thread_killed)
+  {
+    currentUserThread.thread_gets_killed_.wait();
+  }     
+  currentUserThread.thread_killed = false;               
+  currentUserThread.thread_gets_killed_lock_.release(); 
 
 
-  // current_process.thread_retval_map_lock_.acquire();  
-  // iterator = current_process.thread_retval_map_.find(thread_id);            
-  // if(iterator != current_process.thread_retval_map_.end())
-  // {
-  //   return_value = current_process.thread_retval_map_[thread_id];
-  //   if(return_value == (void*)-2222222222)  //maybe is not the best joince
-  //   {
-  //     current_process.thread_retval_map_lock_.release();  
-  //     pthreadExit((void*)currentUserThread.getTID());
-  //   }
-  //   current_process.thread_retval_map_.erase(iterator);
-  //   if(value_ptr != NULL)
-  //   {
-  //     *value_ptr = return_value;
-  //   }
-  // }
-  // current_process.thread_retval_map_lock_.release();  
+  current_process.thread_retval_map_lock_.acquire();  
+  iterator = current_process.thread_retval_map_.find(thread_id);            
+  if(iterator != current_process.thread_retval_map_.end())
+  {
+    return_value = current_process.thread_retval_map_[thread_id];
+    if(return_value == (void*)-2222222222)  //maybe is not the best joince
+    {
+      current_process.thread_retval_map_lock_.release();  
+      pthreadExit((void*)currentUserThread.getTID());
+    }
+    current_process.thread_retval_map_.erase(iterator);
+    if(value_ptr != NULL)
+    {
+      *value_ptr = return_value;
+    }
+  }
+  current_process.thread_retval_map_lock_.release();  
   return 0;
 }
 

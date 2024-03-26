@@ -57,15 +57,6 @@ Thread::Thread(Thread &src, Loader* loader)
 
         
        
-
-
-
-
-
-
-
-
-
 Thread::~Thread()
 {
     debug(THREAD, "~Thread: freeing ThreadInfos\n");
