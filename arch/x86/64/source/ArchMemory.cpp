@@ -16,10 +16,8 @@ ArchMemory::ArchMemory()
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
-  memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety
+  memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
 }
-
-
 
 template<typename T>
 bool ArchMemory::checkAndRemove(pointer map_ptr, uint64 index)
@@ -85,7 +83,6 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
 
 bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
 {
-  debug(A_MEMORY, "%zx %zx %zx %zx\n", page_map_level_4_, virtual_page, physical_page, user_access);
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
   assert((m.page_size == 0) || (m.page_size == PAGE_SIZE));
 
@@ -115,6 +112,84 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
   return false;
 }
+
+
+/** Helper for copy constructor*/
+template <typename T>
+void setupPageEntry(T& entry) {
+    entry.present = 1;
+    entry.writeable = 1;
+    entry.user_access = 1;
+    entry.accessed = 1;
+    entry.page_ppn = PageManager::instance()->allocPPN();
+}
+
+// COPY CONSTRUCTOR 
+ArchMemory::ArchMemory(ArchMemory const &src)
+{
+  debug(A_MEMORY, "ArchMemory::copy-constructor starts \n");
+
+  debug(A_MEMORY, "copy-ctor copying new pml4 \n");
+  page_map_level_4_ = PageManager::instance()->allocPPN();
+  PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);   // get VA of pml4 of child (NEW) and parent (SOURCE)
+  PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
+  memcpy((void*) CHILD_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
+  memset(CHILD_pml4, 0, PAGE_SIZE / 2); // should be zero already, this is just for safety, also only clear lower half (User half)
+
+  debug(A_MEMORY, "copy-ctor start copying all pages\n");
+  // Loop through the pml4 to get each pdpt
+  for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // copy only lower half (userspace)
+  {
+    if (PARENT_pml4[pml4i].present)
+    {
+      // setup new page directory pointer table
+      setupPageEntry(CHILD_pml4[pml4i]);
+      PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
+      PageDirPointerTableEntry* PARENT_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(PARENT_pml4[pml4i].page_ppn);
+
+      // loop through pdpt to get each pd
+      for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
+      {
+        if (PARENT_pdpt[pdpti].pd.present)
+        {
+          assert(PARENT_pdpt[pdpti].pd.size == 0);    //????
+          // setup new page directory
+          setupPageEntry(CHILD_pdpt[pdpti].pd);
+          PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
+          PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
+
+          // loop through pd to get each pt
+          for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
+          {
+            if (PARENT_pd[pdi].pt.present)
+            {
+              assert(PARENT_pd[pdi].pt.size == 0);    //????
+              // setup new page table
+              setupPageEntry(CHILD_pd[pdi].pt);
+              PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
+              PageTableEntry* PARENT_pt = (PageTableEntry*) getIdentAddressOfPPN(PARENT_pd[pdi].pt.page_ppn);
+
+              // loop through pt to get each page
+              for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+              {
+                if (PARENT_pt[pti].present)
+                {
+                  // setup new page and copy from parent
+                  setupPageEntry(CHILD_pt[pti]);
+                  pointer CHILD_page = getIdentAddressOfPPN(CHILD_pt[pti].page_ppn);
+                  pointer PARENT_page = getIdentAddressOfPPN(PARENT_pt[pti].page_ppn);
+                  memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  debug(A_MEMORY, "ArchMemory::copy-constructor finished \n");
+}
+
 
 ArchMemory::~ArchMemory()
 {

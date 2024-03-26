@@ -36,6 +36,22 @@ void ArchThreads::setAddressSpace(Thread *thread, ArchMemory& arch_memory)
   }
 }
 
+
+// MIMH: This method might be needed for implementing CoW (for fork)
+// void ArchThreads::copyAddressSpace(Thread *source, Thread *destination)
+// {
+//   assert(source->kernel_registers_->cr3);
+//   destination->kernel_registers_->cr3 = source->kernel_registers_->cr3;
+//   if (destination->user_registers_)
+//     destination->user_registers_->cr3 = source->user_registers_->cr3;
+
+//   if(destination == currentThread)
+//   {
+//           asm volatile("movq %[new_cr3], %%cr3\n"
+//                        ::[new_cr3]"r"(source->kernel_registers_->cr3));
+//   }
+// }
+
 void ArchThreads::createBaseThreadRegisters(ArchThreadRegisters *&info, void* start_function, void* stack)
 {
   info = new ArchThreadRegisters{};
@@ -78,6 +94,37 @@ void ArchThreads::createUserRegisters(ArchThreadRegisters *&info, void* start_fu
   info->ss      = USER_SS;
   info->rsp0    = (size_t)kernel_stack;
   assert(info->cr3);
+}
+
+void ArchThreads::copyUserRegisters(const ArchThreadRegisters* source, ArchThreadRegisters* &destination, void* kernel_stack)
+{
+  destination = new ArchThreadRegisters{};
+
+  destination->rflags = source->rflags;
+  destination->cr3 = source->cr3;
+  destination->rsp = source->rsp;
+  destination->rbp = source->rbp;
+  destination->rip = source->rip;
+  destination->fpu[0] = source->fpu[0];
+  destination->fpu[1] = source->fpu[1];
+  destination->fpu[2] = source->fpu[2];
+  destination->fpu[3] = source->fpu[3];
+  destination->fpu[4] = source->fpu[4];
+  destination->fpu[5] = source->fpu[5];
+  destination->fpu[6] = source->fpu[6];
+
+  destination->cs = source->cs;
+  destination->ds = source->ds;
+  destination->es = source->es;
+  destination->ss = source->ss;
+  destination->rsp0 = (size_t)kernel_stack;
+}
+
+void ArchThreads::setupForkReturnValue(ArchThreadRegisters* parent, ArchThreadRegisters* child, uint32 child_process_id)
+{
+  assert(child_process_id && "Child id must be non-zero");
+  parent->rax = child_process_id;
+  child->rax = 0;
 }
 
 void ArchThreads::changeInstructionPointer(ArchThreadRegisters *info, void* function)

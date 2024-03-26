@@ -81,6 +81,11 @@ public:
   static void createUserRegisters(ArchThreadRegisters *&info, void* start_function, void* user_stack, void* kernel_stack);
 
 /**
+ * Copy the exact registers of parent (source) to child (destination). Used for fork.
+*/
+  static void copyUserRegisters(const ArchThreadRegisters* source, ArchThreadRegisters* &destination, void* kernel_stack);
+
+/**
  * changes an existing ArchThreadRegisters so that execution will start / continue
  * at the function specified
  * it does not change anything else, and if the thread info / thread was currently
@@ -105,6 +110,12 @@ public:
  * @param arch_memory the arch memory object for the address space
  */
   static void setAddressSpace(Thread *thread, ArchMemory& arch_memory);
+
+// /**
+//  * right after fork(), parent thread (source) and child thread (destination) should share the same address space.
+//  * This is done by copying CR3 register from parent to child.
+//  */
+//   static void copyAddressSpace(Thread *source, Thread *destination);
 
 /**
  * uninterruptable locked operation
@@ -151,6 +162,11 @@ public:
    * @param thread
    */
   static void debugCheckNewThread(Thread* thread);
+
+  /**
+   * set return value for fork(): 0 for child, child's pid for parent
+   */
+  static void setupForkReturnValue(ArchThreadRegisters* parent, ArchThreadRegisters* child, uint32 child_id);
 
 private:
   /**

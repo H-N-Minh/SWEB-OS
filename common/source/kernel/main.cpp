@@ -41,7 +41,7 @@ extern "C" void startup()
   removeBootTimeIdentMapping();
   system_state = BOOTING;
 
-  PageManager::instance();
+  PageManager::instance(); //creation of the Kernel Memory Manager and the Page Manager
   writeLine2Bochs("PageManager and KernelMemoryManager created \n");
 
   main_console = ArchCommon::createConsole(1);
@@ -56,7 +56,7 @@ extern "C" void startup()
 
   kprintf("Kernel end address is %p\n", &kernel_end_address);
 
-  Scheduler::instance();
+  Scheduler::instance(); //Scheduler is created
 
   //needs to be done after scheduler and terminal, but prior to enableInterrupts
   kprintf_init();

@@ -38,24 +38,24 @@ const size_t BD_VIRT_DEVICE     = Ansi_Yellow;
 const size_t KPRINTF            = Ansi_Yellow;
 
 //group kernel
-const size_t LOCK               = Ansi_Yellow  | OUTPUT_ENABLED;
-const size_t LOADER             = Ansi_White   | OUTPUT_ENABLED;
-const size_t SCHEDULER          = Ansi_Yellow  | OUTPUT_ENABLED;
-const size_t SYSCALL            = Ansi_Blue    | OUTPUT_ENABLED;
-const size_t MAIN               = Ansi_Red     | OUTPUT_ENABLED;
-const size_t THREAD             = Ansi_Magenta ;
+const size_t LOCK               = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t LOADER             = Ansi_White  | OUTPUT_ENABLED;
+const size_t SCHEDULER          = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t SYSCALL            = Ansi_Blue | OUTPUT_ENABLED;
+const size_t MAIN               = Ansi_Red   | OUTPUT_ENABLED;
+const size_t THREAD             = Ansi_Magenta | OUTPUT_ENABLED;
 const size_t USERPROCESS        = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTHREAD         = Ansi_Yellow  | OUTPUT_ENABLED;
-const size_t PROCESS_REG        = Ansi_Yellow  ;
+const size_t PROCESS_REG        = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
 const size_t Fabi               = Ansi_Red     | OUTPUT_ENABLED;
 
 
 //group memory management
-const size_t PM                 = Ansi_Green | OUTPUT_ENABLED;
-const size_t PAGEFAULT          = Ansi_Green ;
-const size_t CPU_ERROR          = Ansi_Red   | OUTPUT_ENABLED;
+const size_t PM                 = Ansi_Green| OUTPUT_ENABLED;
+const size_t PAGEFAULT          = Ansi_Green| OUTPUT_ENABLED;
+const size_t CPU_ERROR          = Ansi_Red | OUTPUT_ENABLED;
 const size_t KMM                = Ansi_Yellow;
 
 //group driver
@@ -65,9 +65,9 @@ const size_t IDE_DRIVER         = Ansi_Yellow;
 const size_t MMC_DRIVER         = Ansi_Yellow;
 
 //group arch
-const size_t A_BOOT             = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t A_BOOT             = Ansi_Yellow; //| OUTPUT_ENABLED;
 const size_t A_COMMON           = Ansi_Yellow;
-const size_t A_MEMORY           = Ansi_Yellow;
+const size_t A_MEMORY           = Ansi_Yellow | OUTPUT_ENABLED;
 const size_t A_SERIALPORT       = Ansi_Yellow;
 const size_t A_KB_MANAGER       = Ansi_Yellow;
 const size_t A_INTERRUPTS       = Ansi_Yellow;
@@ -80,7 +80,7 @@ const size_t INODE              = Ansi_Blue;
 const size_t PATHWALKER         = Ansi_Yellow;
 const size_t PSEUDOFS           = Ansi_Yellow;
 const size_t VFSSYSCALL         = Ansi_Yellow;
-const size_t VFS                = Ansi_Yellow;
+const size_t VFS                = Ansi_Yellow; // | OUTPUT_ENABLED;
 const size_t VFS_FILE           = Ansi_Yellow;
 const size_t SUPERBLOCK         = Ansi_Yellow;
 
@@ -89,3 +89,7 @@ const size_t M_STORAGE_MANAGER  = Ansi_Yellow;
 const size_t M_INODE            = Ansi_Yellow| OUTPUT_ENABLED;
 const size_t M_SB               = Ansi_Yellow;
 const size_t M_ZONE             = Ansi_Yellow;
+
+//Personal's debug
+const size_t TAI_THREAD               = Ansi_Yellow  | OUTPUT_ENABLED;
+const size_t MINH                     = Ansi_Red     | OUTPUT_ENABLED;
