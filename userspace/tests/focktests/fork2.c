@@ -23,12 +23,12 @@ int fork2()
     if (pid == 0)
     {
         assert(x == 150 && "Child process should have x = 150");
-        return 69;
+        return 7;
     }
     else
     {
         assert(x == 60 && "Parent process should have x = 60");
-        return 5;
+        return 0;
     }
 
     return 0;
