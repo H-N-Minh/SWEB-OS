@@ -170,8 +170,8 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
   }
 
   // TODO: Lock arch_memory_, also be careful with locking order to prevent deadlock
-  //debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
-  //currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.virtual_page_);
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
+  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.virtual_page_);
   current_process.threads_lock_.release();
   currentUserThread.kill();
   assert(false && "This should never happen");
