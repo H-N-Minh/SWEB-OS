@@ -9,7 +9,7 @@ void printNumber(size_t x)
     {
         printf("%zu\n", x);
     }
-    size_t ret = 7711;
+    // size_t ret = 7711;
 }
 
 
