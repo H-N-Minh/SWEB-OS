@@ -77,8 +77,8 @@ UserProcess::UserProcess(const UserProcess& other)
 
 UserProcess::~UserProcess()
 {
-  if (fd_ > 0)
-    VfsSyscall::close(fd_);
+  // if (fd_ > 0)
+    // VfsSyscall::close(fd_);
 
   delete working_dir_;
   working_dir_ = nullptr;
