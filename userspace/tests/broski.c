@@ -7,12 +7,12 @@
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
 
-#define MAX_FORK 2
+#define MAX_FORK 2      // number of forks to do 
 
 // this tests multiple nested forks. each of them should has their own version of the variable x
 int main() {  
     size_t x = 0;
-    // create 100 child processes
+    // create 2 child processes
     for (int i = 0; i < MAX_FORK; i++) {
         assert(x == i  && "each process should have its own unique value of x");
         pid_t pid = fork();
@@ -31,7 +31,7 @@ int main() {
     }
 
     // only 1 last process would reach here
-    assert(x == MAX_FORK  && "last process (the 100th process) should have x = 100");
-    printf("fork4 successful lets go!\n");
+    assert(x == MAX_FORK  && "last process (the 2nd process) should have x = 2");
+    printf("fork4 successful lets goo!\n");
     return PARENT_SUCCESS;
 }

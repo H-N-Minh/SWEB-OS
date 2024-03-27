@@ -46,7 +46,7 @@ UserProcess::UserProcess(const UserProcess& other)
     filename_(other.filename_), terminal_number_(other.terminal_number_),
     threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_") 
 {
-  fd_ = VfsSyscall::open("/usr/broski.sweb", O_RDONLY);
+  fd_ = VfsSyscall::open(filename_, O_RDONLY);
 
   debug(USERPROCESS, "Copy-ctor: start copying from process (%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
