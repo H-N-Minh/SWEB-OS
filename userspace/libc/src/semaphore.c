@@ -7,7 +7,24 @@
  */
 int sem_wait(sem_t *sem)
 {
-  return -1;
+  if (!sem->initialized_)
+  {
+    return -1;
+  }
+
+  pthread_spin_lock(&sem->lock);
+
+  while (sem->value == 0)
+  {
+    pthread_spin_unlock(&sem->lock); //release the lock before yielding
+    __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
+    pthread_spin_lock(&sem->lock); //reacquire the lock after yielding
+  }
+
+  sem->value--;
+  pthread_spin_unlock(&sem->lock);
+
+  return 0;
 }
 
 /**
@@ -16,6 +33,21 @@ int sem_wait(sem_t *sem)
  */
 int sem_trywait(sem_t *sem)
 {
+  if (!sem->initialized_)
+  {
+    return -1;
+  }
+
+  pthread_spin_lock(&sem->lock);
+
+  if (sem->value > 0)
+  {
+    sem->value--;
+    pthread_spin_unlock(&sem->lock);
+    return 0;
+  }
+
+  pthread_spin_unlock(&sem->lock);
   return -1;
 }
 
@@ -25,7 +57,13 @@ int sem_trywait(sem_t *sem)
  */
 int sem_init(sem_t *sem, int pshared, unsigned value)
 {
-  return -1;
+  if(!sem->initialized_ )
+  {
+    return -1;//fail
+  }
+  sem->value = value;
+  pthread_spin_init(&sem->lock, 0);
+  return 0; //success
 }
 
 /**
@@ -34,7 +72,13 @@ int sem_init(sem_t *sem, int pshared, unsigned value)
  */
 int sem_destroy(sem_t *sem)
 {
-  return -1;
+  if(!sem->initialized_ )
+  {
+    return -1;
+  }
+  pthread_spin_destroy(&sem->lock);
+  sem->initialized_ = 0;
+  return 0;
 }
 
 /**
@@ -43,55 +87,15 @@ int sem_destroy(sem_t *sem)
  */
 int sem_post(sem_t *sem)
 {
-  return -1;
+  if(!sem->initialized_ )
+  {
+    return -1;
+  }
+  pthread_spin_lock(&sem->lock); //lock for atomicity
+  sem->value++;
+  pthread_spin_unlock(&sem->lock);
+
+  return 0;
 }
 
-
-//------------SEM-------------------------
-
-//typedef struct {
-//    int counter;
-//    pthread_t* sleepers;
-//} sem_t;
-//
-//int sem_init(sem_t *sem, int pshared, unsigned counter)
-//{
-//    sem->counter = counter;
-//    sem->sleepers = NULL;
-//    return 0;
-//}
-//
-//int sem_wait(sem_t *sem)
-//{
-//        if (sem->counter <= 0)
-//        {
-//             __asm__ volatile("pause");
-//        }
-//        sem->counter-- (cant use -- bc we need atomically)
-//        return 0;
-//    }
-//}
-//
-//int sem_post(sem_t *sem)
-//{
-//    sem->counter++ (cant use ++ bc we need atomically)
-//    return 0;
-//}
-//
-//int sem_destroy(sem_t *sem)
-//{
-//    free(sem->sleepers); maybe we need to allocate sleepers when sem init? but we dont have malloc
-//    return 0;
-//}
-//
-//int sem_trywait(sem_t *sem,)
-//{
-//    if (sem->counter <= 0)
-//    {
-//        call returns an error (errno set to EAGAIN) instead of blocking
-//    }
-//    sem->counter-- (cant use -- bc we need atomically)
-//    return 0;
-//}
-//}
 

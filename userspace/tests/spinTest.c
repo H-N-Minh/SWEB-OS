@@ -16,24 +16,24 @@ void increment_counter()
         pthread_spin_unlock(&lock);
     }
     printf("Counter value: %d\n", counter);
-    // pthread_exit(NULL);
 }
 
 int main() {
-    pthread_t threads[NUM_THREADS];
-    pthread_spin_init(&lock, 0);
+  pthread_t threads[NUM_THREADS];
+  pthread_spin_init(&lock, 0);
 
-    for (int t = 0; t < NUM_THREADS; t++)
-    {
-        pthread_create(&threads[t], NULL, (void* (*)(void*))increment_counter, NULL);
-    }
+  for (int t = 0; t < NUM_THREADS; t++)
+  {
+      pthread_create(&threads[t], NULL, (void* (*)(void*))increment_counter, NULL);
+  }
 
-    while (counter != 100000)
-    {
+  for (int t = 0; t < NUM_THREADS; t++)
+  {
+    pthread_join(threads[t], NULL);
+  }
 
-    }
 
-    printf("Final Counter value: %d\n", counter);
+  printf("Final Counter value: %d\n", counter);
 
-    return 0;
+  return 0;
 }
