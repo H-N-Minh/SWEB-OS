@@ -7,6 +7,7 @@ extern int fork2();
 extern int fork3();
 extern int fork4();
 extern int fork5();
+extern int fork6();
 
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
@@ -16,8 +17,9 @@ extern int fork5();
 #define FORK1 1     // note: this test also prints 2 lines
 #define FORK2 1
 #define FORK3 1
-#define FORK4 0     // not working right now because fd error when 2 different processes open the same fd
-#define FORK5 1
+#define FORK4 0     // 4 not working right now because fd error when 2 different processes open the same fd
+#define FORK5 0     // all 4 & 5 & 6 requires lot of physical memory so each should be tested alone
+#define FORK6 1
 
 
 int main()
@@ -62,6 +64,14 @@ int main()
         if (retval == PARENT_SUCCESS)         { printf("fork5 successful!\n"); } 
         else if (retval == CHILD_SUCCESS)     { return 0; }                      
         else                                  { printf("fork5 failed!\n"); return -1;}
+    }
+
+    if (FORK6)
+    {
+        retval = fork6();
+        if (retval == PARENT_SUCCESS)         { printf("fork6 successful!\n"); } 
+        else if (retval == CHILD_SUCCESS)     { return 0; }                      
+        else                                  { printf("fork6 failed!\n"); return -1;}
     }
 
     return 0;

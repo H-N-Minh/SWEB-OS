@@ -10,6 +10,7 @@
 #define MAX_FORK 2
 
 // this tests multiple nested forks. each of them should has their own version of the variable x
+// each child is used to fork again, while the parent dies immediately
 int fork4() {  
     size_t x = 0;
     // create 100 child processes

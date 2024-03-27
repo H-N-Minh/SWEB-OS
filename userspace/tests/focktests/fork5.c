@@ -10,6 +10,8 @@
 #define MAX_FORK 50     // without swaping, can fork around 150 times max
 
 // this tests multiple nested forks. each of them should has their own version of the variable x
+// Exactly same as fork4, except: the child after fork dies immediately, while the same parent will 
+// be used to fork again
 int fork5() {  
     size_t x = 0;
     // create 100 child processes
