@@ -42,10 +42,12 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
 // COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
-  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)),
+  : fd_(0), working_dir_(new FileSystemInfo(*other.working_dir_)),
     filename_(other.filename_), terminal_number_(other.terminal_number_),
     threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_") 
 {
+  fd_ = VfsSyscall::open("/usr/broski.sweb", O_RDONLY);
+
   debug(USERPROCESS, "Copy-ctor: start copying from process (%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
