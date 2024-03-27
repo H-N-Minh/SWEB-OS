@@ -12,11 +12,6 @@
 enum ThreadState{Running, Sleeping, ToBeDestroyed};
 enum SystemState {BOOTING, RUNNING, KPANIC};
 
-enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-
-// PTHREAD_CANCEL_EXIT: similar to PTHREAD_CANCEL_ASYNCHRONOUS, except thread gets canceled no matter what CancelState is.
-enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};
-
 extern SystemState system_state;
 
 class UserProcess;
@@ -52,8 +47,6 @@ class Thread
         Thread(Thread &src, Loader* loader);
 
         virtual ~Thread();
-        void setTID(size_t tid);
-
 
         /**
          * Marks the thread to be deleted by the scheduler.
@@ -96,20 +89,15 @@ class Thread
          * @return true if ready for scheduling
          */
         bool schedulable();
+        void setState(ThreadState state);
 
 
         uint32 kernel_stack_[2048];
         ArchThreadRegisters* kernel_registers_;
         ArchThreadRegisters* user_registers_;
-
         uint32 switch_to_userspace_;
-
         Loader* loader_;
-
-
-        void setState(ThreadState state);
-
-        //ThreadState getState() const;
+        Thread::TYPE type_;
 
         /**
          * A part of the single-chained waiters list for the locks.
@@ -117,12 +105,10 @@ class Thread
          * In case of a spinlock it is a busy-waiter, else usually it is a sleeper ^^.
          */
         Thread* next_thread_in_lock_waiters_list_;
-
         /**
          * The information which lock the thread is currently waiting on.
          */
         Lock* lock_waiting_on_;
-
         /**
          * A single chained list containing all the locks held by the thread at the moment.
          * This list is not locked. It may only be accessed by the thread himself,
@@ -131,36 +117,15 @@ class Thread
          */
         Lock* holding_lock_list_;
 
-        void cancelThread();
-
-        void setCancelState(CancelState state);
-        CancelState getCancelState() const;
-
-        void setCancelType(CancelType type);
-        CancelType getCancelType() const;
 
     private:
-        Thread(Thread const &src);
-        Thread &operator=(Thread const &src);
-
         volatile ThreadState state_;
-    public:
-        CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};  //default cancel state is ENABLED
-        CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED}; //default cancel type is DEFERRED
-
 
     protected:
         size_t tid_;
         Terminal* my_terminal_;
-
         ThreadState getState() const;
-
         FileSystemInfo* working_dir_;
-
-        ustl::string name_;
-
-  public:
-    Thread::TYPE type_;
-    
+        ustl::string name_;    
 };
 

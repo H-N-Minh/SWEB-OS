@@ -32,9 +32,9 @@ extern "C" void threadStartHack()
 }
 
 Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type, Loader* loader) :
-    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader),
+    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader), type_(type),
     next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
-    my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name)), type_(type)
+    my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name))
 
 {
     debug(THREAD, "Thread ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
@@ -44,8 +44,7 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
 }
 
 Thread::Thread(Thread &src, Loader* loader) 
-    : loader_(loader), next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(src.state_),
-    cancel_state_(src.cancel_state_), cancel_type_(src.cancel_type_), name_(src.name_), type_(src.type_)
+    : loader_(loader), type_(src.type_), next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(src.state_), name_(src.name_)
 {
   debug(FORK, "Thread COPY-ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
   ArchThreads::createKernelRegisters(kernel_registers_, (void*) (0), getKernelStackStartPointer());
@@ -196,10 +195,6 @@ size_t Thread::getTID() const
     return tid_;
 }
 
-void Thread::setTID(size_t tid)
-{
-  tid_ = tid;
-}
 
 ThreadState Thread::getState() const
 {
@@ -214,31 +209,3 @@ void Thread::setState(ThreadState new_state)
     state_ = new_state;
 }
 
-//asyncro be careful when cancel the thread if its holding a lock
-//need cancelation point (only )
-
-void Thread::cancelThread()
-{
-    // Set the state of the thread to ToBeDestroyed
-
-    //if(cancelation is reach || type = asyn
-        setState(ToBeDestroyed);
-
-        //for example we dont want thread B to kill itself, we want the thread B to call pthreadExit
-}
-
-void Thread::setCancelState(CancelState state) {
-    cancel_state_ = state;
-}
-
-CancelState Thread::getCancelState() const {
-    return cancel_state_;
-}
-
-void Thread::setCancelType(CancelType type) {
-    cancel_type_ = type;
-}
-
-CancelType Thread::getCancelType() const {
-    return cancel_type_;
-}

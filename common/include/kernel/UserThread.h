@@ -7,6 +7,10 @@
 
 class UserProcess;
 
+enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
+
+// PTHREAD_CANCEL_EXIT: similar to PTHREAD_CANCEL_ASYNCHRONOUS, except thread gets canceled no matter what CancelState is.
+enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};
 
 class UserThread : public Thread
 {
@@ -14,38 +18,36 @@ class UserThread : public Thread
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                     Loader* loader, UserProcess* process, size_t tid, void* func, void* para, void* pcreate_helper, bool execv = false);
 
-        // COPY CONSTRUCTOR
-        UserThread(UserThread& other, UserProcess* process, int32 tid);
+        UserThread(UserThread& other, UserProcess* process, int32 tid); // COPY CONSTRUCTOR
 
         ~UserThread();
-        UserProcess* process_{0};
+        
         void Run(){}
-
         void kill() override;
+        void send_kill_notification();
 
+        UserProcess* process_;
+        size_t vpn_stack_;
+
+        //exit
         bool last_thread_alive_{false};
+
+        //exec
         bool last_thread_before_exec_{false};
 
-
-        bool wants_to_be_canceled_{false};
-
-        size_t virtual_page_;
-
-        bool exit_send_cancelation_{false};
-
-        Mutex join_threads_lock_;
-        ustl::vector<UserThread*> join_threads_;
-        bool thread_killed{false};             //not the best naming: TODO
+        //pthread join
+        ustl::vector<UserThread*> join_threads_; //locked by threads_lock_
+        bool thread_killed{false};
         Mutex thread_gets_killed_lock_;
         Condition thread_gets_killed_;
 
-        bool canceled_thread_wants_to_be_killed_{false};   
 
+        //pthread_cancel
+        bool wants_to_be_canceled_{false};
         Mutex cancel_state_type_lock_;
-        // CANCEL_STATE cancel_state_{CANCEL_STATE::PTHREAD_CANCEL_ENABLE};  //currently not used
-        // CANCEL_TYPE cancel_type_{CANCEL_TYPE::PTHREAD_CANCEL_DEFERRED};    //currently not used
-        bool to_late_for_cancel_{false};
+        CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};
+        CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED};
 
-        void send_kill_notification();
+        
 
 };

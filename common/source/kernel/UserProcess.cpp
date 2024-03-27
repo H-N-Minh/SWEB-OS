@@ -19,7 +19,7 @@ int64 UserProcess::pid_counter_ = 1;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
-    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_"),  execv_lock_(" execv_lock_")
+    threads_lock_("thread_lock_"),  execv_lock_(" execv_lock_")
 {
   ProcessRegistry::instance()->processStart();
   if (fd_ >= 0)
@@ -43,8 +43,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
 // COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
-  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), terminal_number_(other.terminal_number_),
-    threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_"),  execv_lock_(" execv_lock_")
+  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
+    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"), execv_lock_(" execv_lock_")
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -91,6 +91,7 @@ UserThread* UserProcess::getUserThread(size_t tid)
 
 int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr)
 {
+  //Todo: assert that it holds thread lock
   ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);                                                   
   if(iterator != thread_retval_map_.end())
   {
@@ -158,16 +159,12 @@ int UserProcess::joinThread(size_t thread_id, void**value_ptr)
   if(!thread_to_be_joined)
   {
     //Check if thread has already terminated
-    thread_retval_map_lock_.acquire(); 
     int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
-    thread_retval_map_lock_.release(); 
     threads_lock_.release();
     return thread_in_retval_map;
   }
   currentUserThread.thread_gets_killed_lock_.acquire();
-  thread_to_be_joined->join_threads_lock_.acquire();
   thread_to_be_joined->join_threads_.push_back(&currentUserThread);
-  thread_to_be_joined->join_threads_lock_.release();
   threads_lock_.release();
   
   //wait for thread get killed
@@ -178,13 +175,10 @@ int UserProcess::joinThread(size_t thread_id, void**value_ptr)
   currentUserThread.thread_killed = false;               
   currentUserThread.thread_gets_killed_lock_.release(); 
 
-
-  thread_retval_map_lock_.acquire();  
+  threads_lock_.acquire();
   int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
-  thread_retval_map_lock_.release();  
-
-  threads_lock_.acquire();  //TODO: ugly way to ensure that we dont go back to userspace if exit
   threads_lock_.release();
+
   return thread_in_retval_map;
 }
 

@@ -14,7 +14,7 @@
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                        Loader* loader, UserProcess* process, size_t tid, void* func, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process) ,
-                join_threads_lock_("join_threads_lock_"), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
+                thread_gets_killed_lock_("thread_gets_killed_lock_"), 
                 thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_state_type_lock_("cancel_state_type_lock_")
 {
     tid_ = tid;
@@ -37,8 +37,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     }
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
-    virtual_page_ = USER_BREAK / PAGE_SIZE - tid - 1;
-    bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page_, page_for_stack, 1);
+    vpn_stack_ = USER_BREAK / PAGE_SIZE - tid - 1;
+    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
     size_t user_stack_ptr = (size_t) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid));
@@ -49,7 +49,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
                                          (void*) user_stack_ptr, getKernelStackStartPointer());
 
         debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
-               user_stack_ptr, user_stack_ptr, virtual_page_, virtual_page_);
+               user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
     else // create the thread for every pthread create
     {
@@ -59,7 +59,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         user_registers_->rdi = (size_t)func;
         user_registers_->rsi = (size_t)arg;
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
-                user_stack_ptr, user_stack_ptr, virtual_page_, virtual_page_);
+                user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
 
     if(execv)
@@ -81,8 +81,9 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 // TODO MINH: correct this to fit new constructor
 UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid)
-        : Thread(other, new_process->loader_), process_(new_process), virtual_page_(other.virtual_page_), join_threads_lock_("join_threads_lock_"), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
-                thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),  cancel_state_type_lock_("cancel_state_type_lock_")
+            : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_),
+            thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
+            cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_)
 {
     debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
     tid_ = tid;
@@ -114,7 +115,7 @@ UserThread::~UserThread()
     {
         debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
         delete process_;
-        process_ = 0;;
+        process_ = 0;
     }
 
     if(unlikely(last_thread_before_exec_))
@@ -148,9 +149,9 @@ void UserThread::kill()
     assert(currentThread == this && "Only the thread itself can kill itself\n");
 
     // FOR PTHREAD JOIN
-    this->process_->threads_lock_.acquire();
+    process_->threads_lock_.acquire();
     send_kill_notification();
-    this->process_->threads_lock_.release();
+    process_->threads_lock_.release();
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
 
@@ -162,28 +163,19 @@ void UserThread::kill()
   }
 }
 
-// void UserThread::Run(){
-//     assert(0);
-// }
-
-
  void UserThread::send_kill_notification()
  {
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  currentUserThread.join_threads_lock_.acquire();
   for(UserThread* join_thread : currentUserThread.join_threads_)
   {
-    if(!current_process.isThreadInVector(join_thread))
+    if(current_process.isThreadInVector(join_thread))
     {
-      currentUserThread.join_threads_lock_.release();
-      return;
+        join_thread->thread_gets_killed_lock_.acquire();
+        join_thread->thread_killed = true;
+        join_thread->thread_gets_killed_.signal();
+        join_thread->thread_gets_killed_lock_.release();
     }
-    join_thread->thread_gets_killed_lock_.acquire();
-    join_thread->thread_killed = true;
-    join_thread->thread_gets_killed_.signal();
-    join_thread->thread_gets_killed_lock_.release();
   }
-  currentUserThread.join_threads_lock_.release();
  }

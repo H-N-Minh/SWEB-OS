@@ -27,15 +27,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   currentUserThread.cancel_state_type_lock_.acquire();
   if(currentUserThread.wants_to_be_canceled_)
   {
-    if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
+    if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT || currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE)
     {
       currentUserThread.cancel_state_type_lock_.release();
-      pthreadExit((void*)-2222222222);
-    }
-    else if (currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE)
-    {
-      currentUserThread.cancel_state_type_lock_.release();
-      pthreadExit((void*)-1111111111);
+      pthreadExit((void*)-1);
     }
   }
   currentUserThread.cancel_state_type_lock_.release();
@@ -151,14 +146,12 @@ void Syscall::pthreadExit(void* value_ptr)
   else  // not last thread in process, saving return values in thread_retval_map_
   {
     debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_\n");
-    current_process.thread_retval_map_lock_.acquire();
     current_process.thread_retval_map_[currentUserThread.getTID()] = value_ptr;
-    current_process.thread_retval_map_lock_.release();
   }
 
   // TODO: Lock arch_memory_, also be careful with locking order to prevent deadlock
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
-  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.virtual_page_);
+  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.vpn_stack_);
   current_process.threads_lock_.release();
   currentUserThread.kill();
   assert(false && "This should never happen");
@@ -415,9 +408,9 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
   }
   debug(SYSCALL, "Syscall::pthread_setcancelstate: thread (%zu) is setted cancel state to (%d)\n", currentThread->getTID(), state);
   ((UserThread*) currentThread)->cancel_state_type_lock_.acquire();
-  *oldstate = (int) ((UserThread*) currentThread)->getCancelState(); //the state the its currently have
+  *oldstate = (int) ((UserThread*) currentThread)->cancel_state_;
 
-  ((UserThread*) currentThread)->setCancelState((CancelState)state);
+  ((UserThread*) currentThread)->cancel_state_ = (CancelState)state;
 
   debug(SYSCALL, "current state %s, previous state %s\n",
         state == CancelState::PTHREAD_CANCEL_ENABLE ? "ENABLED" : "DISABLED",
@@ -428,20 +421,19 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
 
 int Syscall::pthread_setcanceltype(int type, int *oldtype)
 {
-    if(type != 2 && type != 3) //not ASYNCHRONOUS or DEFERRED in userspace
+    if(type != CancelType::PTHREAD_CANCEL_ASYNCHRONOUS && type != PTHREAD_CANCEL_DEFERRED)
     {
-        debug(TAI_THREAD, "------------------Call cancel type fail\n");
+        debug(SYSCALL, "Syscall::pthread_setcanceltype: given type is not recognizable\n");
         return -1;
     }
     ((UserThread*) currentThread)->cancel_state_type_lock_.acquire();
-    CancelType previous_type = ((UserThread*) currentThread)->getCancelType(); //the type the its currently have
+    CancelType previous_type = ((UserThread*) currentThread)->cancel_type_;
     *oldtype = (int)previous_type;
+    ((UserThread*) currentThread)->cancel_type_ = (CancelType)type;
 
-    ((UserThread*) currentThread)->setCancelType((CancelType)type);
-
-    debug(TAI_THREAD, "------------------current type %s, previous type %s\n",
+    debug(SYSCALL, "current type %s, previous type %s\n",
           type == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS",
           *oldtype == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS");
     ((UserThread*) currentThread)->cancel_state_type_lock_.release();
-    return 0; //success
+    return 0;
 }

@@ -52,24 +52,14 @@ void Scheduler::schedule()
     {
       if((*it)->type_ == Thread::USER_THREAD)
       {
-        UserThread& currentUserThread = *((UserThread*)*it);
-        if(currentUserThread.wants_to_be_canceled_ && currentUserThread.switch_to_userspace_ && currentUserThread.cancel_type_ != PTHREAD_CANCEL_DEFERRED) 
+        UserThread& user_it = *((UserThread*)*it);
+        if(user_it.wants_to_be_canceled_ && user_it.switch_to_userspace_ && (user_it.cancel_type_ == PTHREAD_CANCEL_EXIT ||
+          (user_it.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && user_it.cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
         {
-          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && currentUserThread.cancel_state_ == PTHREAD_CANCEL_DISABLE)
-          {
-            currentThread = *it;
-            break;
-          }
-          debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", currentUserThread.getName());
-          currentUserThread.kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
-          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
-          {
-            currentUserThread.kernel_registers_->rsi     = (size_t)-2222222222;
-          }
-          else{
-            currentUserThread.kernel_registers_->rsi     = (size_t)-1111111111;
-          }
-          currentUserThread.switch_to_userspace_ = 0;
+          debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", user_it.getName());
+          user_it.kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
+          user_it.kernel_registers_->rsi     = (size_t)-1;
+          user_it.switch_to_userspace_ = 0;
         }
       }
 
