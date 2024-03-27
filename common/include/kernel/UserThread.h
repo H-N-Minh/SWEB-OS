@@ -16,9 +16,9 @@ class UserThread : public Thread
 {
     public:
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                    Loader* loader, UserProcess* process, size_t tid, void* func, void* para, void* pcreate_helper, bool execv = false);
+                    Loader* loader, UserProcess* process, void* func, void* para, void* pcreate_helper, bool execv = false);
 
-        UserThread(UserThread& other, UserProcess* process, int32 tid); // COPY CONSTRUCTOR
+        UserThread(UserThread& other, UserProcess* process); // COPY CONSTRUCTOR
 
         ~UserThread();
         
@@ -35,16 +35,16 @@ class UserThread : public Thread
         //exec
         bool last_thread_before_exec_{false};
 
-        //pthread join
-        ustl::vector<UserThread*> join_threads_; //locked by threads_lock_
+        //pthread join (join_threads_ are locked by threads_lock_)
+        ustl::vector<UserThread*> join_threads_; 
         bool thread_killed{false};
-        Mutex thread_gets_killed_lock_;
+        Mutex thread_gets_killed_lock_;                                //Locking order: x
         Condition thread_gets_killed_;
 
 
         //pthread_cancel
         bool wants_to_be_canceled_{false};
-        Mutex cancel_state_type_lock_;
+        Mutex cancel_state_type_lock_;                                  //Locking order: x
         CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};
         CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED};
 

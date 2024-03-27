@@ -33,10 +33,9 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   }
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 
-  uint64 tid_counter = ArchThreads::atomic_add(tid_counter_, 1);
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
 
-  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, tid_counter, 0, 0, 0, false));
+  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, false));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
 }
 
@@ -53,8 +52,7 @@ UserProcess::UserProcess(const UserProcess& other)
   loader_ = new Loader(*other.loader_, fd_);
   if (!loader_){assert(0 && "No loader in fork");}
 
-  int64 tid = ArchThreads::atomic_add(tid_counter_, 1);
-  UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this, tid);
+  UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", child_thread->getTID());
@@ -112,6 +110,7 @@ int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr)
 
 bool UserProcess::isThreadInVector(UserThread* test_thread)
 {
+  //TODO: check if lock is held
   for (auto& thread : threads_)
   {
     if(test_thread == thread)
@@ -126,9 +125,8 @@ int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper
 {
   debug(USERPROCESS, "UserProcess::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
 
-  uint64 tid_counter = ArchThreads::atomic_add(tid_counter_, 1);
   threads_lock_.acquire();  
-  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, tid_counter, start_routine, 
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, 
                                           arg, wrapper, false);
   if(new_thread)
   {

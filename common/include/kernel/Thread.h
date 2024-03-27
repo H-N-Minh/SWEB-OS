@@ -117,6 +117,8 @@ class Thread
          */
         Lock* holding_lock_list_;
 
+        unsigned long wakeup_timestamp_{0};
+
 
     private:
         volatile ThreadState state_;

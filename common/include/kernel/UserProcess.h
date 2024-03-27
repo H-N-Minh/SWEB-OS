@@ -44,25 +44,25 @@ class UserProcess
         static int64 pid_counter_;
         int32 pid_;
 
-        int32 fd_;
+        int32 fd_;                                 //Todo: figure out, what needs to be locked here
         FileSystemInfo* working_dir_;
         ustl::string filename_;
         uint32 terminal_number_;
         Loader* loader_;
 
         //Threads
-        static int64 tid_counter_;                          //probably nicer inside of thread to set tid
+        static int64 tid_counter_;
         ustl::vector<UserThread*> threads_;
-        Mutex threads_lock_;                            //1         //Todo: locking order
+        Mutex threads_lock_;                            //Locking order: x (TODO)
 
         //Return value map (locked by threads lock)
         ustl::map<size_t, void*> thread_retval_map_;
 
         //Exec
-        Mutex execv_lock_;
+        Mutex execv_lock_;                              //Locking order: x
         Loader* execv_loader_{NULL};
         int32 execv_fd_{NULL};  
-        size_t execv_ppn_args_{NULL};  
+        size_t execv_ppn_args_{NULL};                   
         size_t exec_argc_{0};    
 };
 

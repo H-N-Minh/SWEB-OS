@@ -12,12 +12,12 @@
 
 // TODO: explain calculation related to execv()
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                       Loader* loader, UserProcess* process, size_t tid, void* func, void* arg, void* pcreate_helper, bool execv)
+                       Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process) ,
                 thread_gets_killed_lock_("thread_gets_killed_lock_"), 
                 thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_state_type_lock_("cancel_state_type_lock_")
 {
-    tid_ = tid;
+    tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
     size_t array_offset = 3500;
 
     if(execv)
@@ -37,11 +37,11 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     }
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
-    vpn_stack_ = USER_BREAK / PAGE_SIZE - tid - 1;
+    vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ - 1;
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid));
+    size_t user_stack_ptr = (size_t) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * tid_);
 
     if (!func) //for the first thread when we create a process
     {
@@ -80,13 +80,13 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 
 // TODO MINH: correct this to fit new constructor
-UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid)
+UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
             cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_)
 {
     debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
-    tid_ = tid;
+    tid_ =  ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
     working_dir_ = new_process->working_dir_;
 
     // copy registers of parent thread, except for RAX (for different fork()-return-value)
@@ -111,8 +111,12 @@ UserThread::~UserThread()
 {
     debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
 
+    //assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread"); //TODO
+
     if(last_thread_alive_)
     {
+        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
+       // assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
         debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
         delete process_;
         process_ = 0;
@@ -120,6 +124,9 @@ UserThread::~UserThread()
 
     if(unlikely(last_thread_before_exec_))
     {
+        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");    //TODO: also check 
+        //assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
+
         debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
         assert(Scheduler::instance()->isCurrentlyCleaningUp());
         delete loader_;
@@ -132,9 +139,7 @@ UserThread::~UserThread()
         }
         process_->fd_ = process_->execv_fd_;
 
-        assert(process_->threads_.size() == 0);
-        size_t new_thread_id = ArchThreads::atomic_add(process_->tid_counter_, 1);
-        UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_, new_thread_id, 0, 0, 0, true);
+        UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_,0, 0, 0, true);
         process_->threads_.push_back(new_thread);
         Scheduler::instance()->addNewThread(new_thread);
     }

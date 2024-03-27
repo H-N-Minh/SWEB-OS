@@ -186,6 +186,40 @@ size_t Scheduler::getTicks()
 
 void Scheduler::incTicks()
 {
+  if(ticks_ % 5 == 0 && ticks_ != 0)
+  {
+    unsigned int edx;
+    unsigned int eax;
+    asm
+    (
+      "rdtsc"
+      : "=a"(eax), "=d"(edx)
+    );
+    unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+
+    unsigned long average_diference_ = (current_time_stamp - last_time_stamp_)/5;
+    //debug(SCHEDULER, "Ticks: %ld\n current tsc: %ld and last tsc: %ld and difference: %ld.\n", ticks_, current_time_stamp, last_time_stamp_, average_diference_);
+    last_time_stamp_ = current_time_stamp;
+    timestamp_fs_ = 54925439000000/average_diference_;
+    //debug(SCHEDULER, "Timestamp ns %ld\n",timestamp_fs_);
+  }
+  if(ticks_ < 5 && ticks_ != 0)
+  {
+    unsigned int edx;
+    unsigned int eax;
+    asm
+    (
+      "rdtsc"
+      : "=a"(eax), "=d"(edx)
+    );
+    unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+    unsigned long average_diference_ = current_time_stamp - last_time_stamp_;
+    //debug(SCHEDULER, "Ticks: %ld\n current tsc: %ld and last tsc: %ld and difference: %ld.\n", ticks_, current_time_stamp, last_time_stamp_, average_diference_);
+    last_time_stamp_ = current_time_stamp;
+    timestamp_fs_ = 54925439000000/average_diference_;
+    //debug(SCHEDULER, "Inverse timestamp ns %ld\n\n",timestamp_fs_);
+  }
+
   ++ticks_;
 }
 

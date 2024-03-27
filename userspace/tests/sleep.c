@@ -5,9 +5,9 @@
 
 int main()
 {
-    printf("Sleep for one second");
-    int rv = sleep(1);
-    printf("Slept for one second");
+    printf("Sleeping start.\n");
+    int rv = sleep(10);
+    printf("Sleeping end.\n");
     assert(rv == 0 && "Successful sleep should return 0.");
     return 0;
 }
