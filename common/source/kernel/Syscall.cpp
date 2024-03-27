@@ -106,7 +106,8 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pthread_testcancel:
       break;
     case sc_fork:
-      return_value = forkProcess();
+      return_value = 0;
+      // return_value = forkProcess();
       break; // you will need many debug hours if you forget the break
     case sc_pipe:
       return_value = pipe((int*) arg1);
