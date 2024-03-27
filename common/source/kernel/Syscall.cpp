@@ -106,8 +106,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pthread_testcancel:
       break;
     case sc_fork:
-      return_value = 0;
-      // return_value = forkProcess();
+      return_value = forkProcess();
       break; // you will need many debug hours if you forget the break
     case sc_pipe:
       return_value = pipe((int*) arg1);
@@ -198,9 +197,10 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
     current_process.thread_retval_map_lock_.release();
   }
 
-  // TODO: Lock arch_memory_, also be careful with locking order to prevent deadlock
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
+  currentUserThread.loader_->arch_memory_.lock_.acquire();
   currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.virtual_page_);
+  currentUserThread.loader_->arch_memory_.lock_.release();
   current_process.threads_lock_.release();
   currentUserThread.kill();
 

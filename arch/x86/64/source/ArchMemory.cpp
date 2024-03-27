@@ -13,6 +13,7 @@ PageDirEntry kernel_page_directory[2 * PAGE_DIR_ENTRIES] __attribute__((aligned(
 PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 
 ArchMemory::ArchMemory()
+  : lock_("ArchMemory_lock")
 {
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
@@ -137,6 +138,7 @@ void setupPageEntry(T& child_entry, T& parent_entry) {
 
 // COPY CONSTRUCTOR 
 ArchMemory::ArchMemory(ArchMemory const &src)
+  : lock_("ArchMemory_lock")
 {
   debug(A_MEMORY, "ArchMemory::copy-constructor starts \n");
 

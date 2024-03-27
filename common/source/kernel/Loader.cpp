@@ -72,8 +72,9 @@ void Loader::loadPage(pointer virtual_address)
     debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
     Syscall::exit(666);
   }
-
+  arch_memory_.lock_.acquire();
   bool page_mapped = arch_memory_.mapPage(virt_page_start_addr / PAGE_SIZE, ppn, true);
+  arch_memory_.lock_.release();
   if (!page_mapped)
   {
     debug(LOADER, "Loader::loadPage: The page has been mapped by someone else.\n");
