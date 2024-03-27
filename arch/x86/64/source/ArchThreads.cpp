@@ -101,7 +101,7 @@ void ArchThreads::copyUserRegisters(const ArchThreadRegisters* source, ArchThrea
   destination = new ArchThreadRegisters{};
 
   destination->rflags = source->rflags;
-  destination->cr3 = source->cr3;
+  // destination->cr3 = source->cr3;
   destination->rsp = source->rsp;
   destination->rbp = source->rbp;
   destination->rip = source->rip;

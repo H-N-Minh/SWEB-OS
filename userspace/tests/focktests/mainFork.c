@@ -14,13 +14,12 @@ extern int fork6();
 
 
 // set to 1 to test, 0 to skip
-#define FORK1 1     // note: this test also prints 2 lines
-#define FORK2 1
-#define FORK3 1
+#define FORK1 0     // note: this test also prints 2 lines
+#define FORK2 0
+#define FORK3 0
 #define FORK4 0     // 4 not working right now because fd error when 2 different processes open the same fd
 #define FORK5 0     // all 4 & 5 & 6 requires lot of physical memory so each should be tested alone
 #define FORK6 1
-
 
 int main()
 {

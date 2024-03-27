@@ -89,7 +89,6 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 
 
-// TODO MINH: correct this to fit new constructor
 UserThread::UserThread(UserThread& other, UserProcess* new_process, int32 tid, uint32 terminal_number, Loader* loader)
         : Thread(other, loader), process_(new_process), join_threads_lock_("join_threads_lock_"),
             thread_gets_killed_lock_("thread_gets_killed_lock_"), thread_gets_killed_(&thread_gets_killed_lock_,
