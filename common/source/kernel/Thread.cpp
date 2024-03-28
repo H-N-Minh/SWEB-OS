@@ -32,9 +32,9 @@ extern "C" void threadStartHack()
 }
 
 Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type, Loader* loader) :
-    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader),
+    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader), type_(type),
     next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
-    my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name)), type_(type)
+    my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name))
 
 {
     debug(THREAD, "Thread ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
@@ -44,18 +44,18 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
 }
 
 Thread::Thread(Thread &src, Loader* loader) 
-    : kernel_registers_(0), user_registers_(0), switch_to_userspace_(1), loader_(loader), 
-    next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
-    my_terminal_(0), working_dir_(src.working_dir_), type_(src.type_)
+    : loader_(loader), type_(src.type_), next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(src.state_), name_(src.name_)
 {
-  name_ = src.name_;
-  debug(THREAD, "Thread COPY-ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
+  debug(FORK, "Thread COPY-ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
   ArchThreads::createKernelRegisters(kernel_registers_, (void*) (0), getKernelStackStartPointer());
+  kernel_registers_->cr3 = loader->arch_memory_.page_map_level_4_;
   kernel_stack_[2047] = STACK_CANARY;
   kernel_stack_[0] = STACK_CANARY;
+
 }
 
-
+        
+       
 Thread::~Thread()
 {
     debug(THREAD, "~Thread: freeing ThreadInfos\n");
@@ -68,7 +68,7 @@ Thread::~Thread()
         debug(THREAD, "~Thread: ERROR: Thread <%s (%p)> is going to be destroyed, but still holds some locks!\n",
               getName(), this);
         Lock::printHoldingList(this);
-        assert(false);
+        assert(false && "Thread that gets destroyed still holds a lock.");
     }
     debug(THREAD, "~Thread: done (%s)\n", name_.c_str());
 }
@@ -182,7 +182,32 @@ void Thread::printBacktrace(bool use_stored_registers)
 
 bool Thread::schedulable()
 {
-    return (getState() == Running);
+  bool running = (getState() == Running);
+  if(running)
+  {
+    if(wakeup_timestamp_ == 0)
+    {
+      return true;
+    }
+    else
+    {
+      unsigned int edx;
+      unsigned int eax;
+      asm
+      (
+        "rdtsc"
+        : "=a"(eax), "=d"(edx)
+      );
+      unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+      if(current_time_stamp >= wakeup_timestamp_)
+      {
+        wakeup_timestamp_ = 0;
+        return true;
+      }
+    }
+
+  }
+  return false;
 }
 
 const char *Thread::getName()
@@ -195,10 +220,6 @@ size_t Thread::getTID() const
     return tid_;
 }
 
-void Thread::setTID(size_t tid)
-{
-  tid_ = tid;
-}
 
 ThreadState Thread::getState() const
 {
@@ -213,31 +234,3 @@ void Thread::setState(ThreadState new_state)
     state_ = new_state;
 }
 
-//asyncro be careful when cancel the thread if its holding a lock
-//need cancelation point (only )
-
-void Thread::cancelThread()
-{
-    // Set the state of the thread to ToBeDestroyed
-
-    //if(cancelation is reach || type = asyn
-        setState(ToBeDestroyed);
-
-        //for example we dont want thread B to kill itself, we want the thread B to call pthreadExit
-}
-
-void Thread::setCancelState(CancelState state) {
-    cancel_state_ = state;
-}
-
-CancelState Thread::getCancelState() const {
-    return cancel_state_;
-}
-
-void Thread::setCancelType(CancelType type) {
-    cancel_type_ = type;
-}
-
-CancelType Thread::getCancelType() const {
-    return cancel_type_;
-}

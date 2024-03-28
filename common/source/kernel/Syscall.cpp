@@ -16,7 +16,6 @@
 #include "umap.h"
 #include "ArchMemory.h"
 #include "PageManager.h"
-
 #include "ArchThreads.h"
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
@@ -31,15 +30,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   currentUserThread.cancel_state_type_lock_.acquire();
   if(currentUserThread.wants_to_be_canceled_)
   {
-    if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
+    if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT || currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE)
     {
       currentUserThread.cancel_state_type_lock_.release();
-      pthreadExit((void*)-2222222222);
-    }
-    else if (currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE)
-    {
-      currentUserThread.cancel_state_type_lock_.release();
-      pthreadExit((void*)-1111111111);
+      pthreadExit((void*)-1);
     }
   }
   currentUserThread.cancel_state_type_lock_.release();
@@ -86,7 +80,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       pthreadExit((void*)arg1);
       break;  
     case sc_pthread_join:
-      return_value = pthread_join((size_t)arg1, (void **)arg2);
+      return_value = pthreadJoin((size_t)arg1, (void **)arg2);
       break;
     case sc_pthread_cancel:
       return_value = pthread_cancel((size_t)arg1);
@@ -148,7 +142,7 @@ uint32 Syscall::pipe(int file_descriptor_array[2])
 // TODO: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
-  debug(SYSCALL, "Syscall::forkProcess: start focking \n");
+  debug(FORK, "Syscall::forkProcess: start focking \n");
   UserProcess* parent = ((UserThread*) currentThread)->process_;
   UserProcess* child = new UserProcess(*parent);
 
@@ -165,9 +159,9 @@ uint32 Syscall::forkProcess()
 }
 
 
-void Syscall::pthreadExit(void* value_ptr, bool from_exec)
+void Syscall::pthreadExit(void* value_ptr)
 {
-  debug(SYSCALL, "Syscall::pthreadExit: called, value_ptr: %p and from exec %d\n", value_ptr, from_exec);
+  debug(SYSCALL, "Syscall::pthreadExit: called, value_ptr: %p.\n", value_ptr);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
@@ -178,28 +172,18 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
 
   if(current_process.threads_.size() == 0)  // last thread in process
   {
-    if(!from_exec)
-    {
       debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
       currentUserThread.last_thread_alive_ = true;
-    }
-    else
-    {
-       debug(SYSCALL, "Syscall::pthreadExit: last thread before exec\n");
-      currentUserThread.last_thread_before_exec_ = true;
-    }
   }
   else  // not last thread in process, saving return values in thread_retval_map_
   {
     debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_\n");
-    current_process.thread_retval_map_lock_.acquire();
     current_process.thread_retval_map_[currentUserThread.getTID()] = value_ptr;
-    current_process.thread_retval_map_lock_.release();
   }
 
   // TODO: Lock arch_memory_, also be careful with locking order to prevent deadlock
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
-  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.virtual_page_);
+  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.vpn_stack_);
   current_process.threads_lock_.release();
   currentUserThread.kill();
 
@@ -207,92 +191,18 @@ void Syscall::pthreadExit(void* value_ptr, bool from_exec)
 }
 
 
-int Syscall::pthread_join(size_t thread_id, void**value_ptr)
+int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 {
-  debug(SYSCALL, "Syscall::PTHREAD_JOIN: called, thread_id: %zu and %p\n", thread_id, value_ptr);
+  debug(SYSCALL, "Syscall:pthreadJoin: called, thread_id: %zu and %p\n", thread_id, value_ptr);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-  if(!check_parameter((size_t)value_ptr, true))
+
+  if((!check_parameter((size_t)value_ptr, true)) || (currentThread->getTID() == thread_id))
   {
     return -1;
   }
-
-  //checks if I not accidentally join myself
-  if(currentThread->getTID() == thread_id)                         
-  {
-    return -1;
-  }
-
-  //check if thread has already terminated
-  current_process.threads_lock_.acquire();
-  current_process.thread_retval_map_lock_.acquire();  
-  ustl::map<size_t, void*>::iterator iterator = current_process.thread_retval_map_.find(thread_id);                                                   
-  void* return_value;
-  if(iterator != current_process.thread_retval_map_.end())
-  {
-    return_value = current_process.thread_retval_map_[thread_id];
-    
-    current_process.thread_retval_map_.erase(iterator);
-    if(value_ptr != NULL)
-    {
-      *value_ptr = return_value;
-    }
-    current_process.thread_retval_map_lock_.release();
-    current_process.threads_lock_.release(); 
-    return 0;
-  }
-  current_process.thread_retval_map_lock_.release();
-
-  //find thread in threadlist
-  UserThread* thread_to_be_joined;
-  for (auto& thread : current_process.threads_)
-  {
-    if(thread_id == thread->getTID())
-    {
-      thread_to_be_joined = thread;
-      break;
-    } 
-  }
-  if(!thread_to_be_joined)
-  {
-    current_process.threads_lock_.release();
-    return -1;
-  }
-
-  currentUserThread.thread_gets_killed_lock_.acquire();
-  thread_to_be_joined->join_threads_lock_.acquire();
-  thread_to_be_joined->join_threads_.push_back(&currentUserThread);
-  thread_to_be_joined->join_threads_lock_.release();
-
-
-  current_process.threads_lock_.release();
-  
-  while(!currentUserThread.thread_killed)
-  {
-    currentUserThread.thread_gets_killed_.wait();
-  }     
-  currentUserThread.thread_killed = false;               
-  currentUserThread.thread_gets_killed_lock_.release(); 
-
-
-  current_process.thread_retval_map_lock_.acquire();  
-  iterator = current_process.thread_retval_map_.find(thread_id);            
-  if(iterator != current_process.thread_retval_map_.end())
-  {
-    return_value = current_process.thread_retval_map_[thread_id];
-    if(return_value == (void*)-2222222222)  //maybe is not the best joince
-    {
-      current_process.thread_retval_map_lock_.release();  
-      pthreadExit((void*)currentUserThread.getTID());
-    }
-    current_process.thread_retval_map_.erase(iterator);
-    if(value_ptr != NULL)
-    {
-      *value_ptr = return_value;
-    }
-  }
-  current_process.thread_retval_map_lock_.release();  
-  return 0;
+  debug(SYSCALL, "Syscall:pthreadJoin: finished, thread_id: %zu and %p\n", thread_id, value_ptr);
+  return current_process.joinThread(thread_id, value_ptr);
 }
 
 
@@ -333,9 +243,13 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   }
   current_process.threads_lock_.release();
 
-  debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
-  pthreadExit((void*)exit_code, from_exec);
-  assert(false && "This should never happen");
+  if(!from_exec)
+  {
+    debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
+    pthreadExit((void*)exit_code);
+    assert(false && "This should never happen");
+  }
+
 }
 
 
@@ -506,7 +420,27 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 
 unsigned int Syscall::sleep(unsigned int seconds)
 {
-  return seconds;
+  uint64_t femtoseconds = (uint64_t)seconds * 1000000000000000;           //Todo: probably dont work if int is too big.
+  debug(SYSCALL, "Want to sleep for %d seconds.\n", seconds);
+  unsigned int edx;
+  unsigned int eax;
+  asm
+  (
+    "rdtsc"
+     : "=a"(eax), "=d"(edx)
+  );
+
+  uint64_t current_time_stamp = ((uint64_t)edx<<32) + eax;
+  //debug(SYSCALL, "TSC is %ld.\n", current_time_stamp);
+
+  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
+  //debug(SYSCALL, "Timestamp_ns is %ld.\n", timestamp_fs);
+
+  currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
+  //debug(SYSCALL, "Wakeup timestamp is %ld.\n", currentThread->wakeup_timestamp_);
+
+  Scheduler::instance()->yield();
+  return 0;
 }
 
 
@@ -526,74 +460,13 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
 
 int Syscall::execv(const char *path, char *const argv[])
 {
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
   if(!check_parameter((size_t)argv, false))
   {
     return -1;
   }
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  UserProcess& current_process = *currentUserThread.process_;
-  current_process.execv_fd_ = VfsSyscall::open(path, O_RDONLY);
-
-  if (current_process.execv_fd_ >= 0)
-  {
-    current_process.execv_loader_ = new Loader(current_process.execv_fd_);
-  }
-
-  if (!current_process.execv_loader_)
-  {
-    debug(USERPROCESS, "Error: loading %s failed!\n", path);
-    VfsSyscall::close(current_process.execv_fd_);
-    return -1;
-    
-  }
-  if (!current_process.execv_loader_->loadExecutableAndInitProcess())
-  {
-    debug(USERPROCESS, "Error: loading %s failed!\n", path);
-    delete current_process.execv_loader_;
-    current_process.execv_loader_ = 0;
-    VfsSyscall::close(current_process.execv_fd_);
-    return -1;
-  }
-
-  //map arguments to identity mapping
-  current_process.execv_ppn_args_ = PageManager::instance()->allocPPN();
-  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(current_process.execv_ppn_args_);
-
-  size_t array_offset = 3500; //choose a good value
-
-  size_t index = 0;
-  size_t offset = 0;
-  while(1)
-  {
-    if(argv[index] == NULL)
-    {
-      break;
-    }
-    if(!check_parameter((size_t)argv[index], true) || (offset +  strlen(argv[index]) + 1) >= array_offset || index >= 300)
-    {
-      delete current_process.execv_loader_;
-      current_process.execv_loader_ = 0;
-      VfsSyscall::close(current_process.execv_fd_);
-      PageManager::instance()->freePPN(current_process.execv_ppn_args_);
-      return -1;
-    }
-
-    memcpy((char*)virtual_address + offset, argv[index], strlen(argv[index])+1);
-    memcpy((void*)(virtual_address + array_offset + index * sizeof(pointer)), &offset, sizeof(pointer));
-
-    offset += strlen(argv[index]) + 1;
-
-    index++;
-  }
-  current_process.exec_argc_ = index;
-
-  exit(0, true);
-
-  ((UserThread*)currentThread)->last_thread_before_exec_ = true;
-  ((UserThread*)currentThread)->kill();
-
-  
-  assert(0 && "Sucessful exec should not return");
+  return current_process.execvProcess(path, argv);
 }
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
@@ -605,9 +478,9 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
   }
   debug(SYSCALL, "Syscall::pthread_setcancelstate: thread (%zu) is setted cancel state to (%d)\n", currentThread->getTID(), state);
   ((UserThread*) currentThread)->cancel_state_type_lock_.acquire();
-  *oldstate = (int) ((UserThread*) currentThread)->getCancelState(); //the state the its currently have
+  *oldstate = (int) ((UserThread*) currentThread)->cancel_state_;
 
-  ((UserThread*) currentThread)->setCancelState((CancelState)state);
+  ((UserThread*) currentThread)->cancel_state_ = (CancelState)state;
 
   debug(SYSCALL, "current state %s, previous state %s\n",
         state == CancelState::PTHREAD_CANCEL_ENABLE ? "ENABLED" : "DISABLED",
@@ -618,20 +491,19 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
 
 int Syscall::pthread_setcanceltype(int type, int *oldtype)
 {
-    if(type != 2 && type != 3) //not ASYNCHRONOUS or DEFERRED in userspace
+    if(type != CancelType::PTHREAD_CANCEL_ASYNCHRONOUS && type != PTHREAD_CANCEL_DEFERRED)
     {
-        debug(TAI_THREAD, "------------------Call cancel type fail\n");
+        debug(SYSCALL, "Syscall::pthread_setcanceltype: given type is not recognizable\n");
         return -1;
     }
     ((UserThread*) currentThread)->cancel_state_type_lock_.acquire();
-    CancelType previous_type = ((UserThread*) currentThread)->getCancelType(); //the type the its currently have
+    CancelType previous_type = ((UserThread*) currentThread)->cancel_type_;
     *oldtype = (int)previous_type;
+    ((UserThread*) currentThread)->cancel_type_ = (CancelType)type;
 
-    ((UserThread*) currentThread)->setCancelType((CancelType)type);
-
-    debug(TAI_THREAD, "------------------current type %s, previous type %s\n",
+    debug(SYSCALL, "current type %s, previous type %s\n",
           type == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS",
           *oldtype == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS");
     ((UserThread*) currentThread)->cancel_state_type_lock_.release();
-    return 0; //success
+    return 0;
 }

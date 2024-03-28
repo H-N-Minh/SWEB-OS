@@ -52,24 +52,14 @@ void Scheduler::schedule()
     {
       if((*it)->type_ == Thread::USER_THREAD)
       {
-        UserThread& currentUserThread = *((UserThread*)*it);
-        if(currentUserThread.wants_to_be_canceled_ && currentUserThread.switch_to_userspace_ && currentUserThread.cancel_type_ != PTHREAD_CANCEL_DEFERRED) 
+        UserThread& user_it = *((UserThread*)*it);
+        if(user_it.wants_to_be_canceled_ && user_it.switch_to_userspace_ && (user_it.cancel_type_ == PTHREAD_CANCEL_EXIT ||
+          (user_it.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && user_it.cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
         {
-          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && currentUserThread.cancel_state_ == PTHREAD_CANCEL_DISABLE)
-          {
-            currentThread = *it;
-            break;
-          }
-          debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", currentUserThread.getName());
-          currentUserThread.kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
-          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
-          {
-            currentUserThread.kernel_registers_->rsi     = (size_t)-2222222222;
-          }
-          else{
-            currentUserThread.kernel_registers_->rsi     = (size_t)-1111111111;
-          }
-          currentUserThread.switch_to_userspace_ = 0;
+          debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", user_it.getName());
+          user_it.kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
+          user_it.kernel_registers_->rsi     = (size_t)-1;
+          user_it.switch_to_userspace_ = 0;
         }
       }
 
@@ -196,6 +186,40 @@ size_t Scheduler::getTicks()
 
 void Scheduler::incTicks()
 {
+  if(ticks_ % 5 == 0 && ticks_ != 0)
+  {
+    unsigned int edx;
+    unsigned int eax;
+    asm
+    (
+      "rdtsc"
+      : "=a"(eax), "=d"(edx)
+    );
+    unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+
+    unsigned long average_diference_ = (current_time_stamp - last_time_stamp_)/5;
+    //debug(SCHEDULER, "Ticks: %ld\n current tsc: %ld and last tsc: %ld and difference: %ld.\n", ticks_, current_time_stamp, last_time_stamp_, average_diference_);
+    last_time_stamp_ = current_time_stamp;
+    timestamp_fs_ = 54925439000000/average_diference_;
+    //debug(SCHEDULER, "Timestamp ns %ld\n",timestamp_fs_);
+  }
+  if(ticks_ < 5 && ticks_ != 0)
+  {
+    unsigned int edx;
+    unsigned int eax;
+    asm
+    (
+      "rdtsc"
+      : "=a"(eax), "=d"(edx)
+    );
+    unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+    unsigned long average_diference_ = current_time_stamp - last_time_stamp_;
+    //debug(SCHEDULER, "Ticks: %ld\n current tsc: %ld and last tsc: %ld and difference: %ld.\n", ticks_, current_time_stamp, last_time_stamp_, average_diference_);
+    last_time_stamp_ = current_time_stamp;
+    timestamp_fs_ = 54925439000000/average_diference_;
+    //debug(SCHEDULER, "Inverse timestamp ns %ld\n\n",timestamp_fs_);
+  }
+
   ++ticks_;
 }
 

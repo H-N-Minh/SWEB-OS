@@ -12,9 +12,22 @@
 
 Loader::Loader(ssize_t fd) : fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0){}
 
-Loader::Loader(ssize_t fd, const ArchMemory& arch)
-  : arch_memory_(arch), fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0)
+Loader::Loader(const Loader &src, int32 fd)
+  : arch_memory_(src.arch_memory_), fd_(fd), hdr_(0), phdrs_(0), program_binary_lock_("Loader::program_binary_lock_"),
+    userspace_debug_info_(0)
 {
+  debug(FORK, "Loader-Copy constructor called.\n");
+
+  readHeaders();
+ 
+
+  debug ( LOADER,"loadExecutableAndInitProcess: Entry: %zx, num Sections %zx\n",hdr_->e_entry, (size_t)hdr_->e_phnum );
+  if (LOADER & OUTPUT_ADVANCED)
+    Elf::printElfHeader ( *hdr_ );
+
+  if (USERTRACE & OUTPUT_ENABLED)
+    loadDebugInfoIfAvailable();
+
 }
 
 Loader::~Loader()
