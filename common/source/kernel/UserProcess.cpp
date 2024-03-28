@@ -10,7 +10,7 @@
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"
 #include "types.h"
-#include "Syscall.h"
+#include "Syscall.h" ////
 
 int64 UserProcess::tid_counter_ = 1;
 int64 UserProcess::pid_counter_ = 1;
