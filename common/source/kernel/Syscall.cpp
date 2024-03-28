@@ -139,7 +139,7 @@ uint32 Syscall::pipe(int file_descriptor_array[2])
 }
 
 
-// TODO: handle return value when fork fails, handle how process exits correctly after fork
+// TODOs: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
   debug(FORK, "Syscall::forkProcess: start focking \n");
@@ -181,7 +181,7 @@ void Syscall::pthreadExit(void* value_ptr)
     current_process.thread_retval_map_[currentUserThread.getTID()] = value_ptr;
   }
 
-  // TODO: Lock arch_memory_, also be careful with locking order to prevent deadlock
+  // TODOs: Lock arch_memory_, also be careful with locking order to prevent deadlock
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
   currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.vpn_stack_);
   current_process.threads_lock_.release();

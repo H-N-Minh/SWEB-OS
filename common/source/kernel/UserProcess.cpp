@@ -27,7 +27,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   if (!loader_ || !loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
-    // TODO: clean process when no loader (kill();)
+    // TODOs: clean process when no loader (kill();)
     return;
   }
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
@@ -94,7 +94,7 @@ UserThread* UserProcess::getUserThread(size_t tid)
 
 int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr)
 {
-  //Todo: assert that it holds thread lock
+  //TODO: assert that it holds thread lock
   ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);                                                   
   if(iterator != thread_retval_map_.end())
   {
@@ -247,7 +247,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   Syscall::exit(0, true);
   
-  while(1)            //TODO should not be busy wait
+  while(1)            //TODOs should not be busy wait
   {
     threads_lock_.acquire();
     if(threads_.size() == 1)

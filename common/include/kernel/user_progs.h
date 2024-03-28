@@ -3,7 +3,8 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                            "/usr/shell.sweb",
+                            "/usr/pthreadCreateTests.sweb",
+                            //"/usr/shell.sweb",
 
                             // "/usr/pc4.sweb",
 //                            "/usr/smallpthreadcreate.sweb",
@@ -14,12 +15,7 @@ char const *user_progs[] = {
                             // "/usr/pthreadCreate.sweb",
 
                             // pthread_create
-                            
-                            //"/usr/pc1.sweb",                      //sanity checks
-                            //"/usr/pc2.sweb",                      //simple pthread_create and check if thread id gets set
-                            //"/usr/pc3.sweb",                      //starting 250 threads
-                           // "/usr/pc4.sweb",                      //check if to running threads have different id
-                           // "/usr/pc5.sweb",                      //pthread create with simple argument
+
                             
 
                             // pthreadExit

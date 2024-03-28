@@ -11,8 +11,8 @@ int function()
     return i;
 }
 
-//Test starting 
-int main()
+//starting 250 threads
+int pc3()
 {
     pthread_t thread_id[250];
 

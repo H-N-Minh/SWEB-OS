@@ -2,20 +2,20 @@
 #include "pthread.h"
 #include "assert.h"
 
-int function1(char* simple_argument)
+int functionpc5(char* simple_argument)
 {
-    assert((char)simple_argument[3] == 't');
+    assert((char)simple_argument[3] == 't');          //TODOs make check nicer
     return 34;
 }
 
 
 //Test: pthread create with simple argument
-int main()
+int pc5()
 {
     pthread_t thread_id;
     char* simple_argument = "test_argument";
 
-    int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, (void*)simple_argument);
+    int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))functionpc5, (void*)simple_argument);
     assert(rv == 0);
 
     void* value_ptr; 

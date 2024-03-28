@@ -19,7 +19,7 @@ int main()
     assert(thread_id);
 
     int delay = 0;
-    for(int i = 0; i < 300000000; i++)        //TODO replace with sleep
+    for(int i = 0; i < 300000000; i++)        //TODOs replace with sleep
     {
         delay+= i;
     }

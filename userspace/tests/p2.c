@@ -7,7 +7,7 @@ int flag = 0;
 int function1()
 {
     int delay = 0;
-    for(int i = 0; i < 600000000; i++)        //TODO replace with sleep
+    for(int i = 0; i < 600000000; i++)        //TODOs replace with something nicer
     {
         delay+= i;
     }
@@ -36,7 +36,7 @@ int main()
     assert(thread_id2);
 
     int delay = 0;
-    for(int i = 0; i < 300000000; i++)        //TODO replace with sleep
+    for(int i = 0; i < 300000000; i++)        //TODOs replace with sth nicer
     {
         delay+= i;
     }

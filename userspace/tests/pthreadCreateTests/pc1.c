@@ -8,7 +8,7 @@ int function1()
     return 0;
 }
 
-int main()
+int pc1()
 {
     pthread_t thread_id;
     int rv;

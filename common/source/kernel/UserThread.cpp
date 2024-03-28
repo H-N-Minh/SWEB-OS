@@ -10,7 +10,7 @@
 #include "uvector.h"
 #include "VfsSyscall.h"
 
-// TODO: explain calculation related to execv()
+// TODOs: explain calculation related to execv()
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                        Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process) ,
@@ -78,8 +78,6 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 
 
-
-// TODO MINH: correct this to fit new constructor
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
@@ -107,7 +105,7 @@ UserThread::~UserThread()
 {
     debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
 
-    //assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread"); //TODO
+    //assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread"); //TODOs
 
     if(last_thread_alive_)
     {
@@ -120,7 +118,7 @@ UserThread::~UserThread()
 
     if(unlikely(last_thread_before_exec_))
     {
-        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");    //TODO: also check 
+        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");    //TODOs: also check 
         //assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
 
         debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
