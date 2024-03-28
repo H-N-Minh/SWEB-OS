@@ -3,13 +3,13 @@
 #include "assert.h"
 
 
-int function1()
+int function1()  //pthread_create with pthread exit in function
 {
     pthread_exit((void*)3);
     return 0;
 }
 
-int main()
+int pe1()
 {
     int rv;
 
@@ -21,6 +21,8 @@ int main()
     assert(thread_id != 0 && "UserThread has ID of KernelThread");
 
     printf("p1 successful!\n");
+
+    //todos join maybe
 
 
     return 0;

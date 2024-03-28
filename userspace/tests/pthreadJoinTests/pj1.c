@@ -8,7 +8,7 @@ int function()
 }
 
 
-int main()
+int pj1()
 {
     pthread_t thread_id;
     int pthread_create_rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function, NULL);
@@ -26,4 +26,6 @@ int main()
     assert((size_t)value_ptr == 6 && "value_ptr does not match the returnvalue of thread");
 
     printf("pj1 successful!\n");
+
+    return 0;
 }

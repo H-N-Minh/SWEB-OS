@@ -22,7 +22,7 @@ void function2(void* thread_id)
 }
 
 //Test: If a thread that called join gets canceled the joined thread should not be detached
-int main()
+int pj6()    //thread that called join gets canceled the joined thread should not be detached
 {
     pthread_t thread_id1;
     int rv1 = pthread_create(&thread_id1, NULL, (void * (*)(void *))function1, NULL);

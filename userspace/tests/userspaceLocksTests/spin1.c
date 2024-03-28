@@ -3,7 +3,8 @@
 #include "stdio.h"
 #include "assert.h"
 
-int main()
+//Test: check if basic lock and unlocking works with spinnlock
+int spin1()
 {
     pthread_spinlock_t lock;
     
@@ -27,9 +28,7 @@ int main()
     rv = pthread_spin_unlock(&lock);
     assert(rv == 0);
 
+    printf("spin1 successful!\n");
 
-
-
-
-    printf("l1 successful\n");
+    return 0;
 }

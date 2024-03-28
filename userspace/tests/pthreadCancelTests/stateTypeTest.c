@@ -1,7 +1,7 @@
 #include "pthread.h"
 #include "assert.h"
 
-int main()
+int sc2()
 {
     int oldstate;
     int oldtype;
@@ -34,4 +34,6 @@ int main()
     assert(return_value == 0);
 
     printf("TEST SUCCESS\n");
+
+    return 0;
 }

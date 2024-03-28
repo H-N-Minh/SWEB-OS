@@ -16,7 +16,7 @@ int function1()
 
 
 
-int main() {
+int fork2() {
     pid_t pid = 5;
     size_t i = 0;
 
@@ -52,5 +52,5 @@ int main() {
     // }
 
     
-    return 0;
+    return pid;
 }

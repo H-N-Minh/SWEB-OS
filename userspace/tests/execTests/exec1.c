@@ -3,7 +3,7 @@
 
 
 //Exec without arguments
-int main()
+int exec1()
 {
     const char * path = "usr/exec1_testprogram.sweb";
 
@@ -13,4 +13,5 @@ int main()
 
     printf("exec 1 successfull\n");
     //assert(0);    //this should never be reached
+    return 0;
 }

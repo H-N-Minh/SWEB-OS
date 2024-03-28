@@ -3,7 +3,7 @@
 #include "stdio.h"
 
 
-int main()
+int exec2()
 {
     //Execv with invalid path
 

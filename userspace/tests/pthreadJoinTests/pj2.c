@@ -3,7 +3,7 @@
 #include "assert.h"
 
 
-int function1()
+int function1pj2()
 {
     int delay = 0;
     for(int i = 0; i < 300000000; i++)        //TODOs replace with sleep
@@ -14,11 +14,11 @@ int function1()
 }
 
 //Test: pthread join where join has to wait for the function to finish
-int main()
+int pj2()
 {
     //without value_ptr
     pthread_t thread_id;
-    int rv_create = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
+    int rv_create = pthread_create(&thread_id, NULL, (void * (*)(void *))function1pj2, NULL);
     assert(rv_create == 0);
     assert(thread_id);
     int rv_join = pthread_join(thread_id, NULL);
@@ -26,7 +26,7 @@ int main()
 
     //with value_ptr
     pthread_t thread_id1;
-    rv_create = pthread_create(&thread_id1, NULL, (void * (*)(void *))function1, NULL);
+    rv_create = pthread_create(&thread_id1, NULL, (void * (*)(void *))function1pj2, NULL);
     assert(rv_create == 0);
     assert(thread_id);
 

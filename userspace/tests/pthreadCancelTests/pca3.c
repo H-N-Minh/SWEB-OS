@@ -35,7 +35,7 @@ void function2(void* thread_id)
 }
 
 
-int main()
+int pca3()
 {
     pthread_t thread_id;
     int create_rv;
@@ -64,5 +64,7 @@ int main()
     assert(flag1 == 1);
 
     printf("pca3 successfull\n");
+
+    return 0;
 
 }

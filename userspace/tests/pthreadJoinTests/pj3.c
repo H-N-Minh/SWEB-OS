@@ -3,7 +3,7 @@
 #include "stdio.h"
 
 
-int function()
+int functionpj3()
 {
     int i = 4; 
     i++;
@@ -11,13 +11,13 @@ int function()
 }
 
 //Test starting 2000 threads after each after with join in between
-int main()
+int pj3()
 {
 
     for(int i = 0; i < 2000; i++)
     {
         pthread_t thread_id;
-        int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function, NULL);
+        int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))functionpj3, NULL);
         assert(rv == 0);
         
         void* value_ptr;

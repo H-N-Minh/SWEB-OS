@@ -2,7 +2,7 @@
 #include "assert.h"
 
 
-int main()
+int main()   //pthreadExit in main
 {
     printf("pe1 successful if no assertion gets raised!\n");
     

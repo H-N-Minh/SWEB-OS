@@ -4,17 +4,17 @@
 #include "unistd.h"
 
 
-int function1()
+int function_pca2()
 {
     return 4;
 }
 
 //Test: Cancel running function
-int main()
+int pca2()
 {
     pthread_t thread_id;
 
-    int rv_create = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
+    int rv_create = pthread_create(&thread_id, NULL, (void * (*)(void *))function_pca2, NULL);
     assert(rv_create == 0);
     assert(thread_id);
 

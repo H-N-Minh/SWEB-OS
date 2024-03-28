@@ -3,9 +3,9 @@
 #include "assert.h"
 #include "unistd.h"
 
-int flag1 = 0;
+int flagpc4 = 0;
 
-int function1()
+int function_pca4()
 {
 
     int oldtype;
@@ -19,21 +19,21 @@ int function1()
     // assert(oldtype == PTHREAD_CANCEL_ENABLE);
     while(1)
     {
-        flag1 = 1;
+        flagpc4 = 1;
     }
     return 4;
 }
 
 //Test: Async cancelation should cancel thread without cancelation point (Test can also be used, that is dont terminate for deffered type)
-int main()
+int pca4()
 {
     pthread_t thread_id;
 
-    int rv_create = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
+    int rv_create = pthread_create(&thread_id, NULL, (void * (*)(void *))function_pca4, NULL);
     assert(rv_create == 0);
     assert(thread_id);
 
-    while(!flag1){}
+    while(!flagpc4){}
 
     int rv_cancel = pthread_cancel(thread_id);
     assert(rv_cancel == 0);

@@ -2,7 +2,7 @@
 #include "assert.h"
 #include "stdio.h"
 
-int function1()
+int functionpj4()
 {
     int delay = 0;
     for(int i = 0; i < 300000000; i++)        //TODOs replace with sleep
@@ -13,11 +13,11 @@ int function1()
 }
 
 //Test: try to join the same thread twice
-int main()
+int pj4()
 {
     //with value_ptr
     pthread_t thread_id1;
-    int rv_create = pthread_create(&thread_id1, NULL, (void * (*)(void *))function1, NULL);
+    int rv_create = pthread_create(&thread_id1, NULL, (void * (*)(void *))functionpj4, NULL);
     assert(rv_create == 0);
     assert(thread_id1);
 

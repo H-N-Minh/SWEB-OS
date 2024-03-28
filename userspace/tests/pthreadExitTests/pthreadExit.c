@@ -15,7 +15,7 @@ void printNumber(size_t x)
 }
 
 
-int main()
+int pe2()
 {
     size_t x = 3;
     pthread_t thread1;

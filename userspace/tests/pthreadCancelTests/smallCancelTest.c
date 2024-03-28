@@ -7,11 +7,13 @@ void* addition(void* arg) {
     return (void*) (num[0] + num[1]);
 }
 
-int main() {
+int pca5() {
     pthread_t thread;
     size_t numbers[2] = {33, 36};
 
     pthread_create(&thread, NULL, addition, (void*)numbers);
+
+    printf("%zu\n", thread);
 
     // create a delay to make sure this thread Join after worker thread finished.
     for (size_t i = 0; i < 100000000; i++)
@@ -22,11 +24,12 @@ int main() {
         }
     }
     size_t sum;
+    pthread_cancel(thread);
     pthread_join(thread, (void**) &sum);
-    
+
 
     printf("Sum of %zu and %zu is: %zu \n", numbers[0], numbers[1], sum);
 
-    
+
     return 0;
 }
