@@ -68,7 +68,7 @@ Thread::~Thread()
         debug(THREAD, "~Thread: ERROR: Thread <%s (%p)> is going to be destroyed, but still holds some locks!\n",
               getName(), this);
         Lock::printHoldingList(this);
-        assert(false);
+        assert(false && "Thread that gets destroyed still holds a lock.");
     }
     debug(THREAD, "~Thread: done (%s)\n", name_.c_str());
 }

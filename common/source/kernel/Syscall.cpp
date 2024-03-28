@@ -370,8 +370,8 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 
 unsigned int Syscall::sleep(unsigned int seconds)
 {
-  uint64_t femtoseconds = (uint64_t)seconds * 1000000000000000;
-  debug(SYSCALL, "Want to sleep for %d seconds, which are %ld femtoseconds. \n", seconds, femtoseconds);
+  uint64_t femtoseconds = (uint64_t)seconds * 1000000000000000;           //Todo: probably dont work if int is too big.
+  debug(SYSCALL, "Want to sleep for %d seconds.\n", seconds);
   unsigned int edx;
   unsigned int eax;
   asm
