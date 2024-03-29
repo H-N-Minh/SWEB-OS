@@ -196,7 +196,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   bool finished = false;
 
-  //check if the provided arguments fit on a page and array is nullterminated
+  //go through all arguments, check if the are valid and if there is enough space
   int argc = 0;
   while(!finished)
   {
@@ -224,7 +224,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     } 
   }
 
-
+  //open the filedescriptor of the new program
   execv_lock_.acquire();
   execv_fd_ = VfsSyscall::open(path, O_RDONLY);
   if(execv_fd_ < 0)
@@ -233,8 +233,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     return -1;
   }
 
+  //create loader for the new binary                                    --TODOs: i think i i need to be careful with race conditions maybe
   execv_loader_ = new Loader(execv_fd_);
-  //Error no loader
   if (!execv_loader_ || !execv_loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", path);
@@ -245,9 +245,11 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     return -1;
   }
 
+  //cancel all other threads
   Syscall::exit(0, true);
   
-  while(1)            //TODOs should not be busy wait
+  //wait for the other threads to die (TODOs: should not be this weird busy wait !!!!)
+  while(1)
   {
     threads_lock_.acquire();
     if(threads_.size() == 1)
@@ -259,21 +261,27 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   }
 
 
-  //map arguments to identity mapping
+  //allocate a free physical page and get the virtual address of the identity mapping
   execv_ppn_args_ = PageManager::instance()->allocPPN();
   size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(execv_ppn_args_);
 
   exec_array_offset_ = array_offset;
   size_t offset = 0;
+  size_t offset1 = USER_BREAK - PAGE_SIZE;
   
   for(int i = 0; i < argc; i++)
   {
+    //write the arguments one by one to the new phsical page via identity mapping
     memcpy((char*)virtual_address + offset, argv[i], strlen(argv[i])+1);
-    memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset, POINTER_SIZE);
+
+    //store the offset of each argument in the page, at the end of all arguments
+    memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset1, POINTER_SIZE);
     offset += strlen(argv[i]) + 1;
+    offset1 += strlen(argv[i]) + 1;
   }
   if(argc > 0)
   {
+    //storing the pointer to the virtual address of the single elements in the array
     memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
   }
   

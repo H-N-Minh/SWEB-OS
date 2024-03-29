@@ -47,6 +47,12 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
                                          (void*) user_stack_ptr, getKernelStackStartPointer());
 
+        if(execv)
+        {
+            user_registers_->rdi = process_->exec_argc_;
+            user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
+        }
+
         debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
@@ -61,11 +67,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
 
-    if(execv)
-    {
-        user_registers_->rdi = process_->exec_argc_;
-        user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
-    }
+
 
     ArchThreads::setAddressSpace(this, loader_->arch_memory_);
 
