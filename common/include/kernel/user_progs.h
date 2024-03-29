@@ -13,8 +13,8 @@ char const *user_progs[] = {
 
                             //"/usr/forkTests.sweb",                                             
 
-                            "/usr/execTests.sweb",
-                            // "/usr/exec4.sweb",
+                            //"/usr/execTests.sweb",
+                             "/usr/exec4.sweb",
                             // "/usr/exec5.sweb",
 
                             //"/usr/userspaceLocksTests.sweb",                                    
