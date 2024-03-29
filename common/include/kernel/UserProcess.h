@@ -67,6 +67,7 @@ class UserProcess
         int32 execv_fd_{NULL};  
         size_t execv_ppn_args_{NULL};                   
         size_t exec_argc_{0};    
+        size_t exec_array_offset_{0};
 
 };
 

@@ -7,15 +7,15 @@ char const *user_progs[] = {
 
                             //"/usr/pthreadCreateTests.sweb",
                             //"/usr/pthreadJoinTests.sweb",
-                            "/usr/pthreadCancelTests.sweb",
+                            //"/usr/pthreadCancelTests.sweb",
                             //"/usr/pthreadExitTests.sweb",
 
 
                             //"/usr/forkTests.sweb",                                             
 
-                            //"/usr/execTests.sweb",
-                            //"/usr/exec4.sweb",
-                            //"/usr/exec5.sweb",
+                            "/usr/execTests.sweb",
+                            // "/usr/exec4.sweb",
+                            // "/usr/exec5.sweb",
 
                             //"/usr/userspaceLocksTests.sweb",                                    
 

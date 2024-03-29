@@ -13,9 +13,9 @@ int main()
 {
     pca1();     //Cancel running thread
     pca2();     //Try to cancel already dead thread
-    pca3();     
+    pca3();     //No cancelation without cancelation point
     pca4();     //Async cancelation should cancel thread without cancelation point
-    pca5();     
+    pca5();     //simple pthread_cancel of dead thread with join afterwards
 
     printf("\n");
 

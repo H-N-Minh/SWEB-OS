@@ -10,7 +10,9 @@
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"
 #include "types.h"
-#include "Syscall.h" ////
+#include "Syscall.h"
+
+#define POINTER_SIZE 8
 
 int64 UserProcess::tid_counter_ = 1;
 int64 UserProcess::pid_counter_ = 1;
@@ -188,19 +190,50 @@ int UserProcess::joinThread(size_t thread_id, void**value_ptr)
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
+
+  int space_left = 4000;   //page size (more or less)
+  size_t array_offset = 0;
+
+  bool finished = false;
+
+  //check if the provided arguments fit on a page and array is nullterminated
+  int argc = 0;
+  while(!finished)
+  {
+    if(!Syscall::check_parameter((size_t)argv[argc], true))
+    { 
+      debug(SYSCALL, "Execv: parameters not in userspace\n");
+      return -1;
+    }
+
+    if(argv[argc] == NULL)
+    {
+      space_left-= POINTER_SIZE;
+      finished = true;
+    }
+    else
+    {
+      space_left-= (strlen(argv[argc]) + 1 + POINTER_SIZE);
+      array_offset+= strlen(argv[argc]) + 1;
+      argc++;
+    }
+    if(space_left < 0)
+    {
+      debug(SYSCALL, "Execv: no space left\n");
+      return -1;
+    } 
+  }
+
+
   execv_lock_.acquire();
   execv_fd_ = VfsSyscall::open(path, O_RDONLY);
-  if (execv_fd_ >= 0)
+  if(execv_fd_ < 0)
   {
-    execv_loader_ = new Loader(execv_fd_);
-  }
-  else
-  {
-    //Error no file descriptor
     execv_lock_.release();
     return -1;
   }
 
+  execv_loader_ = new Loader(execv_fd_);
   //Error no loader
   if (!execv_loader_ || !execv_loader_->loadExecutableAndInitProcess())
   {
@@ -211,39 +244,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     execv_lock_.release();
     return -1;
   }
-
-  //map arguments to identity mapping
-  execv_ppn_args_ = PageManager::instance()->allocPPN();
-  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(execv_ppn_args_);
-
-  size_t array_offset = 3500; //choose a good value
-
-  size_t index = 0;
-  size_t offset = 0;
-  while(1)
-  {
-    if(argv[index] == NULL)
-    {
-      break;
-    }
-    if(!Syscall::check_parameter((size_t)argv[index], true) || (offset +  strlen(argv[index]) + 1) >= array_offset || index >= 300)
-    {
-      delete execv_loader_;
-      execv_loader_ = 0;
-      VfsSyscall::close(execv_fd_);
-      PageManager::instance()->freePPN(execv_ppn_args_);
-      execv_lock_.release();
-      return -1;
-    }
-
-    memcpy((char*)virtual_address + offset, argv[index], strlen(argv[index])+1);
-    memcpy((void*)(virtual_address + array_offset + index * sizeof(pointer)), &offset, sizeof(pointer));
-
-    offset += strlen(argv[index]) + 1;
-
-    index++;
-  }
-  exec_argc_ = index;
 
   Syscall::exit(0, true);
   
@@ -257,6 +257,29 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     }
     threads_lock_.release();
   }
+
+
+  //map arguments to identity mapping
+  execv_ppn_args_ = PageManager::instance()->allocPPN();
+  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(execv_ppn_args_);
+
+  exec_array_offset_ = array_offset;
+  size_t offset = 0;
+  
+  for(int i = 0; i < argc; i++)
+  {
+    memcpy((char*)virtual_address + offset, argv[i], strlen(argv[i])+1);
+    memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset, POINTER_SIZE);
+    offset += strlen(argv[i]) + 1;
+  }
+  if(argc > 0)
+  {
+    memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
+  }
+  
+  exec_argc_ = argc;
+
+
 
   execv_lock_.release();
   ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);

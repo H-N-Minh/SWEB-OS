@@ -18,6 +18,7 @@
 #include "PageManager.h"
 #include "ArchThreads.h"
 
+
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
   size_t return_value = 0;
@@ -195,7 +196,7 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  if((!check_parameter((size_t)value_ptr, true)) || (currentThread->getTID() == thread_id))
+  if(!check_parameter((size_t)value_ptr, true) || (currentThread->getTID() == thread_id))
   {
     return -1;
   }
@@ -208,8 +209,8 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 int Syscall::pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address)         
 {
   debug(SYSCALL, "Syscall::Pthread_CREATE Pthread_created called\n");
-  if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) 
-      && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
+  if(!check_parameter((size_t)thread) || !check_parameter((size_t)attr, true) || !check_parameter((size_t)start_routine) 
+      || !check_parameter((size_t)arg, true) || !check_parameter((size_t)wrapper_address))
   {
     return -1;
   }
@@ -460,10 +461,11 @@ int Syscall::execv(const char *path, char *const argv[])
 {
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-  if(!check_parameter((size_t)argv, false))
+  if(!check_parameter((size_t)argv, false) || !check_parameter((size_t)argv, false))
   {
     return -1;
   }
+
   return current_process.execvProcess(path, argv);
 }
 

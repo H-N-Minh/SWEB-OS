@@ -2,7 +2,6 @@
 #include "assert.h"
 #include "stdio.h"
 
-//Test:No cancelation without cancelation point
 
 #define BIG_NUMBER 1000000000
 
@@ -35,6 +34,7 @@ void function2(void* thread_id)
 }
 
 
+//Test: No cancelation without cancelation point
 int pca3()
 {
     pthread_t thread_id;

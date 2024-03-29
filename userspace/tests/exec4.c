@@ -2,10 +2,10 @@
 #include "unistd.h"
 
 
-//Test: exec with arguments
+//Test: Exec with arguments
 int main()
 {
-    const char * path = "usr/exec3_testprogram.sweb";
+    const char * path = "usr/exec4_testprogram.sweb";
     char *argv[] = { "Alle meine", "Entchen schwimmen auf", "dem See", "schwimmen auf dem See.", (char *)0 };
 
     int rv = execv(path, argv);

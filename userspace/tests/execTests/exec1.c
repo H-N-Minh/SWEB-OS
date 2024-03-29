@@ -2,16 +2,16 @@
 #include "unistd.h"
 
 
-//Exec without arguments
+//Exec without NULL as argument
 int exec1()
 {
-    const char * path = "usr/exec1_testprogram.sweb";
+    const char * path = "usr/exec4_testprogram.sweb";
 
     int rv = execv(path, NULL);
 
-    assert(rv == -1);            //not sure if this is right TODOs
+    assert(rv == -1);
 
-    printf("exec 1 successfull\n");
+    printf("Exec1 successfull!\n");
     //assert(0);    //this should never be reached
     return 0;
 }

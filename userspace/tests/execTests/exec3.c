@@ -5,7 +5,7 @@
 //Test: exec with to many arguments
 int exec3()
 {
-    const char * path = "usr/exec3_testprogram.sweb";
+    const char * path = "usr/exec4_testprogram.sweb";
     char *argv[304] = { 
     "1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1",
     "1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1",
@@ -24,7 +24,7 @@ int exec3()
     int rv = execv(path, argv);
 
     assert(rv == -1);    
-    printf("Exec4 successfull!\n");
+    printf("Exec3 successful!\n");
     
     return 0;
 }

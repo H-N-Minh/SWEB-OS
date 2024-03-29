@@ -18,8 +18,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
                 thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_state_type_lock_("cancel_state_type_lock_")
 {
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
-    size_t array_offset = 3500;
-
+ 
     if(execv)
     {
         size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(process_->execv_ppn_args_);
@@ -32,7 +31,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
         for(size_t i = 0; i < process_->exec_argc_; i++)
         {
-            *(size_t*)(virtual_address + array_offset + i * sizeof(pointer)) += (USER_BREAK - PAGE_SIZE);
+            *(size_t*)(virtual_address + process_->exec_array_offset_ + i * sizeof(pointer)) += (USER_BREAK - PAGE_SIZE);
         }
     }
 
@@ -65,7 +64,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     if(execv)
     {
         user_registers_->rdi = process_->exec_argc_;
-        user_registers_->rsi = USER_BREAK - PAGE_SIZE + array_offset;
+        user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
     }
 
     ArchThreads::setAddressSpace(this, loader_->arch_memory_);

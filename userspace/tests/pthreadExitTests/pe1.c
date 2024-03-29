@@ -20,7 +20,11 @@ int pe1()
     assert(thread_id != 424242 && "thread_id was not set");
     assert(thread_id != 0 && "UserThread has ID of KernelThread");
 
-    printf("p1 successful!\n");
+    void* value_ptr;
+    int pthread_join_rv = pthread_join(thread_id, &value_ptr);
+    assert(value_ptr == (void*)3);
+
+    printf("pe1 successful!\n");
 
     //todos join maybe
 
