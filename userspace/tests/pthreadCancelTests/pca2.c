@@ -18,15 +18,11 @@ int pca2()
     assert(rv_create == 0);
     assert(thread_id);
 
-    int delay = 0;
-    for(int i = 0; i < 300000000; i++)        //TODOs replace with sleep
-    {
-        delay+= i;
-    }
+    sleep(1);
 
     int rv_cancel = pthread_cancel(thread_id);
     assert(rv_cancel == -1 && "Thread is alread dead and cannot be canceled");
     
-    printf("pca2 successfull!\n");
+    printf("pca2 successful!\n");
     return 0;
 }

@@ -23,6 +23,6 @@ int pc5()
     assert(rv == 0);
     assert((size_t)value_ptr == 34);
 
-    printf("pc5 successful\n");
+    printf("pc5 successful!\n");
     return 0;
 }

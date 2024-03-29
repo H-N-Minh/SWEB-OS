@@ -25,6 +25,6 @@ int pca1()
     int rv_cancel = pthread_cancel(thread_id);
     assert(rv_cancel == 0);
     
-    printf("pca1 successfull!\n");
+    printf("pca1 successful!\n");
     return 0;
 }

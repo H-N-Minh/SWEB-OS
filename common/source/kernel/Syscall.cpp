@@ -101,10 +101,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_fork:
       return_value = forkProcess();
-      break; // you will need many debug hours if you forget the break
+      break;
     case sc_pipe:
       return_value = pipe((int*) arg1);
-      break; // you will need many debug hours if you forget the break
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -170,15 +170,13 @@ void Syscall::pthreadExit(void* value_ptr)
   ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), currentThread);
   current_process.threads_.erase(exiting_thread);
 
+  debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_\n");
+  current_process.thread_retval_map_[currentUserThread.getTID()] = value_ptr;
+
   if(current_process.threads_.size() == 0)  // last thread in process
   {
       debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
       currentUserThread.last_thread_alive_ = true;
-  }
-  else  // not last thread in process, saving return values in thread_retval_map_
-  {
-    debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_\n");
-    current_process.thread_retval_map_[currentUserThread.getTID()] = value_ptr;
   }
 
   // TODOs: Lock arch_memory_, also be careful with locking order to prevent deadlock
@@ -450,7 +448,7 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
     {
       return false;
     }
-    debug(SYSCALL, "Ptr %p USER_BREAK %p.\n",(void*)ptr, (void*)USER_BREAK);
+    //debug(SYSCALL, "Ptr %p USER_BREAK %p.\n",(void*)ptr, (void*)USER_BREAK);
     if(ptr >= USER_BREAK)
     {
       return false;
@@ -471,7 +469,7 @@ int Syscall::execv(const char *path, char *const argv[])
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
 {
-  if(state != CancelState::PTHREAD_CANCEL_DISABLE && state != CancelState::PTHREAD_CANCEL_DISABLE)
+  if(state != CancelState::PTHREAD_CANCEL_DISABLE && state != CancelState::PTHREAD_CANCEL_ENABLE)
   {
     debug(SYSCALL, "Syscall::pthread_setcancelstate: given state is not recognizable\n");
     return -1;

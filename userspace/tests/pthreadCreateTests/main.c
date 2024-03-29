@@ -1,3 +1,5 @@
+#include "stdio.h"
+
 extern int pc1();
 extern int pc2();
 extern int pc3();
@@ -12,6 +14,8 @@ int main()
     pc3();  //starting 250 threads
     pc4();  //check if to running threads have different id
     pc5();  //pthread create with simple argument
+
+    printf("\n\npthread_create testcases successful\n");
 
 
     //Todos: running 250 simultaniously

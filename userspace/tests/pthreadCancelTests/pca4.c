@@ -43,6 +43,6 @@ int pca4()
     assert(rv_join == 0 && "Joining canceled thread should be successfull.");
     assert(value_ptr != 0 && "value ptr of canceled thread should be not 0.");
 
-    printf("pca4 successfull!\n");
+    printf("pca4 successful!\n");
     return 0;
 }

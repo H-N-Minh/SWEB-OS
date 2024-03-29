@@ -63,7 +63,7 @@ int pca3()
     assert(result == BIG_NUMBER);
     assert(flag1 == 1);
 
-    printf("pca3 successfull\n");
+    printf("pca3 successful!\n");
 
     return 0;
 

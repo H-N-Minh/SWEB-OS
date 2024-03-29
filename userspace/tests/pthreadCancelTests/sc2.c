@@ -33,7 +33,7 @@ int sc2()
     assert(oldtype == PTHREAD_CANCEL_ASYNCHRONOUS);
     assert(return_value == 0);
 
-    printf("TEST SUCCESS\n");
+    printf("sc2 successful");
 
     return 0;
 }

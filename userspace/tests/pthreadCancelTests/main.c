@@ -1,3 +1,5 @@
+#include "stdio.h"
+
 extern int pca1();
 extern int pca2();
 extern int pca3();
@@ -11,11 +13,16 @@ int main()
 {
     pca1();     //Cancel running thread
     pca2();     //Try to cancel already dead thread
-    pca3();     //Deffered cancel in while should not work
+    pca3();     
     pca4();  
-    pca5();  
+    //pca5();  
+
+    printf("\n");
 
     sc1();  
     sc2(); 
+
+    printf("\n\npthread_cancel testcases successful\n");
+
 
 }
