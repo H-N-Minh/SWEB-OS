@@ -14,8 +14,8 @@ int main()
     pca1();     //Cancel running thread
     pca2();     //Try to cancel already dead thread
     pca3();     
-    pca4();  
-    pca5();  
+    pca4();     //Async cancelation should cancel thread without cancelation point
+    pca5();     
 
     printf("\n");
 
@@ -26,3 +26,5 @@ int main()
 
 
 }
+
+//Todos:  pca4(Test can also be used, that is dont terminate for deffered type)
