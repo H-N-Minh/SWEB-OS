@@ -23,16 +23,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     {
         size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(process_->execv_ppn_args_);
         debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
-
         
         size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
         bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , process_->execv_ppn_args_, 1);
         assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
-
-        for(size_t i = 0; i < process_->exec_argc_; i++)
-        {
-            *(size_t*)(virtual_address + process_->exec_array_offset_ + i * sizeof(pointer)) += (USER_BREAK - PAGE_SIZE);
-        }
     }
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
@@ -49,8 +43,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
         if(execv)
         {
-            user_registers_->rdi = process_->exec_argc_;
-            user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
+        user_registers_->rdi = process_->exec_argc_;
+        user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
         }
 
         debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
