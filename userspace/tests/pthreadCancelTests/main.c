@@ -15,12 +15,12 @@ int main()
     pca2();     //Try to cancel already dead thread
     pca3();     
     pca4();  
-    //pca5();  
+    pca5();  
 
     printf("\n");
 
-    sc1();  
-    sc2(); 
+    sc1();     //Check if setting cancel type and state works
+    sc2();     //pretty similar to sc1
 
     printf("\n\npthread_cancel testcases successful\n");
 

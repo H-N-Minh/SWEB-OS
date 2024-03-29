@@ -1,6 +1,7 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <pthread.h>
+#include "stdio.h"
+#include "stdlib.h"
+#include "pthread.h"
+#include "assert.h"
 
 void* addition(void* arg) {
     size_t* num = (size_t*) arg;
@@ -11,25 +12,18 @@ int pca5() {
     pthread_t thread;
     size_t numbers[2] = {33, 36};
 
-    pthread_create(&thread, NULL, addition, (void*)numbers);
+    int rv_create = pthread_create(&thread, NULL, addition, (void*)numbers);
+    assert(rv_create == 0);
+    assert(thread);
 
-    printf("%zu\n", thread);
+    sleep(1);       //delay to ensure addition has finished
 
-    // create a delay to make sure this thread Join after worker thread finished.
-    for (size_t i = 0; i < 100000000; i++)
-    {
-        if (i % 10000000 == 0)
-        {
-            printf("Main thread is running\n");
-        }
-    }
     size_t sum;
-    pthread_cancel(thread);
-    pthread_join(thread, (void**) &sum);
-
-
-    printf("Sum of %zu and %zu is: %zu \n", numbers[0], numbers[1], sum);
-
+    int rv_cancel = pthread_cancel(thread);
+    assert(rv_cancel != 0);
+    int rv_join = pthread_join(thread, (void**) &sum);
+    assert(rv_join == 0);
+    assert(sum == 69);
 
     return 0;
 }

@@ -58,7 +58,7 @@ void Scheduler::schedule()
         {
           debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", user_it.getName());
           user_it.kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
-          user_it.kernel_registers_->rsi     = (size_t)-1;
+          user_it.kernel_registers_->rdi     = (size_t)-1;
           user_it.switch_to_userspace_ = 0;
         }
       }
