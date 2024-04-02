@@ -4,6 +4,7 @@
 #include "sys/syscall.h"
 #include "../../../common/include/kernel/syscall-definitions.h"
 
+#define USER_BREAK 0x0000800000000000ULL
 
 #ifdef __cplusplus
 extern "C" {
@@ -13,18 +14,26 @@ extern "C" {
 typedef size_t pthread_t;
 typedef unsigned int pthread_attr_t;
 
-//pthread mutex typedefs
-typedef unsigned int pthread_mutex_t;
-typedef unsigned int pthread_mutexattr_t;
-
+//pthread spinlock
 struct pthread_spinlock_struct { 
     size_t  locked_; 
     size_t initialized_;
     void* held_by_;
 }; 
 
-//pthread spinlock typedefs
 typedef struct pthread_spinlock_struct pthread_spinlock_t;
+
+//pthread mutex
+struct pthread_mutex_struct { 
+    size_t  locked_; 
+    size_t initialized_;
+    void* held_by_;
+    void* waiting_list_;
+    pthread_spinlock_t mutex_lock_;
+}; 
+
+typedef struct pthread_mutex_struct pthread_mutex_t;
+typedef unsigned int pthread_mutexattr_t;
 
 //pthread cond typedefs
 typedef unsigned int pthread_cond_t;
@@ -59,6 +68,8 @@ extern int pthread_mutex_destroy(pthread_mutex_t *mutex);
 
 extern int pthread_mutex_lock(pthread_mutex_t *mutex);
 
+extern int pthread_mutex_trylock(pthread_mutex_t *mutex);
+
 extern int pthread_mutex_unlock(pthread_mutex_t *mutex);
 
 extern int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr);
@@ -90,6 +101,8 @@ extern int pthread_spin_trylock(pthread_spinlock_t *lock);
 
 extern int pthread_spin_unlock(pthread_spinlock_t *lock);
 
+
+extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 
 
 #ifdef __cplusplus

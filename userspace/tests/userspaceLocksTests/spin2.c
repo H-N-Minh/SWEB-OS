@@ -17,7 +17,7 @@ void increment_counter()
         current_counter++;
         
 
-        for(int i = 0; i < 100; i++){}             //introduces small delay
+        for(int i = 0; i < 100; i++){}             //introduces small delay, which increases race condition
 
         counter = current_counter;
         pthread_spin_unlock(&lock);

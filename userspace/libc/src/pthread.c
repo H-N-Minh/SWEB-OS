@@ -3,7 +3,7 @@
 #include "sched.h"
 #include "assert.h"
 
-#include <stdio.h>
+#include "stdio.h"
 
 
 /**
@@ -21,15 +21,6 @@ void pthread_create_wrapper(void* start_routine, void* arg)
 {
   void* retval = ((void* (*)(void*))start_routine)(arg);
   pthread_exit(retval);
-}
-
-/**
- * function stub
- * posix compatible signature - do not change the signature!
- */
-int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
-{
-  return -1;
 }
 
 /**
@@ -72,9 +63,49 @@ int pthread_detach(pthread_t thread)
  * function stub
  * posix compatible signature - do not change the signature!
  */
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)              //TODOs: locking
+{
+  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1))
+  {
+    return -1;
+  }
+  if(mutex->initialized_)
+  {
+    return -1;
+  }
+  int rv = pthread_spin_init(&mutex->mutex_lock_, 0);
+  if(rv != 0)
+  {
+    return -1;
+  }
+  mutex->initialized_ = 1;
+  mutex->locked_ = 0;
+  mutex->held_by_ = NULL;
+  mutex->waiting_list_ = NULL;
+    
+  return 0;
+}
+
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
-  return -1;
+  if(!parameters_are_valid((size_t)mutex, 0))
+  {
+    return -1;
+  }
+  if(!mutex->initialized_ )
+  {
+    return -1;
+  }
+  if(mutex->locked_)
+  {
+    return -1;
+  }
+  mutex->initialized_ = 0;
+  return 0;
 }
 
 /**
@@ -83,7 +114,65 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
  */
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-  return -1;
+  if(!parameters_are_valid((size_t)mutex, 0))
+  {
+    return -1;
+  }
+  pthread_spin_lock(&mutex->mutex_lock_);
+  if(!mutex->initialized_ )
+  {
+    pthread_spin_unlock(&mutex->mutex_lock_);
+    return -1;
+  }
+  
+  if(!mutex->locked_)
+  {
+    mutex->locked_ = 1;
+    pthread_spin_unlock(&mutex->mutex_lock_);
+  }
+  else
+  {
+    pthread_spin_unlock(&mutex->mutex_lock_);
+    __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
+    pthread_spin_lock(&mutex->mutex_lock_);
+    if(!mutex->locked_)
+    {
+      mutex->locked_ = 1;
+    }
+    pthread_spin_unlock(&mutex->mutex_lock_);
+  }
+  
+  return 0;
+}
+
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
+int pthread_mutex_trylock(pthread_mutex_t *mutex)
+{
+  if(!parameters_are_valid((size_t)mutex, 0))
+  {
+    return -1;
+  }
+  pthread_spin_lock(&mutex->mutex_lock_);
+  if(!mutex->initialized_ )
+  {
+    pthread_spin_unlock(&mutex->mutex_lock_);
+    return -1;
+  }
+  
+  if(!mutex->locked_)
+  {
+    mutex->locked_ = 1;
+    pthread_spin_unlock(&mutex->mutex_lock_);
+  }
+  else
+  {
+    pthread_spin_unlock(&mutex->mutex_lock_);
+    return -1;
+  }
+  return 0;
 }
 
 /**
@@ -92,7 +181,20 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
  */
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
-  return -1;
+  if(!parameters_are_valid((size_t)mutex, 0))
+  {
+    return -1;
+  }
+  if(mutex->initialized_ == 0)
+  {
+    return -1;
+  }
+  if(mutex->locked_ == 0)
+  {
+    return -1;
+  }
+  mutex->locked_ = 0;
+  return 0;
 }
 
 /**
@@ -146,6 +248,10 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
  */
 int pthread_spin_destroy(pthread_spinlock_t *lock)
 {
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
   if(!lock->initialized_ )
   {
     return -1;
@@ -154,8 +260,8 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
   {
     return -1;
   }
-    lock->initialized_ = 0;
-    return 0;
+  lock->initialized_ = 0;
+  return 0;
 
 }
 
@@ -165,13 +271,17 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
  */
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 {
-    if(lock->initialized_)
-    {
-        return -1;
-    }
-    lock->locked_ = 0;
-    lock->initialized_ = 1;
-    return 0;
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
+  if(lock->initialized_)
+  {
+      return -1;
+  }
+  lock->locked_ = 0;
+  lock->initialized_ = 1;
+  return 0;
 }
 
 /**
@@ -180,18 +290,23 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
  */
 int pthread_spin_lock(pthread_spinlock_t *lock)
 {
-    if(!lock->initialized_ )
-    {
-      return -1;
-    }
-    size_t old_val = 1;
-    do {
-        asm("xchg %0,%1"
-                : "=r" (old_val)
-                : "m" (lock->locked_), "0" (old_val)
-                : "memory");
-    } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
-    return 0; // Success
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
+  if(!lock->initialized_ )
+  {
+    return -1;
+  }
+  size_t old_val = 1;
+  do 
+  {
+    asm("xchg %0,%1"
+        : "=r" (old_val)
+        : "m" (lock->locked_), "0" (old_val)
+        : "memory");
+  } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
+  return 0;
 }
 
 /**
@@ -200,6 +315,10 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
  */
 int pthread_spin_trylock(pthread_spinlock_t *lock)
 {
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
   if(!lock->initialized_ )
   {
     return -1;
@@ -219,6 +338,10 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
  */
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
   if(lock->initialized_ == 0)
   {
     return -1;
@@ -264,20 +387,20 @@ int get_thread_count(void) {
     return __syscall(sc_threadcount, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
 
-//------------MUTEX-------------------------
-//typedef struct {
-//    bool locked;
-//    pthread_t held_by;
-//    pthread_t* sleepers;
-//} Mutex;
-//
-//void mutex_init(Mutex* mutex) {
-//      Mutex lock = malloc()
-//    mutex->locked = 0;
-//    mutex->held_by = 0;
-//    mutex->sleepers = NULL;
-//}
-//
+int parameters_are_valid(size_t ptr, int allowed_to_be_null)
+{
+    if(!allowed_to_be_null && ptr == 0)
+    {
+      return 0;
+    }
+    if(ptr >= USER_BREAK)
+    {
+      return 0;
+    }
+    return 1;
+}
+
+
 //void mutex_lock(Mutex* mutex)
 //{
 //    pthread_t self = pthread_self(); <--assume we implemented pthread_self() in userspace(get the tid of the current thread)
