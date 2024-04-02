@@ -3,7 +3,9 @@
 #include "uvector.h"
 #include "uutility.h"
 #include "Pipe.h"
-
+#include "LocalFileDescriptor.h"
+#include "FileDescriptor.h"
+#include "debug.h"
 
 class FileDescriptorEntry {
 public:
