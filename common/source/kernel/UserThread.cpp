@@ -9,6 +9,7 @@
 #include "ArchInterrupts.h"
 #include "uvector.h"
 #include "VfsSyscall.h"
+#include "Syscall.h"
 
 // TODOs: explain calculation related to execv()
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
@@ -157,8 +158,8 @@ void UserThread::kill()
   }
 }
 
- void UserThread::send_kill_notification()
- {
+void UserThread::send_kill_notification()
+{
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
@@ -172,4 +173,43 @@ void UserThread::kill()
         join_thread->thread_gets_killed_lock_.release();
     }
   }
- }
+}
+
+bool UserThread::schedulable()
+{
+  bool running = (getState() == Running);
+
+  if(wants_to_be_canceled_ && switch_to_userspace_ && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+  {
+    debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
+    kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
+    kernel_registers_->rdi     = (size_t)-1;
+    switch_to_userspace_ = 0;
+    return true;
+  }
+
+  if(running)
+  {
+    if(wakeup_timestamp_ == 0)
+    {
+      return true;
+    }
+    else
+    {
+      unsigned int edx;
+      unsigned int eax;
+      asm
+      (
+        "rdtsc"
+        : "=a"(eax), "=d"(edx)
+      );
+      unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+      if(current_time_stamp >= wakeup_timestamp_)
+      {
+        wakeup_timestamp_ = 0;
+        return true;
+      }
+    }
+  }
+  return false;
+}

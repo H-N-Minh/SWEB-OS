@@ -88,7 +88,7 @@ class Thread
          * Tells the scheduler if this thread is ready for scheduling
          * @return true if ready for scheduling
          */
-        bool schedulable();
+        virtual bool schedulable();
         void setState(ThreadState state);
 
 
