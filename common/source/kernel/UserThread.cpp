@@ -185,6 +185,7 @@ bool UserThread::schedulable()
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     kernel_registers_->rdi     = (size_t)-1;
     switch_to_userspace_ = 0;
+    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
     return true;
   }
 
