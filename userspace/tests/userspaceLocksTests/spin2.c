@@ -6,13 +6,13 @@
 #define MAX_COUNT   100000
 
 int counter = 0;
-pthread_spinlock_t lock;
+pthread_spinlock_t lock2;
 
 void increment_counter()
 {
     for (int i = 0; i < MAX_COUNT; i++)
     {
-        pthread_spin_lock(&lock);
+        pthread_spin_lock(&lock2);
         int current_counter = counter;
         current_counter++;
         
@@ -20,14 +20,14 @@ void increment_counter()
         for(int i = 0; i < 100; i++){}             //introduces small delay, which increases race condition
 
         counter = current_counter;
-        pthread_spin_unlock(&lock);
+        pthread_spin_unlock(&lock2);
     }
     //printf("Counter value: %d\n", counter);
 }
 
 int spin2() {
     pthread_t threads[NUM_THREADS];
-    pthread_spin_init(&lock, 0);
+    pthread_spin_init(&lock2, 0);
 
     for (int t = 0; t < NUM_THREADS; t++)
     {

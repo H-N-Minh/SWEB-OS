@@ -69,26 +69,21 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
   {
     return -1;
   }
-  if(mutex->initialized_)
+  if(mutex->initialized_ == MUTEX_INITALIZED)
   {
     return -1;
   }
   int rv = pthread_spin_init(&mutex->mutex_lock_, 0);
   if(rv != 0)
   {
+    assert(0);
     return -1;
   }
-  mutex->initialized_ = 1;
+  mutex->initialized_ = MUTEX_INITALIZED;
   mutex->locked_ = 0;
   mutex->held_by_ = NULL;
   mutex->waiting_list_ = NULL;
 
-
-  //size_t flag = 421421421;
-  //printf("abc: %ld(=%p).\n\n", (size_t)&flag, &flag);
-
-  //__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
-  //assert(0);
     
   return 0;
 }
@@ -103,7 +98,7 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
   {
     return -1;
   }
-  if(!mutex->initialized_ )
+  if(mutex->initialized_ != MUTEX_INITALIZED)
   {
     return -1;
   }
@@ -126,16 +121,16 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     return -1;
   }
   pthread_spin_lock(&mutex->mutex_lock_);
-  if(!mutex->initialized_ )
+  if(mutex->initialized_ != MUTEX_INITALIZED)
   {
     pthread_spin_unlock(&mutex->mutex_lock_);
     return -1;
   }
+
   size_t stack_variable;
-  size_t* waiting_list_ptr = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
-  printf("waiting_list_ptr: %ld(=%p).\n\n", (size_t)waiting_list_ptr, waiting_list_ptr);
-  //trying to lock the same thread twice
-  if(mutex->held_by_ == waiting_list_ptr)
+  size_t* thread_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);   //address where linked waiting list gets stored
+  //printf("thread_address: %ld(=%p).\n\n", (size_t)thread_address, thread_address);
+  if(mutex->held_by_ == thread_address)
   {
     pthread_spin_unlock(&mutex->mutex_lock_);
     return -1;
@@ -144,7 +139,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   if(!mutex->locked_)
   {
     mutex->locked_ = 1;
-    mutex->held_by_ = waiting_list_ptr;
+    mutex->held_by_ = thread_address;
     pthread_spin_unlock(&mutex->mutex_lock_);
   }
   else
@@ -154,19 +149,18 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     {
       next_thread_on_waiting_list = (size_t*)*next_thread_on_waiting_list;
     }
-    next_thread_on_waiting_list = waiting_list_ptr;
+    next_thread_on_waiting_list = thread_address;
     
-    
-    *waiting_list_ptr = 1;
+    *thread_address = 1;
 
-    pthread_spin_unlock(&mutex->mutex_lock_); //is setting waiting list to 1 really that clever since maybe it dont gets unlocked
+    pthread_spin_unlock(&mutex->mutex_lock_); //TODOs is setting waiting list to 1 really that clever since maybe it dont gets unlocked - probably better to have wait flag at another address
     
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     pthread_spin_lock(&mutex->mutex_lock_);
     if(!mutex->locked_)                              //this should not be nessessary and if it nessessary it needs to be changed
     {
       mutex->locked_ = 1;
-      mutex->held_by_ = waiting_list_ptr;
+      mutex->held_by_ = thread_address;
     }
     pthread_spin_unlock(&mutex->mutex_lock_);
   }
@@ -185,15 +179,15 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
     return -1;
   }
   pthread_spin_lock(&mutex->mutex_lock_);
-  if(!mutex->initialized_ )
+  if(mutex->initialized_ != MUTEX_INITALIZED)
   {
     pthread_spin_unlock(&mutex->mutex_lock_);
     return -1;
   }
   size_t stack_variable;
-  size_t* waiting_list_ptr = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
+  size_t* thread_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
   //trying to lock the same thread twice
-  if(mutex->held_by_ == waiting_list_ptr)
+  if(mutex->held_by_ == thread_address)
   {
     pthread_spin_unlock(&mutex->mutex_lock_);
     return -1;
@@ -202,7 +196,7 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
   if(!mutex->locked_)
   {
     mutex->locked_ = 1;
-    mutex->held_by_ = waiting_list_ptr;
+    mutex->held_by_ = thread_address;
     pthread_spin_unlock(&mutex->mutex_lock_);
   }
   else
@@ -223,16 +217,20 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   {
     return -1;
   }
-  if(mutex->initialized_ == 0)
+  if(mutex->initialized_ != MUTEX_INITALIZED || mutex->locked_ == 0)
   {
-    return -1;
-  }
-  if(mutex->locked_ == 0)
-  {
+    //Error: Mutex is either not initialized or not locked
     return -1;
   }
   mutex->locked_ = 0;
   mutex->held_by_ = 0;
+  size_t* thread_to_be_woken_up = mutex->waiting_list_;
+  if(thread_to_be_woken_up) // && thread_to_be_woken_up != (size_t*)1)
+  {
+    mutex->waiting_list_ = (size_t*)*mutex->waiting_list_;
+    *thread_to_be_woken_up = 0;
+  }
+
   return 0;
 }
 
@@ -291,7 +289,7 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
   {
     return -1;
   }
-  if(!lock->initialized_ )
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
   {
     return -1;
   }
@@ -314,12 +312,12 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
   {
     return -1;
   }
-  if(lock->initialized_)
+  if(lock->initialized_ == SPINLOCK_INITALIZED)
   {
       return -1;
   }
   lock->locked_ = 0;
-  lock->initialized_ = 1;
+  lock->initialized_ = SPINLOCK_INITALIZED;
   return 0;
 }
 
@@ -333,7 +331,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
   {
     return -1;
   }
-  if(!lock->initialized_ )
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
   {
     return -1;
   }
@@ -358,7 +356,7 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
   {
     return -1;
   }
-  if(!lock->initialized_ )
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
   {
     return -1;
   }
@@ -381,7 +379,7 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
   {
     return -1;
   }
-  if(lock->initialized_ == 0)
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
   {
     return -1;
   }
@@ -415,11 +413,11 @@ int pthread_setcanceltype(int type, int *oldtype)
     return __syscall(sc_pthread_setcanceltype, (size_t)type, (size_t)oldtype, 0x0, 0x0, 0x0);
 }
 
+
 void pthread_testcancel(void)
 {
   __syscall(sc_pthread_testcancel, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
-
 
 
 int get_thread_count(void) {
@@ -440,27 +438,3 @@ int parameters_are_valid(size_t ptr, int allowed_to_be_null)
 }
 
 
-//void mutex_lock(Mutex* mutex)
-//{
-//    pthread_t self = pthread_self(); <--assume we implemented pthread_self() in userspace(get the tid of the current thread)
-//    while ((&mutex->locked, 1))
-//    {
-//        //mutex is locked, add current thread to the sleepers list
-//        //mutex is locked wait until it becomes available
-//        syscall(yield)
-//    }
-//    //mutex acquired, update held_by pointer
-//
-//    mutex->held_by = self;
-//      bool locked = 1;
-//}
-//
-//void mutex_unlock(Mutex* mutex)
-// {
-//    if (mutex->held_by != pthread_self())
-//    {
-//        //attempting to unlock mutex not held by current thread
-//    }
-//    // Release the lock
-//    mutex->held_by = 0;
-//}

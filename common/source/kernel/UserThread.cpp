@@ -203,7 +203,7 @@ bool UserThread::schedulable()
   //debug(USERSPACE_LOCKS, "Kernel: userspace %zd(=%zx)\n", (uint64)thread_waiting_for_lock_ptr, (uint64)thread_waiting_for_lock_ptr);
   if(thread_waiting_for_lock_ptr && *thread_waiting_for_lock_ptr != 0)
   {
-    debug(USERTHREAD, "Keyflag is %ld.\n\n", *thread_waiting_for_lock_ptr);
+    //debug(USERTHREAD, "Keyflag is %ld.\n\n", *thread_waiting_for_lock_ptr);
     return false;
   }
 

@@ -6,41 +6,41 @@
 //Test: check if basic lock and unlocking works with mutex
 int mutex1()
 {
-    pthread_mutex_t lock;
+    pthread_mutex_t mutex_lock;
     
     int rv;
-    rv = pthread_mutex_init(&lock, 0);
+    rv = pthread_mutex_init(&mutex_lock, 0);
     assert(rv == 0);
     //printf("reached\n");
-    rv = pthread_mutex_lock(&lock);
+    rv = pthread_mutex_lock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
-    rv = pthread_mutex_trylock(&lock);
+    rv = pthread_mutex_trylock(&mutex_lock);
     assert(rv != 0);
     //printf("reached\n");
-    rv = pthread_mutex_trylock(&lock);
+    rv = pthread_mutex_trylock(&mutex_lock);
     assert(rv != 0);
     //printf("reached\n");
-    rv = pthread_mutex_unlock(&lock);
+    rv = pthread_mutex_unlock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
-    rv = pthread_mutex_trylock(&lock);
+    rv = pthread_mutex_trylock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
-    rv = pthread_mutex_unlock(&lock);
+    rv = pthread_mutex_unlock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
-    rv = pthread_mutex_lock(&lock);
+    rv = pthread_mutex_lock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
-    rv = pthread_mutex_unlock(&lock);
+    rv = pthread_mutex_unlock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
 
-    rv = pthread_mutex_lock(&lock);
+    rv = pthread_mutex_lock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
-    rv = pthread_mutex_lock(&lock);
+    rv = pthread_mutex_lock(&mutex_lock);
     assert(rv != 0);
     //printf("reached\n");
 

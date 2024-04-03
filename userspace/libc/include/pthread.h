@@ -28,9 +28,12 @@ struct pthread_mutex_struct {
     size_t  locked_; 
     size_t initialized_;
     size_t* held_by_;
-    void* waiting_list_;
+    size_t* waiting_list_;
     pthread_spinlock_t mutex_lock_;
 }; 
+
+#define MUTEX_INITALIZED 12341234
+#define SPINLOCK_INITALIZED 14243444
 
 typedef struct pthread_mutex_struct pthread_mutex_t;
 typedef unsigned int pthread_mutexattr_t;
