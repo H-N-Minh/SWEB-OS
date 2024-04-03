@@ -82,6 +82,13 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
   mutex->locked_ = 0;
   mutex->held_by_ = NULL;
   mutex->waiting_list_ = NULL;
+
+
+  size_t flag = 421421421;
+  //printf("abc: %ld(=%p).\n\n", (size_t)&flag, &flag);
+
+  __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
+  //assert(0);
     
   return 0;
 }
@@ -124,6 +131,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     pthread_spin_unlock(&mutex->mutex_lock_);
     return -1;
   }
+
   
   if(!mutex->locked_)
   {
@@ -133,6 +141,12 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   else
   {
     pthread_spin_unlock(&mutex->mutex_lock_);
+
+    size_t stack_variable;
+    size_t* waiting_list_ptr = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
+    *waiting_list_ptr = 5;
+    printf("waiting_list_ptr: %ld(=%p).\n\n", (size_t)waiting_list_ptr, waiting_list_ptr);
+
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     pthread_spin_lock(&mutex->mutex_lock_);
     if(!mutex->locked_)

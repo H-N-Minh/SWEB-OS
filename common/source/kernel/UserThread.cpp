@@ -10,6 +10,7 @@
 #include "uvector.h"
 #include "VfsSyscall.h"
 #include "Syscall.h"
+#include "ArchMemory.h"
 
 // TODOs: explain calculation related to execv()
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
@@ -35,8 +36,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * tid_);
-
+    size_t user_stack_ptr = (size_t) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * tid_ - sizeof(pointer));
+    waiting_list_ptr_ = user_stack_ptr+sizeof(pointer);
+    debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx).\n", 
+          user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_);
     if (!func) //for the first thread when we create a process
     {
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
@@ -184,33 +187,49 @@ bool UserThread::schedulable()
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     kernel_registers_->rdi     = (size_t)-1;
-    switch_to_userspace_ = 0;
     currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
+    switch_to_userspace_ = 0;
     return true;
   }
 
-  if(running)
+  if(!running)
   {
-    if(wakeup_timestamp_ == 0)
+    return false;
+  }
+
+
+  size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)waiting_list_ptr_);
+
+  //debug(USERSPACE_LOCKS, "Kernel: userspace %zd(=%zx)\n", (uint64)thread_waiting_for_lock_ptr, (uint64)thread_waiting_for_lock_ptr);
+  if(thread_waiting_for_lock_ptr && *thread_waiting_for_lock_ptr != 0)
+  {
+    debug(USERTHREAD, "Keyflag is %ld.\n\n", *thread_waiting_for_lock_ptr);
+    return false;
+  }
+
+  
+  if(wakeup_timestamp_ == 0)
+  {
+    return true;
+  }
+  else
+  {
+    unsigned int edx;
+    unsigned int eax;
+    asm
+    (
+      "rdtsc"
+      : "=a"(eax), "=d"(edx)
+    );
+    unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+    if(current_time_stamp >= wakeup_timestamp_)
     {
+      wakeup_timestamp_ = 0;
       return true;
     }
     else
     {
-      unsigned int edx;
-      unsigned int eax;
-      asm
-      (
-        "rdtsc"
-        : "=a"(eax), "=d"(edx)
-      );
-      unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
-      if(current_time_stamp >= wakeup_timestamp_)
-      {
-        wakeup_timestamp_ = 0;
-        return true;
-      }
+      return false;
     }
   }
-  return false;
 }

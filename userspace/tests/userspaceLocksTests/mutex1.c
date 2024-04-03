@@ -28,6 +28,11 @@ int mutex1()
     rv = pthread_mutex_unlock(&lock);
     assert(rv == 0);
 
+    rv = pthread_mutex_lock(&lock);
+    assert(rv == 0);
+    rv = pthread_mutex_lock(&lock);
+    assert(rv == 0);
+
     printf("mutex1 successful!\n");
 
     return 0;
