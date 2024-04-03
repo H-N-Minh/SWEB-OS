@@ -11,27 +11,38 @@ int mutex1()
     int rv;
     rv = pthread_mutex_init(&lock, 0);
     assert(rv == 0);
+    //printf("reached\n");
     rv = pthread_mutex_lock(&lock);
     assert(rv == 0);
+    //printf("reached\n");
     rv = pthread_mutex_trylock(&lock);
     assert(rv != 0);
+    //printf("reached\n");
     rv = pthread_mutex_trylock(&lock);
     assert(rv != 0);
+    //printf("reached\n");
     rv = pthread_mutex_unlock(&lock);
     assert(rv == 0);
+    //printf("reached\n");
     rv = pthread_mutex_trylock(&lock);
     assert(rv == 0);
+    //printf("reached\n");
     rv = pthread_mutex_unlock(&lock);
     assert(rv == 0);
+    //printf("reached\n");
     rv = pthread_mutex_lock(&lock);
     assert(rv == 0);
+    //printf("reached\n");
     rv = pthread_mutex_unlock(&lock);
     assert(rv == 0);
+    //printf("reached\n");
 
     rv = pthread_mutex_lock(&lock);
     assert(rv == 0);
+    //printf("reached\n");
     rv = pthread_mutex_lock(&lock);
-    assert(rv == 0);
+    assert(rv != 0);
+    //printf("reached\n");
 
     printf("mutex1 successful!\n");
 

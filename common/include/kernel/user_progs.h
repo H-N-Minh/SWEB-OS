@@ -6,7 +6,7 @@ char const *user_progs[] = {
                             //"/usr/shell.sweb",
 
                             //"/usr/pthreadCreateTests.sweb",
-                            "/usr/pthreadJoinTests.sweb",
+                            //"/usr/pthreadJoinTests.sweb",
                             //"/usr/pthreadCancelTests.sweb",
                             //"/usr/pthreadExitTests.sweb",
 
@@ -17,7 +17,7 @@ char const *user_progs[] = {
                             // "/usr/exec4.sweb",
                             // "/usr/exec5.sweb",
 
-                            //"/usr/userspaceLocksTests.sweb",                                    
+                            "/usr/userspaceLocksTests.sweb",                                    
 
                             //"/usr/sleepTests.sweb", 
 

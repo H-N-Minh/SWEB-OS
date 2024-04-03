@@ -84,10 +84,10 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
   mutex->waiting_list_ = NULL;
 
 
-  size_t flag = 421421421;
+  //size_t flag = 421421421;
   //printf("abc: %ld(=%p).\n\n", (size_t)&flag, &flag);
 
-  __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
+  //__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
   //assert(0);
     
   return 0;
@@ -131,27 +131,42 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     pthread_spin_unlock(&mutex->mutex_lock_);
     return -1;
   }
+  size_t stack_variable;
+  size_t* waiting_list_ptr = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
+  printf("waiting_list_ptr: %ld(=%p).\n\n", (size_t)waiting_list_ptr, waiting_list_ptr);
+  //trying to lock the same thread twice
+  if(mutex->held_by_ == waiting_list_ptr)
+  {
+    pthread_spin_unlock(&mutex->mutex_lock_);
+    return -1;
+  }
 
-  
   if(!mutex->locked_)
   {
     mutex->locked_ = 1;
+    mutex->held_by_ = waiting_list_ptr;
     pthread_spin_unlock(&mutex->mutex_lock_);
   }
   else
   {
-    pthread_spin_unlock(&mutex->mutex_lock_);
+    size_t* next_thread_on_waiting_list = mutex->waiting_list_;
+    while(next_thread_on_waiting_list && next_thread_on_waiting_list != (size_t*)1)
+    {
+      next_thread_on_waiting_list = (size_t*)*next_thread_on_waiting_list;
+    }
+    next_thread_on_waiting_list = waiting_list_ptr;
+    
+    
+    *waiting_list_ptr = 1;
 
-    size_t stack_variable;
-    size_t* waiting_list_ptr = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
-    *waiting_list_ptr = 5;
-    printf("waiting_list_ptr: %ld(=%p).\n\n", (size_t)waiting_list_ptr, waiting_list_ptr);
-
+    pthread_spin_unlock(&mutex->mutex_lock_); //is setting waiting list to 1 really that clever since maybe it dont gets unlocked
+    
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     pthread_spin_lock(&mutex->mutex_lock_);
-    if(!mutex->locked_)
+    if(!mutex->locked_)                              //this should not be nessessary and if it nessessary it needs to be changed
     {
       mutex->locked_ = 1;
+      mutex->held_by_ = waiting_list_ptr;
     }
     pthread_spin_unlock(&mutex->mutex_lock_);
   }
@@ -175,10 +190,19 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
     pthread_spin_unlock(&mutex->mutex_lock_);
     return -1;
   }
+  size_t stack_variable;
+  size_t* waiting_list_ptr = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
+  //trying to lock the same thread twice
+  if(mutex->held_by_ == waiting_list_ptr)
+  {
+    pthread_spin_unlock(&mutex->mutex_lock_);
+    return -1;
+  }
   
   if(!mutex->locked_)
   {
     mutex->locked_ = 1;
+    mutex->held_by_ = waiting_list_ptr;
     pthread_spin_unlock(&mutex->mutex_lock_);
   }
   else
@@ -208,6 +232,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     return -1;
   }
   mutex->locked_ = 0;
+  mutex->held_by_ = 0;
   return 0;
 }
 
