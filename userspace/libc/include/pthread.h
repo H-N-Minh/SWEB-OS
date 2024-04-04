@@ -11,7 +11,7 @@ extern "C" {
 
 //pthread typedefs
 typedef size_t pthread_t;
-typedef unsigned int pthread_attr_t;
+//typedef unsigned int pthread_attr_t;
 
 //pthread mutex typedefs
 typedef unsigned int pthread_mutex_t;
@@ -33,10 +33,35 @@ typedef unsigned int pthread_condattr_t;
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
-extern int pthread_create(pthread_t *thread,
-         const pthread_attr_t *attr, void *(*start_routine)(void *),
-         void *arg);
 
+
+typedef struct {
+  int detachstate; // PTHREAD_CREATE_DETACHED or PTHREAD_CREATE_JOINABLE
+//  int schedpolicy; // Scheduling policy
+//  struct sched_param schedparam; // Scheduling parameters
+//  //void *stackaddr; // Stack address
+//  size_t stacksize; // Stack size
+} pthread_attr_t;
+
+
+int pthread_attr_init(pthread_attr_t *attr);
+
+int pthread_attr_destroy(pthread_attr_t *attr);
+
+int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
+
+//int pthread_attr_setschedpolicy(pthread_attr_t *attr, int policy);
+//
+//int pthread_attr_setschedparam(pthread_attr_t *attr, const struct sched_param *param);
+//
+//int pthread_attr_setstackaddr(pthread_attr_t *attr, void *stackaddr);
+//
+//int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
+
+
+extern int pthread_create(pthread_t *thread,
+                          const pthread_attr_t *attr, void *(*start_routine)(void *),
+                          void *arg);
 
 /**pthread_create_wrapper is the wrapper that we need to run first
 //the wrapper will take 2 parameter

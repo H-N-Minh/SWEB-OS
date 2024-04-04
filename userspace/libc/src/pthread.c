@@ -2,18 +2,28 @@
 #include "stdio.h"
 #include "sched.h"
 #include "assert.h"
+#include "../../../common/include/kernel/UserProcess.h"
 
 #include <stdio.h>
 
+#define PTHREAD_CREATE_JOINABLE 0
+#define PTHREAD_CREATE_DETACHED 1
 
 /**
  * function stub
  * posix compatible signature - do not change the signature!
  */
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-                    void *(*start_routine)(void *), void *arg)
+                   void *(*start_routine)(void *), void *arg)
 {
-  return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
+  struct KernelThreadAttributes k_attr;
+  k_attr.detachstate = PTHREAD_CREATE_JOINABLE; // Default value
+
+  if (attr) {
+    k_attr.detachstate = attr->detachstate;
+  }
+
+  return __syscall(sc_pthread_create, (size_t)thread, (size_t)&k_attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
 }
 
 //wrapper function. In pthread create
