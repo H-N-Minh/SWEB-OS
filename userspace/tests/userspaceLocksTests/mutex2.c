@@ -5,14 +5,16 @@
 #define NUM_THREADS 100
 #define MAX_COUNT   100000
 
-int mutex_counter = 0;
+long mutex_counter = 0;
 pthread_mutex_t mutex;
 
-void increment_mutex_counter()
+int increment_mutex_counter(void* thread_id)
 {
     for (int i = 0; i < MAX_COUNT; i++)
     {
-        pthread_mutex_lock(&mutex);
+        //printf("reached %ld\n", (size_t)thread_id);
+        int rv_lock = pthread_mutex_lock(&mutex);
+        assert(rv_lock == 0);
         int current_mutex_counter = mutex_counter;
         current_mutex_counter++;
         
@@ -20,24 +22,34 @@ void increment_mutex_counter()
         for(int i = 0; i < 100; i++){}             //introduces small delay, which increases race condition
 
         mutex_counter = current_mutex_counter;
-        pthread_mutex_unlock(&mutex);
+        int rv_unlock = pthread_mutex_unlock(&mutex);
+        assert(rv_unlock == 0);
+        if(mutex_counter%10000 == 0)
+            printf("counter is %ld and current thread is %ld\n", mutex_counter, (long)thread_id);
     }
-    //printf("mutex_counter value: %d\n", mutex_counter);
+    printf("Next mutex finished\n");
+    return 123;
 }
 
 int mutex2() {
     pthread_t threads[NUM_THREADS];
-    pthread_mutex_init(&mutex, 0);
+    int rv_init = pthread_mutex_init(&mutex, 0);
+    assert(rv_init == 0);
 
-    for (int t = 0; t < NUM_THREADS; t++)
+    for (long t = 0; t < NUM_THREADS; t++)
     {
-        pthread_create(&threads[t], NULL, (void* (*)(void*))increment_mutex_counter, NULL);
+        int rv_create = pthread_create(&threads[t], NULL, (void* (*)(void*))increment_mutex_counter, (void*)t);
+        assert(rv_create == 0);
     }
+    printf("Pthread_create_finised\n");
 
-    for (int t = 0; t < NUM_THREADS; t++)
+    while(1){}
+    for (long t = 0; t < NUM_THREADS; t++)
     {
-        pthread_join(threads[t], NULL);
+        int rv_join = pthread_join(threads[t], NULL);
+        assert(rv_join == 0);
     }
+    printf("Pthread_join_finised\n");
 
     assert(mutex_counter == NUM_THREADS * MAX_COUNT);
     printf("mutex2 successful!\n");

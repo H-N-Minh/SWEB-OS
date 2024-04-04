@@ -51,6 +51,7 @@ class UserThread : public Thread
 
         //userspace locks
         size_t waiting_list_ptr_{NULL};
+        size_t currently_waiting_ptr_{NULL};
 
         
 

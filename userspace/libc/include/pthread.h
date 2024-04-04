@@ -107,6 +107,8 @@ extern int pthread_spin_unlock(pthread_spinlock_t *lock);
 
 extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 
+extern void print_waiting_list(size_t* waiting_list, int before);
+
 
 #ifdef __cplusplus
 }

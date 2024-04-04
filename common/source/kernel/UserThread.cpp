@@ -36,10 +36,11 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * tid_ - sizeof(pointer));
-    waiting_list_ptr_ = user_stack_ptr+sizeof(pointer);
-    debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx).\n", 
-          user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_);
+    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 3 * sizeof(pointer));
+    waiting_list_ptr_ = user_stack_ptr + sizeof(pointer);
+    currently_waiting_ptr_ = user_stack_ptr + 2 * sizeof(pointer);
+    debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx) and waiting flag  %zd(=%zx).\n", 
+          user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_, currently_waiting_ptr_, currently_waiting_ptr_);
     if (!func) //for the first thread when we create a process
     {
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
@@ -198,13 +199,22 @@ bool UserThread::schedulable()
   }
 
 
-  size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)waiting_list_ptr_);
+  size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)currently_waiting_ptr_);
 
   //debug(USERSPACE_LOCKS, "Kernel: userspace %zd(=%zx)\n", (uint64)thread_waiting_for_lock_ptr, (uint64)thread_waiting_for_lock_ptr);
-  if(thread_waiting_for_lock_ptr && *thread_waiting_for_lock_ptr != 0)
+  if(thread_waiting_for_lock_ptr)
   {
-    //debug(USERTHREAD, "Keyflag is %ld.\n\n", *thread_waiting_for_lock_ptr);
-    return false;
+    if(*thread_waiting_for_lock_ptr != 0 && *thread_waiting_for_lock_ptr != 2)
+    {
+      return false;
+    }
+    else if(*thread_waiting_for_lock_ptr == 2)
+    {
+      //debug(USERTHREAD, "Unlocking %p was sucessful.\n",(void*)currently_waiting_ptr_);
+      *thread_waiting_for_lock_ptr = 0;
+    }
+    
+   
   }
 
   

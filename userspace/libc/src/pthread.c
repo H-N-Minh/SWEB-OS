@@ -63,6 +63,30 @@ int pthread_detach(pthread_t thread)
  * function stub
  * posix compatible signature - do not change the signature!
  */
+
+
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
+int pthread_mutex_destroy(pthread_mutex_t *mutex)
+{
+  // if(!parameters_are_valid((size_t)mutex, 0))
+  // {
+  //   return -1;
+  // }
+  // if(mutex->initialized_ != MUTEX_INITALIZED)
+  // {
+  //   return -1;
+  // }
+  // if(mutex->locked_)
+  // {
+  //   return -1;
+  // }
+  // mutex->initialized_ = 0;
+  return 0;
+}
+
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)              //TODOs: locking
 {
   if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1))
@@ -76,7 +100,6 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
   int rv = pthread_spin_init(&mutex->mutex_lock_, 0);
   if(rv != 0)
   {
-    assert(0);
     return -1;
   }
   mutex->initialized_ = MUTEX_INITALIZED;
@@ -88,27 +111,6 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
   return 0;
 }
 
-/**
- * function stub
- * posix compatible signature - do not change the signature!
- */
-int pthread_mutex_destroy(pthread_mutex_t *mutex)
-{
-  if(!parameters_are_valid((size_t)mutex, 0))
-  {
-    return -1;
-  }
-  if(mutex->initialized_ != MUTEX_INITALIZED)
-  {
-    return -1;
-  }
-  if(mutex->locked_)
-  {
-    return -1;
-  }
-  mutex->initialized_ = 0;
-  return 0;
-}
 
 /**
  * function stub
@@ -116,94 +118,82 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
  */
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-  if(!parameters_are_valid((size_t)mutex, 0))
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
   {
-    return -1;
-  }
-  pthread_spin_lock(&mutex->mutex_lock_);
-  if(mutex->initialized_ != MUTEX_INITALIZED)
-  {
-    pthread_spin_unlock(&mutex->mutex_lock_);
+    printf("parameters not valid or lock not initialized\n");
     return -1;
   }
 
+  pthread_spin_lock(&mutex->mutex_lock_);
   size_t stack_variable;
-  size_t* thread_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);   //address where linked waiting list gets stored
-  //printf("thread_address: %ld(=%p).\n\n", (size_t)thread_address, thread_address);
-  if(mutex->held_by_ == thread_address)
+  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4088 - 8 - (size_t)(&stack_variable)%4096);   
+  size_t* waiting_flag_address = (size_t*)((size_t)&stack_variable + 4096 - 8 - (size_t)(&stack_variable)%4096);   
+  //printf("waiting_list_address %p and waiting_flag_address %p\n", waiting_list_address, waiting_flag_address);
+  if(mutex->held_by_ == waiting_list_address)
   {
-    pthread_spin_unlock(&mutex->mutex_lock_);
+    printf("Thread is already holding lock\n");
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
     return -1;
   }
 
   if(!mutex->locked_)
   {
     mutex->locked_ = 1;
-    mutex->held_by_ = thread_address;
-    pthread_spin_unlock(&mutex->mutex_lock_);
+    mutex->held_by_ = waiting_list_address;
+    //printf("Waiting_list_address lock is %p\n", waiting_list_address);
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
   }
   else
   {
-    size_t* next_thread_on_waiting_list = mutex->waiting_list_;
-    while(next_thread_on_waiting_list && next_thread_on_waiting_list != (size_t*)1)
+    //print_waiting_list(mutex->waiting_list_, 0);
+
+
+
+    size_t* next_element = (size_t*)&mutex->waiting_list_;  
+    while(1)
     {
-      next_thread_on_waiting_list = (size_t*)*next_thread_on_waiting_list;
+      if(*next_element != NULL)
+      {
+        next_element = (size_t*)(*next_element);
+        //printf("1next element %p\n", next_element);
+      }
+      else
+      {
+        *next_element =  (size_t)waiting_list_address;
+        *waiting_list_address = NULL;
+        //printf("2next element %p\n", next_element);
+        break;
+      }
     }
-    next_thread_on_waiting_list = thread_address;
-    
-    *thread_address = 1;
+    // printf("mutex->waiting_list_ %p\n", mutex->waiting_list_);
+    // printf("next_thread_on_waiting_list %p\n", *next_thread_on_waiting_list);
+   // assert(next_thread_on_waiting_list != NULL && "About to dereferencing a nullptr.");
+    //*next_thread_on_waiting_list = waiting_list_address;
+    // printf("mutex->waiting_list_ %p\n", mutex->waiting_list_);
+    // printf("next_thread_on_waiting_list %p\n\n", *next_thread_on_waiting_list);
+
+    //assert(waiting_flag_address != NULL && "About to dereferencing a nullptr.");
+    //print_waiting_list(mutex->waiting_list_, 1);
 
     pthread_spin_unlock(&mutex->mutex_lock_); //TODOs is setting waiting list to 1 really that clever since maybe it dont gets unlocked - probably better to have wait flag at another address
-    
+   *waiting_flag_address = 1;
+    //printf("hey");
+    //printf("waiting_flag_address %p\n", waiting_flag_address);
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
-    pthread_spin_lock(&mutex->mutex_lock_);
-    if(!mutex->locked_)                              //this should not be nessessary and if it nessessary it needs to be changed
-    {
-      mutex->locked_ = 1;
-      mutex->held_by_ = thread_address;
-    }
-    pthread_spin_unlock(&mutex->mutex_lock_);
-  }
-  
-  return 0;
-}
+    // assert(0);
 
-/**
- * function stub
- * posix compatible signature - do not change the signature!
- */
-int pthread_mutex_trylock(pthread_mutex_t *mutex)
-{
-  if(!parameters_are_valid((size_t)mutex, 0))
-  {
-    return -1;
-  }
-  pthread_spin_lock(&mutex->mutex_lock_);
-  if(mutex->initialized_ != MUTEX_INITALIZED)
-  {
-    pthread_spin_unlock(&mutex->mutex_lock_);
-    return -1;
-  }
-  size_t stack_variable;
-  size_t* thread_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
-  //trying to lock the same thread twice
-  if(mutex->held_by_ == thread_address)
-  {
-    pthread_spin_unlock(&mutex->mutex_lock_);
-    return -1;
+    // pthread_spin_lock(&mutex->mutex_lock_);
+    // printf("mutex->held_by_ %p\n", mutex->held_by_);
+    // printf("waiting_list_address %p\n", waiting_list_address);
+    // printf("waiting_flag_address %p\n\n", waiting_flag_address);
+    // assert(mutex->held_by_ == waiting_list_address && "Held by differs from thread currently holding the lock");
+    // pthread_spin_unlock(&mutex->mutex_lock_);
+    //printf("ho");
+
   }
   
-  if(!mutex->locked_)
-  {
-    mutex->locked_ = 1;
-    mutex->held_by_ = thread_address;
-    pthread_spin_unlock(&mutex->mutex_lock_);
-  }
-  else
-  {
-    pthread_spin_unlock(&mutex->mutex_lock_);
-    return -1;
-  }
   return 0;
 }
 
@@ -213,26 +203,96 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
  */
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
-  if(!parameters_are_valid((size_t)mutex, 0))
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
   {
+    printf("parameter not valid or not initalized\n");
     return -1;
   }
-  if(mutex->initialized_ != MUTEX_INITALIZED || mutex->locked_ == 0)
+  int rv = pthread_spin_lock(&mutex->mutex_lock_);
+  assert(rv == 0);
+  if(mutex->locked_ == 0)
   {
-    //Error: Mutex is either not initialized or not locked
+    printf("lock that you want to unlock is not locked\n");
+    rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
     return -1;
   }
-  mutex->locked_ = 0;
-  mutex->held_by_ = 0;
-  size_t* thread_to_be_woken_up = mutex->waiting_list_;
-  if(thread_to_be_woken_up) // && thread_to_be_woken_up != (size_t*)1)
+  size_t stack_variable;
+  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4088 - 8 - (size_t)(&stack_variable)%4096);     
+
+  if(mutex->held_by_ != waiting_list_address)
   {
-    mutex->waiting_list_ = (size_t*)*mutex->waiting_list_;
-    *thread_to_be_woken_up = 0;
+    printf("Thread does not hold current lock\n");
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
+    return -1;
   }
 
+
+  if(mutex->waiting_list_ != NULL)
+  {
+    mutex->held_by_ = mutex->waiting_list_;
+      
+    assert(mutex->waiting_list_ != NULL && "About to dereferencing a nullptr.");
+    mutex->waiting_list_ = (size_t*)*mutex->waiting_list_;
+    assert(mutex->held_by_ != NULL && "About to dereferencing a nullptr.");
+    *((size_t*)((size_t)mutex->held_by_ + (size_t)8)) = 2;
+
+      // printf("\n(unlock)mutex->held_by_ %p\n", mutex->held_by_);
+      // printf("(unlock)waiting_flag_address %p\n\n", ((size_t*)((size_t)mutex->held_by_ + (size_t)8)));
+      //printf("waiting_list_address %p\n", waiting_list_address);
+  }
+  else
+  {
+    mutex->locked_ = 0;
+    mutex->held_by_ = 0;
+  }
+    
+  rv = pthread_spin_unlock(&mutex->mutex_lock_);
+  assert(rv == 0);
   return 0;
 }
+
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
+int pthread_mutex_trylock(pthread_mutex_t *mutex)
+{
+  // if(!parameters_are_valid((size_t)mutex, 0))
+  // {
+  //   return -1;
+  // }
+  // pthread_spin_lock(&mutex->mutex_lock_);
+  // if(mutex->initialized_ != MUTEX_INITALIZED)
+  // {
+  //   pthread_spin_unlock(&mutex->mutex_lock_);
+  //   return -1;
+  // }
+  // size_t stack_variable;
+  // size_t* thread_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
+  // //trying to lock the same thread twice
+  // if(mutex->held_by_ == thread_address)
+  // {
+  //   pthread_spin_unlock(&mutex->mutex_lock_);
+  //   return -1;
+  // }
+  
+  // if(!mutex->locked_)
+  // {
+  //   mutex->locked_ = 1;
+  //   mutex->held_by_ = thread_address;
+  //   pthread_spin_unlock(&mutex->mutex_lock_);
+  // }
+  // else
+  // {
+  //   pthread_spin_unlock(&mutex->mutex_lock_);
+  //   return -1;
+  // }
+  return 0;
+}
+
+
 
 /**
  * function stub
@@ -437,4 +497,27 @@ int parameters_are_valid(size_t ptr, int allowed_to_be_null)
     return 1;
 }
 
+void print_waiting_list(size_t* waiting_list, int before)
+{
+  size_t* next_element = waiting_list;         //(size_t*)&
+  if(before == 0)
+  {
+    printf( "-----WAITING_LIST_BEFORE------\n");
+  }
+  else
+  {
+    printf("-----WAITING_LIST_AFTER------\n");
+  }
+  
+  while(next_element != NULL)
+  {
+    printf("%p - ", next_element);
+    next_element = (size_t*)(*next_element);
+  }
+  printf("%p\n", next_element);
+  printf("-------------------------\n");
+
+  sleep(10);
+  //printf("Waiting list was %p\n\n", waiting_list);
+}
 
