@@ -206,10 +206,12 @@ bool UserThread::schedulable()
   {
     if(*thread_waiting_for_lock_ptr != 0 && *thread_waiting_for_lock_ptr != 2)
     {
+      //debug(USERTHREAD, "sleeping\n");
       return false;
     }
     else if(*thread_waiting_for_lock_ptr == 2)
     {
+      //debug(USERTHREAD, "waking\n");
       //debug(USERTHREAD, "Unlocking %p was sucessful.\n",(void*)currently_waiting_ptr_);
       *thread_waiting_for_lock_ptr = 0;
     }

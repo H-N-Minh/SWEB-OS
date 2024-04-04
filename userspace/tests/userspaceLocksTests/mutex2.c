@@ -27,7 +27,7 @@ int increment_mutex_counter(void* thread_id)
         if(mutex_counter%10000 == 0)
             printf("counter is %ld and current thread is %ld\n", mutex_counter, (long)thread_id);
     }
-    printf("Next mutex finished\n");
+    //printf("Next mutex finished\n");
     return 123;
 }
 
@@ -43,7 +43,6 @@ int mutex2() {
     }
     printf("Pthread_create_finised\n");
 
-    while(1){}
     for (long t = 0; t < NUM_THREADS; t++)
     {
         int rv_join = pthread_join(threads[t], NULL);
@@ -57,3 +56,5 @@ int mutex2() {
 
     return 0;
 }
+
+

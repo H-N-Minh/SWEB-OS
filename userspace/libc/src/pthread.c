@@ -176,11 +176,12 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 
     //assert(waiting_flag_address != NULL && "About to dereferencing a nullptr.");
     //print_waiting_list(mutex->waiting_list_, 1);
-
+    
     pthread_spin_unlock(&mutex->mutex_lock_); //TODOs is setting waiting list to 1 really that clever since maybe it dont gets unlocked - probably better to have wait flag at another address
-   *waiting_flag_address = 1;
+   
     //printf("hey");
     //printf("waiting_flag_address %p\n", waiting_flag_address);
+    *waiting_flag_address = 1;
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     // assert(0);
 
