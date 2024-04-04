@@ -61,7 +61,9 @@ int FileDescriptorManager::allocateDescriptor(void* associatedObject, int flags)
     if (descriptors.capacity() == 0) {
       descriptors.reserve(1);
     } else {
-      descriptors.reserve(descriptors.capacity() * 2);
+      while (descriptors.size() >= descriptors.capacity()) {
+        descriptors.reserve(descriptors.capacity() * 2);
+      }
     }
   }
 
