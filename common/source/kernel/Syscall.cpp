@@ -308,7 +308,8 @@ int Syscall::pthread_create(size_t* thread, unsigned int* attr, void* start_rout
   {
     return -1;
   }
-  int rv = ((UserThread*) currentThread)->process_->createThread(thread, start_routine, wrapper_address, arg);
+  int rv = ((UserThread*) currentThread)->process_->createThread(thread, start_routine, wrapper_address, arg,
+                                                                 reinterpret_cast<KernelThreadAttributes*>(attr));
   debug(SYSCALL, "Syscall::Pthread_CREATE: finished with return (%d) for thread (%zu)\n", rv, *thread);
   return rv;
 }

@@ -5,6 +5,13 @@
 #include "Mutex.h"
 #include "types.h"
 
+#define PTHREAD_CREATE_JOINABLE 0
+#define PTHREAD_CREATE_DETACHED 1
+
+struct KernelThreadAttributes {
+  int detachstate; // PTHREAD_CREATE_DETACHED or PTHREAD_CREATE_JOINABLE
+};
+
 class UserProcess
 {
     public:
@@ -25,12 +32,9 @@ class UserProcess
 
         UserThread* getUserThread(size_t tid);
 
-        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
+        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, KernelThreadAttributes* attr);
 
         bool isThreadInVector(UserThread* test_thread);
-
-        [[maybe_unused]] size_t openFile(const ustl::string& path, uint32_t mode);
-
 
         int32 fd_;
         FileSystemInfo* working_dir_;
