@@ -92,11 +92,7 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)              //TODOs: locking
 {
-  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1))
-  {
-    return -1;
-  }
-  if(mutex->initialized_ == MUTEX_INITALIZED)
+  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1) || mutex->initialized_ == MUTEX_INITALIZED)
   {
     return -1;
   }
@@ -105,12 +101,14 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr) 
   {
     return -1;
   }
+  rv = pthread_spin_lock(&mutex->mutex_lock_);
+  assert(rv == 0);
   mutex->initialized_ = MUTEX_INITALIZED;
   mutex->locked_ = 0;
-  mutex->held_by_ = NULL;
-  mutex->waiting_list_ = NULL;
-
-    
+  mutex->held_by_ = 0;
+  mutex->waiting_list_ = 0;
+  rv = pthread_spin_unlock(&mutex->mutex_lock_);
+  assert(rv == 0);
   return 0;
 }
 
@@ -141,19 +139,11 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     return -1;
   }
 
-  size_t* next_element = (size_t*)&mutex->waiting_list_;  
-  if(!mutex->locked_)
+  while (mutex->locked_)
   {
-    mutex->locked_ = 1;
-    mutex->held_by_ = waiting_list_address;
-    pthread_spin_unlock(&mutex->mutex_lock_);
-    //printf("Waiting_list_address lock is %p\n", waiting_list_address);
-    //int rv = pthread_spin_unlock(&mutex->mutex_lock_);
-    //assert(rv == 0);
-  }
-  else
-  {
-
+    //*waiting_list_address =(size_t)&mutex->waiting_list_;
+    //mutex->waiting_list_ = waiting_list_address;
+    size_t* next_element = (size_t*)&mutex->waiting_list_;  
     while(1)
     {
       if(*next_element != NULL)
@@ -169,16 +159,19 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         break;
       }
     }
-
-    
-
-    pthread_spin_unlock(&mutex->mutex_lock_);
+    pthread_spin_unlock(&mutex->mutex_lock_);                //Scheduler::instance()->sleepAndRelease(spinlock_);
     *waiting_flag_address = 1;
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
 
+    pthread_spin_lock(&mutex->mutex_lock_);
   }
-  assert(mutex->held_by_ == waiting_list_address && "Held by differs from thread currently holding the lock");
+  mutex->locked_ = 1;
+  mutex->held_by_ = waiting_list_address;
+  pthread_spin_unlock(&mutex->mutex_lock_);
   
+
+  
+  //assert(mutex->held_by_ == waiting_list_address && "Held by differs from thread currently holding the lock");
   return 0;
 }
 
@@ -216,6 +209,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 
   if(mutex->waiting_list_ != NULL)
   {
+    mutex->locked_ = 0;
     mutex->held_by_ = mutex->waiting_list_;
     mutex->waiting_list_ = (size_t*)*mutex->waiting_list_;
     assert(*((size_t*)((size_t)mutex->held_by_ + (size_t)8)) == 1);
