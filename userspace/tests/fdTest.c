@@ -3,7 +3,7 @@
 #include "stdio.h"
 #include "unistd.h"
 
-#define TEST_FILE "userspace/tests/test.txt"
+#define TEST_FILE "usr/test.txt"
 #define BUF_SIZE  128
 
 int main() {

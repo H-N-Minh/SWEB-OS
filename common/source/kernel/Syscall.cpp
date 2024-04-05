@@ -374,7 +374,7 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
     return -1U;
   }
 
-  if (fd >=3 && fd <= 1024) {  // Adjust this condition based on your actual file descriptor range for pipes.
+  if (fd >=3 && fd <= 1024) {
     Pipe* pipe = static_cast<Pipe *>(FileDescriptorManager::getInstance().getAssociatedObject((int)fd));
     for (size_t i = 0; i < size; i++) {
       pipe->write(reinterpret_cast<char *>(buffer)[i]);

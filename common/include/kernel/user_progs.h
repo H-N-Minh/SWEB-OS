@@ -4,7 +4,9 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
-                            "/usr/pipeTest.sweb",
+
+                            "/usr/fdTest.sweb",
+                            //"/usr/pipeTest.sweb",
 
                             // "/usr/pc4.sweb",
 //                            "/usr/smallpthreadcreate.sweb",
