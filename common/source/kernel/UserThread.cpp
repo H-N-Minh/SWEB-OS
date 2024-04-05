@@ -198,25 +198,12 @@ bool UserThread::schedulable()
     return false;
   }
 
-
   size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)currently_waiting_ptr_);
 
   //debug(USERSPACE_LOCKS, "Kernel: userspace %zd(=%zx)\n", (uint64)thread_waiting_for_lock_ptr, (uint64)thread_waiting_for_lock_ptr);
-  if(thread_waiting_for_lock_ptr)
+  if(thread_waiting_for_lock_ptr && *thread_waiting_for_lock_ptr == 1)
   {
-    if(*thread_waiting_for_lock_ptr != 0 && *thread_waiting_for_lock_ptr != 2)
-    {
-      //debug(USERTHREAD, "sleeping\n");
-      return false;
-    }
-    else if(*thread_waiting_for_lock_ptr == 2)
-    {
-      //debug(USERTHREAD, "waking\n");
-      //debug(USERTHREAD, "Unlocking %p was sucessful.\n",(void*)currently_waiting_ptr_);
-      *thread_waiting_for_lock_ptr = 0;
-    }
-    
-   
+    return false;   
   }
 
   

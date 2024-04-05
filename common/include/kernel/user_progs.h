@@ -17,7 +17,7 @@ char const *user_progs[] = {
                             // "/usr/exec4.sweb",
                             // "/usr/exec5.sweb",
 
-                            "/usr/userspaceLocksTests.sweb",                                    
+                            //"/usr/userspaceLocksTests.sweb",                                    
 
                             //"/usr/sleepTests.sweb", 
 

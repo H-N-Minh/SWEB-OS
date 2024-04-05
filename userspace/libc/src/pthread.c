@@ -71,20 +71,23 @@ int pthread_detach(pthread_t thread)
  */
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
-  // if(!parameters_are_valid((size_t)mutex, 0))
-  // {
-  //   return -1;
-  // }
-  // if(mutex->initialized_ != MUTEX_INITALIZED)
-  // {
-  //   return -1;
-  // }
-  // if(mutex->locked_)
-  // {
-  //   return -1;
-  // }
-  // mutex->initialized_ = 0;
-  return 0;
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
+  {
+    return -1;
+  }
+  int rv = pthread_spin_lock(&mutex->mutex_lock_);
+  if(mutex->locked_ || mutex->waiting_list_)
+  {
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    return -1;
+  }
+  else
+  {
+    mutex->initialized_ = 0;
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+  }
+  rv = pthread_spin_destroy(&mutex->mutex_lock_);
+  return rv;
 }
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)              //TODOs: locking
@@ -124,34 +127,33 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     return -1;
   }
 
-  pthread_spin_lock(&mutex->mutex_lock_);
+  int rv = pthread_spin_lock(&mutex->mutex_lock_);
+  assert(rv == 0);
   size_t stack_variable;
   size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4088 - 8 - (size_t)(&stack_variable)%4096);   
   size_t* waiting_flag_address = (size_t*)((size_t)&stack_variable + 4096 - 8 - (size_t)(&stack_variable)%4096);   
-  //printf("waiting_list_address %p and waiting_flag_address %p\n", waiting_list_address, waiting_flag_address);
+
   if(mutex->held_by_ == waiting_list_address)
   {
-    printf("Thread is already holding lock\n");
+    //printf("Thread is already holding lock\n");
     int rv = pthread_spin_unlock(&mutex->mutex_lock_);
     assert(rv == 0);
     return -1;
   }
 
+  size_t* next_element = (size_t*)&mutex->waiting_list_;  
   if(!mutex->locked_)
   {
     mutex->locked_ = 1;
     mutex->held_by_ = waiting_list_address;
+    pthread_spin_unlock(&mutex->mutex_lock_);
     //printf("Waiting_list_address lock is %p\n", waiting_list_address);
-    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
-    assert(rv == 0);
+    //int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    //assert(rv == 0);
   }
   else
   {
-    //print_waiting_list(mutex->waiting_list_, 0);
 
-
-
-    size_t* next_element = (size_t*)&mutex->waiting_list_;  
     while(1)
     {
       if(*next_element != NULL)
@@ -167,33 +169,15 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         break;
       }
     }
-    // printf("mutex->waiting_list_ %p\n", mutex->waiting_list_);
-    // printf("next_thread_on_waiting_list %p\n", *next_thread_on_waiting_list);
-   // assert(next_thread_on_waiting_list != NULL && "About to dereferencing a nullptr.");
-    //*next_thread_on_waiting_list = waiting_list_address;
-    // printf("mutex->waiting_list_ %p\n", mutex->waiting_list_);
-    // printf("next_thread_on_waiting_list %p\n\n", *next_thread_on_waiting_list);
 
-    //assert(waiting_flag_address != NULL && "About to dereferencing a nullptr.");
-    //print_waiting_list(mutex->waiting_list_, 1);
     
-    pthread_spin_unlock(&mutex->mutex_lock_); //TODOs is setting waiting list to 1 really that clever since maybe it dont gets unlocked - probably better to have wait flag at another address
-   
-    //printf("hey");
-    //printf("waiting_flag_address %p\n", waiting_flag_address);
+
+    pthread_spin_unlock(&mutex->mutex_lock_);
     *waiting_flag_address = 1;
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
-    // assert(0);
-
-    // pthread_spin_lock(&mutex->mutex_lock_);
-    // printf("mutex->held_by_ %p\n", mutex->held_by_);
-    // printf("waiting_list_address %p\n", waiting_list_address);
-    // printf("waiting_flag_address %p\n\n", waiting_flag_address);
-    // assert(mutex->held_by_ == waiting_list_address && "Held by differs from thread currently holding the lock");
-    // pthread_spin_unlock(&mutex->mutex_lock_);
-    //printf("ho");
 
   }
+  assert(mutex->held_by_ == waiting_list_address && "Held by differs from thread currently holding the lock");
   
   return 0;
 }
@@ -233,24 +217,21 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   if(mutex->waiting_list_ != NULL)
   {
     mutex->held_by_ = mutex->waiting_list_;
-      
-    assert(mutex->waiting_list_ != NULL && "About to dereferencing a nullptr.");
     mutex->waiting_list_ = (size_t*)*mutex->waiting_list_;
-    assert(mutex->held_by_ != NULL && "About to dereferencing a nullptr.");
+    assert(*((size_t*)((size_t)mutex->held_by_ + (size_t)8)) == 1);
     *((size_t*)((size_t)mutex->held_by_ + (size_t)8)) = 2;
+    rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
 
-      // printf("\n(unlock)mutex->held_by_ %p\n", mutex->held_by_);
-      // printf("(unlock)waiting_flag_address %p\n\n", ((size_t*)((size_t)mutex->held_by_ + (size_t)8)));
-      //printf("waiting_list_address %p\n", waiting_list_address);
   }
   else
   {
     mutex->locked_ = 0;
     mutex->held_by_ = 0;
+    rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
   }
     
-  rv = pthread_spin_unlock(&mutex->mutex_lock_);
-  assert(rv == 0);
   return 0;
 }
 
@@ -260,36 +241,38 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
  */
 int pthread_mutex_trylock(pthread_mutex_t *mutex)
 {
-  // if(!parameters_are_valid((size_t)mutex, 0))
-  // {
-  //   return -1;
-  // }
-  // pthread_spin_lock(&mutex->mutex_lock_);
-  // if(mutex->initialized_ != MUTEX_INITALIZED)
-  // {
-  //   pthread_spin_unlock(&mutex->mutex_lock_);
-  //   return -1;
-  // }
-  // size_t stack_variable;
-  // size_t* thread_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
-  // //trying to lock the same thread twice
-  // if(mutex->held_by_ == thread_address)
-  // {
-  //   pthread_spin_unlock(&mutex->mutex_lock_);
-  //   return -1;
-  // }
-  
-  // if(!mutex->locked_)
-  // {
-  //   mutex->locked_ = 1;
-  //   mutex->held_by_ = thread_address;
-  //   pthread_spin_unlock(&mutex->mutex_lock_);
-  // }
-  // else
-  // {
-  //   pthread_spin_unlock(&mutex->mutex_lock_);
-  //   return -1;
-  // }
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
+  {
+    printf("parameters not valid or lock not initialized\n");
+    return -1;
+  }
+
+  int rv = pthread_spin_lock(&mutex->mutex_lock_);
+  assert(rv == 0);
+  size_t stack_variable;
+  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4088 - 8 - (size_t)(&stack_variable)%4096);   
+  size_t* waiting_flag_address = (size_t*)((size_t)&stack_variable + 4096 - 8 - (size_t)(&stack_variable)%4096);   
+
+  if(mutex->held_by_ == waiting_list_address)
+  {
+    printf("Thread is already holding lock\n");
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
+    return -1;
+  }
+
+  size_t* next_element = (size_t*)&mutex->waiting_list_;  
+  if(!mutex->locked_)
+  {
+    mutex->locked_ = 1;
+    mutex->held_by_ = waiting_list_address;
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+  }
+  else
+  {
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    return -1;
+  }
   return 0;
 }
 
@@ -404,7 +387,7 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
         : "m" (lock->locked_), "0" (old_val)
         : "memory");
   } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
-  return 0;
+  return old_val;
 }
 
 /**

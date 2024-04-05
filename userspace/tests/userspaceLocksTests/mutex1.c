@@ -15,19 +15,19 @@ int mutex1()
     rv = pthread_mutex_lock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
-    // rv = pthread_mutex_trylock(&mutex_lock);
+    rv = pthread_mutex_trylock(&mutex_lock);
     // assert(rv != 0);
     //printf("reached\n");
-    // rv = pthread_mutex_trylock(&mutex_lock);
+    rv = pthread_mutex_trylock(&mutex_lock);
     // assert(rv != 0);
     //printf("reached\n");
     rv = pthread_mutex_unlock(&mutex_lock);
     assert(rv == 0);
     //printf("reached\n");
-    // rv = pthread_mutex_trylock(&mutex_lock);
+    rv = pthread_mutex_trylock(&mutex_lock);
     // assert(rv == 0);
     //printf("reached\n");
-    // rv = pthread_mutex_unlock(&mutex_lock);
+    rv = pthread_mutex_unlock(&mutex_lock);
     // assert(rv == 0);
     //printf("reached\n");
     rv = pthread_mutex_lock(&mutex_lock);
@@ -42,7 +42,11 @@ int mutex1()
     //printf("reached\n");
     rv = pthread_mutex_lock(&mutex_lock);
     assert(rv != 0);
-    //printf("reached\n");
+    //printf("reached\n");"
+    rv = pthread_mutex_unlock(&mutex_lock);
+    assert(rv == 0);
+    //printf("reached");
+    rv = pthread_mutex_destroy(&mutex_lock);
 
     printf("mutex1 successful!\n");
 

@@ -6,9 +6,9 @@ extern int mutex2();
 
 int main()
 {
-    //spin1();   //Test: checks if basic locking and unlocking works with spinlock
-    //spin2();   //simple syncronization with spinlock
+    // spin1();   //Test: checks if basic locking and unlocking works with spinlock
+    // spin2();   //simple syncronization with spinlock
 
-    //mutex1();
+    mutex1();
     mutex2();
 }
