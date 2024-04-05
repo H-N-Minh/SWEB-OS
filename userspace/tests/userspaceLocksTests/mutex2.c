@@ -3,8 +3,8 @@
 #include "assert.h"
 #include "sched.h"
 
-#define NUM_THREADS 4
-#define MAX_COUNT   50000
+#define NUM_THREADS 100
+#define MAX_COUNT   100000
 
 long mutex_counter = 0;
 pthread_mutex_t mutex;

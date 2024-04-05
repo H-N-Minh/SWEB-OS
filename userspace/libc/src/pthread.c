@@ -128,8 +128,8 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   int rv = pthread_spin_lock(&mutex->mutex_lock_);
   assert(rv == 0);
   size_t stack_variable;
-  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4088 - 8 - (size_t)(&stack_variable)%4096);   
-  size_t* waiting_flag_address = (size_t*)((size_t)&stack_variable + 4096 - 8 - (size_t)(&stack_variable)%4096);   
+  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4080 - (size_t)(&stack_variable)%4096);   
+  size_t* waiting_flag_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);   
 
   if(mutex->held_by_ == waiting_list_address)
   {
@@ -138,13 +138,15 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     assert(rv == 0);
     return -1;
   }
-
+  int counter1 = 0;
   while (mutex->locked_)
   {
+    counter1++;
     //*waiting_list_address =(size_t)&mutex->waiting_list_;
     //mutex->waiting_list_ = waiting_list_address;
     size_t* next_element = (size_t*)&mutex->waiting_list_;  
-    while(1)
+    int added_to_waiting_list = 0;
+    while(!added_to_waiting_list)
     {
       if(*next_element != NULL)
       {
@@ -155,6 +157,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
       {
         *next_element =  (size_t)waiting_list_address;
         *waiting_list_address = NULL;
+        added_to_waiting_list = 1;
         //printf("2next element %p\n", next_element);
         break;
       }
@@ -163,8 +166,11 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     *waiting_flag_address = 1;
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
 
-    pthread_spin_lock(&mutex->mutex_lock_);
+    //pthread_spin_lock(&mutex->mutex_lock_);
   }
+  if(counter1 != 0 && counter1 != 1)
+    assert(0 && "yield more than once");
+    //printf("counterabc %d\n", counter1);
   mutex->locked_ = 1;
   mutex->held_by_ = waiting_list_address;
   pthread_spin_unlock(&mutex->mutex_lock_);
@@ -206,22 +212,19 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     return -1;
   }
 
-
+  mutex->locked_ = 0;
+  mutex->held_by_ = 0;
   if(mutex->waiting_list_ != NULL)
   {
-    mutex->locked_ = 0;
-    mutex->held_by_ = mutex->waiting_list_;
+    size_t* thread_to_wake_up_ptr = ((size_t*)((size_t)mutex->waiting_list_ + (size_t)8));
     mutex->waiting_list_ = (size_t*)*mutex->waiting_list_;
-    assert(*((size_t*)((size_t)mutex->held_by_ + (size_t)8)) == 1);
-    *((size_t*)((size_t)mutex->held_by_ + (size_t)8)) = 2;
-    rv = pthread_spin_unlock(&mutex->mutex_lock_);
-    assert(rv == 0);
+    *thread_to_wake_up_ptr = 2;
+    //rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    //assert(rv == 0);
 
   }
   else
   {
-    mutex->locked_ = 0;
-    mutex->held_by_ = 0;
     rv = pthread_spin_unlock(&mutex->mutex_lock_);
     assert(rv == 0);
   }

@@ -12,7 +12,7 @@ int main()
     // spin2();   //simple syncronization with spinlock 
     //spin3();      //syncronization with two spinlocks
 
-    // mutex1();
-     mutex2();
-    //mutex3();
+    mutex1();
+    mutex2();
+    mutex3();
 }
