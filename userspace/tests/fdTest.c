@@ -18,7 +18,7 @@ int main() {
     return fd;
   }
 
-  char* writeData = "Test data";
+  char* writeData = ":/";
   ssize_t bytesWritten = write(fd, writeData, strlen(writeData));
   if (bytesWritten < 0) {
     printf("Failed to write to file");

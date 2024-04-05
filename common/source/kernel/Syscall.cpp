@@ -67,6 +67,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_close:
       return_value = close(arg1);
       break;
+    case sc_lseek:
+      return_value = lseek(arg1, arg2, arg3);
+      break;
     case sc_outline:
       outline(arg1, arg2);
       break;
@@ -117,6 +120,17 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   }
 
   return return_value;
+}
+
+l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
+{
+  FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(fd);
+  if (!file_descriptor)
+  {
+    debug(SYSCALL, "Syscall::lseek -Invalid file descriptor: %zu\n", fd);
+    return -1;
+  }
+  return VfsSyscall::lseek(fd, offset, whence);
 }
 
 
@@ -374,14 +388,6 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
     return -1U;
   }
 
-  if (fd >=3 && fd <= 1024) {
-    Pipe* pipe = static_cast<Pipe *>(FileDescriptorManager::getInstance().getAssociatedObject((int)fd));
-    for (size_t i = 0; i < size; i++) {
-      pipe->write(reinterpret_cast<char *>(buffer)[i]);
-    }
-    return size;
-  }
-
 
   size_t num_written = 0;
 
@@ -407,17 +413,17 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 
   size_t num_read = 0;
 
-  if (fd >= 3 && fd <= 1024) {  //unsure about number
-    Pipe* pipe = static_cast<Pipe *>(FileDescriptorManager::getInstance().getAssociatedObject((int)fd));
-    size_t i = 0;
-    char c;
-
-    while (i < count && pipe->read(c)) {
-      reinterpret_cast<char *>(buffer)[i++] = c;
-    }
-    return i;
-  }
-  else if (fd == fd_stdin)
+//  if (fd >= 3 && fd <= 1024) {  //unsure about number
+//    Pipe* pipe = static_cast<Pipe *>(FileDescriptorManager::getInstance().getAssociatedObject((int)fd));
+//    size_t i = 0;
+//    char c;
+//
+//    while (i < count && pipe->read(c)) {
+//      reinterpret_cast<char *>(buffer)[i++] = c;
+//    }
+//    return i;
+//  }
+  if (fd == fd_stdin)
   {
     num_read = currentThread->getTerminal()->readLine((char*) buffer, count);
     debug(SYSCALL, "Syscall::read: %.*s\n", (int)num_read, (char*) buffer);
