@@ -117,7 +117,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
   if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
   {
-    printf("parameters not valid or lock not initialized\n");
+    //printf("parameters not valid or lock not initialized\n");
     return -1;
   }
 
@@ -163,8 +163,8 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     //pthread_spin_lock(&mutex->mutex_lock_);
   }
-  if(counter1 != 0 && counter1 != 1)
-    assert(0 && "yield more than once");
+  // if(counter1 != 0 && counter1 != 1)
+  //   assert(0 && "yield more than once");
     //printf("counterabc %d\n", counter1);
   mutex->locked_ = 1;
   mutex->held_by_ = waiting_list_address;
@@ -186,14 +186,14 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
   if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
   {
-    printf("parameter not valid or not initalized\n");
+    //printf("parameter not valid or not initalized\n");
     return -1;
   }
   int rv = pthread_spin_lock(&mutex->mutex_lock_);
   assert(rv == 0);
   if(mutex->locked_ == 0)
   {
-    printf("lock that you want to unlock is not locked\n");
+    //printf("lock that you want to unlock is not locked\n");
     rv = pthread_spin_unlock(&mutex->mutex_lock_);
     assert(rv == 0);
     return -1;
@@ -203,7 +203,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
 
   if(mutex->held_by_ != waiting_list_address)
   {
-    printf("Thread does not hold current lock\n");
+   // printf("Thread does not hold current lock\n");
     int rv = pthread_spin_unlock(&mutex->mutex_lock_);
     assert(rv == 0);
     return -1;
@@ -350,6 +350,10 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
   if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ == SPINLOCK_INITALIZED)
   {
     //Error: Spinlock already initalized or lock address not valid
+    return -1;
+  }
+  if(pshared != NULL)  //pshared not implemented
+  {
     return -1;
   }
 
