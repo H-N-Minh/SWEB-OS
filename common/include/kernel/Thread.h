@@ -44,12 +44,12 @@ class Thread
          * @param name The name of the thread
          * @param type The type of the thread (user or kernel thread)
          */
-        Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader=0);
+        Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader=0,  UserProcess* parent_process = nullptr);
 
         /**
          * Copy constructor, used for fork()
          */
-        Thread(Thread &src, Loader* loader);
+        Thread(Thread &src, Loader* loader, UserProcess* parent_process = nullptr);
 
         virtual ~Thread();
         void setTID(size_t tid);
@@ -98,7 +98,7 @@ class Thread
         bool schedulable();
 
 
-        uint32 kernel_stack_[2048];
+        uint32 kernel_stack_[2048]{};
         ArchThreadRegisters* kernel_registers_;
         ArchThreadRegisters* user_registers_;
 
@@ -139,11 +139,16 @@ class Thread
         void setCancelType(CancelType type);
         CancelType getCancelType() const;
 
+        UserProcess* getUserProcess() const {
+          return parent_process_;
+        }
+
     private:
         Thread(Thread const &src);
         Thread &operator=(Thread const &src);
 
         volatile ThreadState state_;
+        UserProcess* parent_process_;
     public:
         CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};  //default cancel state is ENABLED
         CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED}; //default cancel type is DEFERRED

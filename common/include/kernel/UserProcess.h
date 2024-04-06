@@ -4,6 +4,7 @@
 #include "umap.h"
 #include "Mutex.h"
 #include "types.h"
+#include "LocalFileDescriptorTable.h"
 
 #define PTHREAD_CREATE_JOINABLE 0
 #define PTHREAD_CREATE_DETACHED 1
@@ -14,6 +15,9 @@ struct KernelThreadAttributes {
 
 class UserProcess
 {
+    LocalFileDescriptorTable local_fd_table_;
+
+
     public:
         /**
          * Constructor
@@ -35,6 +39,10 @@ class UserProcess
         int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, KernelThreadAttributes* attr);
 
         bool isThreadInVector(UserThread* test_thread);
+
+        LocalFileDescriptorTable& getLocalFdTable() {
+          return local_fd_table_;
+        }
 
         int32 fd_;
         FileSystemInfo* working_dir_;

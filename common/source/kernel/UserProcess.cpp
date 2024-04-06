@@ -16,7 +16,7 @@ int64 UserProcess::pid_counter_ = 1;
 
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
-  : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
+  : local_fd_table_(),fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
     threads_lock_("thread_lock_"), thread_retval_map_lock_("thread_retval_map_lock_")
 {
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -78,6 +78,7 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
+  local_fd_table_.closeAllFileDescriptors();
   delete working_dir_;
   working_dir_ = nullptr;
 
