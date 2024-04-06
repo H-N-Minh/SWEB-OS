@@ -7,7 +7,7 @@
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
 
-#define MAX_FORK 2
+#define MAX_FORK 100
 
 // this tests multiple nested forks. each of them should has their own version of the variable x
 // each child is used to fork again, while the parent dies immediately
