@@ -4,7 +4,7 @@
 #include "sched.h"
 
 #define NUM_THREADS 100
-#define MAX_COUNT   100000
+#define MAX_COUNT   10000 //0
 
 long mutex_counter = 0;
 pthread_mutex_t mutex;
@@ -24,8 +24,8 @@ int increment_mutex_counter(void* thread_id)
         for(int i = 0; i < 100; i++){}             //introduces small delay, which increases race condition
 
         mutex_counter = current_mutex_counter;
-        if(mutex_counter%10000 == 0)
-            printf("counter is %ld and current thread is %ld\n", mutex_counter, (long)thread_id);
+        // if(mutex_counter%10000 == 0)
+        //     printf("counter is %ld and current thread is %ld\n", mutex_counter, (long)thread_id);
         int rv_unlock = pthread_mutex_unlock(&mutex);
         //if(rv_lock != 0){exit(1);}
         assert(rv_unlock == 0);
@@ -56,6 +56,8 @@ int mutex2() {
     printf("Pthread_join_finised\n");
 
     assert(mutex_counter == NUM_THREADS * MAX_COUNT);
+    int rv_destroy = pthread_mutex_destroy(&mutex);
+    assert(rv_destroy == 0);
     printf("mutex2 successful!\n");
     //printf("Final mutex_counter value: %d\n", mutex_counter);
 

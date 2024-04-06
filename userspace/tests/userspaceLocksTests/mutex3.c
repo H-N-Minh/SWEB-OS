@@ -21,7 +21,7 @@ int increment_mutex_counter_1(void* thread_id)
         long temp = mutex_counter_1 + 1;
         if(i % 100 == 0)
         {
-          printf(".");
+          pthread_testcancel();
         }
         mutex_counter_1 = temp;
         int rv_unlock = pthread_mutex_unlock(&mutex_1);
@@ -43,7 +43,7 @@ int increment_mutex_counter_2(void* thread_id)
         long temp = mutex_counter_2 + 1;
         if(i % 100 == 0)
         {
-          printf(".");
+          pthread_testcancel();
         }
         mutex_counter_2 = temp;
         int rv_unlock = pthread_mutex_unlock(&mutex_2);
@@ -83,6 +83,12 @@ int mutex3() {
 
     assert(mutex_counter_1 == THREAD_COUNT * MAX_COUNT);
     assert(mutex_counter_2 == THREAD_COUNT * MAX_COUNT);
+
+    int rv_destroy = pthread_mutex_destroy(&mutex_1);
+    assert(rv_destroy == 0);
+
+    rv_destroy = pthread_mutex_destroy(&mutex_2);
+    assert(rv_destroy == 0);
     printf("mutex3 successful!\n");
     //printf("Final mutex_counter value: %d\n", mutex_counter);
 

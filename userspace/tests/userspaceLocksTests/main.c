@@ -8,11 +8,11 @@ extern int mutex3();
 
 int main()
 {
-    // spin1();   //Test: checks if basic locking and unlocking works with spinlock
+    // spin1();   //checks if basic locking and unlocking works with spinlock
     // spin2();   //simple syncronization with spinlock 
-    //spin3();      //syncronization with two spinlocks
+    // spin3();   //syncronization with two spinlocks
 
-    mutex1();
-    mutex2();
-    mutex3();
+    mutex1();     //checks if basic locking and unlocking works with mutexes
+    mutex2();     //simple syncronization with mutexes
+    mutex3();     //syncronization with two mutexes
 }
