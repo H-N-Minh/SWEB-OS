@@ -20,7 +20,8 @@ int64 UserProcess::pid_counter_ = 1;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
-    threads_lock_("thread_lock_"),  execv_lock_(" execv_lock_")
+    threads_lock_("thread_lock_"),  execv_lock_(" execv_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
+    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_")
 {
   ProcessRegistry::instance()->processStart();
   if (fd_ >= 0)
@@ -44,7 +45,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 // COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
-    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"), execv_lock_(" execv_lock_")
+    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"), execv_lock_(" execv_lock_"),
+    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_")
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -194,7 +196,6 @@ int UserProcess::joinThread(size_t thread_id, void**value_ptr)
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
-
   int space_left = 4000;   //page size (more or less)
   size_t array_offset = 0;
 
@@ -230,6 +231,15 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   //open the filedescriptor of the new program
   execv_lock_.acquire();
+
+  //
+  if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
+  {
+    execv_lock_.release();
+    return -1;
+  }
+
+
   execv_fd_ = VfsSyscall::open(path, O_RDONLY);
   if(execv_fd_ < 0)
   {
@@ -251,18 +261,28 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   //cancel all other threads
   Syscall::exit(0, true);
+  execv_lock_.release();     //Todos
   
-  //wait for the other threads to die (TODOs: should not be this weird busy wait !!!!)
-  while(1)
+
+  threads_lock_.acquire();
+  if(threads_.size() > 1)
   {
-    threads_lock_.acquire();
-    if(threads_.size() == 1)
-    {
-      threads_lock_.release();
-      break;
-    }
-    threads_lock_.release();
+    one_thread_left_ = false;
   }
+  else
+  {
+    one_thread_left_ = true;
+  }
+  threads_lock_.release();
+
+
+
+  one_thread_left_lock_.acquire();
+  while(!one_thread_left_)
+  {
+    one_thread_left_condition_.wait();
+  }
+  one_thread_left_lock_.release();
 
 
   //allocate a free physical page and get the virtual address of the identity mapping
@@ -293,7 +313,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
 
 
-  execv_lock_.release();
+  //execv_lock_.release();
   ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);
   threads_.erase(exiting_thread);
   ((UserThread*)currentThread)->last_thread_before_exec_ = true;

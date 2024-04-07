@@ -179,6 +179,14 @@ void Syscall::pthreadExit(void* value_ptr)
       debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
       currentUserThread.last_thread_alive_ = true;
   }
+  if(current_process.threads_.size() == 1)  // only one thread left
+  {
+    current_process.one_thread_left_lock_.acquire();
+    current_process.one_thread_left_ = true;
+    current_process.one_thread_left_condition_.signal();
+    current_process.one_thread_left_lock_.release();
+
+  }
 
   // TODOs: Lock arch_memory_, also be careful with locking order to prevent deadlock
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());

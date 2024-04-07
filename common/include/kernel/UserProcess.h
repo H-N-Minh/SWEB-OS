@@ -3,6 +3,7 @@
 #include "uvector.h"
 #include "umap.h"
 #include "Mutex.h"
+#include "Condition.h"
 #include "types.h"
 
 class UserProcess
@@ -68,6 +69,11 @@ class UserProcess
         size_t execv_ppn_args_{NULL};                   
         size_t exec_argc_{0};    
         size_t exec_array_offset_{0};
+
+        
+        bool one_thread_left_{false};
+        Mutex one_thread_left_lock_;                                //Locking order: x
+        Condition one_thread_left_condition_;
 
 };
 
