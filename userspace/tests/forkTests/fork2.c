@@ -1,56 +1,44 @@
 #include "stdio.h"
-#include "types.h"
 #include "unistd.h"
-#include "pthread.h"
+#include "assert.h"
+#include "types.h"
 
-int function1()
+#define PARENT_SUCCESS 0    // parent process returns 0 on success
+#define CHILD_SUCCESS 69    // child process returns 69 on success
+
+
+// This tests if the 2 processes can have different values of same variable (they should). Both local and global variables are tested.
+int global_var = 10;
+
+int fork2()
 {
-    printf("Hello from child threads friend\n");
-    while (1)
+    size_t x = 0;
+    pid_t pid = fork();
+
+    if(pid > 0) // parent
     {
-        /* code */
+        x += 10;
+        global_var += 10;
     }
-    
-    return 0;
-}
-
-
-
-int fork2() {
-    pid_t pid = 5;
-    size_t i = 0;
-
-
-    //Test1: Simple pthread_create and check if thread id gets set
-
-    // Create a child process
-    printf("calling fork() from user space\n");
-    pid = fork();
-
-    if (pid < 0) {
-        // Fork failed
-        printf("Fork failed\n");
-        return 1;
-    } else if (pid == 0) {
-        // Child process
-        i += 10;
-        printf("Child reads: (%zu) (should be 10)..\n", i);
-
-
-        pthread_t thread_id = 424242;
-        pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
-
-
-    } else {
-        // Parent process
-        i += 69;
-        printf("parent reads: (%zu) (should be 69)\n", i);
+    else if(pid == 0)   // child
+    {
+        x += 100;
+        global_var += 200;
     }
-    // while (1)
-    // {
-    //     /* code */
-    // }
 
-    
-    return pid;
+    x += 50;        // parent and child should have x = 60 and x = 150 respectively
+    global_var += 500;
+
+    if (pid > 0)
+    {
+        assert(x == 60 && "Parent process should have x = 60");
+        assert(global_var == 520 && "Parent process should have global_var = 520");
+        return PARENT_SUCCESS;
+    }
+    else
+    {
+        assert(x == 150 && "Child process should have x = 150");
+        assert(global_var == 710 && "Child process should have global_var = 710");
+        return CHILD_SUCCESS;
+    }
 }

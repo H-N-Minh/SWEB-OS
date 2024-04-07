@@ -22,6 +22,7 @@ int pe1()
 
     void* value_ptr;
     int pthread_join_rv = pthread_join(thread_id, &value_ptr);
+    assert(pthread_join_rv == 0);
     assert(value_ptr == (void*)3);
 
     printf("pe1 successful!\n");

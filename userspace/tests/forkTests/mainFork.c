@@ -14,12 +14,13 @@ extern int fork6();
 
 
 // set to 1 to test, 0 to skip
-#define FORK1 0     // note: this test also prints 2 lines
-#define FORK2 0
-#define FORK3 0
-#define FORK4 1     
-#define FORK5 0     // all 4 & 5 & 6 requires lot of physical memory so each should be tested alone
-#define FORK6 0
+// all 4 & 5 & 6 requires lot of physical memory so each should be tested alone
+#define FORK1 1     //simple fork
+#define FORK2 1     // This tests if the 2 processes can have different values of same variable (they should). Both local and global variables are tested
+#define FORK3 1     // this tests fork together with pthread_create
+#define FORK4 1     // this tests multiple nested forks
+#define FORK5 1     // this tests multiple nested forks
+#define FORK6 1     // test the locking of archmemory (NOTE: not a really good test for locking)
 
 int main()
 {

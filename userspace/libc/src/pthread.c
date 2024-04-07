@@ -72,21 +72,25 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
     return -1;
   }
   int rv = pthread_spin_lock(&mutex->mutex_lock_);
+  assert(rv == 0);
   if(mutex->locked_ || mutex->waiting_list_)
   {
     int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
     return -1;
   }
   else
   {
     mutex->initialized_ = 0;
     int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
   }
   rv = pthread_spin_destroy(&mutex->mutex_lock_);
+  assert(rv == 0);
   return rv;
 }
 
-int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)              //TODOs: locking
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
   if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1) || mutex->initialized_ == MUTEX_INITALIZED)
   {
@@ -158,8 +162,8 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         break;
       }
     }
-    pthread_spin_unlock(&mutex->mutex_lock_);
     *waiting_flag_address = 1;
+    pthread_spin_unlock(&mutex->mutex_lock_);
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     //pthread_spin_lock(&mutex->mutex_lock_);
   }
@@ -217,9 +221,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     mutex->waiting_list_ = (size_t*)*mutex->waiting_list_;
     *thread_to_wake_up_ptr = 2;
     mutex->mutex_lock_.held_by_ = (size_t*)((size_t)thread_to_wake_up_ptr + (size_t)8);
-    //rv = pthread_spin_unlock(&mutex->mutex_lock_);
-    //assert(rv == 0);
-
   }
   else
   {
@@ -245,8 +246,7 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
   int rv = pthread_spin_lock(&mutex->mutex_lock_);
   assert(rv == 0);
   size_t stack_variable;
-  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4080 - (size_t)(&stack_variable)%4096);   
-  size_t* waiting_flag_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);   
+  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4080 - (size_t)(&stack_variable)%4096);    
 
   if(mutex->held_by_ == waiting_list_address)
   {
@@ -256,16 +256,17 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
     return -1;
   }
 
-  size_t* next_element = (size_t*)&mutex->waiting_list_;  
   if(!mutex->locked_)
   {
     mutex->locked_ = 1;
     mutex->held_by_ = waiting_list_address;
     int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
   }
   else
   {
     int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
     return -1;
   }
   return 0;

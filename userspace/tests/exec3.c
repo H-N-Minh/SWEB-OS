@@ -21,7 +21,7 @@ int main()
     "1","1","1","1","1","1","1","1","1","1",
     "1","1", (char *)0 };
 
-    int rv = execv(path, argv);
+    execv(path, argv);
     assert(0);
     
     return 0;
