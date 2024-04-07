@@ -13,10 +13,10 @@ int main()
     // spin1();   //checks if basic locking and unlocking works with spinlock
     // spin2();   //simple syncronization with spinlock 
     // spin3();   //syncronization with two spinlocks
-    spin4();
+    //spin4();
 
     // mutex1();     //checks if basic locking and unlocking works with mutexes
     // mutex2();     //simple syncronization with mutexes
-    // mutex3();     //syncronization with two mutexes
-    mutex4();
+    mutex3();     //syncronization with two mutexes
+    //mutex4();
 }

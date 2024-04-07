@@ -10,7 +10,7 @@ long mutex_counter_1 = 0;
 long mutex_counter_2 = 0;
 
 pthread_mutex_t mutex_1;
-pthread_mutex_t mutex_2;
+pthread_mutex_t mutex_2  = PTHREAD_MUTEX_INITIALIZER;
 
 int increment_mutex_counter_1(void* thread_id)
 {

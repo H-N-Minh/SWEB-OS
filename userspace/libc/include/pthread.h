@@ -34,11 +34,19 @@ struct pthread_mutex_struct {
     pthread_spinlock_t mutex_lock_;
 }; 
 
+
+
 #define MUTEX_INITALIZED 12341234
 #define SPINLOCK_INITALIZED 14243444
 
+#define PTHREAD_SPIN_INITIALIZER { .locked_ = 0, .initialized_= 0, .held_by_ = 0 }
+
+#define PTHREAD_MUTEX_INITIALIZER {.locked_ = 0, .initialized_= 0, .held_by_ = 0, .waiting_list_ = 0, .mutex_lock_ = PTHREAD_SPIN_INITIALIZER }
+
 typedef struct pthread_mutex_struct pthread_mutex_t;
 typedef unsigned int pthread_mutexattr_t;
+
+
 
 //pthread cond typedefs
 typedef unsigned int pthread_cond_t;
