@@ -25,6 +25,7 @@ class UserThread : public Thread
         void Run(){}
         void kill() override;
         void send_kill_notification();
+        bool schedulable() override;
 
         UserProcess* process_;
         size_t vpn_stack_;
@@ -47,6 +48,10 @@ class UserThread : public Thread
         Mutex cancel_state_type_lock_;                                  //Locking order: x
         CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};
         CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED};
+
+        //userspace locks
+        size_t waiting_list_ptr_{NULL};
+        size_t currently_waiting_ptr_{NULL};
 
         
 

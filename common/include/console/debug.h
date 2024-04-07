@@ -68,7 +68,7 @@ const size_t MMC_DRIVER         = Ansi_Yellow;
 //group arch
 const size_t A_BOOT             = Ansi_Yellow; //| OUTPUT_ENABLED;
 const size_t A_COMMON           = Ansi_Yellow;
-const size_t A_MEMORY           = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t A_MEMORY           = Ansi_Yellow; // | OUTPUT_ENABLED;
 const size_t A_SERIALPORT       = Ansi_Yellow;
 const size_t A_KB_MANAGER       = Ansi_Yellow;
 const size_t A_INTERRUPTS       = Ansi_Yellow;
@@ -87,10 +87,12 @@ const size_t SUPERBLOCK         = Ansi_Yellow;
 
 //group minix
 const size_t M_STORAGE_MANAGER  = Ansi_Yellow;
-const size_t M_INODE            = Ansi_Yellow| OUTPUT_ENABLED;
+const size_t M_INODE            = Ansi_Yellow; //| OUTPUT_ENABLED;
 const size_t M_SB               = Ansi_Yellow;
 const size_t M_ZONE             = Ansi_Yellow;
 
 //Personal's debug
 const size_t TAI_THREAD               = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t MINH                     = Ansi_Red     | OUTPUT_ENABLED;
+
+const size_t USERSPACE_LOCKS         = Ansi_Red     | OUTPUT_ENABLED;

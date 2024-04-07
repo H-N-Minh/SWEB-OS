@@ -9,8 +9,10 @@
 #include "ArchInterrupts.h"
 #include "uvector.h"
 #include "VfsSyscall.h"
+#include "Syscall.h"
+#include "ArchMemory.h"
 
-// TODO: explain calculation related to execv()
+// TODOs: explain calculation related to execv()
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                        Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process) ,
@@ -18,22 +20,15 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
                 thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), cancel_state_type_lock_("cancel_state_type_lock_")
 {
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
-    size_t array_offset = 3500;
-
+ 
     if(execv)
     {
         size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(process_->execv_ppn_args_);
         debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
-
         
         size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
         bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , process_->execv_ppn_args_, 1);
         assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
-
-        for(size_t i = 0; i < process_->exec_argc_; i++)
-        {
-            *(size_t*)(virtual_address + array_offset + i * sizeof(pointer)) += (USER_BREAK - PAGE_SIZE);
-        }
     }
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
@@ -41,12 +36,21 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * tid_);
-
+    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 3 * sizeof(pointer));
+    waiting_list_ptr_ = user_stack_ptr + sizeof(pointer);
+    currently_waiting_ptr_ = user_stack_ptr + 2 * sizeof(pointer);
+    debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx) and waiting flag  %zd(=%zx).\n", 
+          user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_, currently_waiting_ptr_, currently_waiting_ptr_);
     if (!func) //for the first thread when we create a process
     {
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
                                          (void*) user_stack_ptr, getKernelStackStartPointer());
+
+        if(execv)
+        {
+        user_registers_->rdi = process_->exec_argc_;
+        user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
+        }
 
         debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
@@ -62,11 +66,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
 
-    if(execv)
-    {
-        user_registers_->rdi = process_->exec_argc_;
-        user_registers_->rsi = USER_BREAK - PAGE_SIZE + array_offset;
-    }
+
 
     ArchThreads::setAddressSpace(this, loader_->arch_memory_);
 
@@ -105,7 +105,7 @@ UserThread::~UserThread()
 {
     debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
 
-    //assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread"); //TODO
+    //assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread"); //TODOs
 
     if(last_thread_alive_)
     {
@@ -118,7 +118,7 @@ UserThread::~UserThread()
 
     if(unlikely(last_thread_before_exec_))
     {
-        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");    //TODO: also check 
+        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");    //TODOs: also check 
         //assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
 
         debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
@@ -162,8 +162,8 @@ void UserThread::kill()
   }
 }
 
- void UserThread::send_kill_notification()
- {
+void UserThread::send_kill_notification()
+{
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
@@ -177,4 +177,58 @@ void UserThread::kill()
         join_thread->thread_gets_killed_lock_.release();
     }
   }
- }
+}
+
+bool UserThread::schedulable()
+{
+  bool running = (getState() == Running);
+
+  if(wants_to_be_canceled_ && switch_to_userspace_ && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+  {
+    debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
+    kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
+    kernel_registers_->rdi     = (size_t)-1;
+    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
+    switch_to_userspace_ = 0;
+    return true;
+  }
+
+  if(!running)
+  {
+    return false;
+  }
+
+  size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)currently_waiting_ptr_);
+
+  //debug(USERSPACE_LOCKS, "Kernel: userspace %zd(=%zx)\n", (uint64)thread_waiting_for_lock_ptr, (uint64)thread_waiting_for_lock_ptr);
+  if(thread_waiting_for_lock_ptr && *thread_waiting_for_lock_ptr == 1)
+  {
+    return false;   
+  }
+
+  
+  if(wakeup_timestamp_ == 0)
+  {
+    return true;
+  }
+  else
+  {
+    unsigned int edx;
+    unsigned int eax;
+    asm
+    (
+      "rdtsc"
+      : "=a"(eax), "=d"(edx)
+    );
+    unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+    if(current_time_stamp >= wakeup_timestamp_)
+    {
+      wakeup_timestamp_ = 0;
+      return true;
+    }
+    else
+    {
+      return false;
+    }
+  }
+}

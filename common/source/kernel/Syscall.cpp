@@ -18,6 +18,7 @@
 #include "PageManager.h"
 #include "ArchThreads.h"
 
+
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
   size_t return_value = 0;
@@ -101,10 +102,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_fork:
       return_value = forkProcess();
-      break; // you will need many debug hours if you forget the break
+      break;
     case sc_pipe:
       return_value = pipe((int*) arg1);
-      break; // you will need many debug hours if you forget the break
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -139,7 +140,7 @@ uint32 Syscall::pipe(int file_descriptor_array[2])
 }
 
 
-// TODO: handle return value when fork fails, handle how process exits correctly after fork
+// TODOs: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
   debug(FORK, "Syscall::forkProcess: start focking \n");
@@ -170,17 +171,16 @@ void Syscall::pthreadExit(void* value_ptr)
   ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), currentThread);
   current_process.threads_.erase(exiting_thread);
 
+  debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_\n");
+  current_process.thread_retval_map_[currentUserThread.getTID()] = value_ptr;
+
   if(current_process.threads_.size() == 0)  // last thread in process
   {
       debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
       currentUserThread.last_thread_alive_ = true;
   }
-  else  // not last thread in process, saving return values in thread_retval_map_
-  {
-    debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_\n");
-    current_process.thread_retval_map_[currentUserThread.getTID()] = value_ptr;
-  }
 
+  // TODOs: Lock arch_memory_, also be careful with locking order to prevent deadlock
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
   currentUserThread.loader_->arch_memory_.lock_.acquire();
   currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.vpn_stack_);
@@ -198,7 +198,7 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  if((!check_parameter((size_t)value_ptr, true)) || (currentThread->getTID() == thread_id))
+  if(!check_parameter((size_t)value_ptr, true) || (currentThread->getTID() == thread_id))
   {
     return -1;
   }
@@ -211,8 +211,8 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 int Syscall::pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address)         
 {
   debug(SYSCALL, "Syscall::Pthread_CREATE Pthread_created called\n");
-  if(!(check_parameter((size_t)thread) && check_parameter((size_t)attr, true) && check_parameter((size_t)start_routine) 
-      && check_parameter((size_t)arg, true) && check_parameter((size_t)wrapper_address)))
+  if(!check_parameter((size_t)thread) || !check_parameter((size_t)attr, true) || !check_parameter((size_t)start_routine) 
+      || !check_parameter((size_t)arg, true) || !check_parameter((size_t)wrapper_address))
   {
     return -1;
   }
@@ -451,7 +451,7 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
     {
       return false;
     }
-    debug(SYSCALL, "Ptr %p USER_BREAK %p.\n",(void*)ptr, (void*)USER_BREAK);
+    //debug(SYSCALL, "Ptr %p USER_BREAK %p.\n",(void*)ptr, (void*)USER_BREAK);
     if(ptr >= USER_BREAK)
     {
       return false;
@@ -463,16 +463,17 @@ int Syscall::execv(const char *path, char *const argv[])
 {
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-  if(!check_parameter((size_t)argv, false))
+  if(!check_parameter((size_t)argv, false) || !check_parameter((size_t)argv, false))
   {
     return -1;
   }
+
   return current_process.execvProcess(path, argv);
 }
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
 {
-  if(state != CancelState::PTHREAD_CANCEL_DISABLE && state != CancelState::PTHREAD_CANCEL_DISABLE)
+  if(state != CancelState::PTHREAD_CANCEL_DISABLE && state != CancelState::PTHREAD_CANCEL_ENABLE)
   {
     debug(SYSCALL, "Syscall::pthread_setcancelstate: given state is not recognizable\n");
     return -1;
