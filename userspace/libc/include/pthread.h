@@ -40,7 +40,6 @@ struct pthread_mutex_struct {
 #define SPINLOCK_INITALIZED 14243444
 
 #define PTHREAD_SPIN_INITIALIZER { .locked_ = 0, .initialized_= SPINLOCK_INITALIZED, .held_by_ = 0 }
-
 #define PTHREAD_MUTEX_INITIALIZER {.locked_ = 0, .initialized_= MUTEX_INITALIZED, .held_by_ = 0, .waiting_list_ = 0, .mutex_lock_ = PTHREAD_SPIN_INITIALIZER }
 
 typedef struct pthread_mutex_struct pthread_mutex_t;
