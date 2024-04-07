@@ -35,7 +35,7 @@ class ArchMemory
     
     uint64 page_map_level_4_;
     
-    Mutex archmemory_lock_; 
+    //Mutex archmemory_lock_; 
 
     static constexpr size_t RESERVED_START = 0xFFFFFFFF80000ULL;
     static constexpr size_t RESERVED_END = 0xFFFFFFFFC0000ULL;

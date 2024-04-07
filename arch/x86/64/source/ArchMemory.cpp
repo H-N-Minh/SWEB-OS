@@ -12,20 +12,20 @@ PageDirPointerTableEntry kernel_page_directory_pointer_table[2 * PAGE_DIR_POINTE
 PageDirEntry kernel_page_directory[2 * PAGE_DIR_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 
-ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
+ArchMemory::ArchMemory():lock_("archmemory_lock_")
 {
-  archmemory_lock_.acquire();
+  //archmemory_lock_.acquire();
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
-  archmemory_lock_.release();
+  //archmemory_lock_.release();
 }
 
 // COPY CONSTRUCTOR 
-ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_")
+ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 {
-  archmemory_lock_.acquire();
+  //archmemory_lock_.acquire();
   assert(PageManager::instance()->heldBy() != currentThread);
   
   debug(FORK, "ArchMemory::copy-constructor starts \n");
@@ -103,13 +103,13 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
     }
   }
   debug(FORK, "ArchMemory::copy-constructor finished \n");
-  archmemory_lock_.release();
+  //archmemory_lock_.release();
 }
 
 
 ArchMemory::~ArchMemory()
 {
-  archmemory_lock_.acquire();
+  //archmemory_lock_.acquire();
   assert(currentThread->kernel_registers_->cr3 != page_map_level_4_ * PAGE_SIZE && "thread deletes its own arch memory");
 
   PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
@@ -151,7 +151,7 @@ ArchMemory::~ArchMemory()
     }
   }
   PageManager::instance()->freePPN(page_map_level_4_);
-  archmemory_lock_.release();
+  //archmemory_lock_.release();
 }
 
 pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)               //TODOs lock (but probably outside this function to gurantee valid)
@@ -186,7 +186,7 @@ bool ArchMemory::checkAndRemove(pointer map_ptr, uint64 index)
 
 bool ArchMemory::unmapPage(uint64 virtual_page)
 {
-  archmemory_lock_.acquire();
+  //archmemory_lock_.acquire();
   ArchMemoryMapping m = resolveMapping(virtual_page);
 
   assert(m.page_ppn != 0 && m.page_size == PAGE_SIZE && m.pt[m.pti].present);
@@ -209,7 +209,7 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
     checkAndRemove<PageMapLevel4Entry>(getIdentAddressOfPPN(m.pml4_ppn), m.pml4i);
     PageManager::instance()->freePPN(m.pdpt_ppn);
   }
-  archmemory_lock_.release();
+  //archmemory_lock_.release();
   return true;
 }
 
@@ -235,7 +235,7 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
 
 bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
 {
-  archmemory_lock_.acquire();
+  //archmemory_lock_.acquire();
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
   assert((m.page_size == 0) || (m.page_size == PAGE_SIZE));
 
@@ -260,10 +260,10 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   if (m.page_ppn == 0)
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
-    archmemory_lock_.release();
+    //archmemory_lock_.release();
     return true;
   }
-  archmemory_lock_.release();
+  //archmemory_lock_.release();
   return false;
 }
 
