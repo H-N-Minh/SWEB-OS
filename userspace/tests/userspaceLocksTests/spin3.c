@@ -21,7 +21,7 @@ int increment_spin_counter_1(void* thread_id)
         long temp = spin_counter_1 + 1;
         if(i % 100 == 0)
         {
-          printf(".");
+          pthread_testcancel();
         }
         spin_counter_1 = temp;
         int rv_unlock = pthread_spin_unlock(&spin_1);
@@ -43,7 +43,7 @@ int increment_spin_counter_2(void* thread_id)
         long temp = spin_counter_2 + 1;
         if(i % 100 == 0)
         {
-          printf(".");
+          pthread_testcancel();
         }
         spin_counter_2 = temp;
         int rv_unlock = pthread_spin_unlock(&spin_2);
