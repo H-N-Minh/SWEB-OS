@@ -11,7 +11,7 @@ int exec1()
 
     assert(rv == -1);
 
-    printf("Exec1 successfull!\n");
+    printf("Exec1 successful!\n");
     //assert(0);    //this should never be reached
     return 0;
 }
