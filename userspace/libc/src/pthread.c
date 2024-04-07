@@ -67,16 +67,10 @@ int pthread_detach(pthread_t thread)
  */
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
-  if(!parameters_are_valid((size_t)mutex, 0)) // || mutex->initialized_ != MUTEX_INITALIZED)
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
   {
     return -1;
   }
-
-  if(mutex->initialized_ != MUTEX_INITALIZED)
-  {
-    return 0;
-  }
-
   int rv = pthread_spin_lock(&mutex->mutex_lock_);
   if(mutex->locked_ || mutex->waiting_list_)
   {
@@ -94,23 +88,17 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)              //TODOs: locking
 {
-  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1) )//|| mutex->initialized_ == MUTEX_INITALIZED) //
+  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1) || mutex->initialized_ == MUTEX_INITALIZED)
   {
     return -1;
   }
-
-  if(mutex->initialized_ == MUTEX_INITALIZED)                         ///????!!!!
-  {
-    return 0;
-  }
-
   int rv = pthread_spin_init(&mutex->mutex_lock_, 0);
   if(rv != 0)
   {
     return -1;
   }
   rv = pthread_spin_lock(&mutex->mutex_lock_);
-  assert(rv = 0);
+  assert(rv == 0);
   mutex->initialized_ = MUTEX_INITALIZED;
   mutex->locked_ = 0;
   mutex->held_by_ = 0;
@@ -340,10 +328,10 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
   {
     return -1;
   }
-  // if(lock->initialized_ != SPINLOCK_INITALIZED) //??
-  // {
-  //   return -1;
-  // }
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
+  {
+    return -1;
+  }
   if(lock->locked_)
   {
     return -1;
@@ -359,7 +347,7 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
  */
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 {
-  if(!parameters_are_valid((size_t)lock, 0)) // || lock->initialized_ == SPINLOCK_INITALIZED)
+  if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ == SPINLOCK_INITALIZED)
   {
     //Error: Spinlock already initalized or lock address not valid
     return -1;
