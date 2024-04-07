@@ -6,8 +6,8 @@ void Minh_pthread_cond_init(Minh_pthread_cond_t* cv, const pthread_condattr_t *a
     pthread_mutex_init(&cv->mutex, NULL);
 }
 
-void Minh_pthread_cond_wait(Minh_pthread_cond_t* cv, pthread_mutex_t* given_mutex) {
-    pthread_mutex_unlock(given_mutex);
+void Minh_pthread_cond_wait(Minh_pthread_cond_t* cv, pthread_mutex_t* user_mutex) {
+    pthread_mutex_unlock(user_mutex);
     pthread_mutex_lock(&cv->mutex);
     while (cv->value == 0) {
         pthread_mutex_unlock(&cv->mutex);
@@ -15,7 +15,7 @@ void Minh_pthread_cond_wait(Minh_pthread_cond_t* cv, pthread_mutex_t* given_mute
     }
     cv->value = 0;
     pthread_mutex_unlock(&cv->mutex);
-    pthread_mutex_lock(given_mutex);
+    pthread_mutex_lock(user_mutex);
 }
 
 void Minh_pthread_cond_signal(Minh_pthread_cond_t* cv) {
