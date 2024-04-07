@@ -60,8 +60,6 @@ int mutex3() {
     pthread_t threads2[THREAD_COUNT];
     int rv_init_1 = pthread_mutex_init(&mutex_1, 0);
     assert(rv_init_1 == 0);
-    int rv_init_2 = pthread_mutex_init(&mutex_2, 0);
-    assert(rv_init_2 == 0);
 
     for (long t = 0; t < THREAD_COUNT; t++)
     {
