@@ -178,7 +178,22 @@ int pthread_cond_signal(pthread_cond_t *cond)
  */
 int pthread_cond_broadcast(pthread_cond_t *cond)
 {
-  return -1;
+  if(!parameters_are_valid((size_t)cond, 0) || !cond->initialized_)
+  {
+    return -1;    //Cond is Null, cond not initialized
+  }
+  
+  while (!cond->waiting_list_)   // if theres at least 1 thread in the waiting list
+  { 
+    // remove the first thread from the waiting list
+    size_t* thread_to_wakeup = (size_t*) cond->waiting_list_;
+    cond->waiting_list_ = *thread_to_wakeup;
+    // signal the thread to wake up
+    size_t* request_to_sleep = thread_to_wakeup - sizeof(size_t);
+    assert(*request_to_sleep && "waking a thread that is not sleeping");
+    *request_to_sleep = 0;
+  }
+  return 0;
 }
 
 /**
@@ -207,6 +222,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   *new_waiter_request_to_sleep = 1;      // This tells the scheduler that this thread is waiting and can be skipped
   __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
   pthread_mutex_lock(mutex);
+
   return 0;
 }
 
