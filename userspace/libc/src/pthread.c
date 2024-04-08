@@ -3,7 +3,7 @@
 #include "sched.h"
 #include "assert.h"
 
-#include <stdio.h>
+#include "stdio.h"
 
 #define __PAGE_SIZE__ 4096
 
@@ -165,13 +165,18 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   return -1;
 }
 
+#define SPINLOCK_INITALIZED 14243444
 /**
  * function stub
  * posix compatible signature - do not change the signature!
  */
 int pthread_spin_destroy(pthread_spinlock_t *lock)
 {
-  if(!lock->initialized_ )
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
   {
     return -1;
   }
@@ -179,10 +184,11 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
   {
     return -1;
   }
-    lock->initialized_ = 0;
-    return 0;
+  lock->initialized_ = 0;
+  return 0;
 
 }
+
 
 /**
  * function stub
@@ -190,13 +196,17 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
  */
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 {
-    if(lock->initialized_)
-    {
-        return -1;
-    }
-    lock->locked_ = 0;
-    lock->initialized_ = 1;
-    return 0;
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
+  if(lock->initialized_ == SPINLOCK_INITALIZED)
+  {
+      return -1;
+  }
+  lock->locked_ = 0;
+  lock->initialized_ = SPINLOCK_INITALIZED;
+  return 0;
 }
 
 /**
@@ -205,18 +215,23 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
  */
 int pthread_spin_lock(pthread_spinlock_t *lock)
 {
-    if(!lock->initialized_ )
-    {
-      return -1;
-    }
-    size_t old_val = 1;
-    do {
-        asm("xchg %0,%1"
-                : "=r" (old_val)
-                : "m" (lock->locked_), "0" (old_val)
-                : "memory");
-    } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
-    return 0; // Success
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
+  {
+    return -1;
+  }
+  size_t old_val = 1;
+  do 
+  {
+    asm("xchg %0,%1"
+        : "=r" (old_val)
+        : "m" (lock->locked_), "0" (old_val)
+        : "memory");
+  } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
+  return old_val;
 }
 
 /**
@@ -225,7 +240,11 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
  */
 int pthread_spin_trylock(pthread_spinlock_t *lock)
 {
-  if(!lock->initialized_ )
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
   {
     return -1;
   }
@@ -244,7 +263,11 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
  */
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
-  if(lock->initialized_ == 0)
+  if(!parameters_are_valid((size_t)lock, 0))
+  {
+    return -1;
+  }
+  if(lock->initialized_ != SPINLOCK_INITALIZED)
   {
     return -1;
   }
@@ -327,3 +350,16 @@ int get_thread_count(void) {
 //    // Release the lock
 //    mutex->held_by = 0;
 //}
+
+int parameters_are_valid(size_t ptr, int allowed_to_be_null)
+{
+    if(!allowed_to_be_null && ptr == 0)
+    {
+      return 0;
+    }
+    if(ptr >= USER_BREAK)
+    {
+      return 0;
+    }
+    return 1;
+}

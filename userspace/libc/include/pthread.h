@@ -4,6 +4,7 @@
 #include "sys/syscall.h"
 #include "../../../common/include/kernel/syscall-definitions.h"
 
+#define USER_BREAK 0x0000800000000000ULL
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,14 +18,12 @@ typedef unsigned int pthread_attr_t;
 typedef unsigned int pthread_mutex_t;
 typedef unsigned int pthread_mutexattr_t;
 
-struct pthread_spinlock_struct { 
+typedef struct pthread_spinlock_struct { 
     size_t  locked_; 
     size_t initialized_;
     void* held_by_;
-}; 
+} pthread_spinlock_t; 
 
-//pthread spinlock typedefs
-typedef struct pthread_spinlock_struct pthread_spinlock_t;
 
 //pthread cond typedefs
 typedef unsigned int pthread_cond_t;
@@ -96,7 +95,7 @@ extern int pthread_spin_trylock(pthread_spinlock_t *lock);
 
 extern int pthread_spin_unlock(pthread_spinlock_t *lock);
 
-
+extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 
 #ifdef __cplusplus
 }
