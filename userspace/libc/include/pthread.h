@@ -26,7 +26,7 @@ typedef struct pthread_spinlock_struct {
 
 #define SPINLOCK_INITALIZED 14243444
 #define PTHREAD_SPIN_INITIALIZER { .locked_ = 0, .initialized_= SPINLOCK_INITALIZED, .held_by_ = 0 }
-// #define PTHREAD_COND_INITIALIZER { .waiting_list_ = 0, .initialized_= 1 }    // todo; implement this
+#define PTHREAD_COND_INITIALIZER { .initialized_= 1, .waiting_list_ = 0 }
 
 //pthread cond typedefs
 typedef struct pthread_cond_struct
@@ -102,6 +102,7 @@ extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 
 /**
  * @return loop through linked list and get the pointer of last thread that is in the waiting_list_ of the given cond
+ * @return 0 if the list is empty
 */
 extern size_t getLastCondWaiter(pthread_cond_t* cond);
 

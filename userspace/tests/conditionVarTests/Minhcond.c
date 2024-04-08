@@ -19,13 +19,7 @@ void Minh_pthread_cond_wait(Minh_pthread_cond_t* cv, pthread_mutex_t* user_mutex
 }
 
 void Minh_pthread_cond_signal(Minh_pthread_cond_t* cv) {
-    // pthread_mutex_lock(&cv->mutex);???
-    if (!sleepers_.empty()) 
-    { 
-        sleepers_.front()->request_to_sleep_ = 0; 
-        sleepers_.pop_front(); 
-    } 
-    // pthread_mutex_unlock(&cv->mutex);????
+
 }
 
 void Minh_pthread_cond_destroy(Minh_pthread_cond_t* cv) {

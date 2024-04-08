@@ -130,9 +130,7 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
   }
 
   cond->initialized_ = 1;
-  size_t* top_first_stack = getTopOfFirstStack();
-  cond->waiting_list_ = (size_t) top_first_stack - sizeof(size_t); 
-  assert(!cond->waiting_list_ && "waiting_list_ of cond is not NULL");
+  cond->waiting_list_ = 0; 
   return 0;
 }
 
@@ -160,25 +158,18 @@ int pthread_cond_signal(pthread_cond_t *cond)
   {
     return -1;    //Cond is Null, cond not initialized
   }
-  assert(cond->request_to_sleep_ && "cond request_to_sleep_ is already true, this should not happen");
-  if (*(size_t*) cond->request_to_sleep_)
-  { 
-      sleepers_.front()->request_to_sleep_ = 0; 
-      sleepers_.pop_front(); 
-  }
-
-  // adding curent thread to the waiting list
-  size_t* new_waiter_stack = getTopOfFirstStack();
-  size_t new_waiter_list_address = (size_t) new_waiter_stack - sizeof(size_t);
-  size_t last_waiter = getLastCondWaiter(cond);
-  *(size_t*)last_waiter = new_waiter_list_address;
   
-  pthread_mutex_unlock(mutex);       // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
-  assert(cond->request_to_sleep_ && "cond request_to_sleep_ is already true, this should not happen");
-  cond->request_to_sleep_ = 1;      // This tells the scheduler that this thread is waiting and can be skipped
-  __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
-  pthread_mutex_lock(mutex);
-  return -1;
+  if (!cond->waiting_list_)   // if theres at least 1 thread in the waiting list
+  { 
+    // remove the first thread from the waiting list
+    size_t* thread_to_wakeup = (size_t*) cond->waiting_list_;
+    cond->waiting_list_ = *thread_to_wakeup;
+    // signal the thread to wake up
+    size_t* request_to_sleep = thread_to_wakeup - sizeof(size_t);
+    assert(*request_to_sleep && "waking a thread that is not sleeping");
+    *request_to_sleep = 0;
+  }
+  return 0;
 }
 
 /**
@@ -433,7 +424,7 @@ int parameters_are_valid(size_t ptr, int allowed_to_be_null)
 
 size_t getLastCondWaiter(pthread_cond_t* cond)
 {
-  size_t* last_waiter = (size_t*)cond->waiting_list_;
+  size_t* last_waiter = (size_t*)&(cond->waiting_list_);
   while(*last_waiter)
   {
     last_waiter = (size_t*)*last_waiter;
