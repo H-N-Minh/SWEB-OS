@@ -181,7 +181,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   return -1;
 }
 
-#define SPINLOCK_INITALIZED 14243444
+
 /**
  * function stub
  * posix compatible signature - do not change the signature!
@@ -212,16 +212,19 @@ int pthread_spin_destroy(pthread_spinlock_t *lock)
  */
 int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
 {
-  if(!parameters_are_valid((size_t)lock, 0))
+  if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ == SPINLOCK_INITALIZED)
+  {
+    //Error: Spinlock already initalized or lock address not valid
+    return -1;
+  }
+  if(pshared != NULL)  //pshared not implemented
   {
     return -1;
   }
-  if(lock->initialized_ == SPINLOCK_INITALIZED)
-  {
-      return -1;
-  }
+
   lock->locked_ = 0;
   lock->initialized_ = SPINLOCK_INITALIZED;
+  lock->held_by_ = 0;
   return 0;
 }
 
@@ -231,14 +234,15 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
  */
 int pthread_spin_lock(pthread_spinlock_t *lock)
 {
-  if(!parameters_are_valid((size_t)lock, 0))
+  size_t stack_variable;
+  size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096);   
+  
+  if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || lock->held_by_ == current_thread_ptr)
   {
+    //lock not initalized or invalid lock_ptr or lock is allready held by current thread
     return -1;
   }
-  if(lock->initialized_ != SPINLOCK_INITALIZED)
-  {
-    return -1;
-  }
+
   size_t old_val = 1;
   do 
   {
@@ -247,7 +251,8 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
         : "m" (lock->locked_), "0" (old_val)
         : "memory");
   } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
-  return old_val;
+  lock->held_by_ = current_thread_ptr;
+  return 0;
 }
 
 /**
@@ -256,21 +261,29 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
  */
 int pthread_spin_trylock(pthread_spinlock_t *lock)
 {
-  if(!parameters_are_valid((size_t)lock, 0))
+  size_t stack_variable;
+  size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096);
+  if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || lock->held_by_ == current_thread_ptr)
   {
+    //lock not initalized or invalid lock_ptr or lock is allready held by current thread
     return -1;
   }
-  if(lock->initialized_ != SPINLOCK_INITALIZED)
-  {
-    return -1;
-  }
-
+ 
   size_t old_val = 1;
   asm("xchg %0,%1"
   : "=r" (old_val)
   : "m" (lock->locked_), "0" (old_val)
   : "memory");
-  return old_val;
+
+  if(old_val == 0)
+  {
+    lock->held_by_ = current_thread_ptr;
+    return 0;
+  }
+  else
+  {
+    return -1;
+  }
 }
 
 /**
@@ -279,24 +292,22 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
  */
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
-  if(!parameters_are_valid((size_t)lock, 0))
+  size_t stack_variable;
+  size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096);   
+
+  if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || !lock->locked_ || current_thread_ptr != lock->held_by_)
   {
+    //lock not initalized, not locked or invalid lock_ptr, not held by current thread
     return -1;
   }
-  if(lock->initialized_ != SPINLOCK_INITALIZED)
-  {
-    return -1;
-  }
-  if(lock->locked_ == 0)
-  {
-    return -1;
-  }
-    size_t old_val = 0;
-    asm("xchg %0,%1"
-            : "=r" (old_val)
-            : "m" (lock->locked_), "0" (old_val)
-            : "memory");
-    return 0;
+
+  size_t old_val = 0;
+  asm("xchg %0,%1"
+          : "=r" (old_val)
+          : "m" (lock->locked_), "0" (old_val)
+          : "memory");
+  lock->held_by_ = 0;
+  return 0;
 }
 
 /**

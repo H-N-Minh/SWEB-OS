@@ -24,7 +24,9 @@ typedef struct pthread_spinlock_struct {
     void* held_by_;
 } pthread_spinlock_t; 
 
-
+#define SPINLOCK_INITALIZED 14243444
+#define PTHREAD_SPIN_INITIALIZER { .locked_ = 0, .initialized_= SPINLOCK_INITALIZED, .held_by_ = 0 }
+// #define PTHREAD_COND_INITIALIZER { .waiting_list_ = 0, .initialized_= 1 }    // todo; implement this
 
 //pthread cond typedefs
 typedef struct pthread_cond_struct
