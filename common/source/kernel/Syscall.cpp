@@ -201,6 +201,12 @@ int Syscall::pthreadDetach(size_t thread_id, bool threads_locked)
   if(thread_to_be_detached)
   {
     thread_to_be_detached ->join_state_lock_.acquire();
+    if(thread_to_be_detached->join_state_ != PTHREAD_CREATE_JOINABLE)
+    {
+      if(!threads_locked) {current_process.threads_lock_.release();}
+      thread_to_be_detached->join_state_lock_.release();
+      return -1;
+    }
     thread_to_be_detached->join_state_ = PTHREAD_CREATE_DETACHED;
     if(!threads_locked) {current_process.threads_lock_.release();}
     thread_to_be_detached->join_state_lock_.release();
