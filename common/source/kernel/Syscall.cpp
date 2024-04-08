@@ -166,36 +166,7 @@ void Syscall::pthreadExit(void* value_ptr)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  // remove thread from process' thread vector
-  current_process.threads_lock_.acquire();
-  ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(current_process.threads_.begin(), current_process.threads_.end(), currentThread);
-  current_process.threads_.erase(exiting_thread);
-
-  debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_\n");
-  current_process.thread_retval_map_[currentUserThread.getTID()] = value_ptr;
-
-  if(current_process.threads_.size() == 0)  // last thread in process
-  {
-      debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
-      currentUserThread.last_thread_alive_ = true;
-  }
-  if(current_process.threads_.size() == 1)  // only one thread left
-  {
-    current_process.one_thread_left_lock_.acquire();
-    current_process.one_thread_left_ = true;
-    current_process.one_thread_left_condition_.signal();
-    current_process.one_thread_left_lock_.release();
-
-  }
-
-  // TODOs: Lock arch_memory_, also be careful with locking order to prevent deadlock
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
-  currentUserThread.loader_->arch_memory_.lock_.acquire();
-  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.vpn_stack_);
-  currentUserThread.loader_->arch_memory_.lock_.release();
-  current_process.threads_lock_.release();
-  currentUserThread.kill();
-
+  current_process.exitThread(value_ptr);
   assert(false && "This should never happen");
 }
 
@@ -435,7 +406,7 @@ unsigned int Syscall::sleep(unsigned int seconds)
     {
       break;
     }
-    if(seconds < 1000 && seconds > 0)
+    else if(seconds < 1000 && seconds > 0)
     {
       uint64_t femtoseconds = (uint64_t)seconds * 1000000000000000;
       debug(SYSCALL, "Want to sleep for %d seconds.\n", seconds);

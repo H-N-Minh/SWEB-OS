@@ -42,6 +42,7 @@ class UserProcess
 
         int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
         int joinThread(size_t thread_id, void**value_ptr);
+        void exitThread(void* value_ptr);
 
         int execvProcess(const char *path, char *const argv[]);
 

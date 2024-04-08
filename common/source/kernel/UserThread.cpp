@@ -27,13 +27,17 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
         
         size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
+        loader_->arch_memory_.lock_.acquire();
         bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , process_->execv_ppn_args_, 1);
+        loader_->arch_memory_.lock_.release();
         assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
     }
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ - 1;
+    loader_->arch_memory_.lock_.acquire();
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
+    loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
     size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 3 * sizeof(pointer));
@@ -110,7 +114,7 @@ UserThread::~UserThread()
     if(last_thread_alive_)
     {
         assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
-       // assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
+        //assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
         debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
         delete process_;
         process_ = 0;
