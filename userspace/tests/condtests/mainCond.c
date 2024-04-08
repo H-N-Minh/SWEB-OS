@@ -4,13 +4,14 @@
 
 extern int cond1();
 extern int cond2();
+extern int cond3();
 
 // set to 1 to test, 0 to skip
-#define COND1 1         // simple test where child has to wait for parent's signal
-#define COND2 1         // similar to cond1, but with more conds and both has to wait for each other
-// #define cond3 0
-// #define cond4 1     
-// #define cond5 0    
+#define COND1 0         // simple test where child has to wait for parent's signal
+#define COND2 0         // similar to cond1, but with more conds and both has to wait for each other
+#define COND3 1         // Currently not working and not sure why. it doesnt crash, just never exits
+// #define cond4 1      // testing broadcast
+// #define cond5 0      // testing wrong para
 // #define cond6 0
 
 int main()
@@ -33,13 +34,13 @@ int main()
         else                                  { printf("=> cond2 failed!\n");  return -1;}
     }
 
-    // if (FORK3)
-    // {
-    //     retval = fork3();
-    //     if (retval == PARENT_SUCCESS)         { printf("fork3 successful!\n"); } 
-    //     else if (retval == CHILD_SUCCESS)     { return 0; }                      
-    //     else                                  { printf("fork3 failed!\n"); return -1;}
-    // }
+    if (COND3)
+    {
+        printf("Testing cond3...\n");
+        retval = cond3();
+        if (retval == 0)                      { printf("=> cond3 successful!\n"); } 
+        else                                  { printf("=> cond3 failed!\n");  return -1;}
+    }
 
     // if (FORK4)
     // {

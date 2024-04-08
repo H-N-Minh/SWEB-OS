@@ -1,52 +1,73 @@
+/*
+ * This test multiple condition variables in a multi-threaded program.
+ * Its good for testing "lost wake calls"
+ * The main thread does the signal, children do the wait.
+ */
+
 #include "stdio.h"
-#include "types.h"
-#include "unistd.h"
 #include "pthread.h"
-#include "assert.h"
+#include <assert.h>
 
-#define PARENT_SUCCESS 0    // parent process returns 0 on success
-#define CHILD_SUCCESS 69    // child process returns 69 on success
+#define NUM_THREADS3 15
+#define NUM_CONDITIONS3 14
+
+pthread_mutex_t mymutex3[NUM_CONDITIONS3];
+pthread_cond_t mycond3[NUM_CONDITIONS3];
+int sharedVariable[NUM_CONDITIONS3];
 
 
-int fork3_global_var = 0;
-
-int function1()
+void* threadFunction3(void* arg)
 {
-    fork3_global_var += 369;
-    return 0;
+    int conditionIndex = *(int*)arg;
+
+    pthread_mutex_lock(&mymutex3[conditionIndex]);
+    while (sharedVariable[conditionIndex] != 1)
+    {
+        pthread_cond_wait(&mycond3[conditionIndex], &mymutex3[conditionIndex]);
+    }
+    pthread_mutex_unlock(&mymutex3[conditionIndex]);
+
+    return NULL;
 }
 
-// this tests fork together with pthread_create
-int fork3() {    
-    pid_t pid = fork();
 
-    if (pid < 0) 
+int cond3()
+{
+    for (int i = 0; i < NUM_CONDITIONS3; i++)
     {
-        printf("Error\n");
+        pthread_mutex_init(&mymutex3[i], NULL);
+        pthread_cond_init(&mycond3[i], NULL);
+        sharedVariable[i] = 0;
     }
-    else if (pid == 0) // child
+
+    pthread_t threads[NUM_THREADS3];
+    int conditionIndices[NUM_THREADS3];
+
+    for (int i = 0; i < NUM_THREADS3; i++)
     {
-        pthread_t thread_id;
-
-        int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
-        assert(rv == 0 && "child process failed to use pthread_create");
-
-        pthread_join(thread_id, NULL);
-        assert(fork3_global_var == 369 && "pthread_create of child process should have changed fork3_global_var to 369");
-
-        return CHILD_SUCCESS;
-
-    } else {    // parent
-        pthread_t thread_id;
-
-        fork3_global_var += 111;    // so parent and child has different values of fork3_global_var before pthread_create
-        int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, NULL);
-        assert(rv == 0 && "child process failed to use pthread_create");
-
-        pthread_join(thread_id, NULL);
-        assert(fork3_global_var == 480 && "pthread_create of child process should have changed fork3_global_var to 480");
-
-        return PARENT_SUCCESS;
+        conditionIndices[i] = i % NUM_CONDITIONS3;
+        pthread_create(&threads[i], NULL, threadFunction3, &conditionIndices[i]);
     }
+    
+
+    for (int i = 0; i < NUM_CONDITIONS3; i++)
+    {
+        pthread_mutex_lock(&mymutex3[i]);
+        sharedVariable[i] = 1;
+        pthread_cond_signal(&mycond3[i]);
+        pthread_mutex_unlock(&mymutex3[i]);
+    }
+
+    for (int i = 0; i < NUM_THREADS3; i++)
+    {
+        pthread_join(threads[i], NULL);
+    }
+
+    for (int i = 0; i < NUM_CONDITIONS3; i++)
+    {
+        pthread_mutex_destroy(&mymutex3[i]);
+        pthread_cond_destroy(&mycond3[i]);
+    }
+
     return 0;
 }
