@@ -56,7 +56,7 @@ int pthread_join(pthread_t thread, void **value_ptr)
  */
 int pthread_detach(pthread_t thread)
 {
-  return -1;
+  return __syscall(sc_pthread_detach, thread, 0x0, 0x0, 0x0, 0x0);
 }
 
 
