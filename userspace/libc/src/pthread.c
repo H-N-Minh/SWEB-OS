@@ -16,14 +16,17 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                     void *(*start_routine)(void *), void *arg)
 {
   int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
-  // if top_stack is 0, it means this is the first stack of the parent thread, so it should point to itself
-  size_t* top_stack = getTopOfThisStack();
-  if(*top_stack == 0)
+  if (!retval)
   {
-    *top_stack = (size_t)top_stack;
-    // these should already be 0, but just to be sure
-    top_stack -= sizeof(size_t);  *top_stack = 0;
-    top_stack -= sizeof(size_t);  *top_stack = 0;
+    // if top_stack is 0, it means this is the first stack of the parent thread, so it should point to itself
+    size_t* top_stack = getTopOfThisStack();
+    if(*top_stack == 0)
+    {
+      *top_stack = (size_t)top_stack;
+      // these should already be 0, but just to be sure
+      top_stack -= sizeof(size_t);  *top_stack = 0;
+      top_stack -= sizeof(size_t);  *top_stack = 0;
+    }
   }
   return retval;
 }

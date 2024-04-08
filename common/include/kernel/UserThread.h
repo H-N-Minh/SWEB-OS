@@ -25,7 +25,8 @@ class UserThread : public Thread
         void Run(){}
         void kill() override;
         void send_kill_notification();
-
+        bool schedulable() override;
+        
         UserProcess* process_;
         size_t vpn_stack_;
 
@@ -49,5 +50,5 @@ class UserThread : public Thread
         CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED};
 
         //userspace locks
-        size_t request_to_sleep_{NULL};         // pointer to user stack, stores a boolean whether the thread wants to sleep
+        size_t request_to_sleep_{NULL};         // pointer to boolean in user stack, indicate whether the thread is schedulable or not
 };

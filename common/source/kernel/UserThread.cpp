@@ -84,7 +84,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
-            cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_)
+            cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_),
+            request_to_sleep_(other.request_to_sleep_)
 {
     debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
     tid_ =  ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
@@ -181,3 +182,39 @@ void UserThread::kill()
     }
   }
  }
+
+
+bool UserThread::schedulable()
+{
+  bool running = (getState() == Running);
+  if(running)
+  {
+    // if the thread requests to sleep, then it is not scheduled
+    if (request_to_sleep_ && *(size_t*) request_to_sleep_ == 1)
+    {
+        return false;
+    }
+    
+    if(wakeup_timestamp_ == 0)
+    {
+      return true;
+    }
+    else
+    {
+      unsigned int edx;
+      unsigned int eax;
+      asm
+      (
+        "rdtsc"
+        : "=a"(eax), "=d"(edx)
+      );
+      unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+      if(current_time_stamp >= wakeup_timestamp_)
+      {
+        wakeup_timestamp_ = 0;
+        return true;
+      }
+    }
+  }
+  return false;
+}
