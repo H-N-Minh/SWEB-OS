@@ -198,19 +198,18 @@ int Syscall::pthreadDetach(size_t thread_id)
 
   current_process.threads_lock_.acquire();
   UserThread* thread_to_be_detached = current_process.getUserThread(thread_id);
-  thread_to_be_detached .join_state_lock_.acquire();
   if(thread_to_be_detached)
   {
-    thread_to_be_detached.join_state_ = PTHREAD_CREATE_DETACHED;
+    thread_to_be_detached ->join_state_lock_.acquire();
+    thread_to_be_detached->join_state_ = PTHREAD_CREATE_DETACHED;
     current_process.threads_lock_.release();
-    thread_to_be_detached .join_state_lock_.release();
+    thread_to_be_detached->join_state_lock_.release();
     return 0;
   }
   else
   {
     int thread_in_retval_map = current_process.removeRetvalFromMapAndSetReval(thread_id, NULL);
     current_process.threads_lock_.release();
-    thread_to_be_detached .join_state_lock_.release();
     return thread_in_retval_map;
 
   }
