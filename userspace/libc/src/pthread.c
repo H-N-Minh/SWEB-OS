@@ -198,16 +198,16 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 
   // adding curent thread to the waiting list
   size_t last_waiter = getLastCondWaiter(cond);
-  *(size_t*)last_waiter = new_waiter_list_address;
+  *(size_t*)last_waiter = (size_t) new_waiter_list_address;
   
   // current thread signal that it wants to sleep
   // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
-  assert(*new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
+  assert(!*new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
   pthread_mutex_unlock(mutex);       
   *new_waiter_request_to_sleep = 1;      // This tells the scheduler that this thread is waiting and can be skipped
   __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
   pthread_mutex_lock(mutex);
-  return -1;
+  return 0;
 }
 
 
