@@ -128,11 +128,17 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 {
   if(!parameters_are_valid((size_t)cond, 0) || cond->initialized_)
   {
+    return -1;    //Error: Cond already initalized or cond address not valid
+  }
+  if(attr != NULL)  //attr not implemented
+  {
     return -1;
   }
+
   size_t* top_current_stack = getTopOfThisStack();
   size_t* top_first_stack = (size_t*)*top_current_stack;
   cond->waiting_list_ = (size_t) top_first_stack - sizeof(size_t); 
+  assert(!cond->waiting_list_ && "waiting_list_ of cond is not NULL");
   cond->initialized_ = 1;
   return 0;
 }
