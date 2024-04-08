@@ -41,7 +41,9 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * tid_);
+    // sizeof(pointer)*4 because 1 is default and 3 spots are reserved for userspace locks
+    size_t user_stack_ptr = (USER_BREAK - sizeof(pointer)*4 - PAGE_SIZE * tid_);
+    request_to_sleep_ = user_stack_ptr + sizeof(pointer);
 
     if (!func) //for the first thread when we create a process
     {
@@ -58,6 +60,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
         user_registers_->rdi = (size_t)func;
         user_registers_->rsi = (size_t)arg;
+        user_registers_->rdx = (size_t) user_stack_ptr + sizeof(pointer)*3; // address of the top of stack, relevant for userspace locks
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }

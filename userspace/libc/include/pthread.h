@@ -33,6 +33,12 @@ typedef unsigned int pthread_condattr_t;
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
+
+/**
+ * return the address of the top of the current stack
+*/
+extern size_t* getTopOfThisStack();
+
 extern int pthread_create(pthread_t *thread,
          const pthread_attr_t *attr, void *(*start_routine)(void *),
          void *arg);
@@ -42,7 +48,7 @@ extern int pthread_create(pthread_t *thread,
 //the wrapper will take 2 parameter
 //first one for the function that we want to run
 //second one is the parameter of the function */
-void pthread_create_wrapper(void* start_routine, void* arg);
+void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack);
 
 extern void pthread_exit(void *value_ptr);
 

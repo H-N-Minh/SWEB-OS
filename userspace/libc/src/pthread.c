@@ -5,6 +5,14 @@
 
 #include <stdio.h>
 
+#define __PAGE_SIZE__ 4096
+
+size_t* getTopOfThisStack() {
+    size_t stack_variable;
+    size_t* top_stack = (size_t*)((size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t)); 
+    assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
+    return top_stack;
+}
 
 /**
  * function stub
@@ -13,12 +21,24 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                     void *(*start_routine)(void *), void *arg)
 {
-  return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
+  int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
+  // if top_stack is 0, it means this is the first stack of the parent thread, so it should point to itself
+  size_t* top_stack = getTopOfThisStack();
+  if(*top_stack == 0)
+  {
+    *top_stack = (size_t)top_stack;
+  }
+  return retval;
 }
 
-//wrapper function. In pthread create
-void pthread_create_wrapper(void* start_routine, void* arg)
+/**wrapper function. In pthread create
+// top_stack points to the top of the 1st stack of the child thread
+// Since its the first stack of new thread, it should points to itself */
+void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
 {
+  assert(top_stack && "top_stack of Child Thread is NULL");
+  *(size_t*) top_stack = (size_t) top_stack;
+
   void* retval = ((void* (*)(void*))start_routine)(arg);
   pthread_exit(retval);
 }

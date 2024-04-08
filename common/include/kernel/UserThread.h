@@ -48,6 +48,6 @@ class UserThread : public Thread
         CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};
         CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED};
 
-        
-
+        //userspace locks
+        size_t request_to_sleep_{NULL};         // pointer to user stack, stores a boolean whether the thread wants to sleep
 };
