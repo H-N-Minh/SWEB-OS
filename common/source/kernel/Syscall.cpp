@@ -192,39 +192,40 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 
 int Syscall::pthreadDetach(size_t thread_id)
 {
-  debug(SYSCALL, "Syscall:pthreadDetach: called, thread_id: %zu\n", thread_id);
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  UserProcess& current_process = *currentUserThread.process_;
+  return -1;
+  // debug(SYSCALL, "Syscall:pthreadDetach: called, thread_id: %zu\n", thread_id);
+  // UserThread& currentUserThread = *((UserThread*)currentThread);
+  // UserProcess& current_process = *currentUserThread.process_;
 
-  currentUserThread.join_state_lock_.acquire();
-  if(currentUserThread.join_state_ != PTHREAD_CREATE_JOINABLE)
-  {
-    //Thread need to be joinable to get detached
-    currentUserThread.join_state_lock_.release();
-    return -1;
-  }
+  // currentUserThread.join_state_lock_.acquire();
+  // if(currentUserThread.join_state_ != PTHREAD_CREATE_JOINABLE)
+  // {
+  //   //Thread need to be joinable to get detached
+  //   currentUserThread.join_state_lock_.release();
+  //   return -1;
+  // }
   
 
-  current_process.threads_lock_.acquire();
-  int thread_in_retval_map = current_process.removeRetvalFromMapAndSetReval(thread_id, NULL);
-  if(thread_in_retval_map)
-  {
-    currentUserThread.join_state_lock_.release();
-    current_process.threads_lock_.release();
-    return 0;
-  }
+  // current_process.threads_lock_.acquire();
+  // int thread_in_retval_map = current_process.removeRetvalFromMapAndSetReval(thread_id, NULL);
+  // if(thread_in_retval_map)
+  // {
+  //   currentUserThread.join_state_lock_.release();
+  //   current_process.threads_lock_.release();
+  //   return 0;
+  // }
   
-  UserThread* thread_to_be_detached = current_process.getUserThread(thread_id);
+  // UserThread* thread_to_be_detached = current_process.getUserThread(thread_id);
 
-  if(!thread_to_be_detached)
-  {
-    return -1;
-  }
+  // if(!thread_to_be_detached)
+  // {
+  //   return -1;
+  // }
 
-  currentUserThread.join_state_ = PTHREAD_CREATE_DETACHED;
+  // currentUserThread.join_state_ = PTHREAD_CREATE_DETACHED;
   
-  currentUserThread.join_state_lock_.release();
-  current_process.threads_lock_.release();
+  // currentUserThread.join_state_lock_.release();
+  // current_process.threads_lock_.release();
   return 0;
 }
 
