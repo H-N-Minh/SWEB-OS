@@ -165,28 +165,17 @@ int UserProcess::joinThread(size_t thread_id, void**value_ptr)
 
   threads_lock_.acquire();
 
-  //currentUserThread.join_state_lock_.acquire();
-  // if(currentUserThread.join_state_ != PTHREAD_CREATE_JOINABLE)
-  // {
-    //thread_not joinable
-    //currentUserThread.join_state_lock_.release();
-  //   threads_lock_.release();
-  //   return -1;
-  // }
-  
   //find thread in threadlist
   UserThread* thread_to_be_joined = getUserThread(thread_id);
   if(!thread_to_be_joined)
   {
     //Check if thread has already terminated
     int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
-    //currentUserThread.join_state_lock_.release();
     threads_lock_.release();
     return thread_in_retval_map;
   }
   currentUserThread.thread_gets_killed_lock_.acquire();
   thread_to_be_joined->join_threads_.push_back(&currentUserThread);
-  //currentUserThread.join_state_lock_.release();
   threads_lock_.release();
   
   //wait for thread get killed
@@ -213,13 +202,13 @@ void UserProcess::exitThread(void* value_ptr)
   ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);
   threads_.erase(exiting_thread);
 
-  // currentUserThread.join_state_lock_.acquire();
-  // if(currentUserThread.join_state_ == PTHREAD_CREATE_JOINABLE)
-  // {
+  currentUserThread.join_state_lock_.acquire();
+  if(currentUserThread.join_state_ == PTHREAD_CREATE_JOINABLE)
+  {
     debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_ in case the thread is joinable\n");
     thread_retval_map_[currentUserThread.getTID()] = value_ptr;
-  // }
-  // currentUserThread.join_state_lock_.release();
+  }
+  currentUserThread.join_state_lock_.release();
 
   if(threads_.size() == 0)  // last thread in process
   {
