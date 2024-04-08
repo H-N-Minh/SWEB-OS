@@ -49,15 +49,6 @@ void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
  * function stub
  * posix compatible signature - do not change the signature!
  */
-int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
-{
-  return -1;
-}
-
-/**
- * function stub
- * posix compatible signature - do not change the signature!
- */
 void pthread_exit(void *value_ptr)
 {
   __syscall(sc_pthread_exit, (size_t)value_ptr, 0x0, 0x0, 0x0, 0x0);
@@ -94,9 +85,45 @@ int pthread_detach(pthread_t thread)
  * function stub
  * posix compatible signature - do not change the signature!
  */
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
+{
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ == SPINLOCK_INITALIZED)
+  {
+    //Error: Spinlock already initalized or lock address not valid
+    return -1;
+  }
+  if(attr != NULL)  //pshared not implemented
+  {
+    return -1;
+  }
+
+  mutex->locked_ = 0;
+  mutex->initialized_ = SPINLOCK_INITALIZED;
+  mutex->held_by_ = 0;
+  return 0;
+}
+
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
 int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
-  return -1;
+  if(!parameters_are_valid((size_t)mutex, 0))
+  {
+    return -1;
+  }
+  if(mutex->initialized_ != SPINLOCK_INITALIZED)
+  {
+    return -1;
+  }
+  if(mutex->locked_)
+  {
+    return -1;
+  }
+  mutex->initialized_ = 0;
+  return 0;
+
 }
 
 /**
@@ -105,7 +132,25 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
  */
 int pthread_mutex_lock(pthread_mutex_t *mutex)
 {
-  return -1;
+  size_t stack_variable;
+  size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096);   
+  
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != SPINLOCK_INITALIZED || mutex->held_by_ == current_thread_ptr)
+  {
+    //lock not initalized or invalid lock_ptr or lock is allready held by current thread
+    return -1;
+  }
+
+  size_t old_val = 1;
+  do 
+  {
+    asm("xchg %0,%1"
+        : "=r" (old_val)
+        : "m" (mutex->locked_), "0" (old_val)
+        : "memory");
+  } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
+  mutex->held_by_ = current_thread_ptr;
+  return 0;
 }
 
 /**
@@ -114,7 +159,22 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
  */
 int pthread_mutex_unlock(pthread_mutex_t *mutex)
 {
-  return -1;
+  size_t stack_variable;
+  size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096);   
+
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != SPINLOCK_INITALIZED || !mutex->locked_ || current_thread_ptr != mutex->held_by_)
+  {
+    //lock not initalized, not locked or invalid lock_ptr, not held by current thread
+    return -1;
+  }
+
+  size_t old_val = 0;
+  asm("xchg %0,%1"
+          : "=r" (old_val)
+          : "m" (mutex->locked_), "0" (old_val)
+          : "memory");
+  mutex->held_by_ = 0;
+  return 0;
 }
 
 /**

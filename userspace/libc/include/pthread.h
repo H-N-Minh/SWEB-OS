@@ -15,7 +15,7 @@ typedef size_t pthread_t;
 typedef unsigned int pthread_attr_t;
 
 //pthread mutex typedefs
-typedef unsigned int pthread_mutex_t;
+// typedef unsigned int pthread_mutex_t;
 typedef unsigned int pthread_mutexattr_t;
 
 typedef struct pthread_spinlock_struct { 
@@ -23,6 +23,14 @@ typedef struct pthread_spinlock_struct {
     size_t initialized_;
     void* held_by_;
 } pthread_spinlock_t; 
+
+
+// TODO: MUTEX is only copying spinlock for now. Delete this struct
+typedef struct pthread_mutex_struct { 
+    size_t  locked_; 
+    size_t initialized_;
+    void* held_by_;
+} pthread_mutex_t; 
 
 #define SPINLOCK_INITALIZED 14243444
 #define PTHREAD_SPIN_INITIALIZER { .locked_ = 0, .initialized_= SPINLOCK_INITALIZED, .held_by_ = 0 }
