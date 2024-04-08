@@ -25,8 +25,13 @@ typedef struct pthread_spinlock_struct {
 } pthread_spinlock_t; 
 
 
+
 //pthread cond typedefs
-typedef unsigned int pthread_cond_t;
+typedef struct pthread_cond_struct
+{
+  size_t waiting_list_;     // linked list of waiting threads
+  size_t initialized_;
+} pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
 
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
@@ -34,7 +39,8 @@ enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
 
 /**
- * return the address of the top of the current stack
+ * return the address of the top of the current stack. 
+ * @return non null pointer to the top of the current stack
 */
 extern size_t* getTopOfThisStack();
 

@@ -126,7 +126,15 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
  */
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 {
-  return -1;
+  if(!parameters_are_valid((size_t)cond, 0) || cond->initialized_)
+  {
+    return -1;
+  }
+  size_t* top_current_stack = getTopOfThisStack();
+  size_t* top_first_stack = (size_t*)*top_current_stack;
+  cond->waiting_list_ = (size_t) top_first_stack - sizeof(size_t); 
+  cond->initialized_ = 1;
+  return 0;
 }
 
 /**
@@ -135,7 +143,7 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
  */
 int pthread_cond_destroy(pthread_cond_t *cond)
 {
-  return -1;
+  return 0;   // TODO implement this
 }
 
 /**
@@ -162,6 +170,14 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
  */
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
+  // // pthread_mutex_lock(&cv->mutex); ???
+  // assert(cv->value == 0); // request for sleep should be 0 before calling wait
+  // cv->request_to_sleep_ = 1;  // so scheduler set this CURRENT thread to sleep (use calculation here to find request_to_sleep_ address)
+  // sleeper_.push_back(cv->linkedlistaddress);  // add address to list so signal can change it back to 0
+  // pthread_mutex_unlock(user_mutex);       // lost wake call
+  // Scheduler::yield();
+  // pthread_mutex_lock(user_mutex);
+  // // pthread_mutex_unlock(&cv->mutex); ??
   return -1;
 }
 
@@ -351,6 +367,7 @@ int get_thread_count(void) {
 //    mutex->held_by = 0;
 //}
 
+// COND also uses this, dont delete
 int parameters_are_valid(size_t ptr, int allowed_to_be_null)
 {
     if(!allowed_to_be_null && ptr == 0)
