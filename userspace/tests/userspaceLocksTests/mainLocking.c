@@ -18,9 +18,9 @@ int main()
     // spin4();   //Testing more posix errorchecks details
 
     mutex1();     //checks if basic locking and unlocking works with mutexes
-    // mutex2();     //simple syncronization with mutexes
-    // mutex3();     //syncronization with two mutexes
-    // mutex4();     //Testing more posix errorchecks details
+    mutex2();     //simple syncronization with mutexes
+    mutex3();     //syncronization with two mutexes
+    mutex4();     //Testing more posix errorchecks details
 
     printf("\n\nUserspace locking tests successful");
 }

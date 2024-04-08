@@ -44,6 +44,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     // sizeof(pointer)*4 because 1 is default and 3 spots are reserved for userspace locks
     size_t user_stack_ptr = (USER_BREAK - sizeof(pointer)*4 - PAGE_SIZE * tid_);
     request_to_sleep_ = user_stack_ptr + sizeof(pointer);
+    request_to_sleep_ = (size_t) request_to_sleep_ & ~0xF;
 
     if (!func) //for the first thread when we create a process
     {
@@ -184,37 +185,38 @@ void UserThread::kill()
  }
 
 
-// bool UserThread::schedulable()
-// {
-//   bool running = (getState() == Running);
-//   if(running)
-//   {
-//     // if the thread requests to sleep, then it is not scheduled
-//     if (request_to_sleep_ && *(size_t*) request_to_sleep_ == 1)
-//     {
-//         return false;
-//     }
-    
-//     if(wakeup_timestamp_ == 0)
-//     {
-//       return true;
-//     }
-//     else
-//     {
-//       unsigned int edx;
-//       unsigned int eax;
-//       asm
-//       (
-//         "rdtsc"
-//         : "=a"(eax), "=d"(edx)
-//       );
-//       unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
-//       if(current_time_stamp >= wakeup_timestamp_)
-//       {
-//         wakeup_timestamp_ = 0;
-//         return true;
-//       }
-//     }
-//   }
-//   return false;
-// }
+bool UserThread::schedulable()
+{
+  bool running = (getState() == Running);
+  if(running)
+  {
+    // if the thread requests to sleep, then it is not scheduled
+    size_t *request_to_sleep_translated = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)request_to_sleep_);
+    if(request_to_sleep_translated && *request_to_sleep_translated == 1)
+    {
+      return false;   
+    }
+
+    if(wakeup_timestamp_ == 0)
+    {
+      return true;
+    }
+    else
+    {
+      unsigned int edx;
+      unsigned int eax;
+      asm
+      (
+        "rdtsc"
+        : "=a"(eax), "=d"(edx)
+      );
+      unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+      if(current_time_stamp >= wakeup_timestamp_)
+      {
+        wakeup_timestamp_ = 0;
+        return true;
+      }
+    }
+  }
+  return false;
+}
