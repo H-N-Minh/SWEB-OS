@@ -35,7 +35,7 @@ void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
 {
   assert(top_stack && "top_stack of Child Thread is NULL");
   *(size_t*) top_stack = (size_t) top_stack;
-  // these should already be 0, but just to be sure
+  // these should already be 0, but just to be sure:
   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // linked list for waiting threads
   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // boolean for request_to_sleep
   void* retval = ((void* (*)(void*))start_routine)(arg);
@@ -130,12 +130,9 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
   }
 
   cond->initialized_ = 1;
-  
   size_t* top_first_stack = getTopOfFirstStack();
   cond->waiting_list_ = (size_t) top_first_stack - sizeof(size_t); 
   assert(!cond->waiting_list_ && "waiting_list_ of cond is not NULL");
-
-  cond->request_to_sleep_ = (size_t) top_first_stack - sizeof(size_t) * 2; ;
   return 0;
 }
 
@@ -159,6 +156,28 @@ int pthread_cond_destroy(pthread_cond_t *cond)
  */
 int pthread_cond_signal(pthread_cond_t *cond)
 {
+  if(!parameters_are_valid((size_t)cond, 0) || !cond->initialized_)
+  {
+    return -1;    //Cond is Null, cond not initialized
+  }
+  assert(cond->request_to_sleep_ && "cond request_to_sleep_ is already true, this should not happen");
+  if (*(size_t*) cond->request_to_sleep_)
+  { 
+      sleepers_.front()->request_to_sleep_ = 0; 
+      sleepers_.pop_front(); 
+  }
+
+  // adding curent thread to the waiting list
+  size_t* new_waiter_stack = getTopOfFirstStack();
+  size_t new_waiter_list_address = (size_t) new_waiter_stack - sizeof(size_t);
+  size_t last_waiter = getLastCondWaiter(cond);
+  *(size_t*)last_waiter = new_waiter_list_address;
+  
+  pthread_mutex_unlock(mutex);       // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
+  assert(cond->request_to_sleep_ && "cond request_to_sleep_ is already true, this should not happen");
+  cond->request_to_sleep_ = 1;      // This tells the scheduler that this thread is waiting and can be skipped
+  __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
+  pthread_mutex_lock(mutex);
   return -1;
 }
 
@@ -181,15 +200,20 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   {
     return -1;    //Cond is Null, cond not initialized or mutex is null
   }
+  // get the reserved space of current thread
+  size_t* new_waiter_stack            = getTopOfFirstStack();
+  size_t* new_waiter_list_address     = new_waiter_stack - sizeof(size_t);
+  size_t* new_waiter_request_to_sleep = new_waiter_stack - sizeof(size_t) * 2;
+
   // adding curent thread to the waiting list
-  size_t* new_waiter_stack = getTopOfFirstStack();
-  size_t new_waiter_list_address = (size_t) new_waiter_stack - sizeof(size_t);
   size_t last_waiter = getLastCondWaiter(cond);
   *(size_t*)last_waiter = new_waiter_list_address;
   
-  pthread_mutex_unlock(mutex);       // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
-  assert(cond->request_to_sleep_ && "cond request_to_sleep_ is already true, this should not happen");
-  cond->request_to_sleep_ = 1;      // This tells the scheduler that this thread is waiting and can be skipped
+  // current thread signal that it wants to sleep
+  // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
+  assert(*new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
+  pthread_mutex_unlock(mutex);       
+  *new_waiter_request_to_sleep = 1;      // This tells the scheduler that this thread is waiting and can be skipped
   __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
   pthread_mutex_lock(mutex);
   return -1;

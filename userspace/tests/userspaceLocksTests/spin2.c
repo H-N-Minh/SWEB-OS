@@ -10,7 +10,6 @@ pthread_spinlock_t lock2;
 
 void increment_counter()
 {
-    printf("Incrementing counterrrr\n");
     for (int i = 0; i < MAX_COUNT; i++)
     {
         pthread_spin_lock(&lock2);

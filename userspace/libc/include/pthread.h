@@ -33,7 +33,6 @@ typedef struct pthread_cond_struct
 {
   size_t initialized_;
   size_t waiting_list_;     // pointer to linked list of waiting threads
-  size_t request_to_sleep_;  // pointer to boolean, true if thread is waiting and request Scheduler to sleep this thread
 } pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
 
