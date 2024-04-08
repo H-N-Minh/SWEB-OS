@@ -7,12 +7,6 @@
 
 #define __PAGE_SIZE__ 4096
 
-size_t* getTopOfThisStack() {
-    size_t stack_variable;
-    size_t* top_stack = (size_t*)((size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t)); 
-    assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-    return top_stack;
-}
 
 /**
  * function stub
@@ -135,11 +129,13 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
     return -1;
   }
 
-  size_t* top_current_stack = getTopOfThisStack();
-  size_t* top_first_stack = (size_t*)*top_current_stack;
+  cond->initialized_ = 1;
+  
+  size_t* top_first_stack = getTopOfFirstStack();
   cond->waiting_list_ = (size_t) top_first_stack - sizeof(size_t); 
   assert(!cond->waiting_list_ && "waiting_list_ of cond is not NULL");
-  cond->initialized_ = 1;
+
+  cond->request_to_sleep_ = (size_t) top_first_stack - sizeof(size_t) * 2; ;
   return 0;
 }
 
@@ -181,14 +177,21 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
  */
 int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 {
-  // // pthread_mutex_lock(&cv->mutex); ???
-  // assert(cv->value == 0); // request for sleep should be 0 before calling wait
-  // cv->request_to_sleep_ = 1;  // so scheduler set this CURRENT thread to sleep (use calculation here to find request_to_sleep_ address)
-  // sleeper_.push_back(cv->linkedlistaddress);  // add address to list so signal can change it back to 0
-  // pthread_mutex_unlock(user_mutex);       // lost wake call
-  // Scheduler::yield();
-  // pthread_mutex_lock(user_mutex);
-  // // pthread_mutex_unlock(&cv->mutex); ??
+  if(!parameters_are_valid((size_t)cond, 0) || !cond->initialized_ || !mutex)
+  {
+    return -1;    //Cond is Null, cond not initialized or mutex is null
+  }
+  // adding curent thread to the waiting list
+  size_t* new_waiter_stack = getTopOfFirstStack();
+  size_t new_waiter_list_address = (size_t) new_waiter_stack - sizeof(size_t);
+  size_t last_waiter = getLastCondWaiter(cond);
+  *(size_t*)last_waiter = new_waiter_list_address;
+  
+  pthread_mutex_unlock(mutex);       // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
+  assert(cond->request_to_sleep_ && "cond request_to_sleep_ is already true, this should not happen");
+  cond->request_to_sleep_ = 1;      // This tells the scheduler that this thread is waiting and can be skipped
+  __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
+  pthread_mutex_lock(mutex);
   return -1;
 }
 
@@ -401,4 +404,27 @@ int parameters_are_valid(size_t ptr, int allowed_to_be_null)
       return 0;
     }
     return 1;
+}
+
+
+size_t getLastCondWaiter(pthread_cond_t* cond)
+{
+  size_t* last_waiter = (size_t*)cond->waiting_list_;
+  while(*last_waiter)
+  {
+    last_waiter = (size_t*)*last_waiter;
+  }
+  return (size_t)last_waiter;
+}
+
+size_t* getTopOfThisStack() {
+  size_t stack_variable;
+  size_t* top_stack = (size_t*)((size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t)); 
+  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
+  return top_stack;
+}
+
+size_t* getTopOfFirstStack() {
+  size_t* top_current_stack = getTopOfThisStack();
+  return (size_t*)*top_current_stack;
 }

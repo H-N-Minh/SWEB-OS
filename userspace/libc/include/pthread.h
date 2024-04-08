@@ -31,20 +31,15 @@ typedef struct pthread_spinlock_struct {
 //pthread cond typedefs
 typedef struct pthread_cond_struct
 {
-  size_t waiting_list_;     // linked list of waiting threads
   size_t initialized_;
+  size_t waiting_list_;     // pointer to linked list of waiting threads
+  size_t request_to_sleep_;  // pointer to boolean, true if thread is waiting and request Scheduler to sleep this thread
 } pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
 
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
-
-/**
- * return the address of the top of the current stack. 
- * @return non null pointer to the top of the current stack
-*/
-extern size_t* getTopOfThisStack();
 
 extern int pthread_create(pthread_t *thread,
          const pthread_attr_t *attr, void *(*start_routine)(void *),
@@ -104,6 +99,24 @@ extern int pthread_spin_trylock(pthread_spinlock_t *lock);
 extern int pthread_spin_unlock(pthread_spinlock_t *lock);
 
 extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
+
+
+/**
+ * @return loop through linked list and get the pointer of last thread that is in the waiting_list_ of the given cond
+*/
+extern size_t getLastCondWaiter(pthread_cond_t* cond);
+
+/**
+ * return the address of the top of the current stack. 
+ * @return non null pointer
+*/
+extern size_t* getTopOfThisStack();
+
+/**
+ * return the address of the top of the first stack. 
+ * @return non null pointer
+*/
+extern size_t* getTopOfFirstStack();
 
 #ifdef __cplusplus
 }
