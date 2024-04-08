@@ -19,13 +19,13 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   if (!retval)
   {
     // if top_stack is 0, it means this is the first stack of the parent thread, so it should point to itself
-    size_t* top_stack = getTopOfThisStack();
-    if(*top_stack == 0)
+    size_t top_stack = getTopOfThisStack();
+    if(*(size_t*) top_stack == 0)
     {
-      *top_stack = (size_t)top_stack;
+      *(size_t*) top_stack = top_stack;
       // these should already be 0, but just to be sure
-      top_stack -= sizeof(size_t);  *top_stack = 0;
-      top_stack -= sizeof(size_t);  *top_stack = 0;
+      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;
+      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;
     }
   }
   return retval;
@@ -222,15 +222,15 @@ int pthread_cond_signal(pthread_cond_t *cond)
     return -1;    //Cond is Null, cond not initialized
   }
   
-  if (!cond->waiting_list_)   // if theres at least 1 thread in the waiting list
+  if (cond->waiting_list_)   // if theres at least 1 thread in the waiting list
   { 
     // remove the first thread from the waiting list
-    size_t* thread_to_wakeup = (size_t*) cond->waiting_list_;
-    cond->waiting_list_ = *thread_to_wakeup;
+    size_t thread_to_wakeup = cond->waiting_list_;
+    cond->waiting_list_ = *(size_t*) thread_to_wakeup;
     // signal the thread to wake up
-    size_t* request_to_sleep = thread_to_wakeup - sizeof(size_t);
-    assert(*request_to_sleep && "waking a thread that is not sleeping");
-    *request_to_sleep = 0;
+    size_t request_to_sleep = thread_to_wakeup - sizeof(size_t);
+    assert(*(size_t*) request_to_sleep && "waking a thread that is not sleeping");
+    *(size_t*) request_to_sleep = 0;
   }
   return 0;
 }
@@ -270,19 +270,19 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
     return -1;    //Cond is Null, cond not initialized or mutex is null
   }
   // get the reserved space of current thread
-  size_t* new_waiter_stack            = getTopOfFirstStack();
-  size_t* new_waiter_list_address     = (size_t*) ((size_t) new_waiter_stack -   sizeof(size_t));
-  size_t* new_waiter_request_to_sleep = (size_t*) ((size_t) new_waiter_stack - 2*sizeof(size_t));
+  size_t new_waiter_stack            = getTopOfFirstStack();
+  size_t new_waiter_list_address     = new_waiter_stack -   sizeof(size_t);
+  size_t new_waiter_request_to_sleep = new_waiter_stack - 2*sizeof(size_t);
   
   // adding curent thread to the waiting list
   size_t last_waiter = getLastCondWaiter(cond);
-  *(size_t*)last_waiter = (size_t) new_waiter_list_address;
+  *(size_t*)last_waiter = new_waiter_list_address;
   
   // current thread signal that it wants to sleep
   // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
-  assert(!*new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
+  assert(!*(size_t*) new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
   pthread_mutex_unlock(mutex);       
-  *new_waiter_request_to_sleep = 1;      // This tells the scheduler that this thread is waiting and can be skipped
+  *(size_t*) new_waiter_request_to_sleep = 1;      // This tells the scheduler that this thread is waiting and can be skipped
   __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
   pthread_mutex_lock(mutex);
 
@@ -511,14 +511,14 @@ size_t getLastCondWaiter(pthread_cond_t* cond)
   return (size_t)last_waiter;
 }
 
-size_t* getTopOfThisStack() {
+size_t getTopOfThisStack() {
   size_t stack_variable;
-  size_t* top_stack = (size_t*)((size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t)); 
+  size_t top_stack = (size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t); 
   assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
   return top_stack;
 }
 
-size_t* getTopOfFirstStack() {
-  size_t* top_current_stack = getTopOfThisStack();
-  return (size_t*)*top_current_stack;
+size_t getTopOfFirstStack() {
+  size_t top_current_stack = getTopOfThisStack();
+  return *(size_t*) top_current_stack;
 }

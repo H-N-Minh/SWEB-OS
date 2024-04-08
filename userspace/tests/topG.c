@@ -10,7 +10,7 @@
 
 
 void* thread_function(void* arg) {
-    size_t* top_stack = getTopOfThisStack();
+    size_t* top_stack = (size_t*) getTopOfThisStack();
     assert((size_t) top_stack == (size_t) *top_stack && "top_stack of CHILD is not pointing to itself");
     return NULL;
 }
@@ -24,7 +24,7 @@ int main() {
         return 1;
     }
 
-    size_t* top_stack = getTopOfThisStack();
+    size_t* top_stack = (size_t*) getTopOfThisStack();
     assert((size_t) top_stack == (size_t) *top_stack && "top_stack of PARENT is not pointing to itself");
 
     result = pthread_join(thread_id, NULL);

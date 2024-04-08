@@ -1,25 +1,33 @@
 #include "stdio.h"
 #include "pthread.h"
+#include "assert.h"
 
 pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 int flag = 0;
 
+int step = 0;   // each step is fixed, if the step is not executed in order, that means cond not working
+
 void* thread_func(void* arg)
 {
-    printf("2. thread locking...\n");
+    step++;
+    assert(step == 1 && "Step 1 failed!");
+
     pthread_mutex_lock(&mutex);
-    printf("2. thread got the lock...\n");
+
+    step++;
+    assert(step == 2 && "Step 2 failed!");
 
     while (flag == 0) {
-        printf("2. Waiting for signal...\n");
+        step++;
+        assert(step == 3 && "Step 3 failed!");
         pthread_cond_wait(&cond, &mutex);
     }
 
-    printf("2. thread wake up!\n");
+    step++;
+    assert(step == 7 && "Step 7 failed!");
 
     pthread_mutex_unlock(&mutex);
-
     return NULL;
 }
 
@@ -29,21 +37,27 @@ int cond1()
 
     pthread_create(&thread, NULL, thread_func, NULL);
 
-    for (int i = 0; i < 100000000; i++) {
+    for (int i = 0; i < 800000000; i++) {   //5s delay
     // Do nothing
     }
 
     
-    printf("1. thread locking...\n");
+    step++;
+    assert(step == 4 && "Step 4 failed!");
     pthread_mutex_lock(&mutex);
-    printf("1. thread got the lock...\n");
+
+    step++;
+    assert(step == 5 && "Step 5 failed!");
     flag = 1;
+
     pthread_cond_signal(&cond);
+    step++;
+    assert(step == 6 && "Step 6 failed!");
 
-    printf("1. flag changed an signaled...\n");
     pthread_mutex_unlock(&mutex);
-
     pthread_join(thread, NULL);
 
+    step++;
+    assert(step == 8 && "Step 8 failed!");
     return 0;
 }

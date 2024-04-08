@@ -4,12 +4,8 @@
 
 extern int cond1();
 
-#define PARENT_SUCCESS 0    // parent process returns 0 on success
-#define CHILD_SUCCESS 69    // child process returns 69 on success
-
-
 // set to 1 to test, 0 to skip
-#define COND1 1  
+#define COND1 1         // simple test where child has to wait for parent's signal
 // #define cond2 0
 // #define cond3 0
 // #define cond4 1     
@@ -22,6 +18,7 @@ int main()
 
     if (COND1)
     {
+        printf("Testing cond1...\n");
         retval = cond1();
         if (retval == 0)                      { printf("cond1 successful!\n"); } 
         else                                  { printf("cond1 failed!\n");  return -1;}
@@ -67,6 +64,6 @@ int main()
     //     else                                  { printf("fork6 failed!\n"); return -1;}
     // }
     
-    printf("testing completed\n");
+    printf("testing completed!\n");
     return 0;
 }

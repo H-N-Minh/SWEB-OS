@@ -119,13 +119,13 @@ extern size_t getLastCondWaiter(pthread_cond_t* cond);
  * return the address of the top of the current stack. 
  * @return non null pointer
 */
-extern size_t* getTopOfThisStack();
+extern size_t getTopOfThisStack();
 
 /**
  * return the address of the top of the first stack. 
  * @return non null pointer
 */
-extern size_t* getTopOfFirstStack();
+extern size_t getTopOfFirstStack();
 
 #ifdef __cplusplus
 }
