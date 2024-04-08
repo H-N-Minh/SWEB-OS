@@ -115,7 +115,7 @@ UserThread::~UserThread()
     if(last_thread_alive_)
     {
         assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
-        //assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
+        assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
         debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
         delete process_;
         process_ = 0;
@@ -124,7 +124,7 @@ UserThread::~UserThread()
     if(unlikely(last_thread_before_exec_))
     {
         assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");    //TODOs: also check 
-        //assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
+        assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
 
         debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
         assert(Scheduler::instance()->isCurrentlyCleaningUp());

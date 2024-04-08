@@ -13,7 +13,7 @@ int main()
     pj1();          //pthread_join for function that has already finished 
     pj2();          //pthread_join where function is still running
     //pj3();        //starting 2000 threads after each other and join them - takes forever
-    printf("pj3 currently disabled because it takes forever\n");
+   printf("pj3 currently disabled because it takes forever\n");
     pj4();          //try to join the same thread twice
     pj5();          //Simple pthread join (very similar to pj2)
     pj6();          //more complex join and cancel test

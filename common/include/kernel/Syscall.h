@@ -30,7 +30,7 @@ class Syscall
     static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
     static void pthreadExit(void* value_ptr); 
     static int pthreadJoin(size_t thread_id, void**value_ptr); 
-    static int pthreadDetach(size_t thread);
+    static int pthreadDetach(size_t thread,  bool threads_locked = false);
 
     /**
       * @param is_tVector_locked_in_Exit if true: threads_ vector already locked (locked in Exit()).

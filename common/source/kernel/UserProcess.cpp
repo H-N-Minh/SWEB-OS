@@ -202,19 +202,22 @@ void UserProcess::exitThread(void* value_ptr)
   ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);
   threads_.erase(exiting_thread);
 
+  if(threads_.size() == 0)  // last thread in process
+  {
+      debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
+      currentUserThread.last_thread_alive_ = true;
+      thread_retval_map_.clear();
+  }
+
   currentUserThread.join_state_lock_.acquire();
-  if(currentUserThread.join_state_ == PTHREAD_CREATE_JOINABLE)
+  if(currentUserThread.join_state_ == PTHREAD_CREATE_JOINABLE && !currentUserThread.last_thread_alive_ )
   {
     debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_ in case the thread is joinable\n");
     thread_retval_map_[currentUserThread.getTID()] = value_ptr;
   }
   currentUserThread.join_state_lock_.release();
 
-  if(threads_.size() == 0)  // last thread in process
-  {
-      debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
-      currentUserThread.last_thread_alive_ = true;
-  }
+
   if(threads_.size() == 1)  // only one thread left
   {
     one_thread_left_lock_.acquire();
@@ -324,6 +327,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     one_thread_left_condition_.wait();
   }
   one_thread_left_lock_.release();
+
+  thread_retval_map_.clear();
 
 
   //allocate a free physical page and get the virtual address of the identity mapping

@@ -190,26 +190,26 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 }
 
 
-int Syscall::pthreadDetach(size_t thread_id)
+int Syscall::pthreadDetach(size_t thread_id, bool threads_locked)
 {
   debug(SYSCALL, "Syscall:pthreadDetach: called, thread_id: %zu\n", thread_id);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  current_process.threads_lock_.acquire();
+  if(!threads_locked) {current_process.threads_lock_.acquire();}
   UserThread* thread_to_be_detached = current_process.getUserThread(thread_id);
   if(thread_to_be_detached)
   {
     thread_to_be_detached ->join_state_lock_.acquire();
     thread_to_be_detached->join_state_ = PTHREAD_CREATE_DETACHED;
-    current_process.threads_lock_.release();
+    if(!threads_locked) {current_process.threads_lock_.release();}
     thread_to_be_detached->join_state_lock_.release();
     return 0;
   }
   else
   {
     int thread_in_retval_map = current_process.removeRetvalFromMapAndSetReval(thread_id, NULL);
-    current_process.threads_lock_.release();
+    if(!threads_locked){current_process.threads_lock_.release();}
     return thread_in_retval_map;
 
   }
@@ -249,11 +249,12 @@ void Syscall::exit(size_t exit_code, bool from_exec)
       thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
       thread->cancel_state_type_lock_.release();
       debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread->getTID());
-      //pthreadDetach(thread->getTID());
+      pthreadDetach(thread->getTID(), true);
       pthreadCancel(thread->getTID(), true);
       debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread->getTID());
     } 
   }
+
   current_process.threads_lock_.release();
 
   if(!from_exec)
