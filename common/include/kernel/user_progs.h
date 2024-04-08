@@ -4,8 +4,8 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
-
-                            "/usr/userspaceLocksTests.sweb",
+                            "/usr/conditionVarTests.sweb",
+                            // "/usr/userspaceLocksTests.sweb",
 
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
                             // "/usr/pc4.sweb",
