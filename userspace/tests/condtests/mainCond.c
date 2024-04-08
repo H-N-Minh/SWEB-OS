@@ -3,13 +3,14 @@
 #include "assert.h"
 
 extern int cond1();
+extern int cond2();
 
 // set to 1 to test, 0 to skip
 #define COND1 1         // simple test where child has to wait for parent's signal
-// #define cond2 0
+#define COND2 1         // similar to cond1, but with more conds and both has to wait for each other
 // #define cond3 0
 // #define cond4 1     
-// #define cond5 0     // all 4 & 5 & 6 requires lot of physical memory so each should be tested alone
+// #define cond5 0    
 // #define cond6 0
 
 int main()
@@ -20,17 +21,17 @@ int main()
     {
         printf("Testing cond1...\n");
         retval = cond1();
-        if (retval == 0)                      { printf("cond1 successful!\n"); } 
-        else                                  { printf("cond1 failed!\n");  return -1;}
+        if (retval == 0)                      { printf("=> cond1 successful!\n"); } 
+        else                                  { printf("=> cond1 failed!\n");  return -1;}
     }
 
-    // if (FORK2)
-    // {
-    //     retval = fork2();
-    //     if (retval == PARENT_SUCCESS)         { printf("fork2 successful!\n"); } 
-    //     else if (retval == CHILD_SUCCESS)     { return 0; }                      
-    //     else                                  { printf("fork2 failed!\n"); return -1;}
-    // }
+    if (COND2)
+    {
+        printf("Testing cond2...\n");
+        retval = cond2();
+        if (retval == 0)                      { printf("=> cond2 successful!\n"); } 
+        else                                  { printf("=> cond2 failed!\n");  return -1;}
+    }
 
     // if (FORK3)
     // {
@@ -64,6 +65,6 @@ int main()
     //     else                                  { printf("fork6 failed!\n"); return -1;}
     // }
     
-    printf("testing completed!\n");
+    printf("All tests completed!\n");
     return 0;
 }

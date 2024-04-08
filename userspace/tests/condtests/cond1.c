@@ -37,7 +37,7 @@ int cond1()
 
     pthread_create(&thread, NULL, thread_func, NULL);
 
-    for (int i = 0; i < 800000000; i++) {   //5s delay
+    for (int i = 0; i < 200000000; i++) {   //5s delay
     // Do nothing
     }
 
