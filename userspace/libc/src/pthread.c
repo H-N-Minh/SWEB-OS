@@ -149,7 +149,12 @@ int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
  */
 int pthread_cond_destroy(pthread_cond_t *cond)
 {
-  return 0;   // TODO implement this
+  if(!parameters_are_valid((size_t)cond, 0) || !cond->initialized_)
+  {
+    return -1;    //Error: Cond not initalized or cond address not valid
+  }
+  cond->initialized_ = 0;
+  return 0;
 }
 
 /**
