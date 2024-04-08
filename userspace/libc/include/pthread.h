@@ -26,6 +26,7 @@ typedef struct pthread_spinlock_struct {
 
 
 // TODO: MUTEX is only copying spinlock for now. Delete this struct
+#define PTHREAD_MUTEX_INITIALIZER { .locked_ = 0, .initialized_= SPINLOCK_INITALIZED, .held_by_ = 0 }
 typedef struct pthread_mutex_struct { 
     size_t  locked_; 
     size_t initialized_;
