@@ -271,9 +271,9 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   }
   // get the reserved space of current thread
   size_t* new_waiter_stack            = getTopOfFirstStack();
-  size_t* new_waiter_list_address     = new_waiter_stack - sizeof(size_t);
-  size_t* new_waiter_request_to_sleep = new_waiter_stack - sizeof(size_t) * 2;
-
+  size_t* new_waiter_list_address     = (size_t*) ((size_t) new_waiter_stack -   sizeof(size_t));
+  size_t* new_waiter_request_to_sleep = (size_t*) ((size_t) new_waiter_stack - 2*sizeof(size_t));
+  
   // adding curent thread to the waiting list
   size_t last_waiter = getLastCondWaiter(cond);
   *(size_t*)last_waiter = (size_t) new_waiter_list_address;
