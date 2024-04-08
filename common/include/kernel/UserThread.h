@@ -25,7 +25,7 @@ class UserThread : public Thread
         void Run(){}
         void kill() override;
         void send_kill_notification();
-        bool schedulable() override;
+        // bool schedulable() override;
         
         UserProcess* process_;
         size_t vpn_stack_;

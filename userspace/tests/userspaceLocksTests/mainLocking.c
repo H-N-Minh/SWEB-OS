@@ -17,7 +17,7 @@ int main()
     // spin3();   //syncronization with two spinlocks
     // spin4();   //Testing more posix errorchecks details
 
-    // mutex1();     //checks if basic locking and unlocking works with mutexes
+    mutex1();     //checks if basic locking and unlocking works with mutexes
     // mutex2();     //simple syncronization with mutexes
     // mutex3();     //syncronization with two mutexes
     // mutex4();     //Testing more posix errorchecks details

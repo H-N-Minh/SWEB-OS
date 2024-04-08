@@ -184,37 +184,37 @@ void UserThread::kill()
  }
 
 
-bool UserThread::schedulable()
-{
-  bool running = (getState() == Running);
-  if(running)
-  {
-    // if the thread requests to sleep, then it is not scheduled
-    if (request_to_sleep_ && *(size_t*) request_to_sleep_ == 1)
-    {
-        return false;
-    }
+// bool UserThread::schedulable()
+// {
+//   bool running = (getState() == Running);
+//   if(running)
+//   {
+//     // if the thread requests to sleep, then it is not scheduled
+//     if (request_to_sleep_ && *(size_t*) request_to_sleep_ == 1)
+//     {
+//         return false;
+//     }
     
-    if(wakeup_timestamp_ == 0)
-    {
-      return true;
-    }
-    else
-    {
-      unsigned int edx;
-      unsigned int eax;
-      asm
-      (
-        "rdtsc"
-        : "=a"(eax), "=d"(edx)
-      );
-      unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
-      if(current_time_stamp >= wakeup_timestamp_)
-      {
-        wakeup_timestamp_ = 0;
-        return true;
-      }
-    }
-  }
-  return false;
-}
+//     if(wakeup_timestamp_ == 0)
+//     {
+//       return true;
+//     }
+//     else
+//     {
+//       unsigned int edx;
+//       unsigned int eax;
+//       asm
+//       (
+//         "rdtsc"
+//         : "=a"(eax), "=d"(edx)
+//       );
+//       unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+//       if(current_time_stamp >= wakeup_timestamp_)
+//       {
+//         wakeup_timestamp_ = 0;
+//         return true;
+//       }
+//     }
+//   }
+//   return false;
+// }
