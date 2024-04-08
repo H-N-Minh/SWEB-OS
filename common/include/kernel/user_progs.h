@@ -3,11 +3,11 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                            // "/usr/shell.sweb",
+                            "/usr/shell.sweb",
 
-                            // "/usr/userspaceLocksTests.sweb",
+                            "/usr/userspaceLocksTests.sweb",
 
-                            "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
+                            // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
                             // "/usr/pc4.sweb",
                             // "/usr/smallpthreadcreate.sweb",
                             // "/usr/small_cancel_test.sweb",

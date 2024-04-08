@@ -28,8 +28,8 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
   {
     *top_stack = (size_t)top_stack;
     // these should already be 0, but just to be sure
-    top_stack += sizeof(size_t);  *top_stack = 0;
-    top_stack += sizeof(size_t);  *top_stack = 0;
+    top_stack -= sizeof(size_t);  *top_stack = 0;
+    top_stack -= sizeof(size_t);  *top_stack = 0;
   }
   return retval;
 }
@@ -42,8 +42,8 @@ void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
   assert(top_stack && "top_stack of Child Thread is NULL");
   *(size_t*) top_stack = (size_t) top_stack;
   // these should already be 0, but just to be sure
-  top_stack += sizeof(size_t);  *(size_t*) top_stack = 0;   // linked list for waiting threads
-  top_stack += sizeof(size_t);  *(size_t*) top_stack = 0;   // boolean for request_to_sleep
+  top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // linked list for waiting threads
+  top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // boolean for request_to_sleep
   void* retval = ((void* (*)(void*))start_routine)(arg);
   pthread_exit(retval);
 }
