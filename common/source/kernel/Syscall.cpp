@@ -193,7 +193,7 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 int Syscall::pthreadDetach(size_t thread_id)
 {
   return -1;
-  // debug(SYSCALL, "Syscall:pthreadDetach: called, thread_id: %zu\n", thread_id);
+  debug(SYSCALL, "Syscall:pthreadDetach: called, thread_id: %zu\n", thread_id);
   // UserThread& currentUserThread = *((UserThread*)currentThread);
   // UserProcess& current_process = *currentUserThread.process_;
 
