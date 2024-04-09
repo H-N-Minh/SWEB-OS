@@ -21,7 +21,7 @@ int main()
 
     if (COND1)
     {
-        printf("Testing cond1...\n");
+        printf("Testing cond1...");
         retval = cond1();
         if (retval == 0)                      { printf("=> cond1 successful!\n"); } 
         else                                  { printf("=> cond1 failed!\n");  return -1;}
@@ -29,7 +29,7 @@ int main()
 
     if (COND2)
     {
-        printf("Testing cond2...\n");
+        printf("Testing cond2...");
         retval = cond2();
         if (retval == 0)                      { printf("=> cond2 successful!\n"); } 
         else                                  { printf("=> cond2 failed!\n");  return -1;}
@@ -37,7 +37,7 @@ int main()
 
     if (COND3)
     {
-        printf("Testing cond3...\n");
+        printf("Testing cond3...");
         retval = cond3();
         if (retval == 0)                      { printf("=> cond3 successful!\n"); } 
         else                                  { printf("=> cond3 failed!\n");  return -1;}
@@ -45,7 +45,7 @@ int main()
 
     if (COND4)
     {
-        printf("Testing cond4...\n");
+        printf("Testing cond4...");
         retval = cond4();
         if (retval == 0)                      { printf("=> cond4 successful!\n"); } 
         else                                  { printf("=> cond4 failed!\n");  return -1;}
