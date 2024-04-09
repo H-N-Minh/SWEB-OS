@@ -2,7 +2,7 @@
 #include "unistd.h"
 #include "assert.h"
 
-// extern int cond1();
+extern int sem1();
 // extern int cond2();
 // extern int cond3();
 // extern int cond4();
@@ -13,7 +13,7 @@
 // TODO: test these 2 again with bigger amount when mutex is working
 
 // set to 1 to test, 0 to skip
-#define COND1 1         // simple test where child has to wait for parent's signal
+#define SEM1 1         // simple test where child has to wait for parent's signal
 #define COND2 1         // similar to cond1, but with more conds and both has to wait for each other
 #define COND3 1         // test large number of threads on same cond
 #define COND4 1         // testing broadcast
@@ -22,15 +22,15 @@
 
 int main()
 {
-    // int retval = 0;
+    int retval = 0;
 
-    // if (COND1)
-    // {
-    //     printf("\nTesting cond1: simple test...\n");
-    //     retval = cond1();
-    //     if (retval == 0)                      { printf("===> cond1 successful!\n"); } 
-    //     else                                  { printf("===> cond1 failed!\n");  return -1;}
-    // }
+    if (SEM1)
+    {
+        printf("\nTesting sem1: simple test...\n");
+        retval = sem1();
+        if (retval == 0)                      { printf("===> sem1 successful!\n"); } 
+        else                                  { printf("===> sem1 failed!\n");  return -1;}
+    }
 
     // if (COND2)
     // {
@@ -72,6 +72,6 @@ int main()
     //     else                                  { printf("===> cond6 failed!\n");  return -1;}
     // }
     
-    // printf("\n\n---All tests completed!---\n");
+    printf("\n\n---All tests completed!---\n");
     return 0;
 }

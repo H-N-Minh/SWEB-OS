@@ -1,75 +1,88 @@
 #include "stdio.h"
-#include "pthread.h"
+#include <pthread.h>
+#include <semaphore.h>
 #include "assert.h"
 
-pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-int flag = 0;
+#define DEBUG1 1
 
-int step = 0;   // each step is fixed, if the step is not executed in order, that means cond not working
+sem_t mysem1;
+size_t step1 = 0;
 
-void* thread_func(void* arg)
-{
-    step++;
-    // printf("Step %d.\n", step);
-    assert(step == 1 && "Step 1 failed!");
+void printStep(size_t step) {
+    #if DEBUG1
+        // printf("Step: %zu\n", step);
+    #endif
+}
 
-    int rv = pthread_mutex_lock(&mutex);
-    assert(rv == 0);
+void* thread_function1(void* arg) {
+    step1++;
+    printStep(step1);
+    assert(step1 == 1 && "Failed at step 1\n");
 
-    step++;
-    // printf("Step %d.\n", step);
-    assert(step == 2 && "Step 2 failed!");
+    sem_wait(&mysem1);
+    step1++;
+    printStep(step1);
+    assert(step1 == 2 && "Failed at step 2\n");
 
-    while (flag == 0) {
-        step++;
-        // printf("Step %d.\n", step);
-        assert(step == 3 && "Step 3 failed!");
-        pthread_cond_wait(&cond, &mutex);
+    // printf("count is %zu\n", mysem1.count_);
+    // printf("Thread 1 before pausing\n");
+    for (size_t i = 0; i < 200000000; i++) {
+        /* code */
+    }
+    // printf("Thread 1 after pausing\n");
+
+    step1++;
+    printStep(step1);
+    assert(step1 == 3 && "Failed at step 3\n");
+
+    sem_post(&mysem1);
+
+    for (size_t i = 0; i < 100000000; i++) {
+        /* code */
     }
 
-    step++;
-    // printf("Step %d.\n", step);
-    assert(step == 7 && "Step 7 failed!");
+    sem_wait(&mysem1);
 
-    rv = pthread_mutex_unlock(&mutex);
-    assert(rv == 0);
     return NULL;
 }
 
-int cond1()
-{
-    pthread_t thread;
-
-    pthread_create(&thread, NULL, thread_func, NULL);
-
-    for (int i = 0; i < 200000000; i++) {   //5s delay
-    // Do nothing
+void* thread_function11(void* arg) {
+    for (size_t i = 0; i < 100000000; i++) {
+        /* code */
     }
 
-    step++;
-    // printf("Step %d.\n", step);
-    assert(step == 4 && "Step 4 failed!");
-    int rv = pthread_mutex_lock(&mutex);
-    assert(rv == 0);
+    // printf("Thread 2 before calling sem wait\n");
+    sem_wait(&mysem1);
+    // printf("Thread 2 after calling sem wait\n");
+    step1++;
+    printStep(step1);
+    assert(step1 == 4 && "Failed at step 4\n");
 
-    step++;
-    // printf("Step %d.\n", step);
-    assert(step == 5 && "Step 5 failed!");
-    flag = 1;
+    for (size_t i = 0; i < 100000000; i++) {
+        /* code */
+    }
 
-    rv = pthread_cond_signal(&cond);
-    assert(rv == 0);
-    step++;
-    // printf("Step %d.\n", step);
-    assert(step == 6 && "Step 6 failed!");
+    step1++;
+    printStep(step1);
+    assert(step1 == 5 && "Failed at step 5\n");
 
-    rv = pthread_mutex_unlock(&mutex);
-    assert(rv == 0);
-    pthread_join(thread, NULL);
+    sem_post(&mysem1);
 
-    step++;
-    // printf("Step %d.\n", step);
-    assert(step == 8 && "Step 8 failed!");
+    return NULL;
+}
+
+int sem1() {
+    sem_init(&mysem1, 0, 1);
+
+    pthread_t thread1, thread2;
+    int thread_id1 = 1, thread_id2 = 2;
+    pthread_create(&thread1, NULL, thread_function1, &thread_id1);
+    pthread_create(&thread2, NULL, thread_function11, &thread_id2);
+
+    pthread_join(thread1, NULL);
+    pthread_join(thread2, NULL);
+
+    sem_destroy(&mysem1);
+
     return 0;
 }
