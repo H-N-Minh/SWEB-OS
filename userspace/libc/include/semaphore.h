@@ -13,7 +13,7 @@ typedef struct {
     pthread_mutex_t sem_mutex_;
     pthread_cond_t sem_cond_;
     size_t initialized_;
-    size_t count;
+    size_t count_;
 } sem_t;
 
 #endif // SEM_T_DEFINED_
