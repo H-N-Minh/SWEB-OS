@@ -162,8 +162,18 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         break;
       }
     }
-    *waiting_flag_address = 1;
-    pthread_spin_unlock(&mutex->mutex_lock_);
+    //*waiting_flag_address = 1;
+    //pthread_spin_unlock(&mutex->mutex_lock_);
+
+    mutex->mutex_lock_.held_by_ = 0;
+    //size_t old_val = 0;
+    asm("xchg %0,%1"
+          : "=r" (*waiting_flag_address)
+          : "m" (mutex->mutex_lock_.locked_), "0" (*waiting_flag_address)
+          : "memory");
+    
+
+
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     //pthread_spin_lock(&mutex->mutex_lock_);
   }
@@ -219,7 +229,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   {
     size_t* thread_to_wake_up_ptr = ((size_t*)((size_t)mutex->waiting_list_ + (size_t)8));
     mutex->waiting_list_ = (size_t*)*mutex->waiting_list_;
-    *thread_to_wake_up_ptr = 2;
+    *thread_to_wake_up_ptr = 0;
     mutex->mutex_lock_.held_by_ = (size_t*)((size_t)thread_to_wake_up_ptr + (size_t)8);
   }
   else

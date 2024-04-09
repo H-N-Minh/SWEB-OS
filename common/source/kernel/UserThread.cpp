@@ -132,10 +132,8 @@ UserThread::~UserThread()
         process_->loader_ = process_->execv_loader_;
         process_->execv_loader_ = 0;
 
-        if (process_->fd_ > 0)
-        {
-            VfsSyscall::close(process_->fd_);
-        }
+        VfsSyscall::close(process_->fd_);
+
         process_->fd_ = process_->execv_fd_;
 
         UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_,0, 0, 0, true);
