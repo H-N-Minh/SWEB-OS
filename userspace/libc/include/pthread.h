@@ -131,17 +131,17 @@ extern void print_waiting_list(size_t* waiting_list, int before);
 */
 extern size_t getLastCondWaiter(pthread_cond_t* cond);
 
-// /**
-//  * return the address of the top of the current stack. 
-//  * @return non null pointer
-// */
-// extern size_t getTopOfThisStack();
+/**
+ * return the address of the top of the current stack. 
+ * @return non null pointer
+*/
+extern size_t getTopOfThisStack();
 
-// /**
-//  * return the address of the top of the first stack. 
-//  * @return non null pointer
-// */
-// extern size_t getTopOfFirstStack();
+/**
+ * return the address of the top of the first stack. 
+ * @return non null pointer
+*/
+extern size_t getTopOfFirstStack();
 
 /**
  * Wake up a given thread by setting its request_to_sleep to 0
