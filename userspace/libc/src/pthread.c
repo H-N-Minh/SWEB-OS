@@ -130,6 +130,8 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
 
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
+  //debugminh remove this
+  return -1;
   if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1) || mutex->initialized_ == MUTEX_INITALIZED)
   {
     return -1;
