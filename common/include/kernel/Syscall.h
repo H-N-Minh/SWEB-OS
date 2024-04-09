@@ -27,15 +27,16 @@ class Syscall
     static uint32 pipe(int file_descriptor_array[2]);
 
 
-    static int pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
+    static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
     static void pthreadExit(void* value_ptr); 
     static int pthreadJoin(size_t thread_id, void**value_ptr); 
+    static int pthreadDetach(size_t thread,  bool threads_locked = false);
 
     /**
       * @param is_tVector_locked_in_Exit if true: threads_ vector already locked (locked in Exit()).
       * @return -1 if thread doesnt exist in vector. else return 0: set the flag wants_to_be_canceled_ to true.
     */
-    static int pthread_cancel(size_t thread_id, bool is_tVector_locked_in_Exit = false);
+    static int pthreadCancel(size_t thread_id, bool is_tVector_locked_in_Exit = false);
 
     static unsigned int sleep(unsigned int seconds);
 

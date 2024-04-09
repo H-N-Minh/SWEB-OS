@@ -7,10 +7,12 @@
 
 class UserProcess;
 
-enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
+
 
 // PTHREAD_CANCEL_EXIT: similar to PTHREAD_CANCEL_ASYNCHRONOUS, except thread gets canceled no matter what CancelState is.
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};
+enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
+enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE};
 
 class UserThread : public Thread
 {
@@ -26,7 +28,6 @@ class UserThread : public Thread
         void kill() override;
         void send_kill_notification();
         bool schedulable() override;
-        
         UserProcess* process_;
         size_t vpn_stack_;
 
@@ -42,6 +43,9 @@ class UserThread : public Thread
         Mutex thread_gets_killed_lock_;                                //Locking order: x
         Condition thread_gets_killed_;
 
+        Mutex join_state_lock_;
+        JoinState join_state_{JoinState::PTHREAD_CREATE_JOINABLE};            //TODOs copyconstructor
+
 
         //pthread_cancel
         bool wants_to_be_canceled_{false};
@@ -51,4 +55,9 @@ class UserThread : public Thread
 
         //userspace locks
         size_t request_to_sleep_{NULL};         // pointer to boolean in user stack, indicate whether the thread is schedulable or not
+
+        size_t waiting_list_ptr_{NULL};
+        size_t currently_waiting_ptr_{NULL};
+ 
+
 };

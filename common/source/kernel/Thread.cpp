@@ -182,32 +182,7 @@ void Thread::printBacktrace(bool use_stored_registers)
 
 bool Thread::schedulable()
 {
-  bool running = (getState() == Running);
-  if(running)
-  {
-    if(wakeup_timestamp_ == 0)
-    {
-      return true;
-    }
-    else
-    {
-      unsigned int edx;
-      unsigned int eax;
-      asm
-      (
-        "rdtsc"
-        : "=a"(eax), "=d"(edx)
-      );
-      unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
-      if(current_time_stamp >= wakeup_timestamp_)
-      {
-        wakeup_timestamp_ = 0;
-        return true;
-      }
-    }
-
-  }
-  return false;
+  return (getState() == Running);
 }
 
 const char *Thread::getName()

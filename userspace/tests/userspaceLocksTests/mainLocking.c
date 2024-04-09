@@ -12,10 +12,10 @@ extern int mutex4();
 
 int main()
 {
-    // spin1();   //checks if basic locking and unlocking works with spinlock
-    // spin2();   //simple syncronization with spinlock 
-    // spin3();   //syncronization with two spinlocks
-    // spin4();   //Testing more posix errorchecks details
+    spin1();   //checks if basic locking and unlocking works with spinlock
+    spin2();   //simple syncronization with spinlock 
+    spin3();   //syncronization with two spinlocks
+    spin4();   //Testing more posix errorchecks details
 
     mutex1();     //checks if basic locking and unlocking works with mutexes
     mutex2();     //simple syncronization with mutexes

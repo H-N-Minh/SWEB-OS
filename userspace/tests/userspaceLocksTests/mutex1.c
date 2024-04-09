@@ -17,10 +17,10 @@ int mutex1()
     assert(rv == 0);
     
     //trylocking locked lock should fail
-    // rv = pthread_mutex_trylock(&mutex_lock);
-    // assert(rv != 0);
-    // rv = pthread_mutex_trylock(&mutex_lock);
-    // assert(rv != 0);
+    rv = pthread_mutex_trylock(&mutex_lock);
+    assert(rv != 0);
+    rv = pthread_mutex_trylock(&mutex_lock);
+    assert(rv != 0);
 
     //locking the same lock twice should fail
     rv = pthread_mutex_lock(&mutex_lock);
@@ -31,10 +31,10 @@ int mutex1()
     assert(rv == 0);
 
     //trylocking a unlocked thread should work and unlocking again as well
-    // rv = pthread_mutex_trylock(&mutex_lock);
-    // assert(rv == 0);
-    // rv = pthread_mutex_unlock(&mutex_lock);
-    // assert(rv == 0);
+    rv = pthread_mutex_trylock(&mutex_lock);
+    assert(rv == 0);
+    rv = pthread_mutex_unlock(&mutex_lock);
+    assert(rv == 0);
 
     //locking a unlocked thread should work and unlocking again as well
     rv = pthread_mutex_lock(&mutex_lock);
@@ -55,10 +55,10 @@ int mutex1()
     assert(rv == 0);
     rv = pthread_mutex_lock(&mutex_lock);
     assert(rv != 0);
-    // rv = pthread_mutex_trylock(&mutex_lock);
-    // assert(rv != 0);
-    // rv = pthread_mutex_unlock(&mutex_lock);
-    // assert(rv != 0);
+    rv = pthread_mutex_trylock(&mutex_lock);
+    assert(rv != 0);
+    rv = pthread_mutex_unlock(&mutex_lock);
+    assert(rv != 0);
 
     //destroying twice should fail
     rv = pthread_mutex_destroy(&mutex_lock);

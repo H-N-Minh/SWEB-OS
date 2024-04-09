@@ -19,6 +19,8 @@
 #include "KeyboardManager.h"
 #include "panic.h"
 
+#include "UserProcess.h"
+#include "UserThread.h"
 #include "Thread.h"
 #include "ArchInterrupts.h"
 #include "backtrace.h"
@@ -28,6 +30,7 @@
 #include "Syscall.h"
 #include "paging-definitions.h"
 #include "PageFaultHandler.h"
+
 
 #include "8259.h"
 
@@ -296,6 +299,21 @@ extern "C" void syscallHandler()
   ArchInterrupts::disableInterrupts();
   currentThread->switch_to_userspace_ = 1;
   currentThreadRegisters = currentThread->user_registers_;
+
+  ///Todos
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  if(currentUserThread.wants_to_be_canceled_  && (currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT || 
+  (currentUserThread.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+  {
+    //debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", currentUserThread.getName());
+    currentUserThread.kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
+    currentUserThread.kernel_registers_->rdi     = (size_t)-1;
+    currentUserThread.switch_to_userspace_ = 0;
+    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
+  }
+  ///
+
+
   arch_contextSwitch();
 }
 

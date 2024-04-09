@@ -38,7 +38,7 @@ PageManager* PageManager::instance()
  * The lock is created in the constructor and is passed a name to uniquely identify it.
  * This allows for easier debugging and tracking of locks.
  */
-PageManager::PageManager() : lock_("PageManager::lock_")
+PageManager::PageManager() : page_manager_lock_("PageManager::page_manager_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -210,7 +210,7 @@ uint32 PageManager::getNumFreePages() const
  */
 bool PageManager::reservePages(uint32 ppn, uint32 num)
 {
-  assert(lock_.heldBy() == currentThread);
+  assert(page_manager_lock_.heldBy() == currentThread);
   if (ppn < number_of_pages_ && !page_usage_table_->getBit(ppn))
   {
     if (num == 1 || reservePages(ppn + 1, num - 1))
@@ -233,7 +233,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
   assert((page_size % PAGE_SIZE) == 0);
 
-  lock_.acquire();
+  page_manager_lock_.acquire();
 
   for (p = lowest_unreserved_page_; !found && (p < number_of_pages_); ++p)
   {
@@ -245,7 +245,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
   while ((lowest_unreserved_page_ < number_of_pages_) && page_usage_table_->getBit(lowest_unreserved_page_))
     ++lowest_unreserved_page_;
 
-  lock_.release();
+  page_manager_lock_.release();
 
   if (found == 0)
   {
@@ -284,7 +284,7 @@ void PageManager::freePPN(uint32 page_number, uint32 page_size)
   }
   memset((void*)ArchMemory::getIdentAddressOfPPN(page_number), 0xFF, page_size);
 
-  lock_.acquire();
+  page_manager_lock_.acquire();
   if (page_number < lowest_unreserved_page_)
     lowest_unreserved_page_ = page_number;
   for (uint32 p = page_number; p < (page_number + page_size / PAGE_SIZE); ++p)
@@ -292,7 +292,7 @@ void PageManager::freePPN(uint32 page_number, uint32 page_size)
     assert(page_usage_table_->getBit(p) && "Double free PPN");
     page_usage_table_->unsetBit(p);
   }
-  lock_.release();
+  page_manager_lock_.release();
 }
 
 /**

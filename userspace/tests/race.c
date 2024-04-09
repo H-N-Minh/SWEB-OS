@@ -4,15 +4,15 @@
 #define NUM_THREADS 100
 #define MAX_COUNT   1000
 
-int counter = 0;
+int counter1 = 0;
 
 void increment()
 {
     for (int i = 0; i < 1000000; i++)
     {
-        counter++;
+        counter1++;
     }
-    printf("Counter value: %d\n", counter);
+    printf("Counter value: %d\n", counter1);
 }
 
 int main() {
@@ -21,7 +21,7 @@ int main() {
     pthread_create(&thread1, NULL, (void* (*)(void*))increment, NULL);
     pthread_create(&thread2, NULL, (void* (*)(void*))increment, NULL);
 
-    printf("Counter value: %d\n", counter);
+    printf("Counter value: %d\n", counter1);
 
     while(1)
     {

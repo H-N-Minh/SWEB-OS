@@ -94,3 +94,5 @@ const size_t M_ZONE             = Ansi_Yellow;
 //Personal's debug
 const size_t TAI_THREAD               = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t MINH                     = Ansi_Red     | OUTPUT_ENABLED;
+
+const size_t USERSPACE_LOCKS         = Ansi_Red     | OUTPUT_ENABLED;

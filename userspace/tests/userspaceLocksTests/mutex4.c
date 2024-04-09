@@ -47,9 +47,9 @@ void function_2(void* thread_id)
   rv = pthread_mutex_unlock(&mutex_4_1);
   assert(rv != 0);
 
-  // //trylock a lock currently held by another thread should fail
-  // rv = pthread_mutex_trylock(&mutex_4_1);
-  // assert(rv != 0);
+  //trylock a lock currently held by another thread should fail
+  rv = pthread_mutex_trylock(&mutex_4_1);
+  assert(rv != 0);
 
   flag = 0;
 

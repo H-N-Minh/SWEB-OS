@@ -3,6 +3,7 @@
 #include "uvector.h"
 #include "umap.h"
 #include "Mutex.h"
+#include "Condition.h"
 #include "types.h"
 
 class UserProcess
@@ -41,13 +42,14 @@ class UserProcess
 
         int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
         int joinThread(size_t thread_id, void**value_ptr);
+        void exitThread(void* value_ptr);
 
         int execvProcess(const char *path, char *const argv[]);
 
         static int64 pid_counter_;
         int32 pid_;
 
-        int32 fd_;                                 //Todo: figure out, what needs to be locked here
+        int32 fd_;                                 //TODOs: figure out, what needs to be locked here
         FileSystemInfo* working_dir_;
         ustl::string filename_;
         uint32 terminal_number_;
@@ -56,7 +58,7 @@ class UserProcess
         //Threads
         static int64 tid_counter_;
         ustl::vector<UserThread*> threads_;
-        Mutex threads_lock_;                            //Locking order: x (TODO)
+        Mutex threads_lock_;                            //Locking order: x (TODOs)
 
         //Return value map (locked by threads lock)
         ustl::map<size_t, void*> thread_retval_map_;
@@ -67,5 +69,12 @@ class UserProcess
         int32 execv_fd_{NULL};  
         size_t execv_ppn_args_{NULL};                   
         size_t exec_argc_{0};    
+        size_t exec_array_offset_{0};
+
+        
+        bool one_thread_left_{false};
+        Mutex one_thread_left_lock_;                                //Locking order: x
+        Condition one_thread_left_condition_;
+
 };
 
