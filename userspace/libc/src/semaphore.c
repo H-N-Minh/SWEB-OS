@@ -8,6 +8,7 @@
  */
 int sem_init(sem_t *sem, int pshared, unsigned value)
 {
+  return -1;
   if(!parameters_are_valid((size_t)sem, 0) || sem->initialized_)
   {
     return -1;    //Error: Sem already initalized or sem address not valid
@@ -34,13 +35,21 @@ int sem_init(sem_t *sem, int pshared, unsigned value)
  */
 int sem_wait(sem_t *sem)
 {
-  // pthread_mutex_lock(&sem->mutex);
-  // while (sem->count == 0) {
-  //     pthread_cond_wait(&sem->cond, &sem->mutex);
-  // }
-  // sem->count--;
-  // pthread_mutex_unlock(&sem->mutex);
-  return -1;
+  if(!parameters_are_valid((size_t)sem, 0) || !sem->initialized_)
+  {
+    return -1;    //Error: Sem not initalized or sem address not valid
+  }
+
+  int rv = pthread_mutex_lock(&sem->sem_mutex_);
+  assert(rv == 0);
+  while (sem->count_ == 0) {
+      rv = pthread_cond_wait(&sem->sem_cond_, &sem->sem_mutex_);
+      assert(rv == 0);
+  }
+  sem->count_--;
+  rv = pthread_mutex_unlock(&sem->sem_mutex_);
+  assert(rv == 0);
+  return 0;
 }
 
 /**
@@ -49,15 +58,21 @@ int sem_wait(sem_t *sem)
  */
 int sem_trywait(sem_t *sem)
 {
-  return -1;
-  // int ret = 0;
-  // pthread_mutex_lock(&sem->mutex);
-  // if (sem->count > 0) {
-  //     sem->count--;
-  //     ret = 1;
-  // }
-  // pthread_mutex_unlock(&sem->mutex);
-  // return ret;
+  if(!parameters_are_valid((size_t)sem, 0) || !sem->initialized_)
+  {
+    return -1;    //Error: Sem not initalized or sem address not valid
+  }
+
+  int retval = -1;
+  int rv = pthread_mutex_lock(&sem->sem_mutex_);
+  assert(rv == 0);
+  if (sem->count_ > 0) {
+      sem->count_--;
+      retval = 0;
+  }
+  rv = pthread_mutex_unlock(&sem->sem_mutex_);
+  assert(rv == 0);
+  return retval;
 }
 
 /**
