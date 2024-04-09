@@ -18,7 +18,7 @@ extern int cond6();
 #define COND3 1         // test large number of threads on same cond
 #define COND4 1         // testing broadcast
 #define COND5 1         // testing wrong para
-#define COND6 0         // testing lost wake call
+#define COND6 0         // testing lost wake call. This should be tested alone, check the file for details
 
 int main()
 {
@@ -26,52 +26,52 @@ int main()
 
     if (COND1)
     {
-        printf("Testing cond1...");
+        printf("\nTesting cond1: simple test...\n");
         retval = cond1();
-        if (retval == 0)                      { printf("=> cond1 successful!\n"); } 
-        else                                  { printf("=> cond1 failed!\n");  return -1;}
+        if (retval == 0)                      { printf("===> cond1 successful!\n"); } 
+        else                                  { printf("===> cond1 failed!\n");  return -1;}
     }
 
     if (COND2)
     {
-        printf("Testing cond2...");
+        printf("\nTesting cond2: more complicated test...\n");
         retval = cond2();
-        if (retval == 0)                      { printf("=> cond2 successful!\n"); } 
-        else                                  { printf("=> cond2 failed!\n");  return -1;}
+        if (retval == 0)                      { printf("===> cond2 successful!\n"); } 
+        else                                  { printf("===> cond2 failed!\n");  return -1;}
     }
 
     if (COND3)
     {
-        printf("Testing cond3...");
+        printf("\nTesting cond3: large amount of threads on same Cond...\n");
         retval = cond3();
-        if (retval == 0)                      { printf("=> cond3 successful!\n"); } 
-        else                                  { printf("=> cond3 failed!\n");  return -1;}
+        if (retval == 0)                      { printf("===> cond3 successful!\n"); } 
+        else                                  { printf("===> cond3 failed!\n");  return -1;}
     }
 
     if (COND4)
     {
-        printf("Testing cond4...");
+        printf("\nTesting cond4: broadcasting large amount of threads...\n");
         retval = cond4();
-        if (retval == 0)                      { printf("=> cond4 successful!\n"); } 
-        else                                  { printf("=> cond4 failed!\n");  return -1;}
+        if (retval == 0)                      { printf("===> cond4 successful!\n"); } 
+        else                                  { printf("===> cond4 failed!\n");  return -1;}
     }
 
     if (COND5)
     {
-        printf("Testing cond5...");
+        printf("\nTesting cond5: testing wrong parameters...\n");
         retval = cond5();
-        if (retval == 0)                      { printf("=> cond5 successful!\n"); } 
-        else                                  { printf("=> cond5 failed!\n");  return -1;}
+        if (retval == 0)                      { printf("===> cond5 successful!\n"); } 
+        else                                  { printf("===> cond5 failed!\n");  return -1;}
     }
 
     if (COND6)
     {
-        printf("Testing cond6...");
+        printf("\nTesting cond6: testing 'lost wake call'...\n");
         retval = cond6();
-        if (retval == 0)                      { printf("=> cond6 successful!\n"); } 
-        else                                  { printf("=> cond6 failed!\n");  return -1;}
+        if (retval == 0)                      { printf("===> cond6 is only successful when the order of step is correct!\n"); } 
+        else                                  { printf("===> cond6 failed!\n");  return -1;}
     }
     
-    printf("All tests completed!\n");
+    printf("\n\n---All tests completed!---\n");
     return 0;
 }

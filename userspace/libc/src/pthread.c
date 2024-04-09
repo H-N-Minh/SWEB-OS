@@ -224,13 +224,10 @@ int pthread_cond_signal(pthread_cond_t *cond)
   
   if (cond->waiting_list_)   // if theres at least 1 thread in the waiting list
   { 
-    // remove the first thread from the waiting list
+    // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
-    // signal the thread to wake up
-    size_t request_to_sleep = thread_to_wakeup - sizeof(size_t);
-    assert(*(size_t*) request_to_sleep && "waking a thread that is not sleeping");
-    *(size_t*) request_to_sleep = 0;
+    wakeUpThread(thread_to_wakeup);
   }
   return 0;
 }
@@ -311,11 +308,12 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   }
   
   // current thread signal that it wants to sleep
-  // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
   assert(!*(size_t*) new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
-  pthread_mutex_unlock(mutex);       
+  pthread_mutex_unlock(mutex);
   *(size_t*) new_waiter_request_to_sleep = 1;      // This tells the scheduler that this thread is waiting and can be skipped
   __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
+
+  // after waking up, re-acquire the lock
   pthread_mutex_lock(mutex);
 
   return 0;
