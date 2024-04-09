@@ -7,14 +7,18 @@ extern int cond2();
 extern int cond3();
 extern int cond4();
 extern int cond5();
+extern int cond6();
+
+//NOTE COND3 and COND4 only works with very small number of threads, not sure if the problem with our fake mutex or bad cond
+// TODO: test these 2 again with bigger amount when mutex is working
 
 // set to 1 to test, 0 to skip
-#define COND1 0         // simple test where child has to wait for parent's signal
-#define COND2 0         // similar to cond1, but with more conds and both has to wait for each other
-#define COND3 0         // test large number of threads on same cond, not working, not sure because of bad test or bad cond
-#define COND4 0         // testing broadcast
+#define COND1 1         // simple test where child has to wait for parent's signal
+#define COND2 1         // similar to cond1, but with more conds and both has to wait for each other
+#define COND3 1         // test large number of threads on same cond
+#define COND4 1         // testing broadcast
 #define COND5 1         // testing wrong para
-// #define cond6 0      // testing lost wake call
+#define COND6 0         // testing lost wake call
 
 int main()
 {
@@ -60,13 +64,13 @@ int main()
         else                                  { printf("=> cond5 failed!\n");  return -1;}
     }
 
-    // if (FORK6)
-    // {
-    //     retval = fork6();
-    //     if (retval == PARENT_SUCCESS)         { printf("fork6 successful!\n"); } 
-    //     else if (retval == CHILD_SUCCESS)     { return 0; }                      
-    //     else                                  { printf("fork6 failed!\n"); return -1;}
-    // }
+    if (COND6)
+    {
+        printf("Testing cond6...");
+        retval = cond6();
+        if (retval == 0)                      { printf("=> cond6 successful!\n"); } 
+        else                                  { printf("=> cond6 failed!\n");  return -1;}
+    }
     
     printf("All tests completed!\n");
     return 0;

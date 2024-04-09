@@ -257,18 +257,31 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
     if (DEBUGMINH == 1) {
       printf("got into while\n");
     }
-    // remove the first thread from the waiting list
+    // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
-    // signal the thread to wake up
-    size_t request_to_sleep = thread_to_wakeup - sizeof(size_t);
-    assert(*(size_t*) request_to_sleep && "waking a thread that is not sleeping");
-    *(size_t*) request_to_sleep = 0;
+    wakeUpThread(thread_to_wakeup);
   }
   if (DEBUGMINH == 1) {
     printf("exiting broadcast\n");
   }
   return 0;
+}
+
+void wakeUpThread(size_t thread_to_wakeup)
+{
+  size_t request_to_sleep = thread_to_wakeup - sizeof(size_t);
+
+  size_t old_val = 0;
+  do 
+  {
+    asm("xchg %0,%1"
+        : "=r" (old_val)
+        : "m" (*(size_t*) request_to_sleep), "0" (old_val)
+        : "memory");
+  } while (!old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
+
+  *(size_t*) request_to_sleep = 0;
 }
 
 /**

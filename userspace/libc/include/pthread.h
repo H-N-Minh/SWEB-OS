@@ -127,6 +127,13 @@ extern size_t getTopOfThisStack();
 */
 extern size_t getTopOfFirstStack();
 
+/**
+ * Wake up a given thread by setting its request_to_sleep to 0
+ * if the thread is not sleeping yet, then wait until it sleep then wake it up
+ * Since this use spinlock to wait, the currentThread will be blocked until the other thread wake up
+*/
+void wakeUpThread(size_t thread_to_wakeup);
+
 #ifdef __cplusplus
 }
 #endif
