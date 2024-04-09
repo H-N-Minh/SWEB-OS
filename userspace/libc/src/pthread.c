@@ -15,32 +15,12 @@
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                     void *(*start_routine)(void *), void *arg)
 {
-  int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
-  if (!retval)
-  {
-    // if top_stack is 0, it means this is the first stack of the parent thread, so it should point to itself
-    size_t top_stack = getTopOfThisStack();
-    if(*(size_t*) top_stack == 0)
-    {
-      *(size_t*) top_stack = top_stack;
-      // these should already be 0, but just to be sure
-      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;
-      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;
-    }
-  }
-  return retval;
+  return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
 }
 
-/**wrapper function. In pthread create
-// top_stack points to the top of the 1st stack of the child thread
-// Since its the first stack of new thread, it should points to itself */
-void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
+//wrapper function. In pthread create
+void pthread_create_wrapper(void* start_routine, void* arg)
 {
-  assert(top_stack && "top_stack of Child Thread is NULL");
-  *(size_t*) top_stack = (size_t) top_stack;
-  // these should already be 0, but just to be sure:
-  top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // linked list for waiting threads
-  top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // boolean for request_to_sleep
   void* retval = ((void* (*)(void*))start_routine)(arg);
   pthread_exit(retval);
 }
@@ -82,28 +62,6 @@ int pthread_detach(pthread_t thread)
 }
 
 
-
-/**
- * function stub
- * posix compatible signature - do not change the signature!
- */
-int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
-{
-  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ == SPINLOCK_INITALIZED)
-  {
-    //Error: Spinlock already initalized or lock address not valid
-    return -1;
-  }
-  if(attr != NULL)  //pshared not implemented
-  {
-    return -1;
-  }
-
-  mutex->locked_ = 0;
-  mutex->initialized_ = SPINLOCK_INITALIZED;
-  mutex->held_by_ = 0;
-  return 0;
-}
 
 /**
  * function stub
@@ -415,7 +373,7 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
 
 void wakeUpThread(size_t thread_to_wakeup)
 {
-  size_t request_to_sleep = thread_to_wakeup - sizeof(size_t);
+  size_t request_to_sleep = thread_to_wakeup + sizeof(size_t);
 
   size_t old_val = 0;
   do 
@@ -440,9 +398,13 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
     return -1;    //Cond is Null, cond not initialized or mutex is null
   }
   // get the reserved space of current thread
-  size_t new_waiter_stack            = getTopOfFirstStack();
-  size_t new_waiter_list_address     = new_waiter_stack -   sizeof(size_t);
-  size_t new_waiter_request_to_sleep = new_waiter_stack - 2*sizeof(size_t);
+  // size_t new_waiter_stack            = getTopOfFirstStack();
+  // size_t new_waiter_list_address     = new_waiter_stack -   sizeof(size_t);
+  // size_t new_waiter_request_to_sleep = new_waiter_stack - 2*sizeof(size_t);
+
+  size_t stack_variable;
+  size_t new_waiter_list_address = (size_t)&stack_variable + 4064 - (size_t)(&stack_variable)%4096;   
+  size_t new_waiter_request_to_sleep = (size_t)&stack_variable + 4072 - (size_t)(&stack_variable)%4096;   
   
   // adding curent thread to the waiting list
   size_t last_waiter = getLastCondWaiter(cond);
@@ -457,7 +419,8 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   
   // current thread signal that it wants to sleep
   assert(!*(size_t*) new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
-  pthread_mutex_unlock(mutex);
+  int rv = pthread_mutex_unlock(mutex);
+  assert(rv == 0);
   *(size_t*) new_waiter_request_to_sleep = 1;      // This tells the scheduler that this thread is waiting and can be skipped
   __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
 
@@ -596,6 +559,7 @@ int pthread_spin_unlock(pthread_spinlock_t *lock)
   return 0;
 }
 
+
 /**
  * function stub
  * posix compatible signature - do not change the signature!
@@ -654,17 +618,17 @@ size_t getLastCondWaiter(pthread_cond_t* cond)
   return last_waiter;
 }
 
-size_t getTopOfThisStack() {
-  size_t stack_variable;
-  size_t top_stack = (size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t); 
-  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-  return top_stack;
-}
+// size_t getTopOfThisStack() {
+//   size_t stack_variable;
+//   size_t top_stack = (size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t); 
+//   assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
+//   return top_stack;
+// }
 
-size_t getTopOfFirstStack() {
-  size_t top_current_stack = getTopOfThisStack();
-  return *(size_t*) top_current_stack;
-}
+// size_t getTopOfFirstStack() {
+//   size_t top_current_stack = getTopOfThisStack();
+//   return *(size_t*) top_current_stack;
+// }
 
 
 void print_waiting_list(size_t* waiting_list, int before)

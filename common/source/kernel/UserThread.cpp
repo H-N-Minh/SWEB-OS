@@ -40,14 +40,12 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    // From MINH
-    // // sizeof(pointer)*4 because 1 is default and 3 spots are reserved for userspace locks
-    // size_t user_stack_ptr = (USER_BREAK - sizeof(pointer)*4 - PAGE_SIZE * tid_);
-    // request_to_sleep_ = user_stack_ptr + sizeof(pointer);
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 3 * sizeof(pointer));
-    waiting_list_ptr_ = user_stack_ptr + sizeof(pointer);
-    currently_waiting_ptr_ = user_stack_ptr + 2 * sizeof(pointer);
+    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 5 * sizeof(pointer));
+    //sleep_waiting_list = user_stack_ptr + sizeof(pointer);
+    request_to_sleep_ = user_stack_ptr + 2 * sizeof(pointer);
+    waiting_list_ptr_ = user_stack_ptr + 3 * sizeof(pointer);
+    currently_waiting_ptr_ = user_stack_ptr + 4 * sizeof(pointer);
     debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx) and waiting flag  %zd(=%zx).\n", 
           user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_, currently_waiting_ptr_, currently_waiting_ptr_);
     if (!func) //for the first thread when we create a process
@@ -71,7 +69,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
         user_registers_->rdi = (size_t)func;
         user_registers_->rsi = (size_t)arg;
-        user_registers_->rdx = (size_t) user_stack_ptr + sizeof(pointer)*3; // address of the top of stack, relevant for userspace locks
+        //user_registers_->rdx = (size_t) user_stack_ptr + sizeof(pointer)*3; // address of the top of stack, relevant for userspace locks
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
@@ -91,8 +89,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
-            cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_),
-            join_state_lock_("join_state_lock_"), join_state_(other.join_state_), request_to_sleep_(other.request_to_sleep_)
+            join_state_lock_("join_state_lock_"), join_state_(other.join_state_), 
+            cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_)
 {
     debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
     tid_ =  ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
@@ -188,9 +186,10 @@ void UserThread::send_kill_notification()
   }
 }
 
-
 bool UserThread::schedulable()
 {
+  bool running = (getState() == Running);
+
   if(wants_to_be_canceled_ && switch_to_userspace_ && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
   {
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
@@ -201,19 +200,18 @@ bool UserThread::schedulable()
     return true;
   }
 
-
   if(!running)
   {
     return false;
   }
 
-  // From MInh
+
   // // if the thread requests to sleep, then it is not scheduled
-  // size_t *request_to_sleep_translated = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)request_to_sleep_);
-  // if(request_to_sleep_translated && *request_to_sleep_translated == 1)
-  // {
-  //   return false;   
-  // }
+  size_t *request_to_sleep_translated = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)request_to_sleep_);
+  if(request_to_sleep_translated && *request_to_sleep_translated == 1)
+  {
+    return false;   
+  }
 
   size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)currently_waiting_ptr_);
 
@@ -250,13 +248,3 @@ bool UserThread::schedulable()
   }
 }
 
-
-
-
-  bool running = (getState() == Running);
-  if(running)
-  {
-
-
-    if(wakeup_timestamp_ == 0)
-    {

@@ -19,7 +19,10 @@ struct pthread_spinlock_struct {
     size_t  locked_; 
     size_t initialized_;
     void* held_by_;
-} pthread_spinlock_t; 
+}; 
+
+typedef struct pthread_spinlock_struct pthread_spinlock_t;
+
 
 
 //pthread mutex
@@ -66,7 +69,7 @@ extern int pthread_create(pthread_t *thread,
 //the wrapper will take 2 parameter
 //first one for the function that we want to run
 //second one is the parameter of the function */
-void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack);
+void pthread_create_wrapper(void* start_routine, void* arg);
 
 extern void pthread_exit(void *value_ptr);
 
@@ -116,7 +119,6 @@ extern int pthread_spin_trylock(pthread_spinlock_t *lock);
 
 extern int pthread_spin_unlock(pthread_spinlock_t *lock);
 
-extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 
 extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 
@@ -129,17 +131,17 @@ extern void print_waiting_list(size_t* waiting_list, int before);
 */
 extern size_t getLastCondWaiter(pthread_cond_t* cond);
 
-/**
- * return the address of the top of the current stack. 
- * @return non null pointer
-*/
-extern size_t getTopOfThisStack();
+// /**
+//  * return the address of the top of the current stack. 
+//  * @return non null pointer
+// */
+// extern size_t getTopOfThisStack();
 
-/**
- * return the address of the top of the first stack. 
- * @return non null pointer
-*/
-extern size_t getTopOfFirstStack();
+// /**
+//  * return the address of the top of the first stack. 
+//  * @return non null pointer
+// */
+// extern size_t getTopOfFirstStack();
 
 /**
  * Wake up a given thread by setting its request_to_sleep to 0
