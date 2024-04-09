@@ -151,14 +151,12 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
       if(*next_element != NULL)
       {
         next_element = (size_t*)(*next_element);
-        //printf("1next element %p\n", next_element);
       }
       else
       {
         *next_element =  (size_t)waiting_list_address;
         *waiting_list_address = NULL;
         added_to_waiting_list = 1;
-        //printf("2next element %p\n", next_element);
         break;
       }
     }
@@ -166,7 +164,6 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     //pthread_spin_unlock(&mutex->mutex_lock_);
 
     mutex->mutex_lock_.held_by_ = 0;
-    //size_t old_val = 0;
     asm("xchg %0,%1"
           : "=r" (*waiting_flag_address)
           : "m" (mutex->mutex_lock_.locked_), "0" (*waiting_flag_address)
