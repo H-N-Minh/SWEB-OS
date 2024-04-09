@@ -275,11 +275,14 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     } 
   }
 
+  // exit_allowed_lock_.acquire();
+  // exit_allowed_ = false;
+  // exit_allowed_lock_.release();
+
   //open the filedescriptor of the new program
   execv_lock_.acquire();
-
   //
-  if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
+  if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)                 //Todos canceltype lock
   {
     execv_lock_.release();
     return -1;
@@ -310,6 +313,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   execv_lock_.release();     //Todos
   
 
+
   threads_lock_.acquire();
   if(threads_.size() > 1)
   {
@@ -319,10 +323,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     one_thread_left_ = true;
   }
-  threads_lock_.release();
-
-
-
+  
+  //wait for the other threads to die
   one_thread_left_lock_.acquire();
   while(!one_thread_left_)
   {
@@ -331,6 +333,13 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   one_thread_left_lock_.release();
 
   thread_retval_map_.clear();
+
+  // exit_allowed_lock_.acquire();
+  // exit_allowed_ = true;
+  // exit_allowed_lock_.release();
+
+
+  
 
 
   //allocate a free physical page and get the virtual address of the identity mapping
