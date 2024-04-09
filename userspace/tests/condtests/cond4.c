@@ -1,7 +1,7 @@
 #include "stdio.h"
 #include "pthread.h"
 
-#define NUM_THREADS_4 30
+#define NUM_THREADS_4 10
 
 
 pthread_mutex_t mymutex4 = PTHREAD_MUTEX_INITIALIZER;

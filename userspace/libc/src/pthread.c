@@ -276,7 +276,14 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   
   // adding curent thread to the waiting list
   size_t last_waiter = getLastCondWaiter(cond);
-  *(size_t*)last_waiter = new_waiter_list_address;
+  if (!last_waiter) // if the list is empty
+  {
+    cond->waiting_list_ = new_waiter_list_address;
+  }
+  else
+  {
+    *(size_t*)last_waiter = new_waiter_list_address;
+  }
   
   // current thread signal that it wants to sleep
   // TODO: theres a potential race condition here (lost wake call) (thread is signaled to wake before it can request to sleep)
