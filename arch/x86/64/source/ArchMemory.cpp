@@ -39,6 +39,34 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   ArchMemoryMapping m = resolveMapping(virtual_page);
 
   assert(m.page_ppn != 0 && m.page_size == PAGE_SIZE && m.pt[m.pti].present);
+
+  bool is_cow = false;
+  if (m.pt[m.pti].page_ppn != 0)
+  {
+    PageTableEntry* pte = (PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn);
+    is_cow = pte[m.pti].cow;
+  }
+
+  //if the page is marked for copy-on-write, decrement its reference count
+  if(is_cow)
+  {
+    PageTableEntry* pte = (PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn);
+    pte[m.pti].cow = 0;
+  }
+
+//  //if the page is marked for copy-on-write, decrement its reference count
+//  if (is_cow)
+//  {
+//    PageTableEntry* pte = (PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn);
+//    pte[m.pti].cow = 0;
+//  }
+//  else
+//  {
+//    //free the physical page
+//    PageManager::instance()->freePPN(m.page_ppn);
+//  }
+
+
   m.pt[m.pti].present = 0;
   PageManager::instance()->freePPN(m.page_ppn);
   ((uint64*)m.pt)[m.pti] = 0; // for easier debugging
@@ -106,7 +134,35 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
   if (m.page_ppn == 0)
   {
-    insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
+    //check if the page is marked for copy-on-write
+    bool is_cow = false;
+    if (physical_page != 0)
+    {
+      PageTableEntry* pte = (PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn);
+      is_cow = pte[m.pti].cow;
+    }
+
+    if (is_cow)
+    {
+      //allocate a new physical page and copy the contents of the original page
+      size_t new_page_ppn = PageManager::instance()->allocPPN();
+      pointer new_page = getIdentAddressOfPPN(new_page_ppn);
+      pointer old_page = getIdentAddressOfPPN(physical_page);
+      memcpy((void*)new_page, (void*)old_page, PAGE_SIZE);
+
+      //insert the new page into the page table
+      insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, new_page_ppn, 0, 0, user_access, 1);
+
+      //mark the original page as copy-on-write
+      PageTableEntry* pte = (PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn);
+      pte[m.pti].cow = 1;
+    }
+    else
+    {
+      //insert the page into the page table
+      insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
+    }
+
     return true;
   }
 
