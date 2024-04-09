@@ -10,8 +10,8 @@ extern "C" {
 #ifndef SEM_T_DEFINED_
 #define SEM_T_DEFINED_
 typedef struct {
-    pthread_mutex_t sem_mutex_;
-    pthread_cond_t sem_cond_;
+    pthread_mutex_t count_mutex_;
+    pthread_cond_t count_cond_;
     size_t initialized_;
     size_t count_;
 } sem_t;

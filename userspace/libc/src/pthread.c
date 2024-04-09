@@ -325,8 +325,6 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
  */
 int pthread_cond_init(pthread_cond_t *cond, const pthread_condattr_t *attr)
 {
-  //TODOMINH: remove this
-  return -1;
   if(!parameters_are_valid((size_t)cond, 0) || cond->initialized_)
   {
     return -1;    //Error: Cond already initalized or cond address not valid
