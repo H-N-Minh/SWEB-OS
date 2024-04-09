@@ -25,6 +25,42 @@ void pthread_create_wrapper(void* start_routine, void* arg)
   pthread_exit(retval);
 }
 
+
+ 
+// int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
+//                     void *(*start_routine)(void *), void *arg)
+// {
+//   int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
+//   if (!retval)
+//   {
+//     // if top_stack is 0, it means this is the first stack of the parent thread, so it should point to itself
+//     size_t top_stack = getTopOfThisStack();
+//     if(*(size_t*) top_stack == 0)
+//     {
+//       *(size_t*) top_stack = top_stack;
+//       // these should already be 0, but just to be sure
+//       top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;
+//       top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;
+//     }
+//   }
+//   return retval;
+// }
+
+// /**wrapper function. In pthread create
+// // top_stack points to the top of the 1st stack of the child thread
+// // Since its the first stack of new thread, it should points to itself */
+// void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
+// {
+//   assert(top_stack && "top_stack of Child Thread is NULL");
+//   *(size_t*) top_stack = (size_t) top_stack;
+//   // these should already be 0, but just to be sure:
+//   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // linked list for waiting threads
+//   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // boolean for request_to_sleep
+//   void* retval = ((void* (*)(void*))start_routine)(arg);
+//   pthread_exit(retval);
+// }
+
+
 /**
  * function stub
  * posix compatible signature - do not change the signature!
