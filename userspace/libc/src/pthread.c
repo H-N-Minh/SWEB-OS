@@ -241,13 +241,15 @@ int pthread_cond_signal(pthread_cond_t *cond)
  */
 int pthread_cond_broadcast(pthread_cond_t *cond)
 {
+  printf(" got into broadcast\n");
   if(!parameters_are_valid((size_t)cond, 0) || !cond->initialized_)
   {
     return -1;    //Cond is Null, cond not initialized
   }
-  
+  printf("passed parameters check\n");
   while (cond->waiting_list_)   // if theres at least 1 thread in the waiting list
   { 
+    printf("got into while\n");
     // remove the first thread from the waiting list
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
@@ -256,6 +258,7 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
     assert(*(size_t*) request_to_sleep && "waking a thread that is not sleeping");
     *(size_t*) request_to_sleep = 0;
   }
+  printf("exiting broadcast\n");
   return 0;
 }
 

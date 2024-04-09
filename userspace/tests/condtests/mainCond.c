@@ -8,9 +8,9 @@ extern int cond3();
 extern int cond4();
 
 // set to 1 to test, 0 to skip
-#define COND1 0         // simple test where child has to wait for parent's signal
-#define COND2 0         // similar to cond1, but with more conds and both has to wait for each other
-#define COND3 0         // test large number of threads on same cond, not working, not sure because of bad test or bad cond
+#define COND1 1         // simple test where child has to wait for parent's signal
+#define COND2 1         // similar to cond1, but with more conds and both has to wait for each other
+#define COND3 1         // test large number of threads on same cond, not working, not sure because of bad test or bad cond
 #define COND4 1         // testing broadcast
 // #define cond5 0      // testing wrong para
 // #define cond6 0      // testing lost wake call
