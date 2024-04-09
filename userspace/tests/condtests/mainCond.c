@@ -5,14 +5,15 @@
 extern int cond1();
 extern int cond2();
 extern int cond3();
+extern int cond4();
 
 // set to 1 to test, 0 to skip
 #define COND1 0         // simple test where child has to wait for parent's signal
 #define COND2 0         // similar to cond1, but with more conds and both has to wait for each other
-#define COND3 1         // Currently not working and not sure why. it doesnt crash, just never exits
-// #define cond4 1      // testing broadcast
+#define COND3 0         // test large number of threads on same cond, not working, not sure because of bad test or bad cond
+#define COND4 1         // testing broadcast
 // #define cond5 0      // testing wrong para
-// #define cond6 0
+// #define cond6 0      // testing lost wake call
 
 int main()
 {
@@ -42,13 +43,13 @@ int main()
         else                                  { printf("=> cond3 failed!\n");  return -1;}
     }
 
-    // if (FORK4)
-    // {
-    //     retval = fork4();
-    //     if (retval == PARENT_SUCCESS)         { printf("fork4 successful!\n"); } 
-    //     else if (retval == CHILD_SUCCESS)     { return 0; }                      
-    //     else                                  { printf("fork4 failed!\n"); return -1;}
-    // }
+    if (COND4)
+    {
+        printf("Testing cond4...\n");
+        retval = cond4();
+        if (retval == 0)                      { printf("=> cond4 successful!\n"); } 
+        else                                  { printf("=> cond4 failed!\n");  return -1;}
+    }
 
     // if (FORK5)
     // {

@@ -246,15 +246,15 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
     return -1;    //Cond is Null, cond not initialized
   }
   
-  while (!cond->waiting_list_)   // if theres at least 1 thread in the waiting list
+  while (cond->waiting_list_)   // if theres at least 1 thread in the waiting list
   { 
     // remove the first thread from the waiting list
-    size_t* thread_to_wakeup = (size_t*) cond->waiting_list_;
-    cond->waiting_list_ = *thread_to_wakeup;
+    size_t thread_to_wakeup = cond->waiting_list_;
+    cond->waiting_list_ = *(size_t*) thread_to_wakeup;
     // signal the thread to wake up
-    size_t* request_to_sleep = thread_to_wakeup - sizeof(size_t);
-    assert(*request_to_sleep && "waking a thread that is not sleeping");
-    *request_to_sleep = 0;
+    size_t request_to_sleep = thread_to_wakeup - sizeof(size_t);
+    assert(*(size_t*) request_to_sleep && "waking a thread that is not sleeping");
+    *(size_t*) request_to_sleep = 0;
   }
   return 0;
 }
@@ -503,12 +503,17 @@ int parameters_are_valid(size_t ptr, int allowed_to_be_null)
 
 size_t getLastCondWaiter(pthread_cond_t* cond)
 {
-  size_t* last_waiter = (size_t*)&(cond->waiting_list_);
-  while(*last_waiter)
+  if (cond->waiting_list_ == 0)
   {
-    last_waiter = (size_t*)*last_waiter;
+    return 0;
   }
-  return (size_t)last_waiter;
+  
+  size_t last_waiter = cond->waiting_list_;
+  while(*(size_t*) cond->waiting_list_)
+  {
+    last_waiter = *(size_t*) cond->waiting_list_;
+  }
+  return last_waiter;
 }
 
 size_t getTopOfThisStack() {
