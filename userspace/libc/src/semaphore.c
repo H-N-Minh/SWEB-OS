@@ -8,7 +8,6 @@
  */
 int sem_init(sem_t *sem, int pshared, unsigned value)
 {
-  return -1;
   if(!parameters_are_valid((size_t)sem, 0) || sem->initialized_)
   {
     return -1;    //Error: Sem already initalized or sem address not valid

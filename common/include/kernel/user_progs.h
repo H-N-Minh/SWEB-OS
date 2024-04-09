@@ -14,7 +14,7 @@ char const *user_progs[] = {
                             // "/usr/pthreadCreate.sweb",
 
 // COND-------------------------------------------------
-                            "/usr/condtests.sweb",
+                            "/usr/condTests.sweb",
 
 // FORK-------------------------------------------------
                             // "/usr/focktests.sweb",
