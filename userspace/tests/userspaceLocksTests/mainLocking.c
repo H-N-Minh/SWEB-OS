@@ -27,7 +27,7 @@ int main()
 
     //Testing more threads to wait on same lock at same time. 
     // Also test if threads holding lock is killed when program exist. NOTE: 100 of threads still run after this test (this is intended)
-    // mutex5();     
+    mutex5();     
 
     printf("\n\nUserspace locking tests successful, press f12 to check if any threads are still running\n");
     return 0;

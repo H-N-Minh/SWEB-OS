@@ -56,6 +56,6 @@ int mutex5() {
 
     // Destroy the mutex
     // pthread_mutex_destroy(&mymutex5);
-
+    printf("mutex5 successful!\n");
     return 0;
 }
