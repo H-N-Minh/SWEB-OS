@@ -3,22 +3,19 @@
 #include "assert.h"
 
 extern int sem1();
-// extern int cond2();
+extern int sem2();
 // extern int cond3();
 // extern int cond4();
 // extern int cond5();
 // extern int cond6();
 
-//NOTE COND3 and COND4 only works with very small number of threads, not sure if the problem with our fake mutex or bad cond
-// TODO: test these 2 again with bigger amount when mutex is working
-
 // set to 1 to test, 0 to skip
-#define SEM1 1         // simple test where child has to wait for parent's signal
-#define COND2 1         // similar to cond1, but with more conds and both has to wait for each other
-#define COND3 1         // test large number of threads on same cond
-#define COND4 1         // testing broadcast
-#define COND5 1         // testing wrong para
-#define COND6 0         // testing lost wake call. This should be tested alone, check the file for details
+#define SEM1 0         // simple test
+#define SEM2 1         // cond and sem together
+// #define COND3 1         // test large number of threads on same cond
+// #define COND4 1         // testing broadcast
+// #define COND5 1         // testing wrong para
+// #define COND6 0         // testing lost wake call. This should be tested alone, check the file for details
 
 int main()
 {
@@ -32,13 +29,13 @@ int main()
         else                                  { printf("===> sem1 failed!\n");  return -1;}
     }
 
-    // if (COND2)
-    // {
-    //     printf("\nTesting cond2: more complicated test...\n");
-    //     retval = cond2();
-    //     if (retval == 0)                      { printf("===> cond2 successful!\n"); } 
-    //     else                                  { printf("===> cond2 failed!\n");  return -1;}
-    // }
+    if (SEM2)
+    {
+        printf("\nTesting sem2: simple test...\n");
+        retval = sem2();
+        if (retval == 0)                      { printf("===> sem2 successful!\n"); } 
+        else                                  { printf("===> sem2 failed!\n");  return -1;}
+    }
 
     // if (COND3)
     // {

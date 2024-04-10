@@ -1,92 +1,73 @@
 #include "stdio.h"
 #include "pthread.h"
+#include "semaphore.h"
 #include "assert.h"
 
-pthread_mutex_t mutex2 = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t mycond2;
+#define LOOP_AMOUNT2 100        // tested with 1000 still work but take very long
 
-#define WAIT_TIME_COND2 200000000
+sem_t sem;
+pthread_mutex_t mutex;
+pthread_cond_t cond;
+int counter = 0;
 
-int flag2 = 0;
-int step2 = 0;   // each step is fixed, if the step2 is not executed in order, that means cond not working
 
-
-// Test that both threads use cond_wait at same time. First child waits for parent's signal,
-//  then parent waits for child's signal
-void* thread_func2(void* arg)
-{
-    step2++;
-    assert(step2 == 1 && "step 1 failed!");
-
-    pthread_mutex_lock(&mutex2);
-
-    step2++;
-    assert(step2 == 2 && "step 2 failed!");
-
-    while (flag2 == 0) {
-        step2++;
-        assert(step2 == 3 && "step 3 failed!");
-        pthread_cond_wait(&mycond2, &mutex2);
+void *increment(void *arg) {
+    for (int i = 0; i < LOOP_AMOUNT2; ++i) {
+        sem_wait(&sem);
+        ++counter;
+        assert(counter == 1);
+        pthread_cond_signal(&cond);
     }
-
-    step2++;
-    assert(step2 == 7 && "step 7 failed!");
-
-    pthread_mutex_unlock(&mutex2);
-
-    for (int i = 0; i < WAIT_TIME_COND2; i++) {   //5s delay
-        // Do nothing
-    }
-
-    pthread_mutex_lock(&mutex2);
-
-    step2++;
-    assert(step2 == 8 && "step 8 failed!");
-
-    flag2 = 2;
-    pthread_cond_signal(&mycond2);
-    step2++;
-    assert(step2 == 9 && "step 9 failed!");
-
-    pthread_mutex_unlock(&mutex2);
     return NULL;
 }
 
-int cond2()
-{
-    pthread_t thread;
+void *print(void *arg) {
+    for (int i = 0; i < LOOP_AMOUNT2; ++i) {
+        pthread_mutex_lock(&mutex);
+        while (counter == 0)
+            pthread_cond_wait(&cond, &mutex);
+        --counter;
+        assert(counter == 0);
+        pthread_mutex_unlock(&mutex);
+        sem_post(&sem);
+    }
+    return NULL;
+}
 
-    pthread_cond_init(&mycond2, NULL);
+int sem2() {
+    pthread_t t1, t2;
 
-    pthread_create(&thread, NULL, thread_func2, NULL);
-
-    for (int i = 0; i < WAIT_TIME_COND2; i++) {   //5s delay
-        // Do nothing
+    if (sem_init(&sem, 0, 1) != 0) {
+        printf("Failed to initialize semaphore\n");
+        return -1;
     }
 
-    step2++;
-    assert(step2 == 4 && "step 4 failed!");
-    pthread_mutex_lock(&mutex2);
-
-    step2++;
-    assert(step2 == 5 && "step 5 failed!");
-    flag2 = 1;
-
-    pthread_cond_signal(&mycond2);
-
-    while (flag2 == 1) {
-        step2++;
-        assert(step2 == 6 && "step 6 failed!");
-        pthread_cond_wait(&mycond2, &mutex2);
+    if (pthread_mutex_init(&mutex, NULL) != 0) {
+        printf("Failed to initialize mutex\n");
+        return -1;
     }
 
-    step2++;
-    assert(step2 == 10 && "step 10 failed!");
+    if (pthread_cond_init(&cond, NULL) != 0) {
+        printf("Failed to initialize condition variable\n");
+        return -1;
+    }
 
-    pthread_mutex_unlock(&mutex2);
-    pthread_join(thread, NULL);
+    if (pthread_create(&t1, NULL, increment, NULL) != 0) {
+        printf("Failed to create thread\n");
+        return -1;
+    }
 
-    step2++;
-    assert(step2 == 11 && "step 11 failed!");
+    if (pthread_create(&t2, NULL, print, NULL) != 0) {
+        printf("Failed to create thread\n");
+        return -1;
+    }
+
+    pthread_join(t1, NULL);
+    pthread_join(t2, NULL);
+
+    sem_destroy(&sem);
+    pthread_mutex_destroy(&mutex);
+    pthread_cond_destroy(&cond);
+
     return 0;
 }
