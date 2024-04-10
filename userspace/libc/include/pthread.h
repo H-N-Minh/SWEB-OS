@@ -124,13 +124,6 @@ extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 
 extern void print_waiting_list(size_t* waiting_list, int before);
 
-
-/**
- * @return loop through linked list and get the pointer of last thread that is in the waiting_list_ of the given cond
- * @return 0 if the list is empty
-*/
-extern size_t getLastCondWaiter(pthread_cond_t* cond);
-
 /**
  * return the address of the top of the current stack. 
  * @return non null pointer
@@ -146,8 +139,9 @@ extern size_t getTopOfFirstStack();
 /**
  * Add the new_waiter to the last of the waiting_list
  * NOTE: lock the list before calling this function
+ * @param waiting_list_adr the ADDRESS of the waiting_list (&waiting_list_)
 */
-extern void addWaiterToList(size_t waiting_list, size_t new_waiter);
+extern void addWaiterToList(size_t* waiting_list_adr, size_t new_waiter);
 
 /**
  * Wake up a thread by setting its request_to_sleep to 0

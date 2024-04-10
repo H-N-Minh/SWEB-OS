@@ -366,7 +366,7 @@ int pthread_cond_signal(pthread_cond_t *cond)
     // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
-    size_t* request_to_sleep = (size_t*) (thread_to_wakeup - sizeof(size_t));
+    size_t* request_to_sleep = (size_t*) (thread_to_wakeup + sizeof(size_t));
     wakeUpThread(request_to_sleep);
   }
   return 0;
@@ -397,7 +397,7 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
     // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
-    size_t* request_to_sleep = (size_t*) (thread_to_wakeup - sizeof(size_t));
+    size_t* request_to_sleep = (size_t*) (thread_to_wakeup + sizeof(size_t));
     wakeUpThread(request_to_sleep);
   }
   if (DEBUGMINH == 1) {
@@ -422,15 +422,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   size_t new_waiter_list_address     = new_waiter_stack - 3*sizeof(size_t);
 
   // adding curent thread to the waiting list
-  size_t last_waiter = getLastCondWaiter(cond);
-  if (!last_waiter) // if the list is empty
-  {
-    cond->waiting_list_ = new_waiter_list_address;
-  }
-  else
-  {
-    *(size_t*)last_waiter = new_waiter_list_address;
-  }
+  addWaiterToList(&cond->waiting_list_, new_waiter_list_address);
   
   // current thread signal that it wants to sleep
   assert(!*(size_t*) new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
@@ -617,30 +609,13 @@ int parameters_are_valid(size_t ptr, int allowed_to_be_null)
     return 1;
 }
 
-
-size_t getLastCondWaiter(pthread_cond_t* cond)
+void addWaiterToList(size_t* waiting_list_adr, size_t new_waiter)
 {
-  if (cond->waiting_list_ == 0)
+  while(*waiting_list_adr)
   {
-    return 0;
+    waiting_list_adr = (size_t*)*waiting_list_adr;
   }
-  
-  size_t last_waiter = cond->waiting_list_;
-  while(*(size_t*) cond->waiting_list_)
-  {
-    last_waiter = *(size_t*) cond->waiting_list_;
-  }
-  return last_waiter;
-}
-
-void addWaiterToList(size_t waiting_list, size_t new_waiter)
-{
-  size_t* last_waiter = (size_t*) &waiting_list;
-  while(*last_waiter)
-  {
-    last_waiter = (size_t*)*last_waiter;
-  }
-  *last_waiter = new_waiter;
+  *waiting_list_adr = new_waiter;
   *(size_t*) new_waiter = 0;
 }
 
@@ -658,7 +633,6 @@ size_t getTopOfFirstStack() {
   // size_t top_current_stack = getTopOfThisStack();
   // return *(size_t*) top_current_stack;
 }
-
 
 void print_waiting_list(size_t* waiting_list, int before)
 {
@@ -683,7 +657,6 @@ void print_waiting_list(size_t* waiting_list, int before)
   sleep(10);
   //printf("Waiting list was %p\n\n", waiting_list);
 }
-
 
 
 void wakeUpThread(size_t* request_to_sleep)
