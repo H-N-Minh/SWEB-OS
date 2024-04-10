@@ -144,11 +144,18 @@ extern size_t getTopOfThisStack();
 extern size_t getTopOfFirstStack();
 
 /**
- * Wake up a given thread by setting its request_to_sleep to 0
+ * Add the new_waiter to the last of the waiting_list
+ * NOTE: lock the list before calling this function
+*/
+extern void addWaiterToList(size_t waiting_list, size_t new_waiter);
+
+/**
+ * Wake up a thread by setting its request_to_sleep to 0
  * if the thread is not sleeping yet, then wait until it sleep then wake it up
  * Since this use spinlock to wait, the currentThread will be blocked until the other thread wake up
+ * @param request_to_sleep the address of flag that is used to tell Scheduler to skip this thread
 */
-void wakeUpThread(size_t thread_to_wakeup);
+void wakeUpThread(size_t* request_to_sleep);
 
 #ifdef __cplusplus
 }

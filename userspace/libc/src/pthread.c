@@ -249,7 +249,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   }
   size_t stack_variable;
   size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4088 - 8 - (size_t)(&stack_variable)%4096);     
-
   if(mutex->held_by_ != waiting_list_address)
   {
    // printf("Thread does not hold current lock\n");
@@ -257,7 +256,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     assert(rv == 0);
     return -1;
   }
-
   mutex->locked_ = 0;
   mutex->held_by_ = 0;
   if(mutex->waiting_list_ != NULL)
@@ -272,7 +270,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     rv = pthread_spin_unlock(&mutex->mutex_lock_);
     assert(rv == 0);
   }
-    
   return 0;
 }
 
@@ -369,7 +366,8 @@ int pthread_cond_signal(pthread_cond_t *cond)
     // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
-    wakeUpThread(thread_to_wakeup);
+    size_t* request_to_sleep = (size_t*) (thread_to_wakeup - sizeof(size_t));
+    wakeUpThread(request_to_sleep);
   }
   return 0;
 }
@@ -399,28 +397,13 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
     // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
-    wakeUpThread(thread_to_wakeup);
+    size_t* request_to_sleep = (size_t*) (thread_to_wakeup - sizeof(size_t));
+    wakeUpThread(request_to_sleep);
   }
   if (DEBUGMINH == 1) {
     printf("exiting broadcast\n");
   }
   return 0;
-}
-
-void wakeUpThread(size_t thread_to_wakeup)
-{
-  size_t request_to_sleep = thread_to_wakeup + sizeof(size_t);
-
-  size_t old_val = 0;
-  do 
-  {
-    asm("xchg %0,%1"
-        : "=r" (old_val)
-        : "m" (*(size_t*) request_to_sleep), "0" (old_val)
-        : "memory");
-  } while (!old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
-
-  *(size_t*) request_to_sleep = 0;
 }
 
 /**
@@ -650,6 +633,17 @@ size_t getLastCondWaiter(pthread_cond_t* cond)
   return last_waiter;
 }
 
+void addWaiterToList(size_t waiting_list, size_t new_waiter)
+{
+  size_t* last_waiter = (size_t*) &waiting_list;
+  while(*last_waiter)
+  {
+    last_waiter = (size_t*)*last_waiter;
+  }
+  *last_waiter = new_waiter;
+  *(size_t*) new_waiter = 0;
+}
+
 size_t getTopOfThisStack() {
   size_t stack_variable;
   size_t top_stack = (size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t); 
@@ -690,3 +684,118 @@ void print_waiting_list(size_t* waiting_list, int before)
   //printf("Waiting list was %p\n\n", waiting_list);
 }
 
+
+
+void wakeUpThread(size_t* request_to_sleep)
+{
+  size_t old_val = 0;
+  do 
+  {
+    asm("xchg %0,%1"
+        : "=r" (old_val)
+        : "m" (*request_to_sleep), "0" (old_val)
+        : "memory");
+  } while (!old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
+
+  *request_to_sleep = 0;
+}
+
+
+
+//try my own mutex
+/*
+int pthread_mutex_lock(pthread_mutex_t *mutex)
+{
+  // 1. Error handling
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
+  { //printf("parameters not valid or lock not initialized\n");
+    return -1;
+  }
+  assert(pthread_spin_lock(&mutex->mutex_lock_) == 0);
+  size_t stack_variable;
+  size_t* waiting_flag_address = (size_t*) getTopOfThisStack();
+  size_t* waiting_list_address = (size_t*) ((size_t) waiting_flag_address - sizeof(size_t));
+  if(mutex->held_by_ == waiting_list_address)
+  {
+    //printf("Thread is already holding lock\n");
+    assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);
+    return -1;
+  }
+  
+  // 2. Try to acquire the lock
+  if (mutex->waiting_list_ || mutex->locked_)  // if there are threads using the lock or waiting to use it
+  {
+    // Add the current thread to the waiting list then go to sleep
+    addWaiterToList((size_t) mutex->waiting_list_, (size_t)waiting_list_address);
+    assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);
+    *waiting_flag_address = 1;
+    __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
+    
+    // when it wakes up, it should wait to received the lock from the waker
+    size_t* this_thread = (size_t*)((size_t)waiting_flag_address + sizeof(size_t));
+    size_t* old_val = 0;
+    do 
+    {
+      asm("xchg %0,%1"
+          : "=r" (old_val)
+          : "m" (mutex->mutex_lock_.held_by_), "0" (old_val)
+          : "memory");
+    } while ((old_val != this_thread) && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
+    // Then remove itself from the waiting list
+    assert((mutex->waiting_list_ == waiting_list_address) && "thread woke up but is not the first in waiting list");
+    mutex->waiting_list_ = (size_t*) *waiting_list_address;
+  }
+  
+  // From this point, the lock must be free and belongs to the current thread
+  assert(mutex->locked_ == 0 && "mutex is locked when it should be free");
+  mutex->locked_ = 1;
+  mutex->held_by_ = waiting_list_address;
+  assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);
+  return 0;
+}
+
+int pthread_mutex_unlock(pthread_mutex_t *mutex)
+{
+  // 1. Error handling
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
+  {
+    //printf("parameter not valid or not initalized\n");
+    return -1;
+  }
+  assert(pthread_spin_lock(&mutex->mutex_lock_) == 0);
+  if(mutex->locked_ == 0)
+  {
+    //printf("lock that you want to unlock is not locked\n");
+    assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);
+    return -1;
+  }
+  size_t stack_variable;
+  size_t* waiting_flag_address = (size_t*) getTopOfThisStack();
+  size_t* waiting_list_address = (size_t*) ((size_t) waiting_flag_address - sizeof(size_t));
+  if(mutex->held_by_ != waiting_list_address)
+  {
+   // printf("Thread does not hold current lock\n");
+    assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);
+    return -1;
+  }
+
+  // 2. Unlock the mutex
+  mutex->locked_ = 0;
+  mutex->held_by_ = 0;
+
+  // if there are threads waiting for the lock, wake up the first one. (that thread will remove itself from the list)
+  if(mutex->waiting_list_)  
+  {
+    size_t* thread_to_wake_up_ptr = (size_t*) ((size_t)mutex->waiting_list_ + sizeof(size_t));
+    wakeUpThread(thread_to_wake_up_ptr);
+    // pass the lock to the thread that was waiting
+    mutex->mutex_lock_.held_by_ = (size_t*)((size_t)thread_to_wake_up_ptr + sizeof(size_t));
+  }
+  else
+  {
+    assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);
+  }
+  return 0;
+}
+
+*/
