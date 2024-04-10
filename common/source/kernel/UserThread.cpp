@@ -191,7 +191,9 @@ bool UserThread::schedulable()
 {
   bool running = (getState() == Running);
 
-  if(wants_to_be_canceled_ && switch_to_userspace_ && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+  if(wants_to_be_canceled_ && switch_to_userspace_ && 
+          (cancel_type_ == PTHREAD_CANCEL_EXIT || 
+          (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
   {
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
