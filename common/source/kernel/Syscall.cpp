@@ -110,6 +110,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pipe:
       return_value = pipe((int*) arg1);
       break;
+    case sc_clock:
+      return_value = clock();
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -562,4 +565,51 @@ int Syscall::pthread_setcanceltype(int type, int *oldtype)
           *oldtype == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS");
     ((UserThread*) currentThread)->cancel_state_type_lock_.release();
     return 0;
+}
+
+unsigned int Syscall::clock(void)
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
+
+  uint64_t current_time_stamp = get_current_timestamp_64_bit();
+  uint64_t clock = current_process.clock_ + current_time_stamp - current_process.tsc_start_scheduling_;
+  // if(current_time_stamp < current_process.tsc_start_scheduling_)
+  // {
+  //   assert(0);
+  // }
+  // kprintf("Clock %lu: %lu + %lu - %lu\n", clock, current_process.clock_, current_time_stamp, current_process.tsc_start_scheduling_);
+  //kprintf("Timestamp fs %u", timestamp_fs);
+  uint64_t clock_in_femtoseconds = (uint64_t)clock * timestamp_fs;
+
+  unsigned int clock_in_microseconds = (unsigned int)(clock_in_femtoseconds / (uint64_t)1000000000); 
+
+  return clock_in_microseconds;
+}
+
+
+
+uint64_t Syscall::get_current_timestamp_64_bit()
+{      
+  unsigned int edx;
+  unsigned int eax;
+  asm
+  (
+    "rdtsc"
+    : "=a"(eax), "=d"(edx)
+  );
+  return ((uint64_t)edx<<32) + eax;
+}
+
+unsigned int Syscall::get_current_timestamp_32_bit()
+{      
+  unsigned int eax;
+  asm
+  (
+    "rdtsc"
+    : "=a"(eax)
+  );
+  return eax;
 }

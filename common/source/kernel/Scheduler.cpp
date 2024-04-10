@@ -45,11 +45,22 @@ void Scheduler::schedule()
     return;
   }
 
+  if(currentThread && currentThread->type_ == Thread::USER_THREAD)
+  {
+    uint64_t tsc_end_scheduling_ = Syscall::get_current_timestamp_64_bit();
+    uint64_t tsc_start_scheduling_ = ((UserThread*)currentThread)->process_->tsc_start_scheduling_;
+    ((UserThread*)currentThread)->process_->clock_ += (tsc_end_scheduling_ - tsc_start_scheduling_);
+  }
+
   auto it = threads_.begin();
   for(; it != threads_.end(); ++it)
   {
     if((*it)->schedulable())
     {
+      if((*it)->type_ == Thread::USER_THREAD)
+      {
+        ((UserThread*)(*it))->process_->tsc_start_scheduling_ = Syscall::get_current_timestamp_64_bit();
+      }
       currentThread = *it;
       break;
     }

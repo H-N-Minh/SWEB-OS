@@ -17,7 +17,7 @@ char const *user_progs[] = {
                             //"/usr/condtests.sweb",
 
 // FORK-------------------------------------------------
-                            "/usr/forkTests.sweb",
+                            //"/usr/forkTests.sweb",
 
 
                         
@@ -40,7 +40,7 @@ char const *user_progs[] = {
 
                             //"/usr/userspaceLocksTests.sweb",                                    
 
-                            //  "/usr/sleepTests.sweb", 
+                            "/usr/sleepAndClockTests.sweb", 
 
                             0
                            };

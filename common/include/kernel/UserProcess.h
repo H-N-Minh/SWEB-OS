@@ -76,5 +76,7 @@ class UserProcess
         Mutex one_thread_left_lock_;                                //Locking order: x
         Condition one_thread_left_condition_;
 
+        uint64_t clock_{0};
+        uint64_t tsc_start_scheduling_{0};
 };
 
