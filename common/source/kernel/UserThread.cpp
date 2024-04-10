@@ -40,9 +40,12 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 3 * sizeof(pointer));
-    waiting_list_ptr_ = user_stack_ptr + sizeof(pointer);
-    currently_waiting_ptr_ = user_stack_ptr + 2 * sizeof(pointer);
+
+    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 5 * sizeof(pointer));
+    //sleep_waiting_list = user_stack_ptr + sizeof(pointer);
+    request_to_sleep_ = user_stack_ptr + 2 * sizeof(pointer);
+    waiting_list_ptr_ = user_stack_ptr + 3 * sizeof(pointer);
+    currently_waiting_ptr_ = user_stack_ptr + 4 * sizeof(pointer);
     debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx) and waiting flag  %zd(=%zx).\n", 
           user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_, currently_waiting_ptr_, currently_waiting_ptr_);
     if (!func) //for the first thread when we create a process
@@ -66,6 +69,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
         user_registers_->rdi = (size_t)func;
         user_registers_->rsi = (size_t)arg;
+        //user_registers_->rdx = (size_t) user_stack_ptr + sizeof(pointer)*3; // address of the top of stack, relevant for userspace locks
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
@@ -201,6 +205,14 @@ bool UserThread::schedulable()
     return false;
   }
 
+
+  // // if the thread requests to sleep, then it is not scheduled
+  size_t *request_to_sleep_translated = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)request_to_sleep_);
+  if(request_to_sleep_translated && *request_to_sleep_translated == 1)
+  {
+    return false;   
+  }
+
   size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)currently_waiting_ptr_);
 
   //debug(USERSPACE_LOCKS, "Kernel: userspace %zd(=%zx)\n", (uint64)thread_waiting_for_lock_ptr, (uint64)thread_waiting_for_lock_ptr);
@@ -235,3 +247,4 @@ bool UserThread::schedulable()
     }
   }
 }
+

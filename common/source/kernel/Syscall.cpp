@@ -118,6 +118,11 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
+/** TODO: This TODO is only relevant when implementing reserving more stacks for thread. Dont delete
+ * this regards to stack reservation for userspace lock mechanism. if the top of stack is 0, 
+ * this means this is the first stack request. Make the top_stack to point to itself and give this
+ * pointer to child stack's top_stack as well. Calculation to get top of stack is in pthread.c in userspace
+*/
 
 uint32 Syscall::pipe(int file_descriptor_array[2])
 {

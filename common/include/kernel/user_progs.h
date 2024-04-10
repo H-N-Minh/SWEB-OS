@@ -3,6 +3,24 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
+                            //"/usr/shell.sweb",
+
+                            // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
+                            // "/usr/pc4.sweb",
+                            // "/usr/smallpthreadcreate.sweb",
+                            // "/usr/small_cancel_test.sweb",
+                            // "/usr/stateTypeTest.sweb",
+                            // "/usr/spinTest.sweb",
+                            // "/usr/pthreadCreate.sweb",
+
+// COND-------------------------------------------------
+                            "/usr/condtests.sweb",
+
+// FORK-------------------------------------------------
+                            // "/usr/focktests.sweb",
+
+
+                        
                             //"/usr/notest.sweb",
                             //"/usr/shell.sweb",
 
@@ -10,10 +28,7 @@ char const *user_progs[] = {
                             // "/usr/pthreadJoinTests.sweb",
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
-                            // "/usr/pthreadDetachTests.sweb",
-
-
-                            // "/usr/forkTests.sweb",                                             
+                            // "/usr/pthreadDetachTests.sweb",                                        
 
                             //"/usr/execTests.sweb",
                             // "/usr/exec3.sweb",           //Exec with many arguments
