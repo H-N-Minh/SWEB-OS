@@ -5,6 +5,7 @@
 
 #define NUM_THREADS 100
 #define MAX_COUNT   10000 //0
+#define DEBUGMODE2 0
 
 long mutex_counter = 0;
 pthread_mutex_t mutex;
@@ -15,12 +16,11 @@ int increment_mutex_counter(void* thread_id)
     {
         int rv_lock = pthread_mutex_lock(&mutex);
         assert(rv_lock == 0);
-        int current_mutex_counter = mutex_counter;
-        current_mutex_counter++;
-        
-        for(int i = 0; i < 100; i++){}             //introduces small delay, which increases race condition
+        // if (DEBUGMODE2) printf("Thread %ld: mutex_counter = %ld\n", *((size_t*)thread_id), mutex_counter);
+        // for(int i = 0; i < 100; i++){}             //introduces small delay, which increases race condition
 
-        mutex_counter = current_mutex_counter;
+        mutex_counter++;
+        if (DEBUGMODE2) printf("mutex_counter added = %ld\n", mutex_counter);
         int rv_unlock = pthread_mutex_unlock(&mutex);
         assert(rv_unlock == 0);
 
@@ -30,12 +30,14 @@ int increment_mutex_counter(void* thread_id)
 
 int mutex2() {
     pthread_t threads[NUM_THREADS];
+    size_t thread_arg[NUM_THREADS];
     int rv_init = pthread_mutex_init(&mutex, 0);
     assert(rv_init == 0);
 
     for (long t = 0; t < NUM_THREADS; t++)
     {
-        int rv_create = pthread_create(&threads[t], NULL, (void* (*)(void*))increment_mutex_counter, (void*)t);
+        thread_arg[t] = t;
+        int rv_create = pthread_create(&threads[t], NULL, (void* (*)(void*))increment_mutex_counter, (void*)&thread_arg[t]);
         assert(rv_create == 0);
     }
 
