@@ -448,60 +448,64 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 }
 
 
+// unsigned int Syscall::sleep(unsigned int seconds)
+// {
+//   while(1)     //while loop is just in the case seconds is bigger than 1000, because uint64 can not hold more than 18 digits
+//   {
+//     if(seconds <= 0)
+//     {
+//       break;
+//     }
+//     else if(seconds < 1000 && seconds > 0)
+//     {
+//       uint64_t femtoseconds = (uint64_t)seconds * 1000000000000000;
+//       uint64_t current_time_stamp = get_current_timestamp_64_bit();
+//       //debug(SYSCALL, "TSC is %ld.\n", current_time_stamp);
+
+//       uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
+//       //debug(SYSCALL, "Timestamp_ns is %ld.\n", timestamp_fs);
+
+//       currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
+//       //debug(SYSCALL, "Wakeup timestamp is %ld.\n", currentThread->wakeup_timestamp_);
+
+//       Scheduler::instance()->yield();
+//       break;
+//     }
+//     else
+//     {
+//       seconds = seconds - 1000;
+
+//       uint64_t femtoseconds = 1000000000000000000;
+//       uint64_t current_time_stamp = get_current_timestamp_64_bit();
+//       uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
+//       currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
+
+//       Scheduler::instance()->yield();
+//     }
+//   }
+//   return 0;
+// }
+
 unsigned int Syscall::sleep(unsigned int seconds)
 {
-  while(1)     //while loop is just in the case seconds is bigger than 1000, because uint64 can not hold more than 18 digits
-  {
-    if(seconds <= 0)
-    {
-      break;
-    }
-    else if(seconds < 1000 && seconds > 0)
-    {
-      uint64_t femtoseconds = (uint64_t)seconds * 1000000000000000;
-      debug(SYSCALL, "Want to sleep for %d seconds.\n", seconds);
-      unsigned int edx;
-      unsigned int eax;
-      asm
-      (
-        "rdtsc"
-        : "=a"(eax), "=d"(edx)
-      );
+  
+  unsigned int seconds_left = seconds % 1000;
+  unsigned int times_thousands_seconds = seconds / 1000;
 
-      uint64_t current_time_stamp = ((uint64_t)edx<<32) + eax;
-      //debug(SYSCALL, "TSC is %ld.\n", current_time_stamp);
+  uint64_t femtoseconds = (uint64_t)seconds_left * 1000000000000000;
+  uint64_t current_time_stamp = get_current_timestamp_64_bit();
 
-      uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-      //debug(SYSCALL, "Timestamp_ns is %ld.\n", timestamp_fs);
+  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
 
-      currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
-      //debug(SYSCALL, "Wakeup timestamp is %ld.\n", currentThread->wakeup_timestamp_);
+  uint64_t thousand_femtoseconds = 1000000000000000000;
+    
+  currentThread->wakeup_timestamp_ = current_time_stamp + (femtoseconds / timestamp_fs) +  times_thousands_seconds * (thousand_femtoseconds / timestamp_fs);
 
-      Scheduler::instance()->yield();
-      break;
-    }
-    else
-    {
-      seconds = seconds - 1000;
+  Scheduler::instance()->yield();
 
-      uint64_t femtoseconds = 1000000000000000000;
-      unsigned int edx;
-      unsigned int eax;
-      asm
-      (
-        "rdtsc"
-        : "=a"(eax), "=d"(edx)
-      );
-
-      uint64_t current_time_stamp = ((uint64_t)edx<<32) + eax;
-      uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-      currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
-
-      Scheduler::instance()->yield();
-    }
-  }
   return 0;
 }
+
 
 
 bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
