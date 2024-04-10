@@ -12,7 +12,6 @@
 #include "Syscall.h"
 #include "ArchMemory.h"
 
-// TODOs: explain calculation related to execv()
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                        Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
@@ -114,7 +113,7 @@ UserThread::~UserThread()
 {
     debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
 
-    //assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread"); //TODOs
+    assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread");
 
     if(last_thread_alive_)
     {
@@ -127,7 +126,7 @@ UserThread::~UserThread()
 
     if(unlikely(last_thread_before_exec_))
     {
-        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");    //TODOs: also check 
+        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
         assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
 
         debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
@@ -184,6 +183,7 @@ void UserThread::send_kill_notification()
         join_thread->thread_gets_killed_lock_.release();
     }
   }
+  currentUserThread.join_threads_.clear();
 }
 
 bool UserThread::schedulable()
@@ -195,7 +195,7 @@ bool UserThread::schedulable()
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     kernel_registers_->rdi     = (size_t)-1;
-    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
+    currentThreadRegisters = currentThread->kernel_registers_;
     switch_to_userspace_ = 0;
     return true;
   }

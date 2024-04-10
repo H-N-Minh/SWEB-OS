@@ -1,10 +1,11 @@
 #include "stdio.h"
 #include "pthread.h"
 #include "assert.h"
+#include "string.h"
 
 int functionpc5(char* simple_argument)
 {
-    assert((char)simple_argument[3] == 't');          //TODOs make check nicer
+    assert(strcmp(simple_argument, "test_argument") == 0);
     return 34;
 }
 

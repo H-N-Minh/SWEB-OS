@@ -12,7 +12,9 @@ PageDirPointerTableEntry kernel_page_directory_pointer_table[2 * PAGE_DIR_POINTE
 PageDirEntry kernel_page_directory[2 * PAGE_DIR_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 
-ArchMemory::ArchMemory():lock_("archmemory_lock_")                         //Todos: locking nessessary?
+//TODOs: figure out what needs locking
+
+ArchMemory::ArchMemory():lock_("archmemory_lock_")
 {
   lock_.acquire();
   page_map_level_4_ = PageManager::instance()->allocPPN();
@@ -23,7 +25,7 @@ ArchMemory::ArchMemory():lock_("archmemory_lock_")                         //Tod
 }
 
 // COPY CONSTRUCTOR 
-ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")        //Todos: locking nessessary?
+ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 {
   lock_.acquire();
   assert(PageManager::instance()->heldBy() != currentThread);
@@ -33,7 +35,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")        /
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
   memcpy((void*) CHILD_pml4, (void*) PARENT_pml4, PAGE_SIZE);
-
   //memset(CHILD_pml4, 0, PAGE_SIZE / 2); // should be zero already, this is just for safety, also only clear lower half (User half)
 
   debug(A_MEMORY, "copy-ctor start copying all pages\n");
@@ -234,8 +235,8 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
 
 bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
 {
+  assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
   assert(lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
-  //todos assert lock pagemanager
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
   assert((m.page_size == 0) || (m.page_size == PAGE_SIZE));
 
@@ -343,7 +344,7 @@ const ArchMemoryMapping ArchMemory::resolveMapping(uint64 pml4, uint64 vpage)
   return m;
 }
 
-uint64 ArchMemory::get_PPN_Of_VPN_In_KernelMapping(size_t virtual_page, size_t *physical_page,    //TODOs: find out if locking is nessessary
+uint64 ArchMemory::get_PPN_Of_VPN_In_KernelMapping(size_t virtual_page, size_t *physical_page, 
                                                    size_t *physical_pte_page)
 {
   ArchMemoryMapping m = resolveMapping(((uint64) VIRTUAL_TO_PHYSICAL_BOOT(kernel_page_map_level_4) / PAGE_SIZE),
@@ -355,7 +356,7 @@ uint64 ArchMemory::get_PPN_Of_VPN_In_KernelMapping(size_t virtual_page, size_t *
   return m.page_size;
 }
 
-void ArchMemory::mapKernelPage(size_t virtual_page, size_t physical_page)                   //TODOs: find out if locking is nessessary
+void ArchMemory::mapKernelPage(size_t virtual_page, size_t physical_page)                 
 {
   ArchMemoryMapping mapping = resolveMapping(((uint64) VIRTUAL_TO_PHYSICAL_BOOT(kernel_page_map_level_4) / PAGE_SIZE),
                                              virtual_page);
@@ -373,7 +374,7 @@ void ArchMemory::mapKernelPage(size_t virtual_page, size_t physical_page)       
   asm volatile ("movq %%cr3, %%rax; movq %%rax, %%cr3;" ::: "%rax");
 }
 
-void ArchMemory::unmapKernelPage(size_t virtual_page)                                             //TODOs: find out if locking is nessessary
+void ArchMemory::unmapKernelPage(size_t virtual_page)                                           
 {
   ArchMemoryMapping mapping = resolveMapping(((uint64) VIRTUAL_TO_PHYSICAL_BOOT(kernel_page_map_level_4) / PAGE_SIZE),
                                              virtual_page);
@@ -391,7 +392,7 @@ void ArchMemory::unmapKernelPage(size_t virtual_page)                           
   asm volatile ("movq %%cr3, %%rax; movq %%rax, %%cr3;" ::: "%rax");
 }
 
-PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()                                     //TODOs: find out if locking is nessessary
+PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()
 {
   return kernel_page_map_level_4;
 }

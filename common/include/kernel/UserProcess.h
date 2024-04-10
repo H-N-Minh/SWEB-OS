@@ -49,7 +49,7 @@ class UserProcess
         static int64 pid_counter_;
         int32 pid_;
 
-        int32 fd_;                                 //TODOs: figure out, what needs to be locked here
+        int32 fd_;                                 //TODOs: figure out, what needs to be locked and locking order
         FileSystemInfo* working_dir_;
         ustl::string filename_;
         uint32 terminal_number_;
@@ -58,7 +58,7 @@ class UserProcess
         //Threads
         static int64 tid_counter_;
         ustl::vector<UserThread*> threads_;
-        Mutex threads_lock_;                            //Locking order: x (TODOs)
+        Mutex threads_lock_;                            //Locking order: x
 
         //Return value map (locked by threads lock)
         ustl::map<size_t, void*> thread_retval_map_;
