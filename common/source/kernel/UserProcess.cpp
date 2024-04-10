@@ -275,9 +275,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     } 
   }
 
-  // exit_allowed_lock_.acquire();
-  // exit_allowed_ = false;
-  // exit_allowed_lock_.release();
 
   //open the filedescriptor of the new program
   execv_lock_.acquire();
@@ -323,7 +320,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     one_thread_left_ = true;
   }
-  
+  threads_lock_.release();
   //wait for the other threads to die
   one_thread_left_lock_.acquire();
   while(!one_thread_left_)
@@ -333,10 +330,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   one_thread_left_lock_.release();
 
   thread_retval_map_.clear();
-
-  // exit_allowed_lock_.acquire();
-  // exit_allowed_ = true;
-  // exit_allowed_lock_.release();
 
 
   

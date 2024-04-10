@@ -251,14 +251,6 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-
-  // exit_allowed_lock_.acquire();
-  // if(exit_allowed_)
-  // {
-
-  // }
-  // exit_allowed_lock_.release();
-
   current_process.threads_lock_.acquire();
   for (auto& thread : current_process.threads_)
   {
