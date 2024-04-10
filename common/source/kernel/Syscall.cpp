@@ -18,6 +18,8 @@
 #include "PageManager.h"
 #include "ArchThreads.h"
 
+#define BIGGEST_UNSIGNED_INT 4294967295
+
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -576,17 +578,23 @@ unsigned int Syscall::clock(void)
 
   uint64_t current_time_stamp = get_current_timestamp_64_bit();
   uint64_t clock = current_process.clock_ + current_time_stamp - current_process.tsc_start_scheduling_;
-  // if(current_time_stamp < current_process.tsc_start_scheduling_)
-  // {
-  //   assert(0);
-  // }
-  // kprintf("Clock %lu: %lu + %lu - %lu\n", clock, current_process.clock_, current_time_stamp, current_process.tsc_start_scheduling_);
-  //kprintf("Timestamp fs %u", timestamp_fs);
+
   uint64_t clock_in_femtoseconds = (uint64_t)clock * timestamp_fs;
 
-  unsigned int clock_in_microseconds = (unsigned int)(clock_in_femtoseconds / (uint64_t)1000000000); 
+  if(clock_in_femtoseconds / timestamp_fs != clock)
+  {
+    //overflow occured - which also means the number is to big to represent as unsigned int
+    return -1;
+  }
 
-  return clock_in_microseconds;
+  uint64_t clock_in_microseconds = (clock_in_femtoseconds / (uint64_t)1000000000); 
+
+  if(clock_in_microseconds > BIGGEST_UNSIGNED_INT)
+  {
+    return -1;
+  }
+
+  return (unsigned int)clock_in_microseconds;
 }
 
 
@@ -603,13 +611,3 @@ uint64_t Syscall::get_current_timestamp_64_bit()
   return ((uint64_t)edx<<32) + eax;
 }
 
-unsigned int Syscall::get_current_timestamp_32_bit()
-{      
-  unsigned int eax;
-  asm
-  (
-    "rdtsc"
-    : "=a"(eax)
-  );
-  return eax;
-}

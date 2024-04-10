@@ -57,6 +57,5 @@ class Syscall
     static uint32 forkProcess();
 
     static uint64_t get_current_timestamp_64_bit();
-    static unsigned int get_current_timestamp_32_bit();
 };
 
