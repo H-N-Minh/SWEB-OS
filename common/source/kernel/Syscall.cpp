@@ -447,45 +447,6 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
   VfsSyscall::readdir(pathname, buffer, size);
 }
 
-
-// unsigned int Syscall::sleep(unsigned int seconds)
-// {
-//   while(1)     //while loop is just in the case seconds is bigger than 1000, because uint64 can not hold more than 18 digits
-//   {
-//     if(seconds <= 0)
-//     {
-//       break;
-//     }
-//     else if(seconds < 1000 && seconds > 0)
-//     {
-//       uint64_t femtoseconds = (uint64_t)seconds * 1000000000000000;
-//       uint64_t current_time_stamp = get_current_timestamp_64_bit();
-//       //debug(SYSCALL, "TSC is %ld.\n", current_time_stamp);
-
-//       uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-//       //debug(SYSCALL, "Timestamp_ns is %ld.\n", timestamp_fs);
-
-//       currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
-//       //debug(SYSCALL, "Wakeup timestamp is %ld.\n", currentThread->wakeup_timestamp_);
-
-//       Scheduler::instance()->yield();
-//       break;
-//     }
-//     else
-//     {
-//       seconds = seconds - 1000;
-
-//       uint64_t femtoseconds = 1000000000000000000;
-//       uint64_t current_time_stamp = get_current_timestamp_64_bit();
-//       uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-//       currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
-
-//       Scheduler::instance()->yield();
-//     }
-//   }
-//   return 0;
-// }
-
 unsigned int Syscall::sleep(unsigned int seconds)
 {
   
@@ -514,7 +475,6 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
     {
       return false;
     }
-    //debug(SYSCALL, "Ptr %p USER_BREAK %p.\n",(void*)ptr, (void*)USER_BREAK);
     if(ptr >= USER_BREAK)
     {
       return false;
