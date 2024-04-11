@@ -29,7 +29,7 @@ typedef struct
   uint64 ignored_3                 :1;
   uint64 size                      :1; // must be 0
   uint64 ignored_2                 :3;
-  uint64 cow                       :1;
+  uint64 reference_count           :1;
   uint64 page_ppn                  :28;
   uint64 reserved_1                :12; // must be 0
   uint64 ignored_1                 :11;
@@ -144,7 +144,7 @@ typedef struct
   uint64 size                      :1;
   uint64 global                    :1;
   uint64 ignored_2                 :2;
-  uint64 cow                       :1;
+  uint64 reference_count           :1;
   uint64 page_ppn                  :28;
   uint64 reserved_1                :12; // must be 0
   uint64 ignored_1                 :11;
