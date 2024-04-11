@@ -12,10 +12,6 @@
 #include "Syscall.h"
 #include "ArchMemory.h"
 
-<<<<<<< HEAD
-
-=======
->>>>>>> main
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                        Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
