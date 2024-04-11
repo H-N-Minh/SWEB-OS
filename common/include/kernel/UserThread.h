@@ -8,44 +8,56 @@
 class UserProcess;
 
 
+
+// PTHREAD_CANCEL_EXIT: similar to PTHREAD_CANCEL_ASYNCHRONOUS, except thread gets canceled no matter what CancelState is.
+enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};
+enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
+enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE};
+
 class UserThread : public Thread
 {
     public:
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                    Loader* loader, UserProcess* process, size_t tid, void* func, void* para, void* pcreate_helper, bool execv = false);
+                    Loader* loader, UserProcess* process, void* func, void* para, void* pcreate_helper, bool execv = false);
 
-        // COPY CONSTRUCTOR
-        UserThread(UserThread& other, UserProcess* process, int32 tid, uint32 terminal_number, Loader* loader);
+        UserThread(UserThread& other, UserProcess* process); // COPY CONSTRUCTOR
 
         ~UserThread();
-        UserProcess* process_{0};
+        
         void Run(){}
-
         void kill() override;
+        void send_kill_notification();
+        bool schedulable() override;
+        UserProcess* process_;
+        size_t vpn_stack_;
 
+        //exit
         bool last_thread_alive_{false};
+
+        //exec
         bool last_thread_before_exec_{false};
 
-
-        bool wants_to_be_canceled_{false};
-
-        size_t virtual_page_;
-
-        bool exit_send_cancelation_{false};
-
-        Mutex join_threads_lock_;
-        ustl::vector<UserThread*> join_threads_;                //TODO:needs to be cleaned somewhere
-        bool thread_killed{false};             //not the best naming: TODO
-        Mutex thread_gets_killed_lock_;
+        //pthread join (join_threads_ are locked by threads_lock_)
+        ustl::vector<UserThread*> join_threads_; 
+        bool thread_killed{false};
+        Mutex thread_gets_killed_lock_;                                //Locking order: x
         Condition thread_gets_killed_;
 
-        bool canceled_thread_wants_to_be_killed_{false};   
+        Mutex join_state_lock_;
+        JoinState join_state_{JoinState::PTHREAD_CREATE_JOINABLE};
 
-        Mutex cancel_state_type_lock_;
 
-        bool to_late_for_cancel_{false};
+        //pthread_cancel
+        bool wants_to_be_canceled_{false};
+        Mutex cancel_state_type_lock_;                                  //Locking order: x
+        CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};
+        CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED};
 
-        void send_kill_notification();
+        //userspace locks
+        size_t request_to_sleep_{NULL};         // pointer to boolean in user stack, indicate whether the thread is schedulable or not
+
+        size_t waiting_list_ptr_{NULL};
+        size_t currently_waiting_ptr_{NULL};
+ 
 
 };
-

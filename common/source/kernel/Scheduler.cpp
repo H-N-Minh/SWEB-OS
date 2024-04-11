@@ -45,6 +45,13 @@ void Scheduler::schedule()
     return;
   }
 
+  if(currentThread && currentThread->type_ == Thread::USER_THREAD)
+  {
+    uint64_t tsc_end_scheduling_ = Syscall::get_current_timestamp_64_bit();
+    uint64_t tsc_start_scheduling_ = ((UserThread*)currentThread)->process_->tsc_start_scheduling_;
+    ((UserThread*)currentThread)->process_->clock_ += (tsc_end_scheduling_ - tsc_start_scheduling_);
+  }
+
   auto it = threads_.begin();
   for(; it != threads_.end(); ++it)
   {
@@ -52,27 +59,8 @@ void Scheduler::schedule()
     {
       if((*it)->type_ == Thread::USER_THREAD)
       {
-        UserThread& currentUserThread = *((UserThread*)*it);
-        if(currentUserThread.wants_to_be_canceled_ && currentUserThread.switch_to_userspace_ && currentUserThread.cancel_type_ != PTHREAD_CANCEL_DEFERRED) 
-        {
-          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && currentUserThread.cancel_state_ == PTHREAD_CANCEL_DISABLE)
-          {
-            currentThread = *it;
-            break;
-          }
-          debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", currentUserThread.getName());
-          currentUserThread.kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
-          if(currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT)
-          {
-            currentUserThread.kernel_registers_->rsi     = (size_t)-2222222222;
-          }
-          else{
-            currentUserThread.kernel_registers_->rsi     = (size_t)-1111111111;
-          }
-          currentUserThread.switch_to_userspace_ = 0;
-        }
+        ((UserThread*)(*it))->process_->tsc_start_scheduling_ = Syscall::get_current_timestamp_64_bit();
       }
-
       currentThread = *it;
       break;
     }
@@ -196,6 +184,26 @@ size_t Scheduler::getTicks()
 
 void Scheduler::incTicks()
 {
+  if(ticks_ % 5 == 0 && ticks_ != 0)
+  {
+    unsigned long current_time_stamp = Syscall::get_current_timestamp_64_bit();
+
+    unsigned long average_diference_ = (current_time_stamp - last_time_stamp_)/5;
+    //debug(SCHEDULER, "Ticks: %ld\n current tsc: %ld and last tsc: %ld and difference: %ld.\n", ticks_, current_time_stamp, last_time_stamp_, average_diference_);
+    last_time_stamp_ = current_time_stamp;
+    timestamp_fs_ = 54925439000000/average_diference_;
+    //debug(SCHEDULER, "Timestamp ns %ld\n",timestamp_fs_);
+  }
+  if(ticks_ < 5 && ticks_ != 0)
+  {
+    unsigned long current_time_stamp = Syscall::get_current_timestamp_64_bit();
+    unsigned long average_diference_ = current_time_stamp - last_time_stamp_;
+    //debug(SCHEDULER, "Ticks: %ld\n current tsc: %ld and last tsc: %ld and difference: %ld.\n", ticks_, current_time_stamp, last_time_stamp_, average_diference_);
+    last_time_stamp_ = current_time_stamp;
+    timestamp_fs_ = 54925439000000/average_diference_;
+    //debug(SCHEDULER, "Inverse timestamp ns %ld\n\n",timestamp_fs_);
+  }
+
   ++ticks_;
 }
 

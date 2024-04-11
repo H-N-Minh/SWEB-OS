@@ -13,7 +13,7 @@ class Loader
 {
   public:
     Loader(ssize_t fd);
-    Loader(ssize_t fd, const ArchMemory& arch);
+    Loader(const Loader &src, int32 fd);
     ~Loader();
 
     /**
