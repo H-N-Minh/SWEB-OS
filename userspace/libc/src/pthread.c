@@ -131,7 +131,7 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
   {
     return -1;
   }
-  assert(pthread_spin_init(&mutex->mutex_lock_) == 0);
+  assert(pthread_spin_init(&mutex->mutex_lock_, NULL) == 0);
   
   assert(pthread_spin_lock(&mutex->mutex_lock_) == 0);
   mutex->initialized_ = MUTEX_INITALIZED;
@@ -154,7 +154,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     return -1;
   }
   size_t waiting_flag_address = getTopOfThisStack();
-  size_t waiting_list_address = (size_t) waiting_flag_address - sizeof(size_t);
+  size_t waiting_list_address = waiting_flag_address - sizeof(size_t);
   assert(pthread_spin_lock(&mutex->mutex_lock_) == 0);
   if(mutex->waiting_list_ == waiting_list_address)    // the first thread in the waiting list is always the thread currently holding the lock
   {
@@ -210,7 +210,7 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
   else
   {
     size_t waiting_flag_address = getTopOfThisStack();
-    size_t waiting_list_address = (size_t) waiting_flag_address - sizeof(size_t);
+    size_t waiting_list_address = waiting_flag_address - sizeof(size_t);
     addWaiterToList((size_t*) &mutex->waiting_list_, waiting_list_address);     // add itself to 1st spot in the list to mark that the lock belongs to this thread now
     assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);
     return 0;
@@ -231,8 +231,8 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     //printf("parameter not valid or not initalized\n");
     return -1;
   }
-  size_t* waiting_flag_address = (size_t*) getTopOfThisStack();
-  size_t* waiting_list_address = (size_t*) ((size_t) waiting_flag_address - sizeof(size_t));
+  size_t waiting_flag_address = getTopOfThisStack();
+  size_t waiting_list_address = waiting_flag_address - sizeof(size_t);
   assert(pthread_spin_lock(&mutex->mutex_lock_) == 0);
   if(mutex->waiting_list_ != waiting_list_address)
   {
@@ -242,7 +242,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   }
 
   // 2.1 If theres no other thread waiting for the lock, just clear the list and return
-  if(!*waiting_list_address)
+  if(!*(size_t*) waiting_list_address)
   {
     mutex->waiting_list_ = 0;
     assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);
@@ -250,9 +250,9 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   // 2.2 If there are threads waiting for the lock, make it 1st in the list, then wake it up.
   else
   {
-    mutex->waiting_list_ = *waiting_list_address;
+    mutex->waiting_list_ = *(size_t*)waiting_list_address;
     assert(pthread_spin_unlock(&mutex->mutex_lock_) == 0);    // we can unlock here because we wont be working on the list anymore
-    size_t* next_waiter_flag_address = (size_t*) (*waiting_list_address + sizeof(size_t));    // the flag address of the thread we want to wake up
+    size_t* next_waiter_flag_address = (size_t*) (*(size_t*) waiting_list_address + sizeof(size_t));    // the flag address of the thread we want to wake up
     wakeUpThread(next_waiter_flag_address);
   }
 

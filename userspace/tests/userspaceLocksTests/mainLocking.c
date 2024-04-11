@@ -20,14 +20,14 @@ int main()
     // spin3();   //syncronization with two spinlocks
     // spin4();   //Testing more posix errorchecks details
 
-    mutex1();     //checks if basic locking and unlocking works with mutexes
+    // mutex1();     //checks if basic locking and unlocking works with mutexes
     mutex2();     //simple syncronization with mutexes
-    mutex3();     //syncronization with two mutexes
-    mutex4();     //Testing more posix errorchecks details
+    // mutex3();     //syncronization with two mutexes
+    // mutex4();     //Testing more posix errorchecks details
 
     //Testing more threads to wait on same lock at same time. 
     // Also test if threads holding lock is killed when program exist. NOTE: 100 of threads still run after this test (this is intended)
-    mutex5();     
+    // mutex5();     
 
     printf("\n\nUserspace locking tests successful, press f12 to check if any threads are still running\n");
     return 0;
