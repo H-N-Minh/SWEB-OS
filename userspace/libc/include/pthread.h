@@ -27,10 +27,8 @@ typedef struct pthread_spinlock_struct pthread_spinlock_t;
 
 //pthread mutex
 struct pthread_mutex_struct { 
-    size_t  locked_; 
     size_t initialized_;
-    size_t* held_by_;
-    size_t* waiting_list_;
+    size_t waiting_list_;
     pthread_spinlock_t mutex_lock_;
 }; 
 
