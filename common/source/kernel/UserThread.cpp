@@ -208,7 +208,7 @@ bool UserThread::schedulable()
     waiting_for_lock = 1;  
   }
 
-  cancel_state_type_lock_.acquire();
+  // cancel_state_type_lock_.acquire();       // doesnt run when this is uncommented
   if(wants_to_be_canceled_ 
       && (switch_to_userspace_ || waiting_for_lock)
       && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
@@ -218,7 +218,7 @@ bool UserThread::schedulable()
     {
       *request_to_sleep_translated = 0;
       *thread_waiting_for_lock_ptr = 0;
-      cancel_state_type_lock_.release();
+      // cancel_state_type_lock_.release();
       return true;
     }
     
@@ -226,7 +226,7 @@ bool UserThread::schedulable()
     kernel_registers_->rdi     = (size_t)-1;
     currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
     switch_to_userspace_ = 0;
-    cancel_state_type_lock_.release();
+    // cancel_state_type_lock_.release();
     return true;
   }
 
