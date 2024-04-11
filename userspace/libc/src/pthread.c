@@ -602,7 +602,6 @@ void print_waiting_list(size_t* waiting_list, int before)
   //printf("Waiting list was %p\n\n", waiting_list);
 }
 
-
 void wakeUpThread(size_t* request_to_sleep)
 {
   size_t old_val = 0;
