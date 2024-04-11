@@ -20,7 +20,6 @@ inline bool PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
 
   if(address < null_reference_check_border_)
   {
-    //assert(0 && "need to be removed later");  //Todos remove later
     debug(PAGEFAULT, "Maybe you are dereferencing a null-pointer.\n");
   }
   else if(!user && address >= USER_BREAK)

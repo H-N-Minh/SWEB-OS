@@ -5,11 +5,7 @@
 
 int function1pj2()
 {
-    int delay = 0;
-    for(int i = 0; i < 300000000; i++)        //TODOs replace with sleep
-    {
-        delay+= i;
-    }
+    sleep(1);
     return 5;
 }
 

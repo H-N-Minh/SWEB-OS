@@ -14,18 +14,18 @@ char const *user_progs[] = {
                             // "/usr/pthreadCreate.sweb",
 
 // SEM & COND -------------------------------------------------
-                            "/usr/condTests.sweb",
+                            // "/usr/condTests.sweb",
                             // "/usr/semTests.sweb",
 
 // FORK-------------------------------------------------
-                            // "/usr/focktests.sweb",
+                            //"/usr/forkTests.sweb",
 
 
                         
                             //"/usr/notest.sweb",
                             //"/usr/shell.sweb",
 
-                            // "/usr/pthreadCreateTests.sweb",
+                            //"/usr/pthreadCreateTests.sweb",
                             // "/usr/pthreadJoinTests.sweb",
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
@@ -41,7 +41,7 @@ char const *user_progs[] = {
 
                             // "/usr/userspaceLocksTests.sweb",                                    
 
-                            //  "/usr/sleepTests.sweb", 
+                            "/usr/sleepAndClockTests.sweb", 
 
                             0
                            };

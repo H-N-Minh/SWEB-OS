@@ -22,6 +22,7 @@
 #define sc_pipe 1500
 
 #define sc_sleep 500
+#define sc_clock 501
 
 #define sc_pthread_create 300
 #define sc_pthread_exit 301

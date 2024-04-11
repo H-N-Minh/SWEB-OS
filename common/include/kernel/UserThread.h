@@ -44,7 +44,7 @@ class UserThread : public Thread
         Condition thread_gets_killed_;
 
         Mutex join_state_lock_;
-        JoinState join_state_{JoinState::PTHREAD_CREATE_JOINABLE};            //TODOs copyconstructor
+        JoinState join_state_{JoinState::PTHREAD_CREATE_JOINABLE};
 
 
         //pthread_cancel

@@ -27,8 +27,5 @@ int pe1()
 
     printf("pe1 successful!\n");
 
-    //todos join maybe
-
-
     return 0;
 }

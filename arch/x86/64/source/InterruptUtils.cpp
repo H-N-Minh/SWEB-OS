@@ -300,7 +300,6 @@ extern "C" void syscallHandler()
   currentThread->switch_to_userspace_ = 1;
   currentThreadRegisters = currentThread->user_registers_;
 
-  ///Todos
   UserThread& currentUserThread = *((UserThread*)currentThread);
   if(currentUserThread.wants_to_be_canceled_  && (currentUserThread.cancel_type_ == PTHREAD_CANCEL_EXIT || 
   (currentUserThread.cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && currentUserThread.cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
@@ -309,7 +308,7 @@ extern "C" void syscallHandler()
     currentUserThread.kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     currentUserThread.kernel_registers_->rdi     = (size_t)-1;
     currentUserThread.switch_to_userspace_ = 0;
-    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
+    currentThreadRegisters = currentThread->kernel_registers_;
   }
   ///
 

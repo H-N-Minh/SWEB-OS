@@ -46,6 +46,8 @@ class Syscall
 
     static unsigned int sleep(unsigned int seconds);
 
+    static unsigned int clock(void);
+
     static int execv(const char *path, char *const argv[]);
 
     /**
@@ -59,5 +61,7 @@ class Syscall
     static int pthread_setcanceltype(int type, int *oldtype);
 
     static uint32 forkProcess();
+
+    static uint64_t get_current_timestamp_64_bit();
 };
 

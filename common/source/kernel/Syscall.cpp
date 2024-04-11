@@ -18,6 +18,8 @@
 #include "PageManager.h"
 #include "ArchThreads.h"
 
+#define BIGGEST_UNSIGNED_INT 4294967295
+
 
 size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5)
 {
@@ -109,6 +111,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_pipe:
       return_value = pipe((int*) arg1);
+      break;
+    case sc_clock:
+      return_value = clock();
       break;
     default:
       return_value = -1;
@@ -445,61 +450,26 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
   VfsSyscall::readdir(pathname, buffer, size);
 }
 
-
 unsigned int Syscall::sleep(unsigned int seconds)
 {
-  while(1)     //while loop is just in the case seconds is bigger than 1000, because uint64 can not hold more than 18 digits
-  {
-    if(seconds <= 0)
-    {
-      break;
-    }
-    else if(seconds < 1000 && seconds > 0)
-    {
-      uint64_t femtoseconds = (uint64_t)seconds * 1000000000000000;
-      debug(SYSCALL, "Want to sleep for %d seconds.\n", seconds);
-      unsigned int edx;
-      unsigned int eax;
-      asm
-      (
-        "rdtsc"
-        : "=a"(eax), "=d"(edx)
-      );
+  
+  unsigned int seconds_left = seconds % 1000;
+  unsigned int times_thousands_seconds = seconds / 1000;
 
-      uint64_t current_time_stamp = ((uint64_t)edx<<32) + eax;
-      //debug(SYSCALL, "TSC is %ld.\n", current_time_stamp);
+  uint64_t femtoseconds = (uint64_t)seconds_left * 1000000000000000;
+  uint64_t current_time_stamp = get_current_timestamp_64_bit();
 
-      uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-      //debug(SYSCALL, "Timestamp_ns is %ld.\n", timestamp_fs);
+  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
 
-      currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
-      //debug(SYSCALL, "Wakeup timestamp is %ld.\n", currentThread->wakeup_timestamp_);
+  uint64_t thousand_femtoseconds = 1000000000000000000;
+    
+  currentThread->wakeup_timestamp_ = current_time_stamp + (femtoseconds / timestamp_fs) +  times_thousands_seconds * (thousand_femtoseconds / timestamp_fs);
 
-      Scheduler::instance()->yield();
-      break;
-    }
-    else
-    {
-      seconds = seconds - 1000;
+  Scheduler::instance()->yield();
 
-      uint64_t femtoseconds = 1000000000000000000;
-      unsigned int edx;
-      unsigned int eax;
-      asm
-      (
-        "rdtsc"
-        : "=a"(eax), "=d"(edx)
-      );
-
-      uint64_t current_time_stamp = ((uint64_t)edx<<32) + eax;
-      uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-      currentThread->wakeup_timestamp_ = current_time_stamp + ( femtoseconds / timestamp_fs);
-
-      Scheduler::instance()->yield();
-    }
-  }
   return 0;
 }
+
 
 
 bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
@@ -508,7 +478,6 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
     {
       return false;
     }
-    //debug(SYSCALL, "Ptr %p USER_BREAK %p.\n",(void*)ptr, (void*)USER_BREAK);
     if(ptr >= USER_BREAK)
     {
       return false;
@@ -566,3 +535,46 @@ int Syscall::pthread_setcanceltype(int type, int *oldtype)
     ((UserThread*) currentThread)->cancel_state_type_lock_.release();
     return 0;
 }
+
+unsigned int Syscall::clock(void)
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
+
+  uint64_t current_time_stamp = get_current_timestamp_64_bit();
+  uint64_t clock = current_process.clock_ + current_time_stamp - current_process.tsc_start_scheduling_;
+
+  uint64_t clock_in_femtoseconds = (uint64_t)clock * timestamp_fs;
+
+  if(clock_in_femtoseconds / timestamp_fs != clock)
+  {
+    //overflow occured - which also means the number is to big to represent as unsigned int
+    return -1;
+  }
+
+  uint64_t clock_in_microseconds = (clock_in_femtoseconds / (uint64_t)1000000000); 
+
+  if(clock_in_microseconds > BIGGEST_UNSIGNED_INT)
+  {
+    return -1;
+  }
+
+  return (unsigned int)clock_in_microseconds;
+}
+
+
+
+uint64_t Syscall::get_current_timestamp_64_bit()
+{      
+  unsigned int edx;
+  unsigned int eax;
+  asm
+  (
+    "rdtsc"
+    : "=a"(eax), "=d"(edx)
+  );
+  return ((uint64_t)edx<<32) + eax;
+}
+

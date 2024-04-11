@@ -12,7 +12,10 @@
 #include "Syscall.h"
 #include "ArchMemory.h"
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> main
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                        Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
@@ -115,7 +118,7 @@ UserThread::~UserThread()
 {
     debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
 
-    //assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread"); //TODOs
+    assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread");
 
     if(last_thread_alive_)
     {
@@ -128,7 +131,7 @@ UserThread::~UserThread()
 
     if(unlikely(last_thread_before_exec_))
     {
-        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");    //TODOs: also check 
+        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
         assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
 
         debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
@@ -185,6 +188,7 @@ void UserThread::send_kill_notification()
         join_thread->thread_gets_killed_lock_.release();
     }
   }
+  currentUserThread.join_threads_.clear();
 }
 
 bool UserThread::schedulable()
@@ -192,6 +196,7 @@ bool UserThread::schedulable()
   bool running = (getState() == Running);
 
   int waiting_for_lock = 0;
+  
   // if the thread requests to sleep, then it is not scheduled
   size_t *request_to_sleep_translated = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)request_to_sleep_);
   if(request_to_sleep_translated && *request_to_sleep_translated == 1)
@@ -245,14 +250,7 @@ bool UserThread::schedulable()
   }
   else
   {
-    unsigned int edx;
-    unsigned int eax;
-    asm
-    (
-      "rdtsc"
-      : "=a"(eax), "=d"(edx)
-    );
-    unsigned long current_time_stamp = ((unsigned long)edx<<32) + eax;
+    unsigned long current_time_stamp =  Syscall::get_current_timestamp_64_bit();
     if(current_time_stamp >= wakeup_timestamp_)
     {
       wakeup_timestamp_ = 0;

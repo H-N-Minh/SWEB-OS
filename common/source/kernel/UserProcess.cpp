@@ -30,9 +30,11 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   if (!loader_ || !loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
-
-    assert(0);
-    // TODOs: clean process when no loader (kill();)
+    delete loader_;
+    loader_ = 0;
+    VfsSyscall::close(fd_);
+    delete working_dir_;
+    working_dir_ = 0;
     return;
   }
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
@@ -86,8 +88,6 @@ UserProcess::~UserProcess()
   /////
   //local_fd_table_.closeAllFileDescriptors();
   /////
-
-
 
   ProcessRegistry::instance()->processExit();
 }
@@ -229,7 +229,6 @@ void UserProcess::exitThread(void* value_ptr)
 
   }
 
-  // TODOs: Lock arch_memory_, also be careful with locking order to prevent deadlock
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
   currentUserThread.loader_->arch_memory_.lock_.acquire();
   currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.vpn_stack_);
@@ -242,6 +241,8 @@ void UserProcess::exitThread(void* value_ptr)
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  
   int space_left = 4000;   //page size (more or less)
   size_t array_offset = 0;
 
@@ -275,15 +276,18 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     } 
   }
 
+
   //open the filedescriptor of the new program
   execv_lock_.acquire();
-
   //
+  currentUserThread.cancel_state_type_lock_.acquire();
   if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
   {
+    currentUserThread.cancel_state_type_lock_.release();
     execv_lock_.release();
     return -1;
   }
+  currentUserThread.cancel_state_type_lock_.release();
 
 
   execv_fd_ = VfsSyscall::open(path, O_RDONLY);
@@ -293,7 +297,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     return -1;
   }
 
-  //create loader for the new binary                                    --TODOs: i think i i need to be careful with race conditions maybe
+  //create loader for the new binary                                 
   execv_loader_ = new Loader(execv_fd_);
   if (!execv_loader_ || !execv_loader_->loadExecutableAndInitProcess())
   {
@@ -307,7 +311,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   //cancel all other threads
   Syscall::exit(0, true);
-  execv_lock_.release();     //Todos
+  execv_lock_.release();
   
 
   threads_lock_.acquire();
@@ -320,9 +324,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     one_thread_left_ = true;
   }
   threads_lock_.release();
-
-
-
+  //wait for the other threads to die
   one_thread_left_lock_.acquire();
   while(!one_thread_left_)
   {
@@ -331,6 +333,9 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   one_thread_left_lock_.release();
 
   thread_retval_map_.clear();
+
+
+  
 
 
   //allocate a free physical page and get the virtual address of the identity mapping
