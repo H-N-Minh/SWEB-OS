@@ -9,9 +9,6 @@ extern int cond4();
 extern int cond5();
 extern int cond6();
 
-//NOTE COND3 and COND4 only works with very small number of threads, not sure if the problem with our fake mutex or bad cond
-// TODO: test these 2 again with bigger amount when mutex is working
-
 // set to 1 to test, 0 to skip
 #define COND1 1         // simple test where child has to wait for parent's signal
 #define COND2 1         // similar to cond1, but with more conds and both has to wait for each other

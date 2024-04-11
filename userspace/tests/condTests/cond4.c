@@ -5,7 +5,7 @@
 #include <pthread.h>
 
 // NOTE: for normal pthread this number can reach 10k threads and still work
-#define NUM_THREADS_4 2
+#define NUM_THREADS_4 200
 
 
 pthread_mutex_t mymutex4 = PTHREAD_MUTEX_INITIALIZER;

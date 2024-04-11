@@ -14,7 +14,7 @@ char const *user_progs[] = {
                             // "/usr/pthreadCreate.sweb",
 
 // SEM & COND -------------------------------------------------
-                            // "/usr/condTests.sweb",
+                            "/usr/condTests.sweb",
                             // "/usr/semTests.sweb",
 
 // FORK-------------------------------------------------
@@ -39,7 +39,7 @@ char const *user_progs[] = {
 
                             //"/usr/forkExecTests.sweb",  
 
-                            "/usr/userspaceLocksTests.sweb",                                    
+                            // "/usr/userspaceLocksTests.sweb",                                    
 
                             //  "/usr/sleepTests.sweb", 
 
