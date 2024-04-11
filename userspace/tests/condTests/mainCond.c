@@ -8,6 +8,7 @@ extern int cond3();
 extern int cond4();
 extern int cond5();
 extern int cond6();
+extern int cond7();
 
 // set to 1 to test, 0 to skip
 #define COND1 1         // simple test where child has to wait for parent's signal
@@ -16,6 +17,8 @@ extern int cond6();
 #define COND4 1         // testing broadcast
 #define COND5 1         // testing wrong para
 #define COND6 0         // testing lost wake call. This should be tested alone, check the file for details
+#define COND7 1         // multiple threads waiting on same cond, also test if they are killed when main exits. Check file for more detail
+
 
 int main()
 {
@@ -68,7 +71,15 @@ int main()
         if (retval == 0)                      { printf("===> cond6 is only successful when the order of step is correct!\n"); } 
         else                                  { printf("===> cond6 failed!\n");  return -1;}
     }
+
+    if (COND7)
+    {
+        printf("\nTesting cond7: multiple threads waiting on same cond, also testing exit program while threads are still sleeping...\n");
+        retval = cond7();
+        if (retval == 0)                      { printf("===> cond7 is only successful when F12 shows that no threads are alive!\n"); } 
+        else                                  { printf("===> cond7 failed!\n");  return -1;}
+    }
     
-    printf("\n\n---All tests completed!---\n");
+    printf("\n\n---All tests completed! (press F12 to make sure all threads died correctly)---\n");
     return 0;
 }

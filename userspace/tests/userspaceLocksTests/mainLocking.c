@@ -24,10 +24,7 @@ int main()
     mutex2();     //simple syncronization with mutexes
     mutex3();     //syncronization with two mutexes
     mutex4();     //Testing more posix errorchecks details
-
-    //Testing more threads to wait on same lock at same time. 
-    // Also test if threads holding lock is killed when program exist. NOTE: 100 of threads still run after this test (this is intended)
-    mutex5();     
+    mutex5();     //Test multiple threads waiting on same lock, also test if they are killed when main exits. Check file for more detail
 
     printf("\n\nUserspace locking tests successful, press f12 to check if any threads are still running\n");
     return 0;

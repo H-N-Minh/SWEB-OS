@@ -71,6 +71,7 @@ void* thread2(void* arg)
 
 int cond6()
 {
+    printf("This test should be tested alone, check the file cond6 for info!\n");
     pthread_t t1, t2;
 
     pthread_mutex_init(&mymutex6, NULL);

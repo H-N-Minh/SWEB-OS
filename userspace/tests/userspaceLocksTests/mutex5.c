@@ -29,6 +29,9 @@ void* thread_function(void* arg) {
     return NULL;
 }
 
+//Testing more threads to wait on same lock at same time. 
+// Also test if threads sleeping is killed when program exist. 
+//NOTE: 100 of threads still run after this test (this is intended). they should be killed when main() exits
 int mutex5() {
     pthread_t threads[NUM_THREADS5];
 
@@ -45,17 +48,11 @@ int mutex5() {
     #if DEBUGMODE5 == 1
         printf("--main thread finished pthreadcreate\n");
     #endif
-    // pthread_mutex_unlock(&mymutex5); // this releases the lock and all child threads can now run
+    // pthread_mutex_unlock(&mymutex5); // commented out so childs have to wait forever
     #if DEBUGMODE5 == 1
         printf("--main thread released the lock\n");
     #endif
-    // // Join threads
-    // for (int i = 0; i < NUM_THREADS5; i++) {
-    //     pthread_join(threads[i], NULL);
-    // }
 
-    // Destroy the mutex
-    // pthread_mutex_destroy(&mymutex5);
     printf("mutex5 successful!\n");
     return 0;
 }

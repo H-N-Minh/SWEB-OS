@@ -21,7 +21,7 @@ void *increment(void *arg) {
     return NULL;
 }
 
-void *print(void *arg) {
+void *decrement(void *arg) {
     for (int i = 0; i < LOOP_AMOUNT2; ++i) {
         pthread_mutex_lock(&mutex);
         while (counter == 0)
@@ -57,7 +57,7 @@ int sem2() {
         return -1;
     }
 
-    if (pthread_create(&t2, NULL, print, NULL) != 0) {
+    if (pthread_create(&t2, NULL, decrement, NULL) != 0) {
         printf("Failed to create thread\n");
         return -1;
     }
