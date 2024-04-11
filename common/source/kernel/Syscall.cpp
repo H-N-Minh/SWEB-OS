@@ -296,7 +296,9 @@ int Syscall::pthreadCancel(size_t thread_id, bool is_threads_vector_locked)
     return -1;
   }
   debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu setted to be canceled\n", thread_id);
+  thread_to_be_canceled->cancel_state_type_lock_.acquire();
   thread_to_be_canceled->wants_to_be_canceled_ = true;
+  thread_to_be_canceled->cancel_state_type_lock_.release();
   if(!is_threads_vector_locked){current_process.threads_lock_.release();}
   return 0;
 }
