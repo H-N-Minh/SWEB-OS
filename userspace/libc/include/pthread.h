@@ -15,24 +15,22 @@ typedef size_t pthread_t;
 typedef unsigned int pthread_attr_t;
 
 //pthread spinlock
-struct pthread_spinlock_struct { 
-    size_t  locked_; 
+struct pthread_spinlock_struct {
+    size_t  locked_;
     size_t initialized_;
     void* held_by_;
-}; 
+};
 
 typedef struct pthread_spinlock_struct pthread_spinlock_t;
 
 
 
 //pthread mutex
-struct pthread_mutex_struct { 
-    size_t  locked_; 
+struct pthread_mutex_struct {
     size_t initialized_;
-    size_t* held_by_;
-    size_t* waiting_list_;
+    size_t waiting_list_;
     pthread_spinlock_t mutex_lock_;
-}; 
+};
 
 
 
@@ -51,8 +49,8 @@ typedef unsigned int pthread_mutexattr_t;
 //pthread cond typedefs
 typedef struct pthread_cond_struct
 {
-  size_t initialized_;
-  size_t waiting_list_;     // pointer to linked list of waiting threads
+    size_t initialized_;
+    size_t* waiting_list_;     // pointer to linked list of waiting threads
 } pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
 
@@ -61,8 +59,8 @@ enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
 
 extern int pthread_create(pthread_t *thread,
-         const pthread_attr_t *attr, void *(*start_routine)(void *),
-         void *arg);
+                          const pthread_attr_t *attr, void *(*start_routine)(void *),
+                          void *arg);
 
 
 /**pthread_create_wrapper is the wrapper that we need to run first
@@ -124,31 +122,32 @@ extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 
 extern void print_waiting_list(size_t* waiting_list, int before);
 
-
 /**
- * @return loop through linked list and get the pointer of last thread that is in the waiting_list_ of the given cond
- * @return 0 if the list is empty
+ * return the address of the top of the current stack.
+ * @return non null pointer
 */
-extern size_t getLastCondWaiter(pthread_cond_t* cond);
-
-// /**
-//  * return the address of the top of the current stack. 
-//  * @return non null pointer
-// */
-// extern size_t getTopOfThisStack();
-
-// /**
-//  * return the address of the top of the first stack. 
-//  * @return non null pointer
-// */
-// extern size_t getTopOfFirstStack();
+extern size_t getTopOfThisStack();
 
 /**
- * Wake up a given thread by setting its request_to_sleep to 0
+ * return the address of the top of the first stack.
+ * @return non null pointer
+*/
+extern size_t getTopOfFirstStack();
+
+/**
+ * Add the new_waiter to the last of the waiting_list
+ * NOTE: lock the list before calling this function
+ * @param waiting_list_adr the ADDRESS of the waiting_list (&waiting_list_)
+*/
+extern void addWaiterToList(size_t* waiting_list_adr, size_t new_waiter);
+
+/**
+ * Wake up a thread by setting its request_to_sleep to 0
  * if the thread is not sleeping yet, then wait until it sleep then wake it up
  * Since this use spinlock to wait, the currentThread will be blocked until the other thread wake up
+ * @param request_to_sleep the address of flag that is used to tell Scheduler to skip this thread
 */
-void wakeUpThread(size_t thread_to_wakeup);
+void wakeUpThread(size_t* request_to_sleep);
 
 #ifdef __cplusplus
 }

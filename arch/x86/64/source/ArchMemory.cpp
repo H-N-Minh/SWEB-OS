@@ -30,7 +30,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
   lock_.acquire();
   assert(PageManager::instance()->heldBy() != currentThread);
   
-  debug(FORK, "----------------------------ArchMemory::copy-constructor starts \n");
+  debug(FORK, "ArchMemory::copy-constructor starts \n");
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
@@ -49,12 +49,13 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
       //CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
 
       CHILD_pml4[pml4i].page_ppn = PARENT_pml4[pml4i].page_ppn;
+
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* PARENT_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(PARENT_pml4[pml4i].page_ppn);
       memcpy((void*) CHILD_pdpt, (void*) PARENT_pdpt, PAGE_SIZE);
 
-      // debug(FORK, "PARENT_pml4[pml4i].present: %ld\n",PARENT_pml4[pml4i].present);
-      // debug(FORK, "CHILD_pml4[pml4i].present: %ld\n",CHILD_pml4[pml4i].present);
+       debug(FORK, "PARENT_pml4[pml4i].present: %ld\n",PARENT_pml4[pml4i].reserved_1);
+       debug(FORK, "CHILD_pml4[pml4i].present: %ld\n",CHILD_pml4[pml4i].reserved_1);
       assert(CHILD_pml4[pml4i].present == 1 && "The page map level 4 entries should be both be present in child and parent");
 
       // loop through pdpt to get each pd
@@ -70,8 +71,8 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
           PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
           memcpy((void*) CHILD_pd, (void*) PARENT_pd, PAGE_SIZE);
 
-          // debug(FORK, "PARENT_pdpt[pdpti].pd.present: %ld\n",PARENT_pdpt[pdpti].pd.present);
-          // debug(FORK, "CHILD_pdpt[pdpti].pd.present: %ld\n",CHILD_pdpt[pdpti].pd.present);
+           debug(FORK, "PARENT_pdpt[pdpti].pd.present: %ld\n",PARENT_pdpt[pdpti].pd.reserved_1);
+           debug(FORK, "CHILD_pdpt[pdpti].pd.present: %ld\n",CHILD_pdpt[pdpti].pd.reserved_1);
           assert(CHILD_pdpt[pdpti].pd.present == 1 && "The page directory pointer table entries should be both be present in child and parent");
 
           // loop through pd to get each pt
@@ -87,8 +88,8 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
               PageTableEntry* PARENT_pt = (PageTableEntry*) getIdentAddressOfPPN(PARENT_pd[pdi].pt.page_ppn);
               memcpy((void*) CHILD_pt, (void*) PARENT_pt, PAGE_SIZE);
 
-              // debug(FORK, "PARENT_pd[pdi].pt.present: %ld\n",PARENT_pd[pdi].pt.present);
-              // debug(FORK, "CHILD_pd[pdi].pt.present: %ld\n",CHILD_pd[pdi].pt.present);
+               debug(FORK, "PARENT_pd[pdi].pt.present: %ld\n",PARENT_pd[pdi].pt.reserved_1);
+               debug(FORK, "CHILD_pd[pdi].pt.present: %ld\n",CHILD_pd[pdi].pt.reserved_1);
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
 
               // loop through pt to get each pageT
@@ -105,10 +106,8 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   pointer PARENT_page = getIdentAddressOfPPN(PARENT_pt[pti].page_ppn);
                   memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
 
-                  CHILD_pt[pti].reserved_1 = 0;
-
-                   debug(FORK, "PARENT_pt[pti].present: %ld\n",CHILD_page);
-                   debug(FORK, "CHILD_pt[pti].presentt: %ld\n",PARENT_page);
+                   //debug(FORK, "PARENT_pt[pti].present: %ld\n",CHILD_page);
+                   //debug(FORK, "CHILD_pt[pti].presentt: %ld\n",PARENT_page);
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
               }
