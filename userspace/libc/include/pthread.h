@@ -28,8 +28,10 @@ typedef struct pthread_spinlock_struct pthread_spinlock_t;
 //pthread mutex
 struct pthread_mutex_struct {
     size_t initialized_;
-    size_t waiting_list_;
+    size_t *waiting_list_;
     pthread_spinlock_t mutex_lock_;
+    size_t *held_by_;
+    size_t locked_;
 };
 
 
@@ -38,7 +40,7 @@ struct pthread_mutex_struct {
 #define SPINLOCK_INITALIZED 14243444
 
 #define PTHREAD_SPIN_INITIALIZER { .locked_ = 0, .initialized_= SPINLOCK_INITALIZED, .held_by_ = 0 }
-#define PTHREAD_MUTEX_INITIALIZER {.locked_ = 0, .initialized_= MUTEX_INITALIZED, .held_by_ = 0, .waiting_list_ = 0, .mutex_lock_ = PTHREAD_SPIN_INITIALIZER }
+#define PTHREAD_MUTEX_INITIALIZER {.initialized_= MUTEX_INITALIZED, .waiting_list_ = 0, .mutex_lock_ = PTHREAD_SPIN_INITIALIZER }
 #define PTHREAD_COND_INITIALIZER { .initialized_= 1, .waiting_list_ = 0 }
 
 typedef struct pthread_mutex_struct pthread_mutex_t;
@@ -50,7 +52,7 @@ typedef unsigned int pthread_mutexattr_t;
 typedef struct pthread_cond_struct
 {
     size_t initialized_;
-    size_t* waiting_list_;     // pointer to linked list of waiting threads
+    size_t waiting_list_;     // pointer to linked list of waiting threads
 } pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
 
