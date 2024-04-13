@@ -289,6 +289,8 @@ void PageManager::freePPN(uint32 page_number, uint32 page_size)
     lowest_unreserved_page_ = page_number;
   for (uint32 p = page_number; p < (page_number + page_size / PAGE_SIZE); ++p)
   {
+    debug(FORK, "p %d\n",p);
+    debug(FORK, "page_usage_table_->getBit(p) %d\n",page_usage_table_->getBit(p));
     assert(page_usage_table_->getBit(p) && "Double free PPN");
     page_usage_table_->unsetBit(p);
   }
@@ -314,4 +316,51 @@ void PageManager::printBitmap()
 uint32 PageManager::getNumPagesForUser() const
 {
   return num_pages_for_user_;
+}
+
+void PageManager::incrementReferenceCount(uint64 page_number)
+{
+  //check if the page number is already in the map
+  auto it = page_reference_counts_.find(page_number);
+  if (it != page_reference_counts_.end())
+  {
+    //page number found, increment
+    it->second.reference_count++;
+  }
+  else
+  {
+    //page number not found, initialize reference count to 1
+    page_reference_counts_[page_number] = {2};
+  }
+}
+
+void PageManager::decrementReferenceCount(uint64 page_number)
+{
+  //check if the page number is in the map
+  auto it = page_reference_counts_.find(page_number);
+  if (it != page_reference_counts_.end())
+  {
+    //decrement the reference count
+    it->second.reference_count--;
+
+    //if reference count reaches zero, erase the entry from the map
+    if (it->second.reference_count == 0)
+    {
+      page_reference_counts_.erase(it);
+    }
+  }
+}
+
+uint32 PageManager::getReferenceCount(uint64 page_number)
+{
+  // Check if the page number is in the map
+  auto it = page_reference_counts_.find(static_cast<uint32>(page_number));
+  if (it != page_reference_counts_.end())
+  {
+    return it->second.reference_count;
+  }
+  else
+  {
+    return 0;
+  }
 }

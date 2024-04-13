@@ -24,12 +24,12 @@ ArchMemory::ArchMemory():lock_("archmemory_lock_")
   lock_.release();
 }
 
-// COPY CONSTRUCTOR 
+// COPY CONSTRUCTOR
 ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 {
   lock_.acquire();
   assert(PageManager::instance()->heldBy() != currentThread);
-  
+
   debug(FORK, "ArchMemory::copy-constructor starts \n");
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
@@ -46,16 +46,15 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
     if (PARENT_pml4[pml4i].present)
     {
       // setup new page directory pointer table
-      //CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
+      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
 
-      CHILD_pml4[pml4i].page_ppn = PARENT_pml4[pml4i].page_ppn;
-
+      //CHILD_pml4[pml4i].page_ppn = PARENT_pml4[pml4i].page_ppn;
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* PARENT_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(PARENT_pml4[pml4i].page_ppn);
       memcpy((void*) CHILD_pdpt, (void*) PARENT_pdpt, PAGE_SIZE);
 
-       debug(FORK, "PARENT_pml4[pml4i].present: %ld\n",PARENT_pml4[pml4i].reserved_1);
-       debug(FORK, "CHILD_pml4[pml4i].present: %ld\n",CHILD_pml4[pml4i].reserved_1);
+      // debug(FORK, "PARENT_pml4[pml4i].present: %ld\n",PARENT_pml4[pml4i].present);
+      // debug(FORK, "CHILD_pml4[pml4i].present: %ld\n",CHILD_pml4[pml4i].present);
       assert(CHILD_pml4[pml4i].present == 1 && "The page map level 4 entries should be both be present in child and parent");
 
       // loop through pdpt to get each pd
@@ -64,15 +63,15 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
         if (PARENT_pdpt[pdpti].pd.present)
         {
           // setup new page directory
-          //CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
+          CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
 
-          CHILD_pdpt[pdpti].pd.page_ppn = PARENT_pdpt[pdpti].pd.page_ppn;
+          //CHILD_pdpt[pdpti].pd.page_ppn = PARENT_pdpt[pdpti].pd.page_ppn;
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
           memcpy((void*) CHILD_pd, (void*) PARENT_pd, PAGE_SIZE);
 
-           debug(FORK, "PARENT_pdpt[pdpti].pd.present: %ld\n",PARENT_pdpt[pdpti].pd.reserved_1);
-           debug(FORK, "CHILD_pdpt[pdpti].pd.present: %ld\n",CHILD_pdpt[pdpti].pd.reserved_1);
+          // debug(FORK, "PARENT_pdpt[pdpti].pd.present: %ld\n",PARENT_pdpt[pdpti].pd.present);
+          // debug(FORK, "CHILD_pdpt[pdpti].pd.present: %ld\n",CHILD_pdpt[pdpti].pd.present);
           assert(CHILD_pdpt[pdpti].pd.present == 1 && "The page directory pointer table entries should be both be present in child and parent");
 
           // loop through pd to get each pt
@@ -81,15 +80,15 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
             if (PARENT_pd[pdi].pt.present)
             {
               // setup new page table
-              //CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
+              CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
 
-              CHILD_pd[pdi].pt.page_ppn = PARENT_pd[pdi].pt.page_ppn;
+              //CHILD_pd[pdi].pt.page_ppn = PARENT_pd[pdi].pt.page_ppn;
               PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
               PageTableEntry* PARENT_pt = (PageTableEntry*) getIdentAddressOfPPN(PARENT_pd[pdi].pt.page_ppn);
               memcpy((void*) CHILD_pt, (void*) PARENT_pt, PAGE_SIZE);
 
-               debug(FORK, "PARENT_pd[pdi].pt.present: %ld\n",PARENT_pd[pdi].pt.reserved_1);
-               debug(FORK, "CHILD_pd[pdi].pt.present: %ld\n",CHILD_pd[pdi].pt.reserved_1);
+              // debug(FORK, "PARENT_pd[pdi].pt.present: %ld\n",PARENT_pd[pdi].pt.present);
+              // debug(FORK, "CHILD_pd[pdi].pt.present: %ld\n",CHILD_pd[pdi].pt.present);
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
 
               // loop through pt to get each pageT
@@ -102,12 +101,16 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   //CHILD_pt[pti].page_ppn = PageManager::instance()->allocPPN();
 
                   CHILD_pt[pti].page_ppn = PARENT_pt[pti].page_ppn;
-                  pointer CHILD_page = getIdentAddressOfPPN(CHILD_pt[pti].page_ppn);
-                  pointer PARENT_page = getIdentAddressOfPPN(PARENT_pt[pti].page_ppn);
-                  memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
 
-                   //debug(FORK, "PARENT_pt[pti].present: %ld\n",CHILD_page);
-                   //debug(FORK, "CHILD_pt[pti].presentt: %ld\n",PARENT_page);
+                  pointer PARENT_page = getIdentAddressOfPPN(PARENT_pt[pti].page_ppn);
+                  //pointer CHILD_page = getIdentAddressOfPPN(CHILD_pt[pti].page_ppn);
+
+                  pointer CHILD_page = PARENT_page;
+                  memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
+                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
+
+                  //debug(FORK, "PARENT_pt[pti].present: %ld\n",CHILD_page);
+                  //debug(FORK, "CHILD_pt[pti].presentt: %ld\n",PARENT_page);
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
               }
@@ -124,6 +127,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 
 ArchMemory::~ArchMemory()
 {
+  debug(FORK, "~ArchMemory \n");
   lock_.acquire();
   assert(currentThread->kernel_registers_->cr3 != page_map_level_4_ * PAGE_SIZE && "thread deletes its own arch memory");
 
@@ -151,6 +155,7 @@ ArchMemory::~ArchMemory()
                 {
                   pt[pti].present = 0;
                   PageManager::instance()->freePPN(pt[pti].page_ppn);
+                  //debug(FORK, "PageManager::instance()->freePPN(pt[pti].page_ppn) \n");
                 }
               }
               pd[pdi].pt.present = 0;
@@ -201,28 +206,41 @@ bool ArchMemory::checkAndRemove(pointer map_ptr, uint64 index)
 
 bool ArchMemory::unmapPage(uint64 virtual_page)
 {
+  debug(FORK, "unmapPage \n");
   assert(lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
 
   assert(m.page_ppn != 0 && m.page_size == PAGE_SIZE && m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
-  PageManager::instance()->freePPN(m.page_ppn);
+
+  debug(FORK, "getReferenceCount %d \n", PageManager::instance()->getReferenceCount(m.page_ppn));
+
+  if (PageManager::instance()->getReferenceCount(m.page_ppn) > 1)
+  {
+    PageManager::instance()->freePPN(m.page_ppn);
+    PageManager::instance()->decrementReferenceCount(m.page_ppn);
+  }
+
   ((uint64*)m.pt)[m.pti] = 0; // for easier debugging
   bool empty = checkAndRemove<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti);
+
   if (empty)
   {
     empty = checkAndRemove<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi);
     PageManager::instance()->freePPN(m.pt_ppn);
+    debug(FORK, "pt_ppn \n");
   }
   if (empty)
   {
     empty = checkAndRemove<PageDirPointerTablePageDirEntry>(getIdentAddressOfPPN(m.pdpt_ppn), m.pdpti);
     PageManager::instance()->freePPN(m.pd_ppn);
+    debug(FORK, "pd_ppn \n");
   }
   if (empty)
   {
     checkAndRemove<PageMapLevel4Entry>(getIdentAddressOfPPN(m.pml4_ppn), m.pml4i);
     PageManager::instance()->freePPN(m.pdpt_ppn);
+    debug(FORK, "pdpt_ppn \n");
   }
   return true;
 }
@@ -358,7 +376,7 @@ const ArchMemoryMapping ArchMemory::resolveMapping(uint64 pml4, uint64 vpage)
   return m;
 }
 
-uint64 ArchMemory::get_PPN_Of_VPN_In_KernelMapping(size_t virtual_page, size_t *physical_page, 
+uint64 ArchMemory::get_PPN_Of_VPN_In_KernelMapping(size_t virtual_page, size_t *physical_page,
                                                    size_t *physical_pte_page)
 {
   ArchMemoryMapping m = resolveMapping(((uint64) VIRTUAL_TO_PHYSICAL_BOOT(kernel_page_map_level_4) / PAGE_SIZE),
@@ -370,7 +388,7 @@ uint64 ArchMemory::get_PPN_Of_VPN_In_KernelMapping(size_t virtual_page, size_t *
   return m.page_size;
 }
 
-void ArchMemory::mapKernelPage(size_t virtual_page, size_t physical_page)                 
+void ArchMemory::mapKernelPage(size_t virtual_page, size_t physical_page)
 {
   ArchMemoryMapping mapping = resolveMapping(((uint64) VIRTUAL_TO_PHYSICAL_BOOT(kernel_page_map_level_4) / PAGE_SIZE),
                                              virtual_page);
@@ -388,8 +406,9 @@ void ArchMemory::mapKernelPage(size_t virtual_page, size_t physical_page)
   asm volatile ("movq %%cr3, %%rax; movq %%rax, %%cr3;" ::: "%rax");
 }
 
-void ArchMemory::unmapKernelPage(size_t virtual_page)                                           
+void ArchMemory::unmapKernelPage(size_t virtual_page)
 {
+  debug(FORK, "unmapKernelPage \n");
   ArchMemoryMapping mapping = resolveMapping(((uint64) VIRTUAL_TO_PHYSICAL_BOOT(kernel_page_map_level_4) / PAGE_SIZE),
                                              virtual_page);
   PageMapLevel4Entry* pml4 = kernel_page_map_level_4;
