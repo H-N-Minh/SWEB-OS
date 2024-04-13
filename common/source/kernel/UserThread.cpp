@@ -312,3 +312,45 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
   return thread_in_retval_map;
 }
 
+void UserThread::exitThread(void* value_ptr)
+{
+  //remove thread from process' thread vector
+  process_->threads_lock_.acquire();
+  ustl::vector<UserThread*>::iterator exiting_thread_iterator = ustl::find(process_->threads_.begin(), process_->threads_.end(), this);
+  process_->threads_.erase(exiting_thread_iterator);
+
+  if(process_->threads_.size() == 0)  // last thread in process
+  {
+    debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
+    last_thread_alive_ = true;
+    process_->thread_retval_map_.clear();
+  }
+
+  join_state_lock_.acquire();
+  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)  //Todos: cleanup one thread left
+  {
+    debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_ in case the thread is joinable\n");
+    process_->thread_retval_map_[getTID()] = value_ptr;
+  }
+  join_state_lock_.release();
+
+
+  if(process_->threads_.size() == 1)  // only one thread left
+  {
+    process_->one_thread_left_lock_.acquire();
+    process_->one_thread_left_ = true;
+    process_->one_thread_left_condition_.signal();
+    process_->one_thread_left_lock_.release();
+
+  }
+
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  loader_->arch_memory_.lock_.acquire();
+  loader_->arch_memory_.unmapPage(vpn_stack_);
+  loader_->arch_memory_.lock_.release();
+  process_->threads_lock_.release();
+  kill();
+
+}
+
+

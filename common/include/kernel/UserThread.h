@@ -30,6 +30,7 @@ class UserThread : public Thread
         bool schedulable() override;
 
         int joinThread(size_t thread_id, void**value_ptr);
+        void exitThread(void* value_ptr);
 
         
         UserProcess* process_;

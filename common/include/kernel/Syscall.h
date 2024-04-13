@@ -42,7 +42,7 @@ class Syscall
       * @param is_threads_vector_locked if true: threads_ vector already locked (locked in Exit()).
       * @return -1 if thread doesnt exist in vector. else return 0: set the flag wants_to_be_canceled_ to true.
     */
-    static int pthreadCancel(size_t thread_id, bool is_threads_vector_locked = false);
+    static int pthreadCancel(size_t thread_id);
 
     static unsigned int sleep(unsigned int seconds);
 

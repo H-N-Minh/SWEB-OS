@@ -163,47 +163,6 @@ int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper
 }
 
 
-void UserProcess::exitThread(void* value_ptr)
-{
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  //remove thread from process' thread vector
-  threads_lock_.acquire();
-  ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);
-  threads_.erase(exiting_thread);
-
-  if(threads_.size() == 0)  // last thread in process
-  {
-      debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
-      currentUserThread.last_thread_alive_ = true;
-      thread_retval_map_.clear();
-  }
-
-  currentUserThread.join_state_lock_.acquire();
-  if(currentUserThread.join_state_ != PTHREAD_CREATE_DETACHED && !currentUserThread.last_thread_alive_)  //Todos: cleanup one thread left
-  {
-    debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_ in case the thread is joinable\n");
-    thread_retval_map_[currentUserThread.getTID()] = value_ptr;
-  }
-  currentUserThread.join_state_lock_.release();
-
-
-  if(threads_.size() == 1)  // only one thread left
-  {
-    one_thread_left_lock_.acquire();
-    one_thread_left_ = true;
-    one_thread_left_condition_.signal();
-    one_thread_left_lock_.release();
-
-  }
-
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
-  currentUserThread.loader_->arch_memory_.lock_.acquire();
-  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.vpn_stack_);
-  currentUserThread.loader_->arch_memory_.lock_.release();
-  threads_lock_.release();
-  currentUserThread.kill();
-
-}
 
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
@@ -345,21 +304,18 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 }
 
 
-int UserProcess::cancelThread(size_t thread_id, bool is_threads_vector_locked)
+int UserProcess::cancelThread(size_t thread_id)
 {
-  if(!is_threads_vector_locked)  {threads_lock_.acquire();}
-
+  assert(threads_lock_.heldBy() == currentThread && "Threads lock needs to be held when canceling threads");
   UserThread* thread_to_be_canceled = getUserThread(thread_id);
   if(!thread_to_be_canceled)
   {
     debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu doesnt exist in Vector\n", thread_id);
-    if(!is_threads_vector_locked){threads_lock_.release();}
     return -1;
   }
   debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu setted to be canceled\n", thread_id);
   thread_to_be_canceled->cancel_state_type_lock_.acquire();
   thread_to_be_canceled->wants_to_be_canceled_ = true;
   thread_to_be_canceled->cancel_state_type_lock_.release();
-  if(!is_threads_vector_locked){threads_lock_.release();}
   return 0;
 }

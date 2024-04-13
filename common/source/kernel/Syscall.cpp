@@ -178,8 +178,7 @@ uint32 Syscall::forkProcess()
 void Syscall::pthreadExit(void* value_ptr)
 {
   debug(SYSCALL, "Syscall::pthreadExit: called, value_ptr: %p.\n", value_ptr);
-  UserProcess* current_process = ((UserThread*)currentThread)->process_;
-  current_process->exitThread(value_ptr);
+  ((UserThread*)currentThread)->exitThread(value_ptr);
 
   assert(false && "This should never happen");
 }
@@ -269,7 +268,7 @@ void Syscall::exit(size_t exit_code, bool from_exec)
       thread->cancel_state_type_lock_.release();
       debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread_id);
       pthreadDetach(thread_id, true);
-      assert(pthreadCancel(thread_id, true) == 0 && "pthreadCancel failed in exit.\n");
+      assert(current_process.cancelThread(thread_id) == 0 && "pthreadCancel failed in exit.\n");
       debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread_id);
     } 
   }
@@ -286,12 +285,15 @@ void Syscall::exit(size_t exit_code, bool from_exec)
 }
 
 
-int Syscall::pthreadCancel(size_t thread_id, bool is_threads_vector_locked)
+int Syscall::pthreadCancel(size_t thread_id)
 {
-  debug(SYSCALL, "Syscall::pthreadCancel: called with thread_id %ld and called from Exit?: (%d).\n",thread_id, is_threads_vector_locked);
+  debug(SYSCALL, "Syscall::pthreadCancel: called with thread_id %ld.\n",thread_id);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-  return current_process.cancelThread(thread_id, is_threads_vector_locked);
+  current_process.threads_lock_.acquire();
+  int rv = current_process.cancelThread(thread_id);
+  current_process.threads_lock_.release();
+  return rv;
 }
 
 
