@@ -26,7 +26,8 @@ void pthread_create_wrapper(void* start_routine, void* arg)
 }
 
 
- 
+ // commented out for now because this is needed only when thread has multiple stacks
+
 // int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 //                     void *(*start_routine)(void *), void *arg)
 // {
@@ -45,7 +46,6 @@ void pthread_create_wrapper(void* start_routine, void* arg)
 //   }
 //   return retval;
 // }
-
 // /**wrapper function. In pthread create
 // // top_stack points to the top of the 1st stack of the child thread
 // // Since its the first stack of new thread, it should points to itself */
@@ -97,60 +97,6 @@ int pthread_detach(pthread_t thread)
   return __syscall(sc_pthread_detach, thread, 0x0, 0x0, 0x0, 0x0);
 }
 
-
-
-/**
- * function stub
- * posix compatible signature - do not change the signature!
- */
-int pthread_mutex_destroy(pthread_mutex_t *mutex)
-{
-  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
-  {
-    return -1;
-  }
-  int rv = pthread_spin_lock(&mutex->mutex_lock_);
-  assert(rv == 0);
-  if(mutex->locked_ || mutex->waiting_list_)
-  {
-    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
-    assert(rv == 0);
-    return -1;
-  }
-  else
-  {
-    mutex->initialized_ = 0;
-    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
-    assert(rv == 0);
-  }
-  rv = pthread_spin_destroy(&mutex->mutex_lock_);
-  assert(rv == 0);
-  return rv;
-}
-
-int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
-{
-  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1) || mutex->initialized_ == MUTEX_INITALIZED)
-  {
-    return -1;
-  }
-  int rv = pthread_spin_init(&mutex->mutex_lock_, 0);
-  if(rv != 0)
-  {
-    return -1;
-  }
-  rv = pthread_spin_lock(&mutex->mutex_lock_);
-  assert(rv == 0);
-  mutex->initialized_ = MUTEX_INITALIZED;
-  mutex->locked_ = 0;
-  mutex->held_by_ = 0;
-  mutex->waiting_list_ = 0;
-  rv = pthread_spin_unlock(&mutex->mutex_lock_);
-  assert(rv == 0);
-  return 0;
-}
-
-
 /**
  * function stub
  * posix compatible signature - do not change the signature!
@@ -162,13 +108,11 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     //printf("parameters not valid or lock not initialized\n");
     return -1;
   }
-
   int rv = pthread_spin_lock(&mutex->mutex_lock_);
   assert(rv == 0);
   size_t stack_variable;
   size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4080 - (size_t)(&stack_variable)%4096);   
   size_t* waiting_flag_address = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);   
-
   if(mutex->held_by_ == waiting_list_address)
   {
     //printf("Thread is already holding lock\n");
@@ -200,15 +144,11 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     }
     //*waiting_flag_address = 1;
     //pthread_spin_unlock(&mutex->mutex_lock_);
-
     mutex->mutex_lock_.held_by_ = 0;
     asm("xchg %0,%1"
           : "=r" (*waiting_flag_address)
           : "m" (mutex->mutex_lock_.locked_), "0" (*waiting_flag_address)
           : "memory");
-    
-
-
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     //pthread_spin_lock(&mutex->mutex_lock_);
   }
@@ -219,11 +159,45 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   mutex->held_by_ = waiting_list_address;
   rv= pthread_spin_unlock(&mutex->mutex_lock_);
   assert(rv == 0);
- 
-  
-
-  
   //assert(mutex->held_by_ == waiting_list_address && "Held by differs from thread currently holding the lock");
+  return 0;
+}
+
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
+int pthread_mutex_trylock(pthread_mutex_t *mutex)
+{
+  if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
+  {
+    //printf("parameters not valid or lock not initialized\n");
+    return -1;
+  }
+  int rv = pthread_spin_lock(&mutex->mutex_lock_);
+  assert(rv == 0);
+  size_t stack_variable;
+  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4080 - (size_t)(&stack_variable)%4096);    
+  if(mutex->held_by_ == waiting_list_address)
+  {
+    //printf("Thread is already holding lock\n");
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
+    return -1;
+  }
+  if(!mutex->locked_)
+  {
+    mutex->locked_ = 1;
+    mutex->held_by_ = waiting_list_address;
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
+  }
+  else
+  {
+    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
+    return -1;
+  }
   return 0;
 }
 
@@ -249,7 +223,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   }
   size_t stack_variable;
   size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4088 - 8 - (size_t)(&stack_variable)%4096);     
-
   if(mutex->held_by_ != waiting_list_address)
   {
    // printf("Thread does not hold current lock\n");
@@ -257,7 +230,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     assert(rv == 0);
     return -1;
   }
-
   mutex->locked_ = 0;
   mutex->held_by_ = 0;
   if(mutex->waiting_list_ != NULL)
@@ -272,7 +244,6 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
     rv = pthread_spin_unlock(&mutex->mutex_lock_);
     assert(rv == 0);
   }
-    
   return 0;
 }
 
@@ -280,43 +251,56 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
  * function stub
  * posix compatible signature - do not change the signature!
  */
-int pthread_mutex_trylock(pthread_mutex_t *mutex)
+int pthread_mutex_destroy(pthread_mutex_t *mutex)
 {
   if(!parameters_are_valid((size_t)mutex, 0) || mutex->initialized_ != MUTEX_INITALIZED)
   {
-    //printf("parameters not valid or lock not initialized\n");
     return -1;
   }
-
   int rv = pthread_spin_lock(&mutex->mutex_lock_);
   assert(rv == 0);
-  size_t stack_variable;
-  size_t* waiting_list_address = (size_t*)((size_t)&stack_variable + 4080 - (size_t)(&stack_variable)%4096);    
-
-  if(mutex->held_by_ == waiting_list_address)
+  if(mutex->locked_ || mutex->waiting_list_)
   {
-    //printf("Thread is already holding lock\n");
     int rv = pthread_spin_unlock(&mutex->mutex_lock_);
     assert(rv == 0);
     return -1;
-  }
-
-  if(!mutex->locked_)
-  {
-    mutex->locked_ = 1;
-    mutex->held_by_ = waiting_list_address;
-    int rv = pthread_spin_unlock(&mutex->mutex_lock_);
-    assert(rv == 0);
   }
   else
   {
+    mutex->initialized_ = 0;
     int rv = pthread_spin_unlock(&mutex->mutex_lock_);
     assert(rv == 0);
-    return -1;
   }
-  return 0;
+  rv = pthread_spin_destroy(&mutex->mutex_lock_);
+  assert(rv == 0);
+  return rv;
 }
 
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
+int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
+{
+  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1) || mutex->initialized_ == MUTEX_INITALIZED)
+  {
+    return -1;
+  }
+  int rv = pthread_spin_init(&mutex->mutex_lock_, 0);
+  if(rv != 0)
+  {
+    return -1;
+  }
+  rv = pthread_spin_lock(&mutex->mutex_lock_);
+  assert(rv == 0);
+  mutex->initialized_ = MUTEX_INITALIZED;
+  mutex->locked_ = 0;
+  mutex->held_by_ = 0;
+  mutex->waiting_list_ = 0;
+  rv = pthread_spin_unlock(&mutex->mutex_lock_);
+  assert(rv == 0);
+  return 0;
+}
 
 
 /**
@@ -369,7 +353,8 @@ int pthread_cond_signal(pthread_cond_t *cond)
     // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
-    wakeUpThread(thread_to_wakeup);
+    size_t* request_to_sleep = (size_t*) (thread_to_wakeup + sizeof(size_t));
+    wakeUpThread(request_to_sleep);
   }
   return 0;
 }
@@ -399,28 +384,13 @@ int pthread_cond_broadcast(pthread_cond_t *cond)
     // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
-    wakeUpThread(thread_to_wakeup);
+    size_t* request_to_sleep = (size_t*) (thread_to_wakeup + sizeof(size_t));
+    wakeUpThread(request_to_sleep);
   }
   if (DEBUGMINH == 1) {
     printf("exiting broadcast\n");
   }
   return 0;
-}
-
-void wakeUpThread(size_t thread_to_wakeup)
-{
-  size_t request_to_sleep = thread_to_wakeup + sizeof(size_t);
-
-  size_t old_val = 0;
-  do 
-  {
-    asm("xchg %0,%1"
-        : "=r" (old_val)
-        : "m" (*(size_t*) request_to_sleep), "0" (old_val)
-        : "memory");
-  } while (!old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
-
-  *(size_t*) request_to_sleep = 0;
 }
 
 /**
@@ -434,24 +404,12 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
     return -1;    //Cond is Null, cond not initialized or mutex is null
   }
   // get the reserved space of current thread
-  // size_t new_waiter_stack            = getTopOfFirstStack();
-  // size_t new_waiter_list_address     = new_waiter_stack -   sizeof(size_t);
-  // size_t new_waiter_request_to_sleep = new_waiter_stack - 2*sizeof(size_t);
+  size_t new_waiter_stack            = getTopOfFirstStack();
+  size_t new_waiter_request_to_sleep = new_waiter_stack - 2*sizeof(size_t);   // this 2 and 3 depends on the order setup in UserThread ctor
+  size_t new_waiter_list_address     = new_waiter_stack - 3*sizeof(size_t);
 
-  size_t stack_variable;
-  size_t new_waiter_list_address = (size_t)&stack_variable + 4064 - (size_t)(&stack_variable)%4096;   
-  size_t new_waiter_request_to_sleep = (size_t)&stack_variable + 4072 - (size_t)(&stack_variable)%4096;   
-  
   // adding curent thread to the waiting list
-  size_t last_waiter = getLastCondWaiter(cond);
-  if (!last_waiter) // if the list is empty
-  {
-    cond->waiting_list_ = new_waiter_list_address;
-  }
-  else
-  {
-    *(size_t*)last_waiter = new_waiter_list_address;
-  }
+  addWaiterToList(&cond->waiting_list_, new_waiter_list_address);
   
   // current thread signal that it wants to sleep
   assert(!*(size_t*) new_waiter_request_to_sleep && "threads request_to_sleep_ is already true, this should not happen");
@@ -638,34 +596,30 @@ int parameters_are_valid(size_t ptr, int allowed_to_be_null)
     return 1;
 }
 
-
-size_t getLastCondWaiter(pthread_cond_t* cond)
+void addWaiterToList(size_t* waiting_list_adr, size_t new_waiter)
 {
-  if (cond->waiting_list_ == 0)
+  while(*waiting_list_adr)
   {
-    return 0;
+    waiting_list_adr = (size_t*)*waiting_list_adr;
   }
-  
-  size_t last_waiter = cond->waiting_list_;
-  while(*(size_t*) cond->waiting_list_)
-  {
-    last_waiter = *(size_t*) cond->waiting_list_;
-  }
-  return last_waiter;
+  *waiting_list_adr = new_waiter;
+  *(size_t*) new_waiter = 0;
 }
 
-// size_t getTopOfThisStack() {
-//   size_t stack_variable;
-//   size_t top_stack = (size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t); 
-//   assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-//   return top_stack;
-// }
+size_t getTopOfThisStack() {
+  size_t stack_variable;
+  size_t top_stack = (size_t)&stack_variable - (size_t)(&stack_variable)%__PAGE_SIZE__ + __PAGE_SIZE__ - sizeof(size_t); 
+  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
+  return top_stack;
+}
 
-// size_t getTopOfFirstStack() {
-//   size_t top_current_stack = getTopOfThisStack();
-//   return *(size_t*) top_current_stack;
-// }
+size_t getTopOfFirstStack() {
+  return getTopOfThisStack();
 
+  // commented out for now because currently each thread has only one stack
+  // size_t top_current_stack = getTopOfThisStack();
+  // return *(size_t*) top_current_stack;
+}
 
 void print_waiting_list(size_t* waiting_list, int before)
 {
@@ -691,3 +645,16 @@ void print_waiting_list(size_t* waiting_list, int before)
   //printf("Waiting list was %p\n\n", waiting_list);
 }
 
+void wakeUpThread(size_t* request_to_sleep)
+{
+  size_t old_val = 0;
+  do 
+  {
+    asm("xchg %0,%1"
+        : "=r" (old_val)
+        : "m" (*request_to_sleep), "0" (old_val)
+        : "memory");
+  } while (!old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
+
+  *request_to_sleep = 0;
+}

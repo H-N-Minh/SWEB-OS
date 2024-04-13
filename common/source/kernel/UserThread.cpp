@@ -39,12 +39,12 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-
+    // 5 * sizeof(pointer) because 1 is default and 4 is reserved for userspace locking
     size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 5 * sizeof(pointer));
-    //sleep_waiting_list = user_stack_ptr + sizeof(pointer);
-    request_to_sleep_ = user_stack_ptr + 2 * sizeof(pointer);
-    waiting_list_ptr_ = user_stack_ptr + 3 * sizeof(pointer);
     currently_waiting_ptr_ = user_stack_ptr + 4 * sizeof(pointer);
+    waiting_list_ptr_ = user_stack_ptr + 3 * sizeof(pointer);
+    request_to_sleep_ = user_stack_ptr + 2 * sizeof(pointer);
+    //sleep_waiting_list = user_stack_ptr + sizeof(pointer);
     debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx) and waiting flag  %zd(=%zx).\n", 
           user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_, currently_waiting_ptr_, currently_waiting_ptr_);
     if (!func) //for the first thread when we create a process
@@ -88,8 +88,9 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
-            join_state_lock_("join_state_lock_"), join_state_(other.join_state_), 
-            cancel_state_type_lock_("cancel_state_type_lock_"), cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_)
+            join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"), 
+            cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_), 
+            request_to_sleep_(other.request_to_sleep_), waiting_list_ptr_(other.waiting_list_ptr_), currently_waiting_ptr_(other.currently_waiting_ptr_)
 {
     debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
     tid_ =  ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
@@ -190,27 +191,13 @@ bool UserThread::schedulable()
 {
   bool running = (getState() == Running);
 
-  if(wants_to_be_canceled_ && switch_to_userspace_ && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
-  {
-    debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
-    kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
-    kernel_registers_->rdi     = (size_t)-1;
-    currentThreadRegisters = currentThread->kernel_registers_;
-    switch_to_userspace_ = 0;
-    return true;
-  }
-
-  if(!running)
-  {
-    return false;
-  }
-
-
-  // // if the thread requests to sleep, then it is not scheduled
+  int waiting_for_lock = 0;
+  
+  // if the thread requests to sleep, then it is not scheduled
   size_t *request_to_sleep_translated = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)request_to_sleep_);
   if(request_to_sleep_translated && *request_to_sleep_translated == 1)
   {
-    return false;   
+    waiting_for_lock = 1;   
   }
 
   size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)currently_waiting_ptr_);
@@ -218,9 +205,37 @@ bool UserThread::schedulable()
   //debug(USERSPACE_LOCKS, "Kernel: userspace %zd(=%zx)\n", (uint64)thread_waiting_for_lock_ptr, (uint64)thread_waiting_for_lock_ptr);
   if(thread_waiting_for_lock_ptr && *thread_waiting_for_lock_ptr == 1)
   {
-    return false;   
+    waiting_for_lock = 1;  
   }
 
+  if(wants_to_be_canceled_ 
+      && (switch_to_userspace_ || waiting_for_lock)
+      && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+  {
+    debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
+    if (!switch_to_userspace_ && waiting_for_lock)  // TODO: maybe find a cleaner way to do this
+    {
+      *request_to_sleep_translated = 0;
+      *thread_waiting_for_lock_ptr = 0;
+      return true;
+    }
+    
+    kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
+    kernel_registers_->rdi     = (size_t)-1;
+    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
+    switch_to_userspace_ = 0;
+    return true;
+  }
+
+  if (waiting_for_lock)
+  {
+    return false;
+  }
+
+  if(!running)
+  {
+    return false;
+  }
   
   if(wakeup_timestamp_ == 0)
   {

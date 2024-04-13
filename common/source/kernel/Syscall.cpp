@@ -200,32 +200,32 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 }
 
 
-int Syscall::pthreadDetach(size_t thread_id, bool threads_locked)
+int Syscall::pthreadDetach(size_t thread_id, bool is_threads_vector_locked)
 {
   debug(SYSCALL, "Syscall:pthreadDetach: called, thread_id: %zu\n", thread_id);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  if(!threads_locked) {current_process.threads_lock_.acquire();}
+  if(!is_threads_vector_locked) {current_process.threads_lock_.acquire();}
   UserThread* thread_to_be_detached = current_process.getUserThread(thread_id);
   if(thread_to_be_detached)
   {
     thread_to_be_detached ->join_state_lock_.acquire();
     if(thread_to_be_detached->join_state_ != PTHREAD_CREATE_JOINABLE)
     {
-      if(!threads_locked) {current_process.threads_lock_.release();}
+      if(!is_threads_vector_locked) {current_process.threads_lock_.release();}
       thread_to_be_detached->join_state_lock_.release();
-      return -1;
+      return -1;    // thread is already detached
     }
     thread_to_be_detached->join_state_ = PTHREAD_CREATE_DETACHED;
-    if(!threads_locked) {current_process.threads_lock_.release();}
+    if(!is_threads_vector_locked) {current_process.threads_lock_.release();}
     thread_to_be_detached->join_state_lock_.release();
     return 0;
   }
   else
   {
     int thread_in_retval_map = current_process.removeRetvalFromMapAndSetReval(thread_id, NULL);
-    if(!threads_locked){current_process.threads_lock_.release();}
+    if(!is_threads_vector_locked){current_process.threads_lock_.release();}
     return thread_in_retval_map;
 
   }
@@ -261,13 +261,14 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   {
     if(thread != &currentUserThread)
     {
+      size_t thread_id = thread->getTID();
       thread->cancel_state_type_lock_.acquire();
       thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
       thread->cancel_state_type_lock_.release();
-      debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread->getTID());
-      pthreadDetach(thread->getTID(), true);
-      pthreadCancel(thread->getTID(), true);
-      debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread->getTID());
+      debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread_id);
+      assert(pthreadDetach(thread_id, true) == 0 && "pthreadDetach failed in exit.\n");
+      assert(pthreadCancel(thread_id, true) == 0 && "pthreadCancel failed in exit.\n");
+      debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread_id);
     } 
   }
 
@@ -283,25 +284,27 @@ void Syscall::exit(size_t exit_code, bool from_exec)
 }
 
 
-int Syscall::pthreadCancel(size_t thread_id, bool is_tVector_locked_in_Exit)
+int Syscall::pthreadCancel(size_t thread_id, bool is_threads_vector_locked)
 {
-  debug(SYSCALL, "Syscall::pthreadCancel: called with thread_id %ld and called from Exit?: (%d).\n",thread_id, is_tVector_locked_in_Exit);
+  debug(SYSCALL, "Syscall::pthreadCancel: called with thread_id %ld and called from Exit?: (%d).\n",thread_id, is_threads_vector_locked);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  if(!is_tVector_locked_in_Exit)  {current_process.threads_lock_.acquire();}
+  if(!is_threads_vector_locked)  {current_process.threads_lock_.acquire();}
 
   UserThread* thread_to_be_canceled = current_process.getUserThread(thread_id);
   if(!thread_to_be_canceled)
   {
     debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu doesnt exist in Vector\n", thread_id);
     // if its not locked in exit then its locked in here and we need to release it
-    if(!is_tVector_locked_in_Exit){current_process.threads_lock_.release();}
+    if(!is_threads_vector_locked){current_process.threads_lock_.release();}
     return -1;
   }
   debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu setted to be canceled\n", thread_id);
+  thread_to_be_canceled->cancel_state_type_lock_.acquire();
   thread_to_be_canceled->wants_to_be_canceled_ = true;
-  if(!is_tVector_locked_in_Exit){current_process.threads_lock_.release();}
+  thread_to_be_canceled->cancel_state_type_lock_.release();
+  if(!is_threads_vector_locked){current_process.threads_lock_.release();}
   return 0;
 }
 

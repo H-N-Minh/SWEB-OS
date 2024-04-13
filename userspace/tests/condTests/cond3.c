@@ -2,7 +2,7 @@
 #include "pthread.h"
 #include <assert.h>
 
-#define NUM_THREADS3 2
+#define NUM_THREADS3 200
 
 pthread_mutex_t mymutex3;           
 pthread_cond_t mycond3;             // main thread use this to signal child thread
