@@ -25,11 +25,11 @@ char const *user_progs[] = {
                             //"/usr/notest.sweb",
                             //"/usr/shell.sweb",
 
-                            //"/usr/pthreadCreateTests.sweb",
-                            // "/usr/pthreadJoinTests.sweb",
-                             "/usr/pthreadCancelTests.sweb",
-                            // "/usr/pthreadExitTests.sweb",
-                            //"/usr/pthreadDetachTests.sweb",                                        
+                            "/usr/pthreadCreateTests.sweb",
+                            "/usr/pthreadJoinTests.sweb",
+                            "/usr/pthreadCancelTests.sweb",
+                            "/usr/pthreadExitTests.sweb",
+                            // "/usr/pthreadDetachTests.sweb",                                        
 
                             //"/usr/execTests.sweb",
                             // "/usr/exec3.sweb",           //Exec with many arguments

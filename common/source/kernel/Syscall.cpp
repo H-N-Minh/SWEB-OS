@@ -192,46 +192,16 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 }
 
 
-int Syscall::pthreadDetach(size_t thread_id, bool is_threads_vector_locked)
+int Syscall::pthreadDetach(size_t thread_id)
 {
   debug(SYSCALL, "Syscall:pthreadDetach: called, thread_id: %zu\n", thread_id);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  if(!is_threads_vector_locked) {current_process.threads_lock_.acquire();}
-  UserThread* thread_to_be_detached = current_process.getUserThread(thread_id);
-  if(thread_to_be_detached)
-  {
-    thread_to_be_detached ->join_state_lock_.acquire();
-    if(thread_to_be_detached->join_state_ == PTHREAD_CREATE_DETACHED || thread_to_be_detached->join_state_ == PCD_TO_BE_JOINED)
-    {
-      if(!is_threads_vector_locked) {current_process.threads_lock_.release();}
-      thread_to_be_detached->join_state_lock_.release();
-      return -1;    // thread is already detached
-    }
-
-    else if(thread_to_be_detached->join_state_ == PTHREAD_CREATE_JOINABLE)
-    {
-      thread_to_be_detached->join_state_ = PTHREAD_CREATE_DETACHED;
-    }
-
-    else //(thread_to_be_detached->join_state_ == PCJ_TO_BE_JOINED)
-    {
-      thread_to_be_detached->join_state_ = PCD_TO_BE_JOINED;
-    }
-    if(!is_threads_vector_locked) {current_process.threads_lock_.release();}
-    thread_to_be_detached->join_state_lock_.release();
-    return 0;
-  }
-  else
-  {
-    int thread_in_retval_map = current_process.removeRetvalFromMapAndSetReval(thread_id, NULL);
-    if(!is_threads_vector_locked){current_process.threads_lock_.release();}
-    return thread_in_retval_map;
-
-  }
-
-  return 0;
+  current_process.threads_lock_.acquire();
+  int rv = currentUserThread.detachThread(thread_id);
+  current_process.threads_lock_.release();
+  return rv;
 }
 
 
@@ -244,7 +214,7 @@ int Syscall::pthreadCreate(size_t* thread, unsigned int* attr, void* start_routi
   {
     return -1;
   }
-  int rv = ((UserThread*) currentThread)->process_->createThread(thread, start_routine, wrapper_address, arg);
+  int rv = ((UserThread*) currentThread)->createThread(thread, start_routine, wrapper_address, arg);
   debug(SYSCALL, "Syscall::pthreadCreate: finished with return (%d) for thread (%zu)\n", rv, *thread);
   return rv;
 }
@@ -267,8 +237,8 @@ void Syscall::exit(size_t exit_code, bool from_exec)
       thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
       thread->cancel_state_type_lock_.release();
       debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread_id);
-      pthreadDetach(thread_id, true);
-      assert(current_process.cancelThread(thread_id) == 0 && "pthreadCancel failed in exit.\n");
+      currentUserThread.detachThread(thread_id);
+      assert(currentUserThread.cancelThread(thread_id) == 0 && "pthreadCancel failed in exit.\n");
       debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread_id);
     } 
   }
@@ -291,7 +261,7 @@ int Syscall::pthreadCancel(size_t thread_id)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
   current_process.threads_lock_.acquire();
-  int rv = current_process.cancelThread(thread_id);
+  int rv = currentUserThread.cancelThread(thread_id);
   current_process.threads_lock_.release();
   return rv;
 }

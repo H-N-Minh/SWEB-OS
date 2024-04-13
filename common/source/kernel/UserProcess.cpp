@@ -138,32 +138,6 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
   return false;
 }
 
-int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg)
-{
-  debug(USERPROCESS, "UserProcess::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
-
-  threads_lock_.acquire();  
-  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, 
-                                          arg, wrapper, false);
-  if(new_thread)
-  {
-    debug(USERPROCESS, "UserProcess::createThread: Adding new thread to scheduler\n");
-    threads_.push_back(new_thread);
-    Scheduler::instance()->addNewThread(new_thread);
-    *thread = new_thread->getTID();
-    threads_lock_.release();  
-    return 0;
-  }
-  else
-  {
-    debug(USERPROCESS, "UserProcess::createThread: ERROR: Thread not created\n");
-    threads_lock_.release();  
-    return -1;
-  }
-}
-
-
-
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
@@ -304,18 +278,3 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 }
 
 
-int UserProcess::cancelThread(size_t thread_id)
-{
-  assert(threads_lock_.heldBy() == currentThread && "Threads lock needs to be held when canceling threads");
-  UserThread* thread_to_be_canceled = getUserThread(thread_id);
-  if(!thread_to_be_canceled)
-  {
-    debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu doesnt exist in Vector\n", thread_id);
-    return -1;
-  }
-  debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu setted to be canceled\n", thread_id);
-  thread_to_be_canceled->cancel_state_type_lock_.acquire();
-  thread_to_be_canceled->wants_to_be_canceled_ = true;
-  thread_to_be_canceled->cancel_state_type_lock_.release();
-  return 0;
-}

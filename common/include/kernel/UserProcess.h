@@ -40,9 +40,7 @@ class UserProcess
          */
         int removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr);
 
-        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
 
-        int cancelThread(size_t thread_id);
 
         int execvProcess(const char *path, char *const argv[]);
 

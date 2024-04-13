@@ -29,8 +29,11 @@ class UserThread : public Thread
         void send_kill_notification();
         bool schedulable() override;
 
+        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
+        int cancelThread(size_t thread_id);
         int joinThread(size_t thread_id, void**value_ptr);
         void exitThread(void* value_ptr);
+        int detachThread(size_t thread_id);
 
         
         UserProcess* process_;

@@ -33,13 +33,11 @@ class Syscall
 
     /**
      * If thread is active, set join_state to Detached, else remove the retval of the dead thread from retval_map
-     * @param is_threads_vector_locked if the threads_ vector is already locked, set this to true. Default is false
      * @return 0 on success, -1 if the given thread is already Detached or the given thread doesnt have a retval in retval_map
     */
-    static int pthreadDetach(size_t thread,  bool is_threads_vector_locked = false);
+    static int pthreadDetach(size_t thread);
 
     /**
-      * @param is_threads_vector_locked if true: threads_ vector already locked (locked in Exit()).
       * @return -1 if thread doesnt exist in vector. else return 0: set the flag wants_to_be_canceled_ to true.
     */
     static int pthreadCancel(size_t thread_id);
