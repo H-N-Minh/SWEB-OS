@@ -154,7 +154,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     if(!Syscall::check_parameter((size_t)argv[argc], true))
     { 
-      debug(SYSCALL, "Execv: parameters not in userspace\n");
+      debug(USERPROCESS, "Execv: parameters not in userspace\n");
       return -1;
     }
 
@@ -171,7 +171,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     }
     if(space_left < 0)
     {
-      debug(SYSCALL, "Execv: no space left\n");
+      debug(USERPROCESS, "Execv: no space left\n");
       return -1;
     } 
   }
@@ -210,11 +210,12 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   }
 
   //cancel all other threads
-  Syscall::exit(0, true);
+  threads_lock_.acquire();
+  cancelAllOtherThreads();
   execv_lock_.release();
   
 
-  threads_lock_.acquire();
+  
   if(threads_.size() > 1)
   {
     one_thread_left_ = false;
@@ -278,3 +279,41 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 }
 
 
+void UserProcess::exitProcess(size_t exit_code)
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+
+  debug(USERPROCESS, "UserProcess::exitProcess: Thread (%zu) called exit_code: %zd.\n", currentUserThread.getTID(), exit_code);
+
+  threads_lock_.acquire();
+  cancelAllOtherThreads();
+  threads_lock_.release();
+
+  debug(USERPROCESS, "UserProcess::exitProcess: Last Thread %zu calls pthread exit. \n", currentUserThread.getTID());
+  currentUserThread.exitThread((void*)exit_code);
+  assert(false && "This should never happen");
+
+}
+
+void UserProcess::cancelAllOtherThreads()
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  assert(threads_lock_.heldBy() == currentThread);
+
+  for (auto& thread : threads_)
+  {
+    if(thread != &currentUserThread)
+    {
+      size_t thread_id = thread->getTID();
+      thread->cancel_state_type_lock_.acquire();
+      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
+      thread->cancel_state_type_lock_.release();
+      debug(USERPROCESS, "UserProcess::exitProcess: Thread %zu gets canceled. \n",thread_id);
+      currentUserThread.detachThread(thread_id);
+      assert(currentUserThread.cancelThread(thread_id) == 0 && "pthreadCancel failed in exit.\n");
+      debug(USERPROCESS, "UserProcess::exitProcess: Thread %zu was canceled sucessfully. \n",thread_id);
+    } 
+  }
+
+
+}

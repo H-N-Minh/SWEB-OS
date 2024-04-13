@@ -350,8 +350,14 @@ void UserThread::exitThread(void* value_ptr)
 
 }
 
-int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg)
-{
+int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, unsigned int* attr)
+{ 
+  if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true) 
+  || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true) 
+  || !Syscall::check_parameter((size_t)wrapper))
+  {
+    return -1;
+  }
   debug(USERPROCESS, "UserThread::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
 
   process_->threads_lock_.acquire();  
@@ -380,7 +386,7 @@ int UserThread::cancelThread(size_t thread_id)
   UserThread* thread_to_be_canceled = process_->getUserThread(thread_id);
   if(!thread_to_be_canceled)
   {
-    debug(SYSCALL, "UserThread::cancelThread: thread_id %zu doesnt exist in Vector\n", thread_id);
+    debug(USERTHREAD, "UserThread::cancelThread: thread_id %zu doesnt exist in Vector\n", thread_id);
     return -1;
   }
   debug(USERTHREAD, "UserThread::cancelThread: thread_id %zu setted to be canceled\n", thread_id);
