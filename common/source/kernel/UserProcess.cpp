@@ -91,8 +91,11 @@ UserProcess::~UserProcess()
 
   ProcessRegistry::instance()->processExit();
 }
+
+
 UserThread* UserProcess::getUserThread(size_t tid)
 {
+  assert(threads_lock_.heldBy() == currentThread && "getUserThread used without holding threads_lock");
   for (size_t i = 0; i < threads_.size(); i++)
   {
     if (threads_[i]->getTID() == tid)
@@ -104,16 +107,15 @@ UserThread* UserProcess::getUserThread(size_t tid)
 
 int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr)
 {
-  //TODO: assert that it holds thread lock
+  assert(threads_lock_.heldBy() == currentThread && "getUserThread used without holding threads_lock");
   ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);                                                   
   if(iterator != thread_retval_map_.end())
   {
-    void *return_value = thread_retval_map_[tid];
-    thread_retval_map_.erase(iterator);
     if(value_ptr != NULL)
     {
-      *value_ptr = return_value;
+      *value_ptr = thread_retval_map_[tid];
     }
+    thread_retval_map_.erase(iterator);
     return 0;
   }
   else
@@ -160,41 +162,6 @@ int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper
   }
 }
 
-int UserProcess::joinThread(size_t thread_id, void**value_ptr)
-{
-  debug(SYSCALL, "UserProcess:joinThread: called, thread_id: %zu and %p\n", thread_id, value_ptr);
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-
-  threads_lock_.acquire();
-
-  //find thread in threadlist
-  UserThread* thread_to_be_joined = getUserThread(thread_id);
-  if(!thread_to_be_joined)
-  {
-    //Check if thread has already terminated
-    int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
-    threads_lock_.release();
-    return thread_in_retval_map;
-  }
-  currentUserThread.thread_gets_killed_lock_.acquire();
-  thread_to_be_joined->join_threads_.push_back(&currentUserThread);
-  threads_lock_.release();
-  
-  //wait for thread get killed
-  while(!currentUserThread.thread_killed)
-  {
-    currentUserThread.thread_gets_killed_.wait();
-  }     
-  currentUserThread.thread_killed = false;               
-  currentUserThread.thread_gets_killed_lock_.release(); 
-
-  threads_lock_.acquire();
-  int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
-  threads_lock_.release();
-
-  return thread_in_retval_map;
-}
-
 
 void UserProcess::exitThread(void* value_ptr)
 {
@@ -212,7 +179,7 @@ void UserProcess::exitThread(void* value_ptr)
   }
 
   currentUserThread.join_state_lock_.acquire();
-  if(currentUserThread.join_state_ == PTHREAD_CREATE_JOINABLE && !currentUserThread.last_thread_alive_ )
+  if(currentUserThread.join_state_ != PTHREAD_CREATE_DETACHED && !currentUserThread.last_thread_alive_)  //Todos: cleanup one thread left
   {
     debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_ in case the thread is joinable\n");
     thread_retval_map_[currentUserThread.getTID()] = value_ptr;
@@ -375,4 +342,24 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   
   assert(0 && "Sucessful exec should not return");
 
+}
+
+
+int UserProcess::cancelThread(size_t thread_id, bool is_threads_vector_locked)
+{
+  if(!is_threads_vector_locked)  {threads_lock_.acquire();}
+
+  UserThread* thread_to_be_canceled = getUserThread(thread_id);
+  if(!thread_to_be_canceled)
+  {
+    debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu doesnt exist in Vector\n", thread_id);
+    if(!is_threads_vector_locked){threads_lock_.release();}
+    return -1;
+  }
+  debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu setted to be canceled\n", thread_id);
+  thread_to_be_canceled->cancel_state_type_lock_.acquire();
+  thread_to_be_canceled->wants_to_be_canceled_ = true;
+  thread_to_be_canceled->cancel_state_type_lock_.release();
+  if(!is_threads_vector_locked){threads_lock_.release();}
+  return 0;
 }

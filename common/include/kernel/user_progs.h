@@ -29,7 +29,7 @@ char const *user_progs[] = {
                             // "/usr/pthreadJoinTests.sweb",
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
-                            // "/usr/pthreadDetachTests.sweb",                                        
+                            //"/usr/pthreadDetachTests.sweb",                                        
 
                             //"/usr/execTests.sweb",
                             // "/usr/exec3.sweb",           //Exec with many arguments
@@ -41,7 +41,7 @@ char const *user_progs[] = {
 
                             // "/usr/userspaceLocksTests.sweb",                                    
 
-                            "/usr/sleepAndClockTests.sweb", 
+                            // "/usr/sleepAndClockTests.sweb", 
 
                             0
                            };

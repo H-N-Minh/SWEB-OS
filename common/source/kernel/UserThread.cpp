@@ -256,3 +256,59 @@ bool UserThread::schedulable()
   }
 }
 
+int UserThread::joinThread(size_t thread_id, void**value_ptr)
+{
+  debug(USERTHREAD, "UserThread:joinThread: called, thread_id: %zu and %p\n", thread_id, value_ptr);
+
+  if(!Syscall::check_parameter((size_t)value_ptr, true) || (currentThread->getTID() == thread_id))
+  {
+    debug(USERTHREAD, "UserThread:pthreadJoin: Thread tries to join itself or invalid value_ptr.\n");
+    return -1;
+  }
+
+
+  process_->threads_lock_.acquire();
+
+  //check if thread is running
+  UserThread* thread_to_be_joined = process_->getUserThread(thread_id);
+  if(!thread_to_be_joined)
+  {
+    debug(USERTHREAD, "UserThread:pthreadJoin: No running thread id %zu can be found.\n", thread_id);
+
+   //check if thread has already terminated 
+    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, value_ptr);
+    process_->threads_lock_.release();
+    return thread_in_retval_map;
+  }
+  thread_to_be_joined->join_state_lock_.acquire();
+  if(thread_to_be_joined->join_state_ != PTHREAD_CREATE_JOINABLE && thread_to_be_joined->join_state_ != PCJ_TO_BE_JOINED)
+  {
+    thread_to_be_joined->join_state_lock_.release();
+    process_->threads_lock_.release();
+    return -1;
+  }
+  else 
+  {
+    thread_to_be_joined->join_state_ = PCJ_TO_BE_JOINED;
+  }
+
+  thread_to_be_joined->join_state_lock_.release();
+  thread_gets_killed_lock_.acquire();
+  thread_to_be_joined->join_threads_.push_back(this);
+  process_->threads_lock_.release();
+  
+  //wait for thread get killed
+  while(!thread_killed)
+  {
+    thread_gets_killed_.wait();
+  }     
+  thread_killed = false;               
+  thread_gets_killed_lock_.release(); 
+
+  process_->threads_lock_.acquire();
+  int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, value_ptr);
+  process_->threads_lock_.release();
+
+  return thread_in_retval_map;
+}
+

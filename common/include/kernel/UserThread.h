@@ -12,7 +12,7 @@ class UserProcess;
 // PTHREAD_CANCEL_EXIT: similar to PTHREAD_CANCEL_ASYNCHRONOUS, except thread gets canceled no matter what CancelState is.
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE};
+enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE, PCD_TO_BE_JOINED, PCJ_TO_BE_JOINED};
 
 class UserThread : public Thread
 {
@@ -28,6 +28,10 @@ class UserThread : public Thread
         void kill() override;
         void send_kill_notification();
         bool schedulable() override;
+
+        int joinThread(size_t thread_id, void**value_ptr);
+
+        
         UserProcess* process_;
         size_t vpn_stack_;
 
