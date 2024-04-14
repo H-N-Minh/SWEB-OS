@@ -1,15 +1,13 @@
-#include "stdio.h"
 #include "assert.h"
-#include "string.h"
+#include "unistd.h"
 
-//testprogram for exec4 with args 
-int main(int argc, char *argv[])
+
+//Test: exec with to many arguments
+int exec3_1()
 {
-   assert(argc == 302);
-    //printf("Argc is %d\n", argc);
-
-    char *arguments[] = { 
-    "1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1",
+    const char * path = "usr/exec_testprogram.sweb";
+    char *argv[] = { 
+    "3","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1",
     "1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1",
     "1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1","1",
     "1","1","1","1","1","1","1","1","1","1",
@@ -23,12 +21,31 @@ int main(int argc, char *argv[])
     "1","1","1","1","1","1","1","1","1","1",
     "1","1", (char *)0 };
 
-    for(int i = 0; i < argc;  i++)
-    {
-        //printf("Argument %d is \"%s\"\n", i,  argv[i]);
-        assert(strcmp(argv[i], arguments[i]) == 0);
-    }
-
-    printf("Exec3 successful!\n");
+    execv(path, argv);
+    assert(0);
+    
     return 0;
+}
+
+
+
+int exec3()
+{
+  pid_t pid = fork();
+
+  if (pid == -1)
+  {
+    return -1;
+  } 
+  else if (pid == 0) //Child
+  {
+    exec3_1();
+    assert(0);    //this should never be reached
+
+    return pid;
+  } 
+  else //parent
+  {
+    return pid;
+  }
 }

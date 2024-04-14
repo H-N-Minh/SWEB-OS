@@ -141,6 +141,10 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
+  if(!Syscall::check_parameter((size_t)argv, false) || !Syscall::check_parameter((size_t)argv, false))
+  {
+    return -1;
+  }
   UserThread& currentUserThread = *((UserThread*)currentThread);
   
   int space_left = 4000;   //page size (more or less)
@@ -212,8 +216,12 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   //cancel all other threads
   threads_lock_.acquire();
   cancelAllOtherThreads();
+  currentUserThread.send_kill_notification(); //todos: in case a thread wants to join me but what happens if later still wants to join
   execv_lock_.release();
   
+
+  
+
 
   
   if(threads_.size() > 1)

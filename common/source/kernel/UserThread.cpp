@@ -205,21 +205,16 @@ bool UserThread::schedulable()
     waiting_for_lock = 1;  
   }
 
-  if(wants_to_be_canceled_ 
-      && (switch_to_userspace_ || waiting_for_lock)
-      && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+  if(wants_to_be_canceled_ && switch_to_userspace_
+    && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
   {
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
-    if (!switch_to_userspace_ && waiting_for_lock)  // TODO: maybe find a cleaner way to do this
-    {
-      *request_to_sleep_translated = 0;
-      *thread_waiting_for_lock_ptr = 0;
-      return true;
-    }
+
+    *request_to_sleep_translated = 0;
+    *thread_waiting_for_lock_ptr = 0;
     
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     kernel_registers_->rdi     = (size_t)-1;
-    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
     switch_to_userspace_ = 0;
     return true;
   }

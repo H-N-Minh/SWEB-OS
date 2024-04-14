@@ -232,6 +232,13 @@ void Syscall::exit(size_t exit_code)
   assert(false && "This should never happen");
 }
 
+int Syscall::execv(const char *path, char *const argv[])
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+  return current_process.execvProcess(path, argv);
+}
+
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 {
@@ -374,17 +381,12 @@ void Syscall::pseudols(const char *pathname, char *buffer, size_t size)
 
 unsigned int Syscall::sleep(unsigned int seconds)
 {
-  
   unsigned int seconds_left = seconds % 1000;
   unsigned int times_thousands_seconds = seconds / 1000;
-
   uint64_t femtoseconds = (uint64_t)seconds_left * 1000000000000000;
   uint64_t current_time_stamp = get_current_timestamp_64_bit();
-
   uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-
   uint64_t thousand_femtoseconds = 1000000000000000000;
-    
   currentThread->wakeup_timestamp_ = current_time_stamp + (femtoseconds / timestamp_fs) +  times_thousands_seconds * (thousand_femtoseconds / timestamp_fs);
 
   Scheduler::instance()->yield();
@@ -396,28 +398,18 @@ unsigned int Syscall::sleep(unsigned int seconds)
 
 bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
 {
-    if(!allowed_to_be_null && ptr == 0)
-    {
-      return false;
-    }
-    if(ptr >= USER_BREAK)
-    {
-      return false;
-    }
-    return true;
-}
-
-int Syscall::execv(const char *path, char *const argv[])
-{
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  UserProcess& current_process = *currentUserThread.process_;
-  if(!check_parameter((size_t)argv, false) || !check_parameter((size_t)argv, false))
+  if(!allowed_to_be_null && ptr == 0)
   {
-    return -1;
+    return false;
   }
-
-  return current_process.execvProcess(path, argv);
+  if(ptr >= USER_BREAK)
+  {
+    return false;
+  }
+  return true;
 }
+
+
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
 {
