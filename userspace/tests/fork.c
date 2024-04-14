@@ -27,6 +27,8 @@ int main() {
   printf("calling fork() from user space\n");
   pid = fork();
 
+  printf("pid is %ld \n", pid);
+
   if (pid < 0) {
     // Fork failed
     printf("Fork failed\n");

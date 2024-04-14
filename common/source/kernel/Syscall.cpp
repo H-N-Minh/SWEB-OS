@@ -108,6 +108,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_fork:
       return_value = forkProcess();
+      debug(FORK, "return_value %zu \n",return_value);
       break;
     case sc_pipe:
       return_value = pipe((int*) arg1);

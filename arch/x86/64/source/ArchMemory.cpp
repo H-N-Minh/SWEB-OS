@@ -106,11 +106,11 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   //pointer CHILD_page = getIdentAddressOfPPN(CHILD_pt[pti].page_ppn);
 
                   pointer CHILD_page = PARENT_page;
-                  memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
+                  //memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
 
-                  //debug(FORK, "PARENT_pt[pti].present: %ld\n",CHILD_page);
-                  //debug(FORK, "CHILD_pt[pti].presentt: %ld\n",PARENT_page);
+                  //debug(FORK, "PARENT_pt[pti].present: %ld\n",PARENT_page);
+                  debug(FORK, "CHILD_pt[pti].presentt: %ld\n",CHILD_page);
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
               }
@@ -153,9 +153,18 @@ ArchMemory::~ArchMemory()
               {
                 if (pt[pti].present)
                 {
-                  pt[pti].present = 0;
-                  PageManager::instance()->freePPN(pt[pti].page_ppn);
-                  //debug(FORK, "PageManager::instance()->freePPN(pt[pti].page_ppn) \n");
+                  if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
+                  {
+                    debug(FORK, "free page and set present in destructor  \n");
+                    debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                    pt[pti].present = 0;
+                    PageManager::instance()->freePPN(pt[pti].page_ppn);
+                  }
+                  else
+                  {
+                    debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                  }
                 }
               }
               pd[pdi].pt.present = 0;
@@ -213,7 +222,7 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(m.page_ppn != 0 && m.page_size == PAGE_SIZE && m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
 
-  debug(FORK, "getReferenceCount %d \n", PageManager::instance()->getReferenceCount(m.page_ppn));
+  debug(FORK, "getReferenceCount in unmapPage  %d \n", PageManager::instance()->getReferenceCount(m.page_ppn));
 
   if (PageManager::instance()->getReferenceCount(m.page_ppn) > 1)
   {
@@ -228,19 +237,16 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   {
     empty = checkAndRemove<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi);
     PageManager::instance()->freePPN(m.pt_ppn);
-    debug(FORK, "pt_ppn \n");
   }
   if (empty)
   {
     empty = checkAndRemove<PageDirPointerTablePageDirEntry>(getIdentAddressOfPPN(m.pdpt_ppn), m.pdpti);
     PageManager::instance()->freePPN(m.pd_ppn);
-    debug(FORK, "pd_ppn \n");
   }
   if (empty)
   {
     checkAndRemove<PageMapLevel4Entry>(getIdentAddressOfPPN(m.pml4_ppn), m.pml4i);
     PageManager::instance()->freePPN(m.pdpt_ppn);
-    debug(FORK, "pdpt_ppn \n");
   }
   return true;
 }
