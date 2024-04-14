@@ -115,9 +115,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_clock:
       return_value = clock();
       break;
-    case sc_tortillas_bootup:
+    case sc_tortillas_bootup:   // needed for test system Tortillas
       break;
-    case sc_tortillas_finished:
+    case sc_tortillas_finished:   // needed for test system Tortillas
       break;
     default:
       return_value = -1;
@@ -256,7 +256,6 @@ int Syscall::pthreadCreate(size_t* thread, unsigned int* attr, void* start_routi
 
 void Syscall::exit(size_t exit_code, bool from_exec)
 {
-  debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd and from exec %d\n", currentThread->getTID(), exit_code, from_exec);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
@@ -279,12 +278,18 @@ void Syscall::exit(size_t exit_code, bool from_exec)
 
   current_process.threads_lock_.release();
 
+  if (exit_code != 69)
+  {
+    debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
+  }
+  
   if(!from_exec)
   {
     debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
     pthreadExit((void*)exit_code);
     assert(false && "This should never happen");
   }
+  
 }
 
 

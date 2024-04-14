@@ -4,6 +4,7 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
+                            // "/usr/temproaray.sweb",
 
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
                             // "/usr/pc4.sweb",
@@ -18,7 +19,7 @@ char const *user_progs[] = {
                             // "/usr/semTests.sweb",
 
 // FORK-------------------------------------------------
-                            //"/usr/forkTests.sweb",
+                            // "/usr/forkTests.sweb",
 
 
                         
