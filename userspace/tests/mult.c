@@ -1,3 +1,14 @@
+/*
+--- # Test specification
+category: base
+description: |
+    Multiplies two matrices containing pseudo random numbers
+    and returns the sum of the resulting matrix.
+
+expect_exit_codes: [1237619379]
+disable: true
+*/
+
 #include "../../common/include/kernel/syscall-definitions.h"
 
 

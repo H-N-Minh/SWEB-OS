@@ -115,6 +115,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_clock:
       return_value = clock();
       break;
+    case sc_tortillas_bootup:
+      break;
+    case sc_tortillas_finished:
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -252,6 +256,7 @@ int Syscall::pthreadCreate(size_t* thread, unsigned int* attr, void* start_routi
 
 void Syscall::exit(size_t exit_code, bool from_exec)
 {
+  debug(SYSCALL, "Syscall::EXIT: called, exit_code: %zd\n", exit_code);
   debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd and from exec %d\n", currentThread->getTID(), exit_code, from_exec);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
@@ -280,7 +285,6 @@ void Syscall::exit(size_t exit_code, bool from_exec)
     pthreadExit((void*)exit_code);
     assert(false && "This should never happen");
   }
-
 }
 
 

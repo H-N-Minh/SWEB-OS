@@ -31,3 +31,6 @@ userspace/tests/pthreadCreate
 .vscode/settings.json
 .vscode/tasks.json
 arch/x86/64/CMakeLists.include
+
+tortillas_config.yml
+
