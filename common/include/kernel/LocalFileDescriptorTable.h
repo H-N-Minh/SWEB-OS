@@ -14,7 +14,9 @@ public:
 
   LocalFileDescriptor* getLocalFileDescriptor(int local_fd_id) const;
 
+
   void closeAllFileDescriptors();
+  void removeLocalFileDescriptor(LocalFileDescriptor* local_fd);
 
 
 private:

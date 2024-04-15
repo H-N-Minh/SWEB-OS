@@ -68,3 +68,21 @@ void LocalFileDescriptorTable::closeAllFileDescriptors() {
     local_fds_.clear();
   }
 }
+
+void LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* local_fd) {
+  auto it = ustl::find(local_fds_.begin(), local_fds_.end(), local_fd);
+  if (it != local_fds_.end()) {
+    // Decrement the reference count of the global file descriptor
+    FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor();
+    global_fd->decrementRefCount();
+
+    // If no more references, delete the global file descriptor
+    if (global_fd->getRefCount() == 0) {
+      delete global_fd;
+    }
+
+    // Erase the local file descriptor from the vector and delete it
+    local_fds_.erase(it);
+    delete local_fd;
+  }
+}

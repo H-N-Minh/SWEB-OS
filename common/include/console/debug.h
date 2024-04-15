@@ -41,18 +41,18 @@ const size_t KPRINTF            = Ansi_Yellow;
 const size_t LOCK               = Ansi_Yellow ;
 const size_t LOADER             = Ansi_White  ;
 const size_t SCHEDULER          = Ansi_Yellow ;
-const size_t SYSCALL            = Ansi_Blue | OUTPUT_ENABLED;
+const size_t SYSCALL            = Ansi_Blue ;
 const size_t MAIN               = Ansi_Red   | OUTPUT_ENABLED;
-const size_t THREAD             = Ansi_Magenta | OUTPUT_ENABLED;
-const size_t USERPROCESS        = Ansi_Cyan    | OUTPUT_ENABLED;
-const size_t USERTHREAD         = Ansi_Yellow  | OUTPUT_ENABLED;
+const size_t THREAD             = Ansi_Magenta ;
+const size_t USERPROCESS        = Ansi_Cyan    ;
+const size_t USERTHREAD         = Ansi_Yellow  ;
 
 const size_t PROCESS_REG        = Ansi_Yellow  ;
 const size_t BACKTRACE          = Ansi_Cyan    ;
 const size_t USERTRACE          = Ansi_Red     ;
 const size_t PIPE               = Ansi_Cyan | OUTPUT_ENABLED;
-const size_t FILEDESCRIPTOR               = Ansi_Cyan | OUTPUT_ENABLED;
-const size_t Fabi               = Ansi_Cyan | OUTPUT_ENABLED;
+const size_t FILEDESCRIPTOR     = Ansi_Cyan | OUTPUT_ENABLED;
+const size_t Fabi               = Ansi_Cyan ;
 
 
 const size_t FORK          = Ansi_Red;
@@ -84,7 +84,7 @@ const size_t FS                 = Ansi_Yellow| OUTPUT_ENABLED;
 const size_t RAMFS              = Ansi_White;
 const size_t DENTRY             = Ansi_Blue;
 const size_t INODE              = Ansi_Blue;
-const size_t PATHWALKER         = Ansi_Yellow| OUTPUT_ENABLED;
+const size_t PATHWALKER         = Ansi_Yellow;
 const size_t PSEUDOFS           = Ansi_Yellow| OUTPUT_ENABLED;
 const size_t VFSSYSCALL         = Ansi_Yellow| OUTPUT_ENABLED;
 const size_t VFS                = Ansi_Yellow| OUTPUT_ENABLED; // | OUTPUT_ENABLED;
@@ -99,8 +99,8 @@ const size_t M_ZONE             = Ansi_Yellow;
 
 //Personal's debug
 
-const size_t TAI_THREAD               = Ansi_Yellow  | OUTPUT_ENABLED;
-const size_t MINH                     = Ansi_Red     | OUTPUT_ENABLED;
+const size_t TAI_THREAD               = Ansi_Yellow  ;
+const size_t MINH                     = Ansi_Red     ;
 
-const size_t USERSPACE_LOCKS         = Ansi_Red     | OUTPUT_ENABLED;
+const size_t USERSPACE_LOCKS         = Ansi_Red     ;
 

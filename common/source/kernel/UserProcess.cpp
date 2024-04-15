@@ -12,11 +12,13 @@
 #include "types.h"
 #include "Syscall.h"
 
+
 #define POINTER_SIZE 8
 
 int64 UserProcess::tid_counter_ = 1;
 int64 UserProcess::pid_counter_ = 1;
 
+UserProcess* UserProcess::currentProcess_ = nullptr;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
 

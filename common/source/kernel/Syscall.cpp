@@ -382,10 +382,19 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
   return num_read;
 }
 
-size_t Syscall::close(size_t fd)
-{
-  return VfsSyscall::close(fd);
-}
+//size_t Syscall::close(size_t fd)
+//{
+//  return VfsSyscall::close(fd);
+//}
+
+//size_t Syscall::open(size_t path, size_t flags)
+//{
+//  if (path >= USER_BREAK)
+//  {
+//    return -1U;
+//  }
+//  return VfsSyscall::open((char*) path, flags);
+//}
 
 size_t Syscall::open(size_t path, size_t flags)
 {
@@ -393,8 +402,111 @@ size_t Syscall::open(size_t path, size_t flags)
   {
     return -1U;
   }
-  return VfsSyscall::open((char*) path, flags);
+
+  UserProcess* current_process = UserProcess::currentProcess();
+  LocalFileDescriptorTable& local_fd_table = current_process->getLocalFileDescriptorTable();
+
+  int global_fd = VfsSyscall::open((char*) path, flags);
+  if (global_fd < 0)
+  {
+    return -1U;
+  }
+
+  FileDescriptor* global_fd_object = global_fd_list.getFileDescriptor(global_fd);
+  if (!global_fd_object)
+  {
+    return -1U;
+  }
+
+  LocalFileDescriptor* local_fd = local_fd_table.createLocalFileDescriptor(global_fd_object, flags, 0);
+
+  return local_fd->getLocalFD();
 }
+//
+//size_t Syscall::write(size_t local_fd, pointer buffer, size_t size)
+//{
+//
+//  if ((buffer >= USER_BREAK) || (buffer + size > USER_BREAK))
+//  {
+//    return -1U;
+//  }
+//
+//
+//  UserProcess* current_process = UserProcess::currentProcess();
+//  LocalFileDescriptorTable& local_fd_table = current_process->getLocalFileDescriptorTable();
+//
+//
+//  LocalFileDescriptor* local_fd_object = local_fd_table.getLocalFileDescriptor(local_fd);
+//  if (!local_fd_object)
+//  {
+//    return -1U;
+//  }
+//
+//
+//  FileDescriptor* global_fd_object = local_fd_object->getGlobalFileDescriptor();
+//  if (!global_fd_object)
+//  {
+//    return -1U;
+//  }
+//
+//
+//  size_t num_written = VfsSyscall::write(global_fd_object->getFd(), (char*) buffer, size);
+//  return num_written;
+//}
+
+//size_t Syscall::read(size_t local_fd, pointer buffer, size_t count)
+//{
+//
+//  if ((buffer >= USER_BREAK) || (buffer + count > USER_BREAK))
+//  {
+//    return -1U;
+//  }
+//
+//
+//  UserProcess* current_process = UserProcess::currentProcess();
+//  LocalFileDescriptorTable& local_fd_table = current_process->getLocalFileDescriptorTable();
+//
+//
+//  LocalFileDescriptor* local_fd_object = local_fd_table.getLocalFileDescriptor(local_fd);
+//  if (!local_fd_object)
+//  {
+//    return -1U;
+//  }
+//
+//
+//  FileDescriptor* global_fd_object = local_fd_object->getGlobalFileDescriptor();
+//  if (!global_fd_object)
+//  {
+//    return -1U;
+//  }
+//
+//
+//  size_t num_read = VfsSyscall::read(global_fd_object->getFd(), (char*) buffer, count);
+//  return num_read;
+//}
+
+size_t Syscall::close(size_t local_fd_id)
+{
+  UserProcess* current_process = UserProcess::currentProcess();
+  LocalFileDescriptorTable& local_fd_table = current_process->getLocalFileDescriptorTable();
+
+  LocalFileDescriptor* local_fd_object = local_fd_table.getLocalFileDescriptor(local_fd_id);
+  if (!local_fd_object)
+  {
+    return -1U;
+  }
+
+  FileDescriptor* global_fd_object = local_fd_object->getGlobalFileDescriptor();
+  int result = VfsSyscall::close(global_fd_object->getFd());
+
+  local_fd_table.removeLocalFileDescriptor(local_fd_object);
+
+  return result;
+}
+
+
+
+
 
 void Syscall::outline(size_t port, pointer text)
 {

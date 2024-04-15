@@ -17,7 +17,7 @@ struct KernelThreadAttributes {
 class UserProcess
 {
     LocalFileDescriptorTable local_fd_table_;
-
+    static UserProcess* currentProcess_;
 
     public:
         /**
@@ -42,8 +42,11 @@ class UserProcess
 
         bool isThreadInVector(UserThread* test_thread);
 
-        LocalFileDescriptorTable& getLocalFdTable() {
+        LocalFileDescriptorTable& getLocalFileDescriptorTable() {
           return local_fd_table_;
+        }
+        static UserProcess* currentProcess() {
+          return currentProcess_;
         }
 
         
@@ -97,5 +100,6 @@ class UserProcess
 
         uint64_t clock_{0};
         uint64_t tsc_start_scheduling_{0};
+
 };
 

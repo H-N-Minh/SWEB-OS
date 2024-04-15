@@ -39,12 +39,12 @@ class Thread
          * @param name The name of the thread
          * @param type The type of the thread (user or kernel thread)
          */
-        Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader=0,  UserProcess* parent_process = nullptr);
+        Thread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, Loader* loader=0);
 
         /**
          * Copy constructor, used for fork()
          */
-        Thread(Thread &src, Loader* loader, UserProcess* parent_process = nullptr);
+        Thread(Thread &src, Loader* loader);
 
         virtual ~Thread();
 
@@ -120,14 +120,10 @@ class Thread
         unsigned long wakeup_timestamp_{0};
 
 
-        UserProcess* getUserProcess() const {
-          return parent_process_;
-        }
 
     private:
         volatile ThreadState state_;
 
-        UserProcess* parent_process_;
 
 
 
