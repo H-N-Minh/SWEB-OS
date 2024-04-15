@@ -23,4 +23,4 @@ jobs:
       run: |
         git clone https://github.com/PaideiaDilemma/Tortillas.git ./tortillas
         cd tortillas
-        python3 -m tortillas -C .github/tortillas_config.yml -S ..
+        python3 -m tortillas -C $GITHUB_WORKSPACE/.github/tortillas_config.yml -S ..
