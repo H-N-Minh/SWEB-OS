@@ -4,7 +4,7 @@ category: base
 description: "getThreadCount"
 
 expect_exit_codes: [0]
-disabled: true
+disabled: false
 */
 
 #include <stdio.h>
