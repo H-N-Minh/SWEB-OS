@@ -7,7 +7,6 @@ expect_exit_codes: [0]
 disabled: false
 */
 
-
 #include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
