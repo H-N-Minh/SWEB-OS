@@ -3,6 +3,7 @@
 #include "types.h"
 #include "offsets.h"
 #include "paging-definitions.h"
+#include "Mutex.h"
 
 struct ArchMemoryMapping
 {
@@ -31,10 +32,14 @@ class ArchMemory
   public:
     ArchMemory();  
     ~ArchMemory();
-
+    
     uint64 page_map_level_4_;
+    
+    //Mutex archmemory_lock_; 
+
     static constexpr size_t RESERVED_START = 0xFFFFFFFF80000ULL;
     static constexpr size_t RESERVED_END = 0xFFFFFFFFC0000ULL;
+    Mutex lock_;
 
     /**
      * Maps a virtual page to a physical page and creates the upper paging-hierarchy tables on demand.

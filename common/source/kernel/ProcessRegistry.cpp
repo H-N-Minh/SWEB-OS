@@ -110,6 +110,12 @@ void ProcessRegistry::createProcess(const char* path)
 
     debug(PROCESS_REG, "create process %s\n", path);
     UserProcess* process = new UserProcess(path, new FileSystemInfo(*working_dir_));
+    if(!process->loader_)
+    {
+        debug(PROCESS_REG, "Process creation of %s failed.\n", path);
+        ProcessRegistry::instance()->processExit();
+        return;
+    }
     debug(PROCESS_REG, "created userprocess %s\n", path);
     debug(PROCESS_REG, "created userprocess %s\n", path);
     process->threads_lock_.acquire();

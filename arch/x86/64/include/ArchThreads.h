@@ -83,7 +83,7 @@ public:
 /**
  * Copy the exact registers of parent (source) to child (destination). Used for fork.
 */
-  static void copyUserRegisters(const ArchThreadRegisters* source, ArchThreadRegisters* &destination, void* kernel_stack);
+  static void copyUserRegisters(const ArchThreadRegisters* source, ArchThreadRegisters* &destination, void* kernel_stack, ArchMemory* arch_memory);
 
 /**
  * changes an existing ArchThreadRegisters so that execution will start / continue

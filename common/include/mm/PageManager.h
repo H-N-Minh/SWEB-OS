@@ -43,7 +43,7 @@ class PageManager
 
     Thread* heldBy()
     {
-      return lock_.heldBy();
+      return page_manager_lock_.heldBy();
     }
 
     PageManager();
@@ -62,7 +62,7 @@ class PageManager
     uint32 lowest_unreserved_page_;
     uint32 num_pages_for_user_;
 
-    SpinLock lock_;
+    SpinLock page_manager_lock_;
 
     static PageManager* instance_;
 

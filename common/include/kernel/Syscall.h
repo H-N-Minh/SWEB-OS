@@ -18,7 +18,7 @@ class Syscall
     static size_t open(size_t path, size_t flags);
     static void pseudols(const char *pathname, char *buffer, size_t size);
 
-    static size_t createprocess(size_t path, size_t sleep);   //duplicate
+    static size_t createprocess(size_t path, size_t sleep);
     static void trace();
 
     static uint32 get_thread_count();
@@ -29,17 +29,26 @@ class Syscall
     static uint32 pipe(int file_descriptor_array[2]);
 
 
-    static int pthread_create(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
-    static void pthreadExit(void* value_ptr, bool from_exec = false);  //duplicate
-    static int pthread_join(size_t thread_id, void**value_ptr);  //duplicate
+    static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
+    static void pthreadExit(void* value_ptr); 
+    static int pthreadJoin(size_t thread_id, void**value_ptr); 
 
     /**
-      * @param is_tVector_locked_in_Exit if true: threads_ vector already locked (locked in Exit()).
+     * If thread is active, set join_state to Detached, else remove the retval of the dead thread from retval_map
+     * @param is_threads_vector_locked if the threads_ vector is already locked, set this to true. Default is false
+     * @return 0 on success, -1 if the given thread is already Detached or the given thread doesnt have a retval in retval_map
+    */
+    static int pthreadDetach(size_t thread,  bool is_threads_vector_locked = false);
+
+    /**
+      * @param is_threads_vector_locked if true: threads_ vector already locked (locked in Exit()).
       * @return -1 if thread doesnt exist in vector. else return 0: set the flag wants_to_be_canceled_ to true.
     */
-    static int pthread_cancel(size_t thread_id, bool is_tVector_locked_in_Exit = false);  //duplicate
+    static int pthreadCancel(size_t thread_id, bool is_threads_vector_locked = false);
 
     static unsigned int sleep(unsigned int seconds);
+
+    static unsigned int clock(void);
 
     static int execv(const char *path, char *const argv[]);
 
@@ -54,5 +63,7 @@ class Syscall
     static int pthread_setcanceltype(int type, int *oldtype);
 
     static uint32 forkProcess();
+
+    static uint64_t get_current_timestamp_64_bit();
 };
 

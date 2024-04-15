@@ -4,6 +4,9 @@
 extern "C" {
 #endif
 
+#include "sys/syscall.h"
+#include "../../../common/include/kernel/syscall-definitions.h"
+
 #define CLOCKS_PER_SEC 1000000
 
 #ifndef CLOCK_T_DEFINED
