@@ -7,53 +7,6 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-    - name: Create tortillas_config.yml
-      run: |
-        echo 'threads: 8
-        # Timeouts
-        bootup_timeout_secs: 20
-        default_test_timeout_secs: 240
-        # Syscall numbers to detect bootup and test completion
-        sc_tortillas_bootup: 1337
-        sc_tortillas_finished: 1338
-        # The analyze config field contains entries that describe
-        # how tortillas parses sweb logs.
-        analyze:
-        # Exit codes
-          - name: exit_codes # Unique identifier
-            scope: SYSCALL # as in `debug(SYSCALL, ...)`
-            pattern: "Tortillas test system received exit code: (\\d+)" # match exit code
-            mode: exit_codes # special mode that checks exit codes
-            set_status: FAILED # set status FAILED, if unexpected exit codes
-        # Userspace asserts
-          - name: userspace_asserts
-            scope: SYSCALL
-            pattern: "Syscall::write: (Assertion failed:.*)"
-            mode: add_as_error # add matches as errors
-            set_status: FAILED
-        # Locking errors
-          - name: lock_logs
-            scope: LOCK
-            pattern: "(.*)"
-            mode: add_as_error
-        # Command not understood
-          - name: command_not_understood
-            scope: SYSCALL
-            pattern: "Syscall::write: (Unknown command)"
-            mode: add_as_error
-            set_status: FAILED
-        # Kernel panics
-          - name: kernel_panics
-            scope: "KERNEL PANIC"
-            pattern: "(.*)"
-            mode: add_as_error
-            set_status: PANIC
-        # Backtraces
-          - name: backtrace
-            scope: BACKTRACE
-            pattern: "(.*)"
-            mode: add_as_error_join' > $GITHUB_WORKSPACE/tortillas_config.yml
-
     - uses: actions/checkout@v2
 
     - name: Set up environment
@@ -70,4 +23,4 @@ jobs:
       run: |
         git clone https://github.com/PaideiaDilemma/Tortillas.git ./tortillas
         cd tortillas
-        python3 -m tortillas -S ..
+        python3 -m tortillas -C .github/tortillas_config.yml -S ..
