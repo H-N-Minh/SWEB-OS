@@ -19,8 +19,20 @@ jobs:
         sh setup_cmake.sh
         cd /tmp/sweb
         make -j$(nproc)
+        
     - name: Test
+      id: tests
       run: |
         git clone https://github.com/PaideiaDilemma/Tortillas.git ./tortillas
         cd tortillas
-        python3 -m tortillas -C $GITHUB_WORKSPACE/.github/tortillas_config.yml -S ..
+        OUTPUT=$(python3 -m tortillas -C $GITHUB_WORKSPACE/.github/tortillas_config.yml -S ..)
+        echo "::set-output name=result::$OUTPUT"
+        echo $OUTPUT
+
+    - name: Test and send report to Discord
+      if: always()
+      uses: Ilshidur/action-discord@2.1.0
+      with:
+        args: "${{ job.status }}: ${{ steps.tests.outputs.result }}"
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}
