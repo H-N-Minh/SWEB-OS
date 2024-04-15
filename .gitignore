@@ -32,5 +32,4 @@ userspace/tests/pthreadCreate
 .vscode/tasks.json
 arch/x86/64/CMakeLists.include
 
-tortillas_config.yml
 
