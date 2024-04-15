@@ -31,7 +31,7 @@ jobs:
 
     - name: Test and send report to Discord
       if: always()
-      uses: Ilshidur/action-discord@2.1.0
+      uses: Ilshidur/action-discord@master
       with:
         args: "${{ job.status }}: ${{ steps.tests.outputs.result }}"
       env:
