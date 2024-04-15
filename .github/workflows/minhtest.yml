@@ -52,7 +52,7 @@ jobs:
           - name: backtrace
             scope: BACKTRACE
             pattern: "(.*)"
-            mode: add_as_error_join' > tortillas_config.yml
+            mode: add_as_error_join' > $GITHUB_WORKSPACE/tortillas_config.yml
 
     - uses: actions/checkout@v2
 
