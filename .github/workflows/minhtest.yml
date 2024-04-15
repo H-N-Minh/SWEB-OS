@@ -25,7 +25,7 @@ jobs:
       run: |
         git clone https://github.com/PaideiaDilemma/Tortillas.git ./tortillas
         cd tortillas
-        OUTPUT=$(python3 -m tortillas -C $GITHUB_WORKSPACE/.github/tortillas_config.yml -S ..)
+        OUTPUT=$(python3 -m tortillas -C $GITHUB_WORKSPACE/.github/tortillas_config.yml -S .. 2>&1)
         echo "::set-output name=result::$OUTPUT"
         echo $OUTPUT
 
