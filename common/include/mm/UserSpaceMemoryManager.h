@@ -6,7 +6,8 @@
 #include "types.h"
 #include "Loader.h"
 
-#define MAX_HEAP_SIZE 0x10000000 // 256 MB
+
+#define MAX_HEAP_SIZE (USER_BREAK / 4)
 
 // class MallocSegment
 // {
@@ -84,6 +85,11 @@ class UserSpaceMemoryManager
 
 
     size_t totalUsedHeap();
+
+    /**
+     * adjust the brk by size amount (can be positive or negative)
+     * @return pointer to the reserved space, else return 0 on failure
+    */
     pointer sbrk(ssize_t size);
 
 

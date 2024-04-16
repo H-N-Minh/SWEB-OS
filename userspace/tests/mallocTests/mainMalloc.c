@@ -29,9 +29,9 @@ int main()
     if (SBRK1)
     {
         retval = sbrk1();
-        if (retval == 0)         { printf("sbrk1 successful!\n"); } 
-        else if (retval == -1)     { return 0; }                      // this kills all child processes
-        else                                  { printf("sbrk1 failed!\n");  return -1;}
+        if (retval == 0)                         { printf("sbrk1 successful!\n"); } 
+        else if (retval == -1)                   { return 0; }                      // this kills all child processes
+        else                                     { printf("sbrk1 failed!\n");  return -1;}
     }
 
     // if (MALLOC1)

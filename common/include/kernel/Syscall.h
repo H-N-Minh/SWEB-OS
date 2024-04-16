@@ -64,6 +64,6 @@ class Syscall
 
     static uint64_t get_current_timestamp_64_bit();
 
-    static uint32 sbrkMemory(size_t increment);
+    static uint32 sbrkMemory(size_t size_ptr, size_t return_ptr);
 };
 

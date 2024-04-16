@@ -520,7 +520,7 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
 pointer UserSpaceMemoryManager::sbrk(ssize_t size)
 {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd)\n", size);
-  return 0;
+  return (pointer) current_break_;
   // assert(base_break_ <= (size_t)kernel_break_ + size && "kernel heap break value corrupted");
   // assert((reserved_max_ == 0 || ((kernel_break_ - base_break_) + size) <= reserved_max_) && "maximum kernel heap size reached");
   // assert(DYNAMIC_KMM && "ksbrk should only be called if DYNAMIC_KMM is 1 - not in baseline SWEB");

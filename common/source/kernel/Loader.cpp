@@ -40,24 +40,29 @@ Loader::~Loader()
 
 void* Loader::getBrkStart()
 {
-  debug(LOADER, "Loader:getBrkStart: Calculating the start address of Heap\n");
+  debug(SBRK, "Loader:getBrkStart: Calculating the start address of Heap\n");
   
   // Iterate through all sections and get the highest segment address
   pointer highest_segment = 0;
   program_binary_lock_.acquire();
   for(ustl::list<Elf::Phdr>::iterator it = phdrs_.begin(); it != phdrs_.end(); it++)
   {
-    if(((*it).p_vaddr + (*it).p_filesz) > highest_segment)
+    size_t segment_start = (*it).p_vaddr;
+    size_t segment_size = (*it).p_filesz;
+    size_t segment_end = segment_start + segment_size;
+    if(segment_end > highest_segment)
     {
-      highest_segment = (*it).p_vaddr + (*it).p_filesz;
+      highest_segment = segment_end;
     }
   }
   program_binary_lock_.release();
   assert(highest_segment > 0 && "Loader:getBrkStart: ERROR! No segment found.\n");
 
   // Calculate the start address of the heap (1 page up from the highest segment's page)
-  pointer highest_segment_page_start = highest_segment - (highest_segment % PAGE_SIZE) + sizeof(size_t);
-  return (void*)(highest_segment_page_start + 2*PAGE_SIZE);
+  size_t highest_segment_page_start = highest_segment - (highest_segment % PAGE_SIZE);
+  void* heap_start = (void*) (highest_segment_page_start + PAGE_SIZE*2);
+  debug(SBRK, "Loader:getBrkStart: The start address of the heap is %p\n", heap_start);
+  return heap_start;
 }
 
 void Loader::loadPage(pointer virtual_address)

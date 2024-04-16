@@ -121,7 +121,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_tortillas_finished:   // needed for test system Tortillas
       break;
     case sc_sbrk:
-      return_value = sbrkMemory(arg1);
+      return_value = sbrkMemory(arg1, arg2);
       break;
     default:
       return_value = -1;
@@ -138,15 +138,39 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 */
 
 
-uint32 Syscall::sbrkMemory(size_t size)
+uint32 Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 {
+  debug(SBRK, "Syscall::sbrkMemory: sbrk called\n");
+  assert(size_ptr != 0 && "Syscall::sbrkMemory: size_ptr is null\n");
+  assert(return_ptr != 0 && "Syscall::sbrkMemory: return_ptr is null\n");
+
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->heap_manager_;
-  if (size > MAX_HEAP_SIZE || size < (-1)*heap_manager->totalUsedHeap())
+
+  debug(SBRK, "Syscall::sbrkMemory: get the size amount and check if its valid\n");
+  ssize_t size = *(ssize_t*) size_ptr;
+  size_t potential_new_break = heap_manager->current_break_ + size;
+  size_t heap_start = heap_manager->heap_start_;
+
+  if (potential_new_break > MAX_HEAP_SIZE || potential_new_break < heap_start)
   {
-    debug(SYSCALL, "Syscall::sbrk: size %zd is too big\n", size);
+    debug(SBRK, "Syscall::sbrk: size %zd is too big\n", size);
     return -1; 
   }
-  return heap_manager->sbrk(size);
+  
+  debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
+  pointer reserved_space = 0;
+  reserved_space = heap_manager->sbrk(size);
+  if (reserved_space == 0)
+  {
+    debug(SBRK, "Syscall::sbrk: sbrk failed\n");
+    return -1;
+  }
+  else
+  {
+    debug(SBRK, "Syscall::sbrk: sbrk done with return %p\n", (void*) reserved_space);
+    *(pointer*) return_ptr = reserved_space;
+    return 0; 
+  }
 }
 
 uint32 Syscall::pipe(int file_descriptor_array[2])

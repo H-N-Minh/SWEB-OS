@@ -4,7 +4,7 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
-                            // "/usr/temproaray.sweb",
+                            "/usr/mallocTests.sweb",
 
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
                             // "/usr/pc4.sweb",
