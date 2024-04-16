@@ -5,6 +5,7 @@
 #include "assert.h"
 #include "types.h"
 #include "Loader.h"
+#include "SpinLock.h"
 
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
@@ -82,7 +83,9 @@ class UserSpaceMemoryManager
 
     size_t current_break_;
     size_t heap_start_;
-
+    Loader* loader_;
+    
+    SpinLock lock_;
 
     size_t totalUsedHeap();
 

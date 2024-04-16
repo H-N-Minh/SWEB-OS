@@ -1,5 +1,7 @@
 #include "UserSpaceMemoryManager.h"
 #include "debug.h"
+#include "PageManager.h"
+#include "ArchMemory.h"
 
 // #include "ArchCommon.h"
 // #include "assert.h"
@@ -512,63 +514,95 @@ size_t UserSpaceMemoryManager::totalUsedHeap()
 }
 
 UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
+  : lock_("UserSpaceMemoryManager::lock_")
 {
   heap_start_ = (size_t) loader->getBrkStart();
   current_break_ = heap_start_;
+  loader_ = loader;
 }
 
 pointer UserSpaceMemoryManager::sbrk(ssize_t size)
 {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd)\n", size);
-  return (pointer) current_break_;
-  // assert(base_break_ <= (size_t)kernel_break_ + size && "kernel heap break value corrupted");
-  // assert((reserved_max_ == 0 || ((kernel_break_ - base_break_) + size) <= reserved_max_) && "maximum kernel heap size reached");
-  // assert(DYNAMIC_KMM && "ksbrk should only be called if DYNAMIC_KMM is 1 - not in baseline SWEB");
-  // if(size != 0)
-  // {
-  //   size_t old_brk = kernel_break_;
-  //   size_t cur_top_vpn = kernel_break_ / PAGE_SIZE;
-  //   if ((kernel_break_ % PAGE_SIZE) == 0)
-  //     cur_top_vpn--;
-  //   kernel_break_ = ((size_t)kernel_break_) + size;
-  //   size_t new_top_vpn = (kernel_break_ )  / PAGE_SIZE;
-  //   if ((kernel_break_ % PAGE_SIZE) == 0)
-  //     new_top_vpn--;
-  //   if(size > 0)
-  //   {
-  //     debug(KMM, "%zx != %zx\n", cur_top_vpn, new_top_vpn);
-  //     while(cur_top_vpn != new_top_vpn)
-  //     {
-  //       debug(KMM, "%zx != %zx\n", cur_top_vpn, new_top_vpn);
-  //       cur_top_vpn++;
-  //       assert(pm_ready_ && "Kernel Heap should not be used before PageManager is ready");
-  //       size_t new_page = PageManager::instance()->allocPPN();
-  //       if(unlikely(new_page == 0))
-  //       {
-  //         kprintfd("KernelMemoryManager::freeSegment: FATAL ERROR\n");
-  //         kprintfd("KernelMemoryManager::freeSegment: no more physical memory\n");
-  //         assert(new_page != 0 && "Kernel Heap is out of memory");
-  //       }
-  //       debug(KMM, "kbsrk: map %zx -> %zx\n", cur_top_vpn, new_page);
-  //       memset((void*)ArchMemory::getIdentAddressOfPPN(new_page), 0 , PAGE_SIZE);
-  //       ArchMemory::mapKernelPage(cur_top_vpn, new_page);
-  //     }
 
-  //   }
-  //   else
-  //   {
-  //     while(cur_top_vpn != new_top_vpn)
-  //     {
-  //       assert(pm_ready_ && "Kernel Heap should not be used before PageManager is ready");
-  //       ArchMemory::unmapKernelPage(cur_top_vpn);
-  //       cur_top_vpn--;
-  //     }
-  //   }
-  //   return old_brk;
-  // }
-  // else
-  // {
-  //   return kernel_break_;
-  // }
+  lock_.acquire();
+  loader_->arch_memory_.lock_.acquire();
+  if(size != 0)
+  {
+    debug(SBRK, "UserSpaceMemoryManager::sbrk: changing break value\n");
+    size_t old_break = current_break_;
+    current_break_ = current_break_ + size;
+
+    size_t old_top_vpn = old_break / PAGE_SIZE;
+    if ((old_break % PAGE_SIZE) == 0)
+      old_top_vpn--;
+    size_t new_top_vpn = current_break_ / PAGE_SIZE;
+    if ((current_break_ % PAGE_SIZE) == 0)
+      new_top_vpn--;
+
+    if(size > 0)
+    {
+      debug(SBRK, "old break is on page %zx <= new break is on page %zx\n", old_top_vpn, new_top_vpn);
+      while(old_top_vpn != new_top_vpn)
+      {
+        debug(SBRK, "%zx != %zx\n", old_top_vpn, new_top_vpn);
+        old_top_vpn++;
+        
+        size_t new_page = PageManager::instance()->allocPPN();
+        if(unlikely(new_page == 0))
+        {
+          debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, no more physical memory\n");
+          current_break_ = old_break;
+          loader_->arch_memory_.lock_.release();
+          lock_.release();
+          return 0;
+        }
+
+        debug(SBRK, "kbsrk: map %zx -> %zx\n", old_top_vpn, new_page);
+        void* new_page_ptr = (void*) ArchMemory::getIdentAddressOfPPN(new_page);
+        memset(new_page_ptr, 0 , PAGE_SIZE);
+        bool successly_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1);
+        if(unlikely(!successly_mapped))
+        {
+          debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not map page\n");
+          current_break_ = old_break;
+          loader_->arch_memory_.lock_.release();
+          lock_.release();
+          return 0;
+        }
+      }
+    }
+    else    // size < 0
+    {
+      debug(SBRK, "old break is on page %zx >= new break is on page %zx\n", old_top_vpn, new_top_vpn);
+      while(old_top_vpn != new_top_vpn)
+      {
+        bool successly_unmapped = loader_->arch_memory_.unmapPage(old_top_vpn);
+        if(unlikely(!successly_unmapped))
+        {
+          debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not unmap page\n");
+          current_break_ = old_break;
+          loader_->arch_memory_.lock_.release();
+          lock_.release();
+          return 0;
+        }
+        old_top_vpn--;
+      }
+    }
+    debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successful, new break value is %zx\n", current_break_);
+    loader_->arch_memory_.lock_.release();
+    lock_.release();
+    assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
+    assert(current_break_ <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: current break is above heap limit");
+    return (pointer) old_break;
+  }
+  else
+  {
+    debug(SBRK, "UserSpaceMemoryManager::sbrk: returning current break value without changing it %zx\n", current_break_);
+    pointer old_break = (pointer) current_break_;
+    loader_->arch_memory_.lock_.release();
+    lock_.release();
+    return old_break;
+  }
 }
 
