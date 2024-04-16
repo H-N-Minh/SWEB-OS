@@ -17,6 +17,7 @@
 #include "ArchMemory.h"
 #include "PageManager.h"
 #include "ArchThreads.h"
+#include "UserSpaceMemoryManager.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -119,6 +120,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_tortillas_finished:   // needed for test system Tortillas
       break;
+    case sc_sbrk:
+      return_value = sbrkMemory(arg1);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -132,6 +136,17 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
  * this means this is the first stack request. Make the top_stack to point to itself and give this
  * pointer to child stack's top_stack as well. Calculation to get top of stack is in pthread.c in userspace
 */
+
+
+uint32 Syscall::sbrkMemory(size_t size)
+{
+  if (size > MAX_HEAP_SIZE || size < (-1)*UserSpaceMemoryManager::totalUsedHeap())
+  {
+    debug(SYSCALL, "Syscall::sbrk: size %zd is too big\n", size);
+    return -1; 
+  }
+  return UserSpaceMemoryManager::sbrk(size);
+}
 
 uint32 Syscall::pipe(int file_descriptor_array[2])
 {

@@ -17,12 +17,7 @@
 #define sc_createprocess 191
 #define sc_trace 252
 
-#define sc_threadcount 2048
-
-#define sc_pipe 1500
-
-#define sc_sleep 500
-#define sc_clock 501
+#define sc_threadcount 260
 
 #define sc_pthread_create 300
 #define sc_pthread_exit 301
@@ -35,6 +30,15 @@
 
 #define sc_execv 400
 
+#define sc_sleep 500
+#define sc_clock 501
+
+// malloc
+#define sc_sbrk 600
+
+
 // Needed for test system Tortillas
 #define sc_tortillas_bootup 1337
 #define sc_tortillas_finished 1338
+
+#define sc_pipe 1500
