@@ -99,7 +99,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   // setup new page and copy from parent
 
                   //CHILD_pt[pti].page_ppn = PageManager::instance()->allocPPN();
-
                   CHILD_pt[pti].page_ppn = PARENT_pt[pti].page_ppn;
 
                   pointer PARENT_page = getIdentAddressOfPPN(PARENT_pt[pti].page_ppn);
@@ -110,6 +109,12 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 
                   PARENT_pt[pti].writeable = 0; //read only
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
+
+                  //should it be call here?
+                  //add if condition for read only and referene count
+                  accessSharedMemoryPage(PARENT_pt[pti].page_ppn);//create private for parent
+                  accessSharedMemoryPage(CHILD_pt[pti].page_ppn);//create private for child
+
 
                   //debug(FORK, "PARENT_pt[pti].present: %ld\n",PARENT_page);
                   debug(FORK, "CHILD_pt[pti].presentt: %ld\n",CHILD_page);
@@ -126,6 +131,16 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
   lock_.release();
 }
 
+bool::ArchMemory::accessSharedMemoryPage(uint64 page_ppn)
+{
+  uint64 physical_private_page = PageManager::instance()->allocPPN();
+  pointer private_page = getIdentAddressOfPPN(physical_private_page);
+
+  pointer original_page = getIdentAddressOfPPN(page_ppn);
+  memcpy((void*) private_page, (void*) original_page, PAGE_SIZE);
+
+  return true;
+}
 
 ArchMemory::~ArchMemory()
 {
@@ -278,6 +293,7 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
   assert(lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
+  debug(FORK, "getReferenceCount in mapPage  %d \n", PageManager::instance()->getReferenceCount(m.page_ppn));
   assert((m.page_size == 0) || (m.page_size == PAGE_SIZE));
 
   if (m.pdpt_ppn == 0)
@@ -306,7 +322,14 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 //    {
 //      //create a private copy of the page
 //      uint64 private_page = PageManager::instance()->allocPPN();
-//      memcpy((void*)getIdentAddressOfPPN(private_page), (void*)getIdentAddressOfPPN(physical_page), PAGE_SIZE);
+
+//
+//
+//      pointer original_page = getIdentAddressOfPPN(m.page_ppn);
+//      pointer private_page = getIdentAddressOfPPN(private_page);
+//
+
+//      memcpy((void*)original_page, (void*)private_page, PAGE_SIZE);
 //
 //      physical_page = private_page;
 //      //After created a rivate copy of the page unmap -> call unmapPgae?
@@ -318,6 +341,8 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   }
   return false;
 }
+
+
 
 
 const ArchMemoryMapping ArchMemory::resolveMapping(uint64 vpage)
