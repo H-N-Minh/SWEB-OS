@@ -7,7 +7,7 @@
  */
 int brk(void *end_data_segment)
 {
-  return -1;
+  return __syscall(sc_brk, (size_t) end_data_segment, 0x0, 0x0, 0x0, 0x0);
 }
 
 /**

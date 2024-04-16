@@ -521,12 +521,18 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
   loader_ = loader;
 }
 
-pointer UserSpaceMemoryManager::sbrk(ssize_t size)
+pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
 {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd)\n", size);
 
-  lock_.acquire();
-  loader_->arch_memory_.lock_.acquire();
+  if (!already_locked) {
+    lock_.acquire();
+    loader_->arch_memory_.lock_.acquire();
+  }
+
+  assert(current_break_ + size <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: trying to allocate more than MAX_HEAP_SIZE");
+  assert(current_break_ + size >= heap_start_ && "UserSpaceMemoryManager::sbrk: trying to deallocate below heap start");
+
   if(size != 0)
   {
     debug(SBRK, "UserSpaceMemoryManager::sbrk: changing break value\n");
@@ -553,8 +559,11 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size)
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, no more physical memory\n");
           current_break_ = old_break;
-          loader_->arch_memory_.lock_.release();
-          lock_.release();
+          if (!already_locked)
+          {
+            loader_->arch_memory_.lock_.release();
+            lock_.release();
+          }
           return 0;
         }
 
@@ -566,8 +575,11 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size)
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not map page\n");
           current_break_ = old_break;
-          loader_->arch_memory_.lock_.release();
-          lock_.release();
+          if (!already_locked)
+          {
+            loader_->arch_memory_.lock_.release();
+            lock_.release();
+          }
           return 0;
         }
       }
@@ -582,16 +594,22 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size)
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not unmap page\n");
           current_break_ = old_break;
-          loader_->arch_memory_.lock_.release();
-          lock_.release();
+          if (!already_locked)
+          {
+            loader_->arch_memory_.lock_.release();
+            lock_.release();
+          }
           return 0;
         }
         old_top_vpn--;
       }
     }
     debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successful, new break value is %zx\n", current_break_);
-    loader_->arch_memory_.lock_.release();
-    lock_.release();
+    if (!already_locked)
+    {
+      loader_->arch_memory_.lock_.release();
+      lock_.release();
+    }
     assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
     assert(current_break_ <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: current break is above heap limit");
     return (pointer) old_break;
@@ -600,9 +618,39 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size)
   {
     debug(SBRK, "UserSpaceMemoryManager::sbrk: returning current break value without changing it %zx\n", current_break_);
     pointer old_break = (pointer) current_break_;
+    if (!already_locked)
+    {
+      loader_->arch_memory_.lock_.release();
+      lock_.release();
+    }
+    return old_break;
+  }
+}
+
+
+int UserSpaceMemoryManager::brk(size_t new_break_addr)
+{
+  debug(SBRK, "UserSpaceMemoryManager::brk called with new break address (%zx)\n", new_break_addr);
+  assert(new_break_addr >= heap_start_ && "UserSpaceMemoryManager::brk: new break is below heap start");
+  assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
+
+  lock_.acquire();
+  loader_->arch_memory_.lock_.acquire();
+  ssize_t size = new_break_addr - current_break_;
+  pointer resevered_space = sbrk(size, 1);
+  if (resevered_space == 0)
+  {
+    debug(SBRK, "UserSpaceMemoryManager::brk: FATAL ERROR, could not set new break at address (%zx)\n", new_break_addr);
     loader_->arch_memory_.lock_.release();
     lock_.release();
-    return old_break;
+    return -1;
+  } 
+  else
+  {
+    debug(SBRK, "UserSpaceMemoryManager::brk: new break is set successful at address (%zx)\n", current_break_);
+    loader_->arch_memory_.lock_.release();
+    lock_.release();
+    return 0;
   }
 }
 

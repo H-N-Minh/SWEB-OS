@@ -84,16 +84,24 @@ class UserSpaceMemoryManager
     size_t current_break_;
     size_t heap_start_;
     Loader* loader_;
-    
+
     SpinLock lock_;
 
     size_t totalUsedHeap();
 
     /**
-     * adjust the brk by size amount (can be positive or negative)
+     * adjust the brk by size amount 
+     * @param size the amount to adjust the brk by (can be positive or negative)
+     * @param already_locked if the lock for break is already held
      * @return pointer to the reserved space, else return 0 on failure
     */
-    pointer sbrk(ssize_t size);
+    pointer sbrk(ssize_t size, size_t already_locked);
+
+    /**
+     * set the address of brk to a fixed address
+     * @return 0 on success, else return -1
+    */
+    int brk(size_t new_break_addr);
 
 
 ///////////////////////////////////////////////////////////////////////////

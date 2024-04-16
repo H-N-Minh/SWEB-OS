@@ -123,6 +123,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_sbrk:
       return_value = sbrkMemory(arg1, arg2);
       break;
+    case sc_brk:
+      return_value = brkMemory(arg1);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -137,8 +140,33 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
  * pointer to child stack's top_stack as well. Calculation to get top of stack is in pthread.c in userspace
 */
 
+size_t Syscall::brkMemory(size_t new_brk_addr)
+{
+  debug(SBRK, "Syscall::brkMemory: brk called with address %p. Checking if addr is valid \n", (void*) new_brk_addr);
 
-uint32 Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->heap_manager_;
+  size_t heap_start = heap_manager->heap_start_;
+
+  if (new_brk_addr > MAX_HEAP_SIZE || new_brk_addr < heap_start)
+  {
+    debug(SBRK, "Syscall::brkMemory: address %p is not within heap segment\n", (void*) new_brk_addr);
+    return -1; 
+  }
+  
+  int successly_brk = heap_manager->brk(new_brk_addr);
+  if (successly_brk == 0)
+  {
+    debug(SBRK, "Syscall::brkMemory: brk done with address %p\n", (void*) new_brk_addr);
+    return 0; 
+  }
+  else
+  {
+    debug(SBRK, "Syscall::brkMemory: brk failed with address %p\n", (void*) new_brk_addr);
+    return -1;
+  }
+}
+
+size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 {
   debug(SBRK, "Syscall::sbrkMemory: sbrk called\n");
   assert(size_ptr != 0 && "Syscall::sbrkMemory: size_ptr is null\n");
@@ -159,7 +187,7 @@ uint32 Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
   
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
   pointer reserved_space = 0;
-  reserved_space = heap_manager->sbrk(size);
+  reserved_space = heap_manager->sbrk(size, 0);
   if (reserved_space == 0)
   {
     debug(SBRK, "Syscall::sbrk: sbrk failed\n");
