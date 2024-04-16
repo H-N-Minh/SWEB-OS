@@ -107,6 +107,8 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 
                   pointer CHILD_page = PARENT_page;
                   //memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
+
+                  PARENT_pt[pti].writeable = 0; //read only
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
 
                   //debug(FORK, "PARENT_pt[pti].present: %ld\n",PARENT_page);
@@ -298,6 +300,19 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
   if (m.page_ppn == 0)
   {
+    debug(FORK, "getReferenceCount in mapPage  %d \n", PageManager::instance()->getReferenceCount(m.page_ppn));
+    //debug(FORK, "writable bit in mapPage  %d\n",  m.pt[m.pti].writeable);
+//    if (PageManager::instance()->getReferenceCount(physical_page) > 1 && !m.pt[m.pti].writeable)
+//    {
+//      //create a private copy of the page
+//      uint64 private_page = PageManager::instance()->allocPPN();
+//      memcpy((void*)getIdentAddressOfPPN(private_page), (void*)getIdentAddressOfPPN(physical_page), PAGE_SIZE);
+//
+//      physical_page = private_page;
+//      //After created a rivate copy of the page unmap -> call unmapPgae?
+//      //which also will decrement the reference count
+//    }
+
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     return true;
   }

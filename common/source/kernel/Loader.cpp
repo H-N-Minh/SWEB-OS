@@ -19,7 +19,6 @@ Loader::Loader(const Loader &src, int32 fd)
   debug(FORK, "Loader-Copy constructor called.\n");
 
   readHeaders();
- 
 
   debug ( LOADER,"loadExecutableAndInitProcess: Entry: %zx, num Sections %zx\n",hdr_->e_entry, (size_t)hdr_->e_phnum );
   if (LOADER & OUTPUT_ADVANCED)
