@@ -29,6 +29,11 @@ class Loader
      */
     void loadPage(pointer virtual_address);
 
+    /**
+     * Return the start address of Heap
+    */
+    void* getBrkStart();
+
     Stabs2DebugInfo const* getDebugInfos() const;
 
     void* getEntryFunction() const;

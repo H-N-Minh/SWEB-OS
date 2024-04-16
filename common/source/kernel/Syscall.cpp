@@ -140,12 +140,13 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 uint32 Syscall::sbrkMemory(size_t size)
 {
-  if (size > MAX_HEAP_SIZE || size < (-1)*UserSpaceMemoryManager::totalUsedHeap())
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->heap_manager_;
+  if (size > MAX_HEAP_SIZE || size < (-1)*heap_manager->totalUsedHeap())
   {
     debug(SYSCALL, "Syscall::sbrk: size %zd is too big\n", size);
     return -1; 
   }
-  return UserSpaceMemoryManager::sbrk(size);
+  return heap_manager->sbrk(size);
 }
 
 uint32 Syscall::pipe(int file_descriptor_array[2])

@@ -505,12 +505,16 @@
 // }
 
 ///////////////////////////////////////////////////////////////////////////////////////////
-size_t UserSpaceMemoryManager::current_break_ = 0;
-size_t UserSpaceMemoryManager::heap_start_ = 0;
 
 size_t UserSpaceMemoryManager::totalUsedHeap()
 {
   return current_break_ - heap_start_;
+}
+
+UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
+{
+  heap_start_ = (size_t) loader->getBrkStart();
+  current_break_ = heap_start_;
 }
 
 pointer UserSpaceMemoryManager::sbrk(ssize_t size)

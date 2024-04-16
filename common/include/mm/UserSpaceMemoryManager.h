@@ -4,6 +4,7 @@
 // #include "SpinLock.h"
 #include "assert.h"
 #include "types.h"
+#include "Loader.h"
 
 #define MAX_HEAP_SIZE 0x10000000 // 256 MB
 
@@ -76,13 +77,14 @@
 class UserSpaceMemoryManager
 {
   public:
+    UserSpaceMemoryManager(Loader* loader);
 
-    static size_t current_break_;
-    static size_t heap_start_;
+    size_t current_break_;
+    size_t heap_start_;
 
 
-    static size_t totalUsedHeap();
-    static pointer sbrk(ssize_t size);
+    size_t totalUsedHeap();
+    pointer sbrk(ssize_t size);
 
 
 ///////////////////////////////////////////////////////////////////////////
