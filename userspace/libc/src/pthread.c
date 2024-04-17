@@ -7,6 +7,8 @@
 
 #define __PAGE_SIZE__ 4096
 
+// a flag for the 1st thread of the process to setup its metadata
+size_t __META_INITIALIZED__ = 0;   
 
 // /**
 //  * function stub
@@ -32,21 +34,16 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                     void *(*start_routine)(void *), void *arg)
 {
   int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
-  if (!retval)  // if thread was created successfully
+  if (!retval && !__META_INITIALIZED__)  // if thread was created successfully and metadata is not setup
   {
-    // if top_stack is 0, it means this is the first stack of the parent thread and metadata is missing. Setup the metadata
-    size_t top_stack = getTopOfFirstStack();
-    if (top_stack == 0)
-    {
-      top_stack = getTopOfThisStack();
-      *(size_t*) top_stack                               = GUARD_MARKER;
-      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // spinlock
-      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_flag
-      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_waiter_list
-      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_flag
-      top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_waiter_list
-      top_stack -= sizeof(size_t);  *(size_t*) top_stack = GUARD_MARKER;
-    }
+    size_t top_stack = getTopOfThisStack();
+    *(size_t*) top_stack                               = GUARD_MARKER;
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_flag
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_waiter_list
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_flag
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_waiter_list
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = GUARD_MARKER;
+    __META_INITIALIZED__ = 1;
   }
   return retval;
 }
@@ -124,8 +121,8 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   // size_t* mutex_waiter_list = (size_t*)((size_t)&stack_variable + 4080 - (size_t)(&stack_variable)%4096); 
   size_t top_stack = getTopOfFirstStack(); 
   assert(top_stack && "top_stack cant be found");
-  size_t* mutex_flag = (size_t*) (top_stack - sizeof(size_t)*2);
-  size_t* mutex_waiter_list = (size_t*) (top_stack - sizeof(size_t)*3);
+  size_t* mutex_flag = (size_t*) (top_stack - sizeof(size_t));
+  size_t* mutex_waiter_list = (size_t*) (top_stack - sizeof(size_t)*2);
 
   if(mutex->held_by_ == mutex_waiter_list)
   {
@@ -192,7 +189,7 @@ int pthread_mutex_trylock(pthread_mutex_t *mutex)
   assert(rv == 0);
   size_t top_stack = getTopOfFirstStack();
   assert(top_stack && "top_stack cant be found");
-  size_t* mutex_waiter_list = (size_t*)(top_stack - sizeof(size_t)*3);    
+  size_t* mutex_waiter_list = (size_t*)(top_stack - sizeof(size_t)*2);    
   if(mutex->held_by_ == mutex_waiter_list)
   {
     //printf("Thread is already holding lock\n");
@@ -238,7 +235,7 @@ int pthread_mutex_unlock(pthread_mutex_t *mutex)
   }
   size_t top_stack = getTopOfFirstStack();
   assert(top_stack && "top_stack cant be found");
-  size_t* mutex_waiter_list = (size_t*)(top_stack - sizeof(size_t)*3);    
+  size_t* mutex_waiter_list = (size_t*)(top_stack - sizeof(size_t)*2);    
   if(mutex->held_by_ != mutex_waiter_list)
   {
    // printf("Thread does not hold current lock\n");
@@ -422,8 +419,9 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
   // get the reserved space of current thread
   size_t top_stack                   = getTopOfFirstStack();
   assert(top_stack && "top_stack cant be found");
-  size_t cond_flag                   = top_stack - 4*sizeof(size_t);   // this 2 and 3 depends on the order setup in UserThread ctor
-  size_t cond_waiter_list            = top_stack - 5*sizeof(size_t);
+  size_t cond_flag                   = top_stack - 3*sizeof(size_t);   // this 2 and 3 depends on the order setup in UserThread ctor
+  size_t cond_waiter_list            = top_stack - 4*sizeof(size_t);
+  assert(top_stack && "top_stack cant be found");
 
   // adding curent thread to the waiting list
   addWaiterToList(&cond->waiting_list_, cond_waiter_list);
@@ -493,12 +491,11 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
  * posix compatible signature - do not change the signature!
  */
 int pthread_spin_lock(pthread_spinlock_t *lock)
-{
+{ 
   // size_t stack_variable;
   // size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096 - sizeof(size_t));   
-  size_t top_stack = getTopOfThisStack();
-  assert(top_stack && "top_stack cant be found");
-  size_t* current_thread_ptr = (size_t*) (top_stack - sizeof(size_t));
+  size_t* current_thread_ptr = (size_t*) getTopOfFirstStack();
+  assert(current_thread_ptr && "top_stack cant be found");
 
   if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || lock->held_by_ == current_thread_ptr)
   {
@@ -526,9 +523,8 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
 {
   // size_t stack_variable;
   // size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096 - sizeof(size_t));
-  size_t top_stack = getTopOfThisStack();
-  assert(top_stack && "top_stack cant be found");
-  size_t* current_thread_ptr = (size_t*) (top_stack - sizeof(size_t));
+  size_t* current_thread_ptr = (size_t*) getTopOfFirstStack();
+  assert(current_thread_ptr && "top_stack cant be found");
   if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || lock->held_by_ == current_thread_ptr)
   {
     //lock not initalized or invalid lock_ptr or lock is allready held by current thread
@@ -559,11 +555,9 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
   // size_t stack_variable;
-  // size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096 - sizeof(size_t));  
-  size_t top_stack = getTopOfThisStack();
-  assert(top_stack && "top_stack cant be found");
-  size_t* current_thread_ptr = (size_t*) (top_stack - sizeof(size_t)); 
-
+  // size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096 - sizeof(size_t));   
+  size_t* current_thread_ptr = (size_t*) getTopOfFirstStack();
+  assert(current_thread_ptr && "top_stack cant be found");
   if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || !lock->locked_ || current_thread_ptr != lock->held_by_)
   {
     //lock not initalized, not locked or invalid lock_ptr, not held by current thread
@@ -643,6 +637,19 @@ size_t getTopOfThisStack()
 size_t getTopOfFirstStack()
 {
   size_t top_current_stack = getTopOfThisStack();
+  if (!__META_INITIALIZED__)
+  {
+    size_t top_stack = top_current_stack;
+    *(size_t*) top_stack                               = GUARD_MARKER;
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_flag
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_waiter_list
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_flag
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_waiter_list
+    top_stack -= sizeof(size_t);  *(size_t*) top_stack = GUARD_MARKER;
+    __META_INITIALIZED__ = 1;
+    return top_current_stack;
+  }
+
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
     if (top_current_stack && *(size_t*) top_current_stack == GUARD_MARKER)
