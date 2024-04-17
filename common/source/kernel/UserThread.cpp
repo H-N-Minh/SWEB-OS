@@ -39,14 +39,17 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    // 5 * sizeof(pointer) because 1 is default and 4 is reserved for userspace locking
-    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 5 * sizeof(pointer));
-    currently_waiting_ptr_ = user_stack_ptr + 4 * sizeof(pointer);
-    waiting_list_ptr_ = user_stack_ptr + 3 * sizeof(pointer);
-    request_to_sleep_ = user_stack_ptr + 2 * sizeof(pointer);
-    //sleep_waiting_list = user_stack_ptr + sizeof(pointer);
-    debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx) and waiting flag  %zd(=%zx).\n", 
-          user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_, currently_waiting_ptr_, currently_waiting_ptr_);
+    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 7 * sizeof(pointer));
+    debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
+    //                                                          1. Guard
+    mutex_flag_ = user_stack_ptr + 5 * sizeof(pointer);      // 2. Mutex flag
+    //                                                          3. Mutex waiter list 
+    cond_flag_ = user_stack_ptr + 3 * sizeof(pointer);       // 4. Cond flag
+    //                                                          5. Cond waiter list
+    //                                                          6. Guard
+    //                                                          7. user_stack_ptr
+    debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for waiting flag  %zd(=%zx).\n", 
+          user_stack_ptr, user_stack_ptr, mutex_flag_, mutex_flag_);
     if (!func) //for the first thread when we create a process
     {
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
@@ -90,7 +93,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process)
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
             join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"), 
             cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_), 
-            request_to_sleep_(other.request_to_sleep_), waiting_list_ptr_(other.waiting_list_ptr_), currently_waiting_ptr_(other.currently_waiting_ptr_)
+            cond_flag_(other.cond_flag_), mutex_flag_(other.mutex_flag_)
 {
     debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
     tid_ =  ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
@@ -194,13 +197,13 @@ bool UserThread::schedulable()
   int waiting_for_lock = 0;
   
   // if the thread requests to sleep, then it is not scheduled
-  size_t *request_to_sleep_translated = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)request_to_sleep_);
+  size_t *request_to_sleep_translated = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)cond_flag_);
   if(request_to_sleep_translated && *request_to_sleep_translated == 1)
   {
     waiting_for_lock = 1;   
   }
 
-  size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)currently_waiting_ptr_);
+  size_t *thread_waiting_for_lock_ptr = (size_t*)loader_->arch_memory_.checkAddressValid((uint64)mutex_flag_);
 
   //debug(USERSPACE_LOCKS, "Kernel: userspace %zd(=%zx)\n", (uint64)thread_waiting_for_lock_ptr, (uint64)thread_waiting_for_lock_ptr);
   if(thread_waiting_for_lock_ptr && *thread_waiting_for_lock_ptr == 1)

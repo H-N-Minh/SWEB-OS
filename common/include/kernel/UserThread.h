@@ -54,10 +54,15 @@ class UserThread : public Thread
         CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED};
 
         //userspace locks
-        size_t request_to_sleep_{NULL};         // pointer to boolean in user stack, indicate whether the thread is schedulable or not
-
-        size_t waiting_list_ptr_{NULL};
-        size_t currently_waiting_ptr_{NULL};
- 
+        size_t cond_flag_{NULL};         // pointer to boolean in user stack, indicate whether the thread is schedulable or not
+        size_t mutex_flag_{NULL};
+        // the Meta data is ordered as follows:
+                    // 1. Guard
+                    // 2. Mutex flag
+                    // 3. Mutex waiter list 
+                    // 4. Cond flag
+                    // 5. Cond waiter list
+                    // 6. Guard
+                    // 7. user_stack_ptr (the user stack starts from here)
 
 };
