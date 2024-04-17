@@ -141,7 +141,7 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
-  if(!Syscall::check_parameter((size_t)argv, false) || !Syscall::check_parameter((size_t)argv, false))
+  if(!Syscall::check_parameter((size_t)path, false) || !Syscall::check_parameter((size_t)argv, false))
   {
     return -1;
   }
