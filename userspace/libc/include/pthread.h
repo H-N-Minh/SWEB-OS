@@ -6,6 +6,10 @@
 
 #define USER_BREAK 0x0000800000000000ULL
 
+// CHANGES TO THESE DEFINE MUST ALSO BE CHANGED IN KERNEL
+#define GUARD_MARKER 0xbadcafe00000ULL   
+#define MAX_STACK_AMOUNT 4
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -69,7 +73,7 @@ extern int pthread_create(pthread_t *thread,
 //the wrapper will take 2 parameter
 //first one for the function that we want to run
 //second one is the parameter of the function */
-void pthread_create_wrapper(void* start_routine, void* arg);
+void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack);
 
 extern void pthread_exit(void *value_ptr);
 
@@ -131,8 +135,8 @@ extern void print_waiting_list(size_t* waiting_list, int before);
 extern size_t getTopOfThisStack();
 
 /**
- * return the address of the top of the first stack. 
- * @return non null pointer
+ * return the address of the top of the first stack, which is the 1st GUARD_MARKER
+ * @return the address found, or 0 if not found
 */
 extern size_t getTopOfFirstStack();
 

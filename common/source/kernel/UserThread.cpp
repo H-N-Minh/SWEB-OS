@@ -39,9 +39,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 7 * sizeof(pointer));
+    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 8 * sizeof(pointer));
     debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
-    //                                                          1. Guard
+    size_t top_stack = user_stack_ptr + 7 * sizeof(pointer); // 1. Guard
+                                                             // 1. spinlock
     mutex_flag_ = user_stack_ptr + 5 * sizeof(pointer);      // 2. Mutex flag
     //                                                          3. Mutex waiter list 
     cond_flag_ = user_stack_ptr + 3 * sizeof(pointer);       // 4. Cond flag
@@ -64,14 +65,14 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
-    else // create the thread for every pthread create
+    else // create the thread for pthread create
     {
         ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper, (void*) user_stack_ptr,
                                          getKernelStackStartPointer());
 
         user_registers_->rdi = (size_t)func;
         user_registers_->rsi = (size_t)arg;
-        //user_registers_->rdx = (size_t) user_stack_ptr + sizeof(pointer)*3; // address of the top of stack, relevant for userspace locks
+        user_registers_->rdx = top_stack; // address of the top of stack, relevant for userspace locks
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
