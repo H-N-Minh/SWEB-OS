@@ -17,8 +17,8 @@ char const *user_progs[] = {
                             // "/usr/growingStackTests.sweb",
 
 // SEM & COND -------------------------------------------------
-                            "/usr/condTests.sweb",
-                            "/usr/semTests.sweb",
+                            // "/usr/condTests.sweb",
+                            // "/usr/semTests.sweb",
 
 // FORK-------------------------------------------------
                             // "/usr/forkTests.sweb",

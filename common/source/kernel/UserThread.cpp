@@ -16,7 +16,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
                        Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
               thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), join_state_lock_("join_state_lock_"),
-              cancel_state_type_lock_("cancel_state_type_lock_")
+              cancel_state_type_lock_("cancel_state_type_lock_"), guarded_(0)
 {
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
  
@@ -74,6 +74,9 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         user_registers_->rdx = top_stack; // address of the top of stack, relevant for userspace locks
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
+
+        debug(GROW_STACK, "UserThread ctor for pthread_create: Child guard is set up immediately (in userspace)\n");
+        guarded_ = 1;
     }
 
 
@@ -93,7 +96,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process)
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
             join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"), 
             cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_), 
-            cond_flag_(other.cond_flag_), mutex_flag_(other.mutex_flag_)
+            cond_flag_(other.cond_flag_), mutex_flag_(other.mutex_flag_), guarded_(other.guarded_)
 {
     debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
     tid_ =  ArchThreads::atomic_add(UserProcess::tid_counter_, 1);

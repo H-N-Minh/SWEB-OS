@@ -7,6 +7,8 @@
 #include "Loader.h"
 #include "Syscall.h"
 #include "ArchThreads.h"
+#include "UserSpaceMemoryManager.h"
+
 extern "C" void arch_contextSwitch();
 
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
@@ -37,7 +39,29 @@ inline bool PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   else if(user && !present && 
           address > null_reference_check_border_ && address < USER_BREAK)
   {
-    debug(MINH, "HEHE BOYYY address is %p \n", (void*)address);
+    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
+    
+    UserSpaceMemoryManager* manager = currentThread->process_->user_mem_manager_;
+    assert(manager && "UserSpaceMemoryManager is not initialized.");
+    int retval = manager->checkValidGrowingStack(address);
+    
+    if(retval == 11)
+    {
+      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. 
+                          Exiting with error 11\n");
+      assert(currentThread->loader_ && "Thread that gets a segfault has no loader. This should not happen.")
+      Syscall::exit(11);
+      assert(false && "Syscall::exit() called but thread still alive");
+    }
+    else if(retval == 1)
+    {
+      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. 
+                          Creating new stack for current thread\n");
+      manager->increaseStackSize(address);
+      // tODO: check if sucess
+      return true;
+    }
+    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
     return true;
   }
   else

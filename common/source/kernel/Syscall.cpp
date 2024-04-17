@@ -144,7 +144,7 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
 {
   debug(SBRK, "Syscall::brkMemory: brk called with address %p. Checking if addr is valid \n", (void*) new_brk_addr);
 
-  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->heap_manager_;
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
   size_t heap_start = heap_manager->heap_start_;
 
   if (new_brk_addr > MAX_HEAP_SIZE || new_brk_addr < heap_start)
@@ -172,7 +172,7 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
   assert(size_ptr != 0 && "Syscall::sbrkMemory: size_ptr is null\n");
   assert(return_ptr != 0 && "Syscall::sbrkMemory: return_ptr is null\n");
 
-  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->heap_manager_;
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
 
   debug(SBRK, "Syscall::sbrkMemory: get the size amount and check if its valid\n");
   ssize_t size = *(ssize_t*) size_ptr;

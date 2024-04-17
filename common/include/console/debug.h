@@ -57,7 +57,8 @@ const size_t PM                 = Ansi_Green| OUTPUT_ENABLED;
 const size_t PAGEFAULT          = Ansi_Green| OUTPUT_ENABLED;
 const size_t CPU_ERROR          = Ansi_Red | OUTPUT_ENABLED;
 const size_t KMM                = Ansi_Yellow;
-const size_t SBRK                = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t SBRK               = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t GROW_STACK         = Ansi_Green  | OUTPUT_ENABLED;
 
 //group driver
 const size_t DRIVER             = Ansi_Yellow;

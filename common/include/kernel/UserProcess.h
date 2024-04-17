@@ -55,7 +55,7 @@ class UserProcess
         ustl::string filename_;
         uint32 terminal_number_;
         Loader* loader_;
-        UserSpaceMemoryManager* heap_manager_;
+        UserSpaceMemoryManager* user_mem_manager_;
 
         //Threads
         static int64 tid_counter_;
