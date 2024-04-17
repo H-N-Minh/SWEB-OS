@@ -34,6 +34,12 @@ inline bool PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   {
     debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
   }
+  else if(user && !present && 
+          address > null_reference_check_border_ && address < USER_BREAK)
+  {
+    debug(MINH, "HEHE BOYYY address is %p \n", (void*)address);
+    return true;
+  }
   else
   {
     // everything seems to be okay

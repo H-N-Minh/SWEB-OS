@@ -4,7 +4,6 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
-                            "/usr/mallocTests.sweb",
 
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
                             // "/usr/pc4.sweb",
@@ -13,6 +12,9 @@ char const *user_progs[] = {
                             // "/usr/stateTypeTest.sweb",
                             // "/usr/spinTest.sweb",
                             // "/usr/pthreadCreate.sweb",
+// UserSpace Memory -------------------------------------------------
+                            // "/usr/mallocTests.sweb",
+                            "/usr/growingStackTests.sweb",
 
 // SEM & COND -------------------------------------------------
                             // "/usr/condTests.sweb",

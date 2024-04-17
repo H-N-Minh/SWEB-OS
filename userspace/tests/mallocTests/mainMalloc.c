@@ -7,7 +7,6 @@ extern int brk1();
 
 
 // set to 1 to test, 0 to skip
-// TODO: ask if we would get point for implementing brk if we already have sbrk
 #define SBRK1 1     // basic test for sbrk
 #define BRK1 1      // basic test for brk
 
