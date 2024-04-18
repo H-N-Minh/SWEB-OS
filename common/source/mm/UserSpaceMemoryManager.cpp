@@ -273,12 +273,12 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
 
   // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
-  ArchMemory arch_memory = ((UserThread*) currentThread)->process_->loader_->arch_memory_;
+  ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
   uint32 new_ppn = PageManager::instance()->allocPPN();
-  arch_memory.lock_.acquire();
-  bool page_mapped = arch_memory.mapPage(new_vpn, new_ppn, true);
-  arch_memory.lock_.release();
+  arch_memory->lock_.acquire();
+  bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true);
+  arch_memory->lock_.release();
   if (!page_mapped)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: could not map new page\n");
