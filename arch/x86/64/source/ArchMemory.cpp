@@ -108,13 +108,12 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   //memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
 
                   PARENT_pt[pti].writeable = 0; //read only
+                  //debug(FORK, "---------------PARENT_pt[pti].cow: %ld\n",PARENT_pt[pti].cow);
+                  PARENT_pt[pti].cow = 1; //read only
+                  //debug(FORK, "---------------PARENT_pt[pti].cow: %ld\n",PARENT_pt[pti].cow);
+
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
-
-                  //should it be call here?
-                  //add if condition for read only and referene count
-                  accessSharedMemoryPage(PARENT_pt[pti].page_ppn);//create private for parent
-                  accessSharedMemoryPage(CHILD_pt[pti].page_ppn);//create private for child
-
+                  debug(FORK, "-------------------Parent Page Address: %zx\n", PARENT_page);
 
                   //debug(FORK, "PARENT_pt[pti].present: %ld\n",PARENT_page);
                   debug(FORK, "CHILD_pt[pti].presentt: %ld\n",CHILD_page);
@@ -316,26 +315,6 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
   if (m.page_ppn == 0)
   {
-    debug(FORK, "getReferenceCount in mapPage  %d \n", PageManager::instance()->getReferenceCount(m.page_ppn));
-    //debug(FORK, "writable bit in mapPage  %d\n",  m.pt[m.pti].writeable);
-//    if (PageManager::instance()->getReferenceCount(physical_page) > 1 && !m.pt[m.pti].writeable)
-//    {
-//      //create a private copy of the page
-//      uint64 private_page = PageManager::instance()->allocPPN();
-
-//
-//
-//      pointer original_page = getIdentAddressOfPPN(m.page_ppn);
-//      pointer private_page = getIdentAddressOfPPN(private_page);
-//
-
-//      memcpy((void*)original_page, (void*)private_page, PAGE_SIZE);
-//
-//      physical_page = private_page;
-//      //After created a rivate copy of the page unmap -> call unmapPgae?
-//      //which also will decrement the reference count
-//    }
-
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     return true;
   }

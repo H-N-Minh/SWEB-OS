@@ -61,7 +61,20 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   if (checkPageFaultIsValid(address, user, present, switch_to_us))
   {
-    currentThread->loader_->loadPage(address);
+    debug(PAGEFAULT_TEST, "---------------Page Fault Address: %zx\n", address);
+    if(writing)
+    {
+      if (currentThread->loader_->isCOW(address))
+      {
+        currentThread->loader_->copyPage(address);
+      }
+      else
+      {
+        currentThread->loader_->loadPage(address);
+      }
+    }
+    else
+      currentThread->loader_->loadPage(address);
   }
   else
   {
