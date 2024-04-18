@@ -11,6 +11,7 @@
 #include "VfsSyscall.h"
 #include "Syscall.h"
 #include "ArchMemory.h"
+#include "UserSpaceMemoryManager.h"
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
                        Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
@@ -33,15 +34,15 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     }
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
-    vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ - 1;
+    vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
     loader_->arch_memory_.lock_.acquire();
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 7 * sizeof(pointer));
+    size_t user_stack_ptr = (size_t) (USER_BREAK - MAX_STACK_AMOUNT * PAGE_SIZE * tid_ - 7 * sizeof(pointer));
     debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
-    top_stack_ = user_stack_ptr + 6 * sizeof(pointer); // 1. Guard
+    top_stack_ = user_stack_ptr + 6 * sizeof(pointer);       // 1. Guard
     mutex_flag_ = user_stack_ptr + 5 * sizeof(pointer);      // 2. Mutex flag
     //                                                          3. Mutex waiter list 
     cond_flag_ = user_stack_ptr + 3 * sizeof(pointer);       // 4. Cond flag

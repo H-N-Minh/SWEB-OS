@@ -10,6 +10,7 @@
 
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
+#define MAX_STACK_AMOUNT 4
 
 
 class UserSpaceMemoryManager
@@ -48,7 +49,7 @@ class UserSpaceMemoryManager
 
 
     /**
-     * increase the stack size by one page
+     * allocate a new page and map to the page with the given address
      * @param address the address to increase the stack size at
      * @return 0 on success, else return -1
     */

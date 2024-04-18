@@ -7,7 +7,6 @@
 #include "ArchMemory.h"
 
 #define GUARD_MARKER 0xbadcafe00000ULL  
-#define MAX_STACK_AMOUNT 4
 
 size_t UserSpaceMemoryManager::totalUsedHeap()
 {
@@ -233,6 +232,7 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
   assert(top_current_page && "top_current_page pointer of the current stack is NULL");
 
   // make sure guard is set up
+  debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: passed sanity check, guards are setted\n");
   initGuard(current_thread, top_current_page);
 
   // get to top of stack where the meta data is stored
@@ -260,36 +260,33 @@ void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current
   assert(address > top_current_stack - PAGE_SIZE*MAX_STACK_AMOUNT && "address is not within range of growing stack");
 }
 
+
 int UserSpaceMemoryManager::increaseStackSize(size_t address)
 {
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize called with address (%zx)\n", address);
-  /*
-  if(address < current_break_)
+  
+  // Quick check to see if the address is (somewhat) valid
+  size_t top_this_page = getTopOfThisPage(address);
+  size_t top_this_stack = checkGuardValid(top_this_page);
+  assert(top_this_stack != 11 && "UserSpaceMemoryManager::increaseStackSize: guards are corrupted. Segfault!!");
+  finalSanityCheck(address, top_this_stack);
+
+  // Set up new page
+  debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
+  ArchMemory arch_memory = ((UserThread*) currentThread)->process_->loader_->arch_memory_;
+  uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
+  uint32 new_ppn = PageManager::instance()->allocPPN();
+  arch_memory.lock_.acquire();
+  bool page_mapped = arch_memory.mapPage(new_vpn, new_ppn, true);
+  arch_memory.lock_.release();
+  if (!page_mapped)
   {
-    debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: address is below current break\n");
+    debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: could not map new page\n");
+    PageManager::instance()->freePPN(new_ppn);
     return -1;
   }
-  lock_.acquire();
-  loader_->arch_memory_.lock_.acquire();
-  size_t old_break = current_break_;
-  size_t new_break = current_break_ + PAGE_SIZE;
-  ssize_t size = new_break - current_break_;
-  pointer resevered_space = sbrk(size, 1);
-  if (resevered_space == 0)
-  {
-    debug(SBRK, "UserSpaceMemoryManager::increaseStackSize: FATAL ERROR, could not increase stack size at address (%zx)\n", address);
-    loader_->arch_memory_.lock_.release();
-    lock_.release();
-    return -1;
-  } 
-  else
-  {
-    debug(SBRK, "UserSpaceMemoryManager::increaseStackSize: stack size is increased successful at address (%zx)\n", current_break_);
-    loader_->arch_memory_.lock_.release();
-    lock_.release();
-  }
-  */
-    return 0;
+
+  return 0;
 }
 
 size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address) 
