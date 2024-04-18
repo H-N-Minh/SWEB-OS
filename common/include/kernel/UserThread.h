@@ -3,7 +3,6 @@
 #include "Thread.h"
 #include "Mutex.h"
 #include "Condition.h"
-#include "UserProcess.h"
 
 class UserProcess;
 
@@ -67,6 +66,8 @@ class UserThread : public Thread
         
         // boolean to indicate if the metadata is set up. If not, its garantiued that thread never had growing stack before
         size_t guarded_;
+        // pointer of the top of 1st page of the stack
+        size_t top_stack_;
         
 
 };

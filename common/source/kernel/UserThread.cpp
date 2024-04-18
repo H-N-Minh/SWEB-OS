@@ -41,7 +41,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
     size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 7 * sizeof(pointer));
     debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
-    size_t top_stack = user_stack_ptr + 6 * sizeof(pointer); // 1. Guard
+    top_stack_ = user_stack_ptr + 6 * sizeof(pointer); // 1. Guard
     mutex_flag_ = user_stack_ptr + 5 * sizeof(pointer);      // 2. Mutex flag
     //                                                          3. Mutex waiter list 
     cond_flag_ = user_stack_ptr + 3 * sizeof(pointer);       // 4. Cond flag
@@ -71,7 +71,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
         user_registers_->rdi = (size_t)func;
         user_registers_->rsi = (size_t)arg;
-        user_registers_->rdx = top_stack; // address of the top of stack, relevant for userspace locks
+        user_registers_->rdx = top_stack_; // address of the top of stack, relevant for userspace locks
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
 
@@ -96,7 +96,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process)
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
             join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"), 
             cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_), 
-            cond_flag_(other.cond_flag_), mutex_flag_(other.mutex_flag_), guarded_(other.guarded_)
+            cond_flag_(other.cond_flag_), mutex_flag_(other.mutex_flag_), guarded_(other.guarded_), top_stack_(other.top_stack_)
 {
     debug(FORK, "UserThread COPY-Constructor: start copying from thread (TID:%zu) \n", other.getTID());
     tid_ =  ArchThreads::atomic_add(UserProcess::tid_counter_, 1);

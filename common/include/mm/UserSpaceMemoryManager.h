@@ -6,6 +6,7 @@
 #include "types.h"
 #include "Loader.h"
 #include "SpinLock.h"
+#include "UserThread.h"
 
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
@@ -54,8 +55,28 @@ class UserSpaceMemoryManager
     int increaseStackSize(size_t address);
 
     /**
-     * @return the top of the current page. It cant be 0
+     * @return the top of the page of the given address. 0 is never returned
     */
-    size_t getTopOfThisPage();
+    size_t getTopOfThisPage(size_t address) ;
 
-}
+    /** find the top of stack and then check if guards are valid
+     * @return ptr to top of stack if valid, 11 if guard is corrupted
+    */
+    size_t checkGuardValid(size_t top_current_page);
+
+    /**
+     * Final check to make sure growing stack is valid
+    */
+    void finalSanityCheck(size_t address, size_t top_current_stack);
+
+    /**
+     * first check to quickly see if the address is somewhat valid
+     * @return 1 if the address seems valid, 0 if address seems not related to growing stack
+    */
+    int sanityCheck(size_t address);
+
+    /**
+     * @brief if the guard_ flag is not set, then set up the guard for current thread
+    */
+    void initGuard(UserThread* current_thread, size_t top_current_page);
+};
