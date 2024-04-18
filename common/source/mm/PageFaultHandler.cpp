@@ -57,9 +57,9 @@ inline bool PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
     else if(retval == 1)
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
+      return true;
       manager->increaseStackSize(address);
       // tODO: check if sucess
-      return true;
     }
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
     return true;

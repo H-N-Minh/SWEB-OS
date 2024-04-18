@@ -197,21 +197,22 @@ int UserSpaceMemoryManager::sanityCheck(size_t address)
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is out of range\n");
     return 0;
   }
+  UserThread* current_thread = (UserThread*) currentThread;
+  if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE))
+  {
+    debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is not in range of growing stack\n");
+    return 0;
+  }
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
   if (arch_memory->checkAddressValid(address))
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is already mapped\n");
     return 0;
   }
-  if (!arch_memory->checkAddressValid(address - PAGE_SIZE))
+  size_t valid_address = address + PAGE_SIZE;   // address of the last page of stack should be valid
+  if (!arch_memory->checkAddressValid(valid_address))
   {
-    debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is not related to growing stack\n");
-    return 0;
-  }
-  UserThread* current_thread = (UserThread*) currentThread;
-  if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE))
-  {
-    debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is not in range of growing stack\n");
+    debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: last page is not mapped -> not related to growing stack\n");
     return 0;
   }
   
@@ -255,8 +256,8 @@ void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current
   assert(top_current_stack && "top_current_stack pointer of the current stack is NULL");
   assert(top_current_stack == ((UserThread*) currentThread)->top_stack_ && "this is not our stack");
 
-  assert(address > top_current_stack && "address is not within range of growing stack");
-  assert(address <= top_current_stack - PAGE_SIZE*MAX_STACK_AMOUNT && "address is not within range of growing stack");
+  assert(address < top_current_stack && "address is not within range of growing stack");
+  assert(address > top_current_stack - PAGE_SIZE*MAX_STACK_AMOUNT && "address is not within range of growing stack");
 }
 
 int UserSpaceMemoryManager::increaseStackSize(size_t address)
