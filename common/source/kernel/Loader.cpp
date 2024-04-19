@@ -336,12 +336,12 @@ PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
 //  debug(PAGEFAULT_TEST, "Indices: Pml4i: %lx pml3i: %lx pml2i: %lx pml1i: %lx offset: %lx\n", pml4i, pml3i, pml2i, pml1i, offset);
 
   VPN vpn {.packed = virtual_addr};
-  debug(PAGEFAULT_TEST, "Indices: Pml4i: %lx pml3i: %lx pml2i: %lx pml1i: %lx offset: %lx\n", vpn.pml4i, vpn.pml3i, vpn.pml2i, vpn.pml1i, vpn.offset);
+  //debug(PAGEFAULT_TEST, "Indices: Pml4i: %lx pml3i: %lx pml2i: %lx pml1i: %lx offset: %lx\n", vpn.pml4i, vpn.pml3i, vpn.pml2i, vpn.pml1i, vpn.offset);
 
   //GET PPN FROM Archmemory
 
   size_t pml4_ppn = currentThread->loader_->arch_memory_.page_map_level_4_;
-  debug(PAGEFAULT_TEST, "pml4_ppn %lx\n", pml4_ppn);
+  //debug(PAGEFAULT_TEST, "pml4_ppn %lx\n", pml4_ppn);
 
   //get the physical address of the PML4 table
   PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) ArchMemory::getIdentAddressOfPPN(pml4_ppn);
@@ -375,7 +375,7 @@ PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
     return nullptr;
   }
 
-  debug(PAGEFAULT_TEST, "page table entry found at address: %p\n", &pml1[vpn.pml1i]);
+  //debug(PAGEFAULT_TEST, "page table entry found at address: %p\n", &pml1[vpn.pml1i]);
 
   return &pml1[vpn.pml1i];
 }
@@ -387,9 +387,12 @@ void Loader::copyPage(size_t virtual_addr)
   {
     size_t new_page_ppn = PageManager::instance()->allocPPN();
 
+    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+
+    PageManager::instance()->getReferenceCount(entry->page_ppn);
+
     pointer original_page = ArchMemory::getIdentAddressOfPPN(entry->page_ppn);
     pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
-
     memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
     //update the page table entry to point to the new physical page

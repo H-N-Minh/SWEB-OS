@@ -9,6 +9,7 @@
 #include "KernelMemoryManager.h"
 #include "assert.h"
 #include "Bitmap.h"
+#include "ArchThreads.h"
 
 PageManager pm;
 
@@ -325,12 +326,12 @@ void PageManager::incrementReferenceCount(uint64 page_number)
   if (it != page_reference_counts_.end())
   {
     //page number found, increment
-    it->second.reference_count++;
+    ArchThreads::atomic_add(reinterpret_cast<int64 &>(it->second.reference_count), 1);
   }
   else
   {
     //page number not found, initialize reference count to 1
-    page_reference_counts_[page_number] = {2};
+    ArchThreads::atomic_set(reinterpret_cast<int32 &>(page_reference_counts_[page_number]), 2);
   }
 }
 
@@ -341,7 +342,8 @@ void PageManager::decrementReferenceCount(uint64 page_number)
   if (it != page_reference_counts_.end())
   {
     //decrement the reference count
-    it->second.reference_count--;
+    ArchThreads::atomic_sub(reinterpret_cast<int64 &>(it->second.reference_count), 1);
+    ArchThreads::atomic_set(reinterpret_cast<int32 &>(page_reference_counts_[page_number]), it->second.reference_count);
 
     //if reference count reaches zero, erase the entry from the map
     if (it->second.reference_count == 0)

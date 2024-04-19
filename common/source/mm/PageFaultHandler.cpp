@@ -32,7 +32,15 @@ inline bool PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   }
   else if(present)
   {
-    debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+    if (currentThread->loader_->isCOW(address))
+    {
+      debug(PAGEFAULT_TEST, "pagefault even though the address is mapped BUT ITS COW.\n");
+      return true;
+    }
+    else
+    {
+      debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+    }
   }
   else
   {
@@ -61,11 +69,11 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   if (checkPageFaultIsValid(address, user, present, switch_to_us))
   {
-    debug(PAGEFAULT_TEST, "---------------Page Fault Address: %zx\n", address);
     if(writing)
     {
       if (currentThread->loader_->isCOW(address))
       {
+        debug(PAGEFAULT_TEST, "is COW, copying Page\n");
         currentThread->loader_->copyPage(address);
       }
       else

@@ -137,6 +137,8 @@ public:
   static uint64 atomic_add(uint64 &value, int64 increment);
   static int64 atomic_add(int64 &value, int64 increment);
 
+  static int64 atomic_sub(int64 &value, int64 decrement);
+
   /**
    * Atomically set a target to another value.
    *
@@ -147,6 +149,7 @@ public:
   static void atomic_set(int32 &target, int32 value);
   static void atomic_set(uint64 &target, uint64 value);
   static void atomic_set(int64 &target, int64 value);
+
 
 /**
  *

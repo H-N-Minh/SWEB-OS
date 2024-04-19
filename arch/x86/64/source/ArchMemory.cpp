@@ -96,27 +96,17 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
               {
                 if (PARENT_pt[pti].present)
                 {
-                  // setup new page and copy from parent
-
                   //CHILD_pt[pti].page_ppn = PageManager::instance()->allocPPN();
-                  CHILD_pt[pti].page_ppn = PARENT_pt[pti].page_ppn;
-
-                  pointer PARENT_page = getIdentAddressOfPPN(PARENT_pt[pti].page_ppn);
-                  //pointer CHILD_page = getIdentAddressOfPPN(CHILD_pt[pti].page_ppn);
-
-                  pointer CHILD_page = PARENT_page;
-                  //memcpy((void*) CHILD_page, (void*) PARENT_page, PAGE_SIZE);
+                  //CHILD_pt[pti].page_ppn = PARENT_pt[pti].page_ppn;
 
                   PARENT_pt[pti].writeable = 0; //read only
-                  //debug(FORK, "---------------PARENT_pt[pti].cow: %ld\n",PARENT_pt[pti].cow);
-                  PARENT_pt[pti].cow = 1; //read only
-                  //debug(FORK, "---------------PARENT_pt[pti].cow: %ld\n",PARENT_pt[pti].cow);
+                  PARENT_pt[pti].cow = 1;
+
+                  CHILD_pt[pti].writeable = 0; //read only
+                  CHILD_pt[pti].cow = 1;
 
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
-                  debug(FORK, "-------------------Parent Page Address: %zx\n", PARENT_page);
 
-                  //debug(FORK, "PARENT_pt[pti].present: %ld\n",PARENT_page);
-                  debug(FORK, "CHILD_pt[pti].presentt: %ld\n",CHILD_page);
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
               }
@@ -169,10 +159,10 @@ ArchMemory::~ArchMemory()
               {
                 if (pt[pti].present)
                 {
+                  debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
                   {
                     debug(FORK, "free page and set present in destructor  \n");
-                    debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                     pt[pti].present = 0;
                     PageManager::instance()->freePPN(pt[pti].page_ppn);
                   }
@@ -238,13 +228,7 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(m.page_ppn != 0 && m.page_size == PAGE_SIZE && m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
 
-  debug(FORK, "getReferenceCount in unmapPage  %d \n", PageManager::instance()->getReferenceCount(m.page_ppn));
-
-  if (PageManager::instance()->getReferenceCount(m.page_ppn) > 1)
-  {
-    PageManager::instance()->freePPN(m.page_ppn);
-    PageManager::instance()->decrementReferenceCount(m.page_ppn);
-  }
+  PageManager::instance()->freePPN(m.page_ppn);
 
   ((uint64*)m.pt)[m.pti] = 0; // for easier debugging
   bool empty = checkAndRemove<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti);
@@ -292,7 +276,7 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
   assert(lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
-  debug(FORK, "getReferenceCount in mapPage  %d \n", PageManager::instance()->getReferenceCount(m.page_ppn));
+
   assert((m.page_size == 0) || (m.page_size == PAGE_SIZE));
 
   if (m.pdpt_ppn == 0)
