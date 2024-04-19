@@ -21,6 +21,9 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
   loader_ = loader;
 }
 
+
+// minhsbrk3
+/*
 pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
 {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd)\n", size);
@@ -153,7 +156,7 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
     return 0;
   }
 }
-
+*/
 
 void UserSpaceMemoryManager::initGuard(UserThread* current_thread, size_t top_current_page)
 {
