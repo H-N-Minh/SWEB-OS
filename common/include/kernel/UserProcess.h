@@ -46,6 +46,11 @@ class UserProcess
         void exitProcess(size_t exit_code);
         void cancelAllOtherThreads();
 
+
+        bool check_parameters_for_exec(char *const argv[], int& argc, int& array_offset);
+        void waitForThreadsToDie();
+
+
         static int64 pid_counter_;
         int32 pid_;
 
@@ -62,14 +67,6 @@ class UserProcess
 
         //Return value map (locked by threads lock)
         ustl::map<size_t, void*> thread_retval_map_;
-
-        //Exec
-        Mutex execv_lock_;                              //Locking order: x
-        Loader* execv_loader_{NULL};
-        int32 execv_fd_{NULL};  
-        size_t execv_ppn_args_{NULL};                   
-        size_t exec_argc_{0};    
-        size_t exec_array_offset_{0};
 
         
         bool one_thread_left_{false};

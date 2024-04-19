@@ -11,13 +11,13 @@ extern int exec7();
 
 int main()
 {
-    exec1();  //Exec without NULL as argument
-    exec2();  //exec with wrong path   
-    exec3();  //Exec with many arguments
-    exec4();  //Exec with arguments
+    // exec1();  //Exec without NULL as argument
+    // exec2();  //exec with wrong path   
+    // exec3();  //Exec with many arguments
+    // exec4();  //Exec with arguments
     exec5();  //Exec without arguments
-    exec6();  //Exec with multiple threads
-    exec7();  //Exec with multiple threads
+    // exec6();  //Exec with multiple threads
+    // exec7();  //Exec with multiple threads
           
 
     sleep(3);

@@ -13,64 +13,46 @@
 #include "ArchMemory.h"
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                       Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
+                       Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper)
             : Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
               thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), join_state_lock_("join_state_lock_"),
               cancel_state_type_lock_("cancel_state_type_lock_")
 {
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
  
-    if(execv)
-    {
-        size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(process_->execv_ppn_args_);
-        debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
-        
-        size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
-        loader_->arch_memory_.lock_.acquire();
-        bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , process_->execv_ppn_args_, 1);
-        loader_->arch_memory_.lock_.release();
-        assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
-    }
-
-    size_t page_for_stack = PageManager::instance()->allocPPN();
+    page_for_stack_ = PageManager::instance()->allocPPN();
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ - 1;
     loader_->arch_memory_.lock_.acquire();
-    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
+    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack_, 1);
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
     // 5 * sizeof(pointer) because 1 is default and 4 is reserved for userspace locking
-    size_t user_stack_ptr = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 5 * sizeof(pointer));
-    currently_waiting_ptr_ = user_stack_ptr + 4 * sizeof(pointer);
-    waiting_list_ptr_ = user_stack_ptr + 3 * sizeof(pointer);
-    request_to_sleep_ = user_stack_ptr + 2 * sizeof(pointer);
-    //sleep_waiting_list = user_stack_ptr + sizeof(pointer);
+    user_stack_ptr_ = (size_t) (USER_BREAK - PAGE_SIZE * tid_ - 5 * sizeof(pointer));
+    currently_waiting_ptr_ = user_stack_ptr_ + 4 * sizeof(pointer);
+    waiting_list_ptr_ = user_stack_ptr_ + 3 * sizeof(pointer);
+    request_to_sleep_ = user_stack_ptr_ + 2 * sizeof(pointer);
+    //sleep_waiting_list = user_stack_ptr_ + sizeof(pointer);
     debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for Waiting list %zd(=%zx) and waiting flag  %zd(=%zx).\n", 
-          user_stack_ptr, user_stack_ptr, waiting_list_ptr_, waiting_list_ptr_, currently_waiting_ptr_, currently_waiting_ptr_);
+          user_stack_ptr_, user_stack_ptr_, waiting_list_ptr_, waiting_list_ptr_, currently_waiting_ptr_, currently_waiting_ptr_);
     if (!func) //for the first thread when we create a process
     {
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
-                                         (void*) user_stack_ptr, getKernelStackStartPointer());
-
-        if(execv)
-        {
-        user_registers_->rdi = process_->exec_argc_;
-        user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
-        }
+                                         (void*) user_stack_ptr_, getKernelStackStartPointer());
 
         debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
-               user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
+               user_stack_ptr_, user_stack_ptr_, vpn_stack_, vpn_stack_);
     }
     else // create the thread for every pthread create
     {
-        ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper, (void*) user_stack_ptr,
+        ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper, (void*) user_stack_ptr_,
                                          getKernelStackStartPointer());
 
         user_registers_->rdi = (size_t)func;
         user_registers_->rsi = (size_t)arg;
-        //user_registers_->rdx = (size_t) user_stack_ptr + sizeof(pointer)*3; // address of the top of stack, relevant for userspace locks
+        //user_registers_->rdx = (size_t) user_stack_ptr_ + sizeof(pointer)*3; // address of the top of stack, relevant for userspace locks
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
-                user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
+                user_stack_ptr_, user_stack_ptr_, vpn_stack_, vpn_stack_);
     }
 
 
@@ -86,8 +68,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
-            : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_),
-            thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
+            : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_), user_stack_ptr_(other.user_stack_ptr_),
+            page_for_stack_(other.page_for_stack_), thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
             join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"), 
             cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_), 
             request_to_sleep_(other.request_to_sleep_), waiting_list_ptr_(other.waiting_list_ptr_), currently_waiting_ptr_(other.currently_waiting_ptr_)
@@ -123,26 +105,6 @@ UserThread::~UserThread()
         debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
         delete process_;
         process_ = 0;
-    }
-
-    if(unlikely(last_thread_before_exec_))
-    {
-        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
-        assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
-
-        debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
-        assert(Scheduler::instance()->isCurrentlyCleaningUp());
-        delete loader_;
-        process_->loader_ = process_->execv_loader_;
-        process_->execv_loader_ = 0;
-
-        VfsSyscall::close(process_->fd_);
-
-        process_->fd_ = process_->execv_fd_;
-
-        UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_,0, 0, 0, true);
-        process_->threads_.push_back(new_thread);
-        Scheduler::instance()->addNewThread(new_thread);
     }
 }
 
@@ -357,7 +319,7 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
 
   process_->threads_lock_.acquire();  
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
-                                          process_->loader_, process_, start_routine, arg, wrapper, false);
+                                          process_->loader_, process_, start_routine, arg, wrapper);
   if(new_thread)
   {
     debug(USERPROCESS, "UserThread::createThread: Adding new thread to scheduler\n");

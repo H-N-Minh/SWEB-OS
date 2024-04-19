@@ -20,7 +20,7 @@ int64 UserProcess::pid_counter_ = 1;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
-    threads_lock_("thread_lock_"),  execv_lock_(" execv_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
+    threads_lock_("thread_lock_"),  one_thread_left_lock_("one_thread_left_lock_"),
     one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_")
 {
   ProcessRegistry::instance()->processStart();
@@ -41,7 +41,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
 
-  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, false));
+  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
 }
 
@@ -49,7 +49,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 // COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
-    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"), execv_lock_(" execv_lock_"),
+    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"), 
     one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_")
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
@@ -141,25 +141,115 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+
   if(!Syscall::check_parameter((size_t)path, false) || !Syscall::check_parameter((size_t)argv, false))
   {
     return -1;
   }
-  UserThread& currentUserThread = *((UserThread*)currentThread);
   
-  int space_left = 4000;   //page size (more or less)
-  size_t array_offset = 0;
+  int argc = 0;
+  // int array_offset = 0;
+  // if(!check_parameters_for_exec(argv, argc, array_offset))
+  // {
+  //   return -1;
+  // }
 
+  int32 execv_fd = VfsSyscall::open(path, O_RDONLY);
+  if(execv_fd < 0)
+  {
+    VfsSyscall::close(execv_fd);
+    return -1;
+  }
+  VfsSyscall::close(execv_fd);
+
+  // threads_lock_.acquire();
+  // currentUserThread.cancel_state_type_lock_.acquire();
+  // if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
+  // {
+  //   VfsSyscall::close(execv_fd);
+  //   threads_lock_.release();
+  //   currentUserThread.cancel_state_type_lock_.release();
+  //   return -1;
+  // }
+  // currentUserThread.cancel_state_type_lock_.release();
+
+  // //cancel all other threads
+  // cancelAllOtherThreads();
+  // currentUserThread.send_kill_notification();
+  // one_thread_left_ = (threads_.size() > 1) ? false : true;
+  // threads_lock_.release();
+
+  // waitForThreadsToDie();
+
+
+  // //allocate a free physical page and get the virtual address of the identity mapping
+  // size_t page_for_args = PageManager::instance()->allocPPN();
+  // size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
+
+  // int exec_array_offset_ = array_offset;
+  // size_t offset = 0;
+  // size_t offset1 = USER_BREAK - PAGE_SIZE;
+  
+  // for(int i = 0; i < argc; i++)
+  // {
+  //   //write the arguments one by one to the new phsical page via identity mapping
+  //   memcpy((char*)virtual_address + offset, argv[i], strlen(argv[i])+1);
+
+  //   //store the offset of each argument in the page, at the end of all arguments
+  //   memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset1, POINTER_SIZE);
+  //   offset += strlen(argv[i]) + 1;
+  //   offset1 += strlen(argv[i]) + 1;
+  // }
+  // if(argc > 0)
+  // {
+  //   //storing the pointer to the virtual address of the single elements in the array
+  //   memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
+  // }
+  
+
+
+
+  // virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);             //todos__ not sure if i have to do it again
+  // debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
+        
+  // size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
+  // loader_->arch_memory_.lock_.acquire();
+  // bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
+  // loader_->arch_memory_.lock_.release();
+  // assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
+
+  //locking?? TODO
+
+  loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.page_for_stack_);  //cancel
+  memset((void*) ArchMemory::getIdentAddressOfPPN(currentUserThread.page_for_stack_), 0, PAGE_SIZE);
+  fd_ = VfsSyscall::open(path, O_RDONLY);
+
+  loader_->replaceLoader(fd_);
+  ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
+
+  
+  currentThread->user_registers_->rdi = argc;
+  //currentThread->user_registers_->rsi = USER_BREAK - PAGE_SIZE + exec_array_offset_;
+
+  // assert(0);
+
+  return 0;
+}
+
+
+bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& array_offset)
+{
+  int space_left = 4000;   //page size (more or less)
   bool finished = false;
 
   //go through all arguments, check if the are valid and if there is enough space
-  int argc = 0;
   while(!finished)
   {
     if(!Syscall::check_parameter((size_t)argv[argc], true))
     { 
       debug(USERPROCESS, "Execv: parameters not in userspace\n");
-      return -1;
+      return false;
     }
 
     if(argv[argc] == NULL)
@@ -176,63 +266,14 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     if(space_left < 0)
     {
       debug(USERPROCESS, "Execv: no space left\n");
-      return -1;
+      return false;
     } 
   }
+  return true;
+}
 
-
-  //open the filedescriptor of the new program
-  execv_lock_.acquire();
-  //
-  currentUserThread.cancel_state_type_lock_.acquire();
-  if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
-  {
-    currentUserThread.cancel_state_type_lock_.release();
-    execv_lock_.release();
-    return -1;
-  }
-  currentUserThread.cancel_state_type_lock_.release();
-
-
-  execv_fd_ = VfsSyscall::open(path, O_RDONLY);
-  if(execv_fd_ < 0)
-  {
-    execv_lock_.release();
-    return -1;
-  }
-
-  //create loader for the new binary                                 
-  execv_loader_ = new Loader(execv_fd_);
-  if (!execv_loader_ || !execv_loader_->loadExecutableAndInitProcess())
-  {
-    debug(USERPROCESS, "Error: loading %s failed!\n", path);
-    delete execv_loader_;
-    execv_loader_ = 0;
-    VfsSyscall::close(execv_fd_);
-    execv_lock_.release();
-    return -1;
-  }
-
-  //cancel all other threads
-  threads_lock_.acquire();
-  cancelAllOtherThreads();
-  currentUserThread.send_kill_notification(); //todos: in case a thread wants to join me but what happens if later still wants to join
-  execv_lock_.release();
-  
-
-  
-
-
-  
-  if(threads_.size() > 1)
-  {
-    one_thread_left_ = false;
-  }
-  else
-  {
-    one_thread_left_ = true;
-  }
-  threads_lock_.release();
+void UserProcess::waitForThreadsToDie()
+{
   //wait for the other threads to die
   one_thread_left_lock_.acquire();
   while(!one_thread_left_)
@@ -243,46 +284,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   thread_retval_map_.clear();
 
-
-  
-
-
-  //allocate a free physical page and get the virtual address of the identity mapping
-  execv_ppn_args_ = PageManager::instance()->allocPPN();
-  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(execv_ppn_args_);
-
-  exec_array_offset_ = array_offset;
-  size_t offset = 0;
-  size_t offset1 = USER_BREAK - PAGE_SIZE;
-  
-  for(int i = 0; i < argc; i++)
-  {
-    //write the arguments one by one to the new phsical page via identity mapping
-    memcpy((char*)virtual_address + offset, argv[i], strlen(argv[i])+1);
-
-    //store the offset of each argument in the page, at the end of all arguments
-    memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset1, POINTER_SIZE);
-    offset += strlen(argv[i]) + 1;
-    offset1 += strlen(argv[i]) + 1;
-  }
-  if(argc > 0)
-  {
-    //storing the pointer to the virtual address of the single elements in the array
-    memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
-  }
-  
-  exec_argc_ = argc;
-
-
-
-  //execv_lock_.release();
-  ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);
-  threads_.erase(exiting_thread);
-  ((UserThread*)currentThread)->last_thread_before_exec_ = true;
-  ((UserThread*)currentThread)->kill();
-
-  
-  assert(0 && "Sucessful exec should not return");
+  assert(threads_.size() == 1 && "Not all threads removed from threads_");
+  assert(thread_retval_map_.size() == 0 && "There are still values in retval map");
 
 }
 

@@ -190,7 +190,9 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
 
-  assert(m.page_ppn != 0 && m.page_size == PAGE_SIZE && m.pt[m.pti].present);
+  assert(m.page_ppn != 0);
+  assert(m.page_size == PAGE_SIZE);
+  assert(m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
   PageManager::instance()->freePPN(m.page_ppn);
   ((uint64*)m.pt)[m.pti] = 0; // for easier debugging
@@ -396,3 +398,90 @@ PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()
 {
   return kernel_page_map_level_4;
 }
+
+
+void ArchMemory::deleteEverythingExecpt(size_t dont_free_this_ppn)
+{
+  lock_.acquire();
+
+  PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
+  for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // free only lower half
+  {
+    bool ptpd_empty = false;
+    if (pml4[pml4i].present)
+    {
+      uint32 pdpt_ppn = pml4[pml4i].page_ppn;
+      PageDirPointerTableEntry* pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(pdpt_ppn);
+      for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
+      {
+        bool pd_empty = false;
+        if (pdpt[pdpti].pd.present)
+        {
+          uint32 pd_ppn = pdpt[pdpti].pd.page_ppn;
+          PageDirEntry* pd = (PageDirEntry*) getIdentAddressOfPPN(pd_ppn);
+          for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
+          {
+            bool pt_empty = false;
+            if (pd[pdi].pt.present)
+            {
+              uint32 pt_ppn = pd[pdi].pt.page_ppn;
+              PageTableEntry* pt = (PageTableEntry*) getIdentAddressOfPPN(pt_ppn);
+              for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+              {
+                uint32 page_ppn = pt[pti].page_ppn;
+                if (pt[pti].present && page_ppn != dont_free_this_ppn)
+                {
+                  // debug(USERPROCESS, "ppn %x, dont_free %lx \n", page_ppn, dont_free_this_ppn);
+                  if(page_ppn != dont_free_this_ppn)
+                  {
+                    pt[pti].present = 0;
+                    debug(USERPROCESS, "1:free page ppn %x - pt %x - pd %x - pdpt %x\n", page_ppn, pt_ppn, pd_ppn, pdpt_ppn);
+                    PageManager::instance()->freePPN(page_ppn);
+                    ((uint64*)pt)[pti] = 0; // for easier debugging
+                    pt_empty = checkAndRemove<PageTableEntry>(getIdentAddressOfPPN(pt_ppn), pti);
+                    if (pt_empty)
+                    {
+                      break;
+                    }
+                  }
+                }
+              }
+              if(pt_empty)
+              {
+                pd_empty = checkAndRemove<PageDirPageTableEntry>(getIdentAddressOfPPN(pd_ppn), pdi);
+                debug(USERPROCESS, "2:free pt ppn %x - pd %x - pdpt %x\n", pt_ppn, pd_ppn, pdpt_ppn);
+                ((uint64*)pd)[pdi] = 0; // for easier debugging
+                PageManager::instance()->freePPN(pt_ppn);
+                if(pd_empty)
+                {
+                  break;
+                }
+              }
+            }
+          }
+          if(pd_empty)
+          {
+            ptpd_empty = checkAndRemove<PageDirPointerTablePageDirEntry>(getIdentAddressOfPPN(pdpt_ppn), pdpti);
+            debug(USERPROCESS, "3:free pd ppn %x - pdpt %x\n", pd_ppn, pdpt_ppn);
+            ((uint64*)pdpt)[pdpti] = 0; // for easier debugging
+            PageManager::instance()->freePPN(pd_ppn);  
+            if (ptpd_empty)
+            {
+              break;
+            }
+          }
+        } 
+      }
+      if(ptpd_empty)
+      {
+        checkAndRemove<PageMapLevel4Entry>(getIdentAddressOfPPN(page_map_level_4_), pml4i);
+        debug(USERPROCESS, "4:free pdpt ppn %x\n", pdpt_ppn);
+        ((uint64*)pml4)[pml4i] = 0; // for easier debugging
+        PageManager::instance()->freePPN(pdpt_ppn);
+      }
+
+    }
+  }
+  lock_.release();
+}
+

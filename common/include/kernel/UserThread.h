@@ -18,7 +18,7 @@ class UserThread : public Thread
 {
     public:
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                    Loader* loader, UserProcess* process, void* func, void* para, void* pcreate_helper, bool execv = false);
+                    Loader* loader, UserProcess* process, void* func, void* para, void* pcreate_helper);
 
         UserThread(UserThread& other, UserProcess* process); // COPY CONSTRUCTOR
 
@@ -38,6 +38,8 @@ class UserThread : public Thread
         
         UserProcess* process_;
         size_t vpn_stack_;
+        size_t user_stack_ptr_;            //Todos: copy in fork
+        size_t page_for_stack_;
 
         //exit
         bool last_thread_alive_{false};

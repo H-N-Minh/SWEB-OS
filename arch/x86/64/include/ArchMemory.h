@@ -103,6 +103,8 @@ class ArchMemory
     ArchMemory(ArchMemory const &src);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
+    void deleteEverythingExecpt(size_t dont_free_this_ppn);
+
   private:
     /**
      * Adds a PML4Entry, PDPTEntry, PDEntry or PTEntry to the given PML4, PDPT, PD or PT respectively.
