@@ -70,8 +70,8 @@ int main()
     if (FORK6)
     {
         retval = fork6();
-        if (retval == PARENT_SUCCESS)         { printf("fork6 successful!\n"); } 
-        else if (retval == CHILD_SUCCESS)     { return 0; }                      
+        if (retval == PARENT_SUCCESS)         { printf("fork6 successful!\n"); }
+        else if (retval == CHILD_SUCCESS)     { return 0; }
         else                                  { printf("fork6 failed!\n"); return -1;}
     }
 

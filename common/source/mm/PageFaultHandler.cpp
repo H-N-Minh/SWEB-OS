@@ -36,7 +36,15 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   }
   else if(present)
   {
-    debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+    if (currentThread->loader_->isCOW(address))
+    {
+      debug(PAGEFAULT_TEST, "pagefault even though the address is mapped BUT ITS COW.\n");
+      return true;
+    }
+    else
+    {
+      debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+    }
   }
   else if(user && !present && 
           address > null_reference_check_border_ && address < USER_BREAK)
@@ -86,7 +94,20 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == 1)
   {
-    currentThread->loader_->loadPage(address);
+    if(writing) //bit of entry->writable = =1?
+    {
+      if (currentThread->loader_->isCOW(address))
+      {
+        debug(PAGEFAULT_TEST, "is COW, copying Page\n");
+        currentThread->loader_->copyPage(address);
+      }
+      else
+      {
+        currentThread->loader_->loadPage(address);
+      }
+    }
+    else
+      currentThread->loader_->loadPage(address);
   }
   else if (status == 69)
   {
