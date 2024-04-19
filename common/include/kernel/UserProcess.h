@@ -47,6 +47,8 @@ class UserProcess
 
         int execvProcess(const char *path, char *const argv[]);
 
+        void unmapThreadStack(ArchMemory* arch_memory, size_t top_stack);
+
         static int64 pid_counter_;
         int32 pid_;
 

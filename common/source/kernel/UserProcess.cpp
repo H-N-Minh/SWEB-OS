@@ -6,11 +6,11 @@
 #include "PageManager.h"
 #include "Scheduler.h"
 #include "Mutex.h"
-#include "UserProcess.h"
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"
 #include "types.h"
 #include "Syscall.h"
+#include "UserThread.h"
 
 #define POINTER_SIZE 8
 
@@ -237,14 +237,41 @@ void UserProcess::exitThread(void* value_ptr)
   }
 
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
-  currentUserThread.loader_->arch_memory_.lock_.acquire();
-  currentUserThread.loader_->arch_memory_.unmapPage(currentUserThread.vpn_stack_);
-  currentUserThread.loader_->arch_memory_.lock_.release();
+  unmapThreadStack(&currentUserThread.loader_->arch_memory_, currentUserThread.top_stack_);
   threads_lock_.release();
   currentUserThread.kill();
 
 }
 
+void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
+{
+  debug(SYSCALL, "pthreadExit: Unmapping thread's stack\n");
+  assert(top_stack && "Error: top_stack is NULL in unmapThreadStack\n");
+  assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
+
+  uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
+  for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
+  {
+    if (arch_memory->checkAddressValid(top_stack))
+    {
+      size_t* guard1 = (size_t*) top_stack;
+      size_t* guard2 = (size_t*) (top_stack - sizeof(size_t) * (META_SIZE - 1) );
+      *guard1 = 0;
+      *guard2 = 0;
+      arch_memory->lock_.acquire();
+      arch_memory->unmapPage(top_vpn);
+      arch_memory->lock_.release();
+      top_vpn--;
+      top_stack -= PAGE_SIZE;
+    }
+    else
+    {
+      break;
+    }
+  }
+
+  debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
+}
 
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {

@@ -165,7 +165,7 @@ void UserSpaceMemoryManager::initGuard(UserThread* current_thread, size_t top_cu
     assert(arch_memory->checkAddressValid(top_last_page) && "last page of growing stack is not mapped");
 
     size_t* guard1 = (size_t*) top_last_page;
-    size_t* guard2 = (size_t*) (top_last_page - sizeof(size_t)*5);
+    size_t* guard2 = (size_t*) (top_last_page - sizeof(size_t)* (META_SIZE - 1));
     assert(guard1 && "guard1 pointer of the current stack is NULL");
     assert(guard2 && "guard2 pointer of the current stack is NULL");
 
@@ -311,7 +311,7 @@ size_t UserSpaceMemoryManager::checkGuardValid(size_t top_current_page)
     // check if guards are valid
     if (top_last_page && *(size_t*) top_last_page == GUARD_MARKER)
     {
-      size_t* guard2 = (size_t*) (top_last_page - sizeof(size_t)*5);
+      size_t* guard2 = (size_t*) (top_last_page - sizeof(size_t)*(META_SIZE - 1));
       if (*guard2 == GUARD_MARKER)
       {
         return top_last_page;

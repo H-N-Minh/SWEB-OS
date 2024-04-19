@@ -6,7 +6,7 @@
 
 class UserProcess;
 
-
+#define META_SIZE 6     // If this is changed then the guards location in pthread.c in userspace must be updated as well
 
 // PTHREAD_CANCEL_EXIT: similar to PTHREAD_CANCEL_ASYNCHRONOUS, except thread gets canceled no matter what CancelState is.
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};

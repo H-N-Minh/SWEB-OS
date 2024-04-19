@@ -12,6 +12,7 @@ extern int gs1();
  *                     
  * - test with fork ( fork then growing stack) and (growing stack then fork)
  * - test buffer over flow and underflow, program should exit with error code 
+ * - test page is unmapped correctly when thread finish
 
 */
 
