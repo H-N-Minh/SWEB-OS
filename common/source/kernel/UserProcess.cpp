@@ -161,7 +161,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     VfsSyscall::close(execv_fd);
     return -1;
   }
-  VfsSyscall::close(execv_fd);
+
 
   // threads_lock_.acquire();
   // currentUserThread.cancel_state_type_lock_.acquire();
@@ -221,15 +221,21 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   //locking?? TODO
 
-  loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.page_for_stack_);  //cancel
-  memset((void*) ArchMemory::getIdentAddressOfPPN(currentUserThread.page_for_stack_), 0, PAGE_SIZE);
-  fd_ = VfsSyscall::open(path, O_RDONLY);
+  loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.vpn_stack_);  //cancel
+  
+  //memset((void*) ArchMemory::getIdentAddressOfPPN(currentUserThread.page_for_stack_), 0, PAGE_SIZE);
+  size_t old_cr3 = currentThread->user_registers_->cr3;
 
-  loader_->replaceLoader(fd_);
+  loader_->replaceLoader(execv_fd);
+  VfsSyscall::close(fd_);
+  fd_ = execv_fd;
+
+  
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
 
   
   currentThread->user_registers_->rdi = argc;
+  currentThread->user_registers_->cr3 = old_cr3;
   //currentThread->user_registers_->rsi = USER_BREAK - PAGE_SIZE + exec_array_offset_;
 
   // assert(0);

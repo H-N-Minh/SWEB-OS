@@ -5,6 +5,7 @@
 //testprogram for exec4 with args 
 int main(int argc, char *argv[])
 {
+    printf("heyo\n");
     if(argc == 0)
     {
         printf("Exec5 successful!\n");

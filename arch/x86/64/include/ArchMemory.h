@@ -103,7 +103,7 @@ class ArchMemory
     ArchMemory(ArchMemory const &src);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
-    void deleteEverythingExecpt(size_t dont_free_this_ppn);
+    void deleteEverythingExecpt(size_t virtual_page);
 
   private:
     /**
