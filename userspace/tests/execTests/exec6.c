@@ -10,7 +10,7 @@ void print_function()
 {
   while(1)
   {
-    printf(". ");
+    //printf(". ");
     flag1 = 1;
   }   
 }

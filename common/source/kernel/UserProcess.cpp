@@ -149,11 +149,11 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   }
   
   int argc = 0;
-  // int array_offset = 0;
-  // if(!check_parameters_for_exec(argv, argc, array_offset))
-  // {
-  //   return -1;
-  // }
+  int array_offset = 0;
+  if(!check_parameters_for_exec(argv, argc, array_offset))
+  {
+    return -1;
+  }
 
   int32 execv_fd = VfsSyscall::open(path, O_RDONLY);
   if(execv_fd < 0)
@@ -163,61 +163,58 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   }
 
 
-  // threads_lock_.acquire();
-  // currentUserThread.cancel_state_type_lock_.acquire();
-  // if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
-  // {
-  //   VfsSyscall::close(execv_fd);
-  //   threads_lock_.release();
-  //   currentUserThread.cancel_state_type_lock_.release();
-  //   return -1;
-  // }
-  // currentUserThread.cancel_state_type_lock_.release();
+  threads_lock_.acquire();
+  currentUserThread.cancel_state_type_lock_.acquire();
+  if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
+  {
+    VfsSyscall::close(execv_fd);
+    threads_lock_.release();
+    currentUserThread.cancel_state_type_lock_.release();
+    return -1;
+  }
+  currentUserThread.cancel_state_type_lock_.release();
 
-  // //cancel all other threads
-  // cancelAllOtherThreads();
-  // currentUserThread.send_kill_notification();
-  // one_thread_left_ = (threads_.size() > 1) ? false : true;
-  // threads_lock_.release();
+  //cancel all other threads
+  cancelAllOtherThreads();
+  currentUserThread.send_kill_notification();
+  one_thread_left_ = (threads_.size() > 1) ? false : true;
+  threads_lock_.release();
 
-  // waitForThreadsToDie();
+  waitForThreadsToDie();
 
 
-  // //allocate a free physical page and get the virtual address of the identity mapping
-  // size_t page_for_args = PageManager::instance()->allocPPN();
-  // size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
+  //allocate a free physical page and get the virtual address of the identity mapping
+  size_t page_for_args = PageManager::instance()->allocPPN();
+  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
 
-  // int exec_array_offset_ = array_offset;
-  // size_t offset = 0;
-  // size_t offset1 = USER_BREAK - PAGE_SIZE;
+  int exec_array_offset_ = array_offset;
+  size_t offset = 0;
+  size_t offset1 = USER_BREAK - PAGE_SIZE;
   
-  // for(int i = 0; i < argc; i++)
-  // {
-  //   //write the arguments one by one to the new phsical page via identity mapping
-  //   memcpy((char*)virtual_address + offset, argv[i], strlen(argv[i])+1);
+  for(int i = 0; i < argc; i++)
+  {
+    //write the arguments one by one to the new phsical page via identity mapping
+    memcpy((char*)virtual_address + offset, argv[i], strlen(argv[i])+1);
 
-  //   //store the offset of each argument in the page, at the end of all arguments
-  //   memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset1, POINTER_SIZE);
-  //   offset += strlen(argv[i]) + 1;
-  //   offset1 += strlen(argv[i]) + 1;
-  // }
-  // if(argc > 0)
-  // {
-  //   //storing the pointer to the virtual address of the single elements in the array
-  //   memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
-  // }
+    //store the offset of each argument in the page, at the end of all arguments
+    memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset1, POINTER_SIZE);
+    offset += strlen(argv[i]) + 1;
+    offset1 += strlen(argv[i]) + 1;
+  }
+  if(argc > 0)
+  {
+    //storing the pointer to the virtual address of the single elements in the array
+    memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
+  }
   
 
 
 
-  // virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);             //todos__ not sure if i have to do it again
-  // debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
+  virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);             //todos__ not sure if i have to do it again
+  debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
         
-  // size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
-  // loader_->arch_memory_.lock_.acquire();
-  // bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
-  // loader_->arch_memory_.lock_.release();
-  // assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
+
+  
 
   //locking?? TODO
 
@@ -236,7 +233,14 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   
   currentThread->user_registers_->rdi = argc;
   currentThread->user_registers_->cr3 = old_cr3;
-  //currentThread->user_registers_->rsi = USER_BREAK - PAGE_SIZE + exec_array_offset_;
+
+
+  size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
+  loader_->arch_memory_.lock_.acquire();
+  bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
+  loader_->arch_memory_.lock_.release();
+  currentThread->user_registers_->rsi = USER_BREAK - PAGE_SIZE + exec_array_offset_;
+  assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
 
   // assert(0);
 
