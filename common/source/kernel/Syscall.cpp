@@ -17,6 +17,7 @@
 #include "ArchMemory.h"
 #include "PageManager.h"
 #include "ArchThreads.h"
+#include "UserSpaceMemoryManager.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -116,6 +117,16 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_clock:
       return_value = clock();
       break;
+    case sc_tortillas_bootup:   // needed for test system Tortillas
+      break;
+    case sc_tortillas_finished:   // needed for test system Tortillas
+      break;
+    case sc_sbrk:
+      return_value = sbrkMemory(arg1, arg2);
+      break;
+    case sc_brk:
+      return_value = brkMemory(arg1);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -129,6 +140,67 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
  * this means this is the first stack request. Make the top_stack to point to itself and give this
  * pointer to child stack's top_stack as well. Calculation to get top of stack is in pthread.c in userspace
 */
+
+size_t Syscall::brkMemory(size_t new_brk_addr)
+{
+  debug(SBRK, "Syscall::brkMemory: brk called with address %p. Checking if addr is valid \n", (void*) new_brk_addr);
+
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+  size_t heap_start = heap_manager->heap_start_;
+
+  if (new_brk_addr > MAX_HEAP_SIZE || new_brk_addr < heap_start)
+  {
+    debug(SBRK, "Syscall::brkMemory: address %p is not within heap segment\n", (void*) new_brk_addr);
+    return -1; 
+  }
+  
+  int successly_brk = heap_manager->brk(new_brk_addr);
+  if (successly_brk == 0)
+  {
+    debug(SBRK, "Syscall::brkMemory: brk done with address %p\n", (void*) new_brk_addr);
+    return 0; 
+  }
+  else
+  {
+    debug(SBRK, "Syscall::brkMemory: brk failed with address %p\n", (void*) new_brk_addr);
+    return -1;
+  }
+}
+
+size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
+{
+  debug(SBRK, "Syscall::sbrkMemory: sbrk called\n");
+  assert(size_ptr != 0 && "Syscall::sbrkMemory: size_ptr is null\n");
+  assert(return_ptr != 0 && "Syscall::sbrkMemory: return_ptr is null\n");
+
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+
+  debug(SBRK, "Syscall::sbrkMemory: get the size amount and check if its valid\n");
+  ssize_t size = *(ssize_t*) size_ptr;
+  size_t potential_new_break = heap_manager->current_break_ + size;
+  size_t heap_start = heap_manager->heap_start_;
+
+  if (potential_new_break > MAX_HEAP_SIZE || potential_new_break < heap_start)
+  {
+    debug(SBRK, "Syscall::sbrk: size %zd is too big\n", size);
+    return -1; 
+  }
+  
+  debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
+  pointer reserved_space = 0;
+  reserved_space = heap_manager->sbrk(size, 0);
+  if (reserved_space == 0)
+  {
+    debug(SBRK, "Syscall::sbrk: sbrk failed\n");
+    return -1;
+  }
+  else
+  {
+    debug(SBRK, "Syscall::sbrk: sbrk done with return %p\n", (void*) reserved_space);
+    *(pointer*) return_ptr = reserved_space;
+    return 0; 
+  }
+}
 
 uint32 Syscall::pipe(int file_descriptor_array[2])
 {
@@ -201,32 +273,32 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 }
 
 
-int Syscall::pthreadDetach(size_t thread_id, bool threads_locked)
+int Syscall::pthreadDetach(size_t thread_id, bool is_threads_vector_locked)
 {
   debug(SYSCALL, "Syscall:pthreadDetach: called, thread_id: %zu\n", thread_id);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  if(!threads_locked) {current_process.threads_lock_.acquire();}
+  if(!is_threads_vector_locked) {current_process.threads_lock_.acquire();}
   UserThread* thread_to_be_detached = current_process.getUserThread(thread_id);
   if(thread_to_be_detached)
   {
     thread_to_be_detached ->join_state_lock_.acquire();
     if(thread_to_be_detached->join_state_ != PTHREAD_CREATE_JOINABLE)
     {
-      if(!threads_locked) {current_process.threads_lock_.release();}
+      if(!is_threads_vector_locked) {current_process.threads_lock_.release();}
       thread_to_be_detached->join_state_lock_.release();
-      return -1;
+      return -1;    // thread is already detached
     }
     thread_to_be_detached->join_state_ = PTHREAD_CREATE_DETACHED;
-    if(!threads_locked) {current_process.threads_lock_.release();}
+    if(!is_threads_vector_locked) {current_process.threads_lock_.release();}
     thread_to_be_detached->join_state_lock_.release();
     return 0;
   }
   else
   {
     int thread_in_retval_map = current_process.removeRetvalFromMapAndSetReval(thread_id, NULL);
-    if(!threads_locked){current_process.threads_lock_.release();}
+    if(!is_threads_vector_locked){current_process.threads_lock_.release();}
     return thread_in_retval_map;
 
   }
@@ -262,47 +334,55 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   {
     if(thread != &currentUserThread)
     {
+      size_t thread_id = thread->getTID();
       thread->cancel_state_type_lock_.acquire();
       thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
       thread->cancel_state_type_lock_.release();
-      debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread->getTID());
-      pthreadDetach(thread->getTID(), true);
-      pthreadCancel(thread->getTID(), true);
-      debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread->getTID());
+      debug(SYSCALL, "EXIT: Thread %zu gets canceled. \n",thread_id);
+      assert(pthreadDetach(thread_id, true) == 0 && "pthreadDetach failed in exit.\n");
+      assert(pthreadCancel(thread_id, true) == 0 && "pthreadCancel failed in exit.\n");
+      debug(SYSCALL, "EXIT: Thread %zu was canceled sucessfully. \n",thread_id);
     } 
   }
 
   current_process.threads_lock_.release();
 
+  if (exit_code != 69)
+  {
+    debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
+  }
+  
   if(!from_exec)
   {
     debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
     pthreadExit((void*)exit_code);
     assert(false && "This should never happen");
   }
-
+  
 }
 
 
-int Syscall::pthreadCancel(size_t thread_id, bool is_tVector_locked_in_Exit)
+int Syscall::pthreadCancel(size_t thread_id, bool is_threads_vector_locked)
 {
-  debug(SYSCALL, "Syscall::pthreadCancel: called with thread_id %ld and called from Exit?: (%d).\n",thread_id, is_tVector_locked_in_Exit);
+  debug(SYSCALL, "Syscall::pthreadCancel: called with thread_id %ld and called from Exit?: (%d).\n",thread_id, is_threads_vector_locked);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  if(!is_tVector_locked_in_Exit)  {current_process.threads_lock_.acquire();}
+  if(!is_threads_vector_locked)  {current_process.threads_lock_.acquire();}
 
   UserThread* thread_to_be_canceled = current_process.getUserThread(thread_id);
   if(!thread_to_be_canceled)
   {
     debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu doesnt exist in Vector\n", thread_id);
     // if its not locked in exit then its locked in here and we need to release it
-    if(!is_tVector_locked_in_Exit){current_process.threads_lock_.release();}
+    if(!is_threads_vector_locked){current_process.threads_lock_.release();}
     return -1;
   }
   debug(SYSCALL, "Syscall::pthreadCancel: thread_id %zu setted to be canceled\n", thread_id);
+  thread_to_be_canceled->cancel_state_type_lock_.acquire();
   thread_to_be_canceled->wants_to_be_canceled_ = true;
-  if(!is_tVector_locked_in_Exit){current_process.threads_lock_.release();}
+  thread_to_be_canceled->cancel_state_type_lock_.release();
+  if(!is_threads_vector_locked){current_process.threads_lock_.release();}
   return 0;
 }
 

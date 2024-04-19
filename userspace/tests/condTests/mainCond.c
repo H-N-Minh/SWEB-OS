@@ -8,17 +8,18 @@ extern int cond3();
 extern int cond4();
 extern int cond5();
 extern int cond6();
-
-//NOTE COND3 and COND4 only works with very small number of threads, not sure if the problem with our fake mutex or bad cond
-// TODO: test these 2 again with bigger amount when mutex is working
+extern int cond7();
 
 // set to 1 to test, 0 to skip
+//TODO: add test to check overflow/underflow when header data of page is corrupted
 #define COND1 1         // simple test where child has to wait for parent's signal
 #define COND2 1         // similar to cond1, but with more conds and both has to wait for each other
 #define COND3 1         // test large number of threads on same cond
 #define COND4 1         // testing broadcast
 #define COND5 1         // testing wrong para
 #define COND6 0         // testing lost wake call. This should be tested alone, check the file for details
+#define COND7 1         // multiple threads waiting on same cond, also test if they are killed when main exits. Check file for more detail
+
 
 int main()
 {
@@ -71,7 +72,15 @@ int main()
         if (retval == 0)                      { printf("===> cond6 is only successful when the order of step is correct!\n"); } 
         else                                  { printf("===> cond6 failed!\n");  return -1;}
     }
+
+    if (COND7)
+    {
+        printf("\nTesting cond7: multiple threads waiting on same cond, also testing exit program while threads are still sleeping...\n");
+        retval = cond7();
+        if (retval == 0)                      { printf("===> cond7 is only successful when F12 shows that no threads are alive!\n"); } 
+        else                                  { printf("===> cond7 failed!\n");  return -1;}
+    }
     
-    printf("\n\n---All tests completed!---\n");
+    printf("\n\n---All tests completed! (press F12 to make sure all threads died correctly)---\n");
     return 0;
 }

@@ -1,4 +1,43 @@
 #include "semaphore.h"
+#include "assert.h"
+
+
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
+int sem_init(sem_t *sem, int pshared, unsigned value)
+{
+  // int DEBUGMINH = 1;
+  // if (DEBUGMINH == 1) {
+  //   printf("Semaphore init called\n");
+  // }
+  if(!parameters_are_valid((size_t)sem, 0) || sem->initialized_)
+  {
+    return -1;    //Error: Sem already initialized or sem address not valid
+  }
+  if (pshared)
+  {
+    return -1;    // Shared between processes, not implemented yet
+  }
+  // if (DEBUGMINH == 1) {
+  //   printf("Semaphore init passed checks\n");
+  // }
+
+  int rv = pthread_mutex_init(&sem->count_mutex_, 0);
+  assert(rv == 0 && "failed to init mutex in sem_init");
+  rv = pthread_cond_init(&sem->count_cond_, 0);
+  assert(rv == 0 && "failed to init cond in sem_init");
+
+  sem->count_ = value;
+  sem->initialized_ = 1;
+
+  // if (DEBUGMINH == 1) {
+  //   printf("Semaphore initialized\n");
+  // }
+
+  return 0;
+}
 
 
 /**
@@ -7,22 +46,42 @@
  */
 int sem_wait(sem_t *sem)
 {
-  if (!sem->initialized_)
+  // int DEBUGMINH = 1;
+  // if (DEBUGMINH == 1) {
+  //   printf("got into sem wait\n");
+  //   printf("sem address: %p, inited: %zu\n",  sem, sem->initialized_);
+  // }
+  if(!parameters_are_valid((size_t)sem, 0) || !sem->initialized_)
   {
-    return -1;
+    return -1;    //Error: Sem not initalized or sem address not valid
   }
+  // if (DEBUGMINH == 1) {
+  //   printf("passed the arg checks\n");
+  // }
 
-  pthread_spin_lock(&sem->lock);
 
-  while (sem->value == 0)
-  {
-    pthread_spin_unlock(&sem->lock); //release the lock before yielding
-    __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
-    pthread_spin_lock(&sem->lock); //reacquire the lock after yielding
+  int rv = pthread_mutex_lock(&sem->count_mutex_);
+  assert(rv == 0 && "failed to lock mutex in sem_wait");
+
+  // if (DEBUGMINH == 1) {
+  //   printf("Before entering while loop\n");
+  // }
+
+  while (sem->count_ == 0) {
+      rv = pthread_cond_wait(&sem->count_cond_, &sem->count_mutex_);
+      assert(rv == 0 && "failed to cond_wait in sem_wait");
+      // if (DEBUGMINH == 1) {
+      //   printf("Inside while loop\n");
+      // }
   }
+  sem->count_--;
 
-  sem->value--;
-  pthread_spin_unlock(&sem->lock);
+  rv = pthread_mutex_unlock(&sem->count_mutex_);
+  assert(rv == 0 && "failed to unlock mutex in sem_wait");
+
+  // if (DEBUGMINH == 1) {
+  //   printf("After unlocking mutex\n");
+  // }
 
   return 0;
 }
@@ -33,52 +92,21 @@ int sem_wait(sem_t *sem)
  */
 int sem_trywait(sem_t *sem)
 {
-  if (!sem->initialized_)
+  if(!parameters_are_valid((size_t)sem, 0) || !sem->initialized_)
   {
-    return -1;
+    return -1;    //Error: Sem not initalized or sem address not valid
   }
 
-  pthread_spin_lock(&sem->lock);
-
-  if (sem->value > 0)
-  {
-    sem->value--;
-    pthread_spin_unlock(&sem->lock);
-    return 0;
+  int retval = -1;
+  int rv = pthread_mutex_lock(&sem->count_mutex_);
+  assert(rv == 0 && "failed to lock mutex in sem_trywait");
+  if (sem->count_ > 0) {
+      sem->count_--;
+      retval = 0;
   }
-
-  pthread_spin_unlock(&sem->lock);
-  return -1;
-}
-
-/**
- * function stub
- * posix compatible signature - do not change the signature!
- */
-int sem_init(sem_t *sem, int pshared, unsigned value)
-{
-  if(!sem->initialized_ )
-  {
-    return -1;//fail
-  }
-  sem->value = value;
-  pthread_spin_init(&sem->lock, 0);
-  return 0; //success
-}
-
-/**
- * function stub
- * posix compatible signature - do not change the signature!
- */
-int sem_destroy(sem_t *sem)
-{
-  if(!sem->initialized_ )
-  {
-    return -1;
-  }
-  pthread_spin_destroy(&sem->lock);
-  sem->initialized_ = 0;
-  return 0;
+  rv = pthread_mutex_unlock(&sem->count_mutex_);
+  assert(rv == 0 && "failed to unlock mutex in sem_trywait");
+  return retval;
 }
 
 /**
@@ -87,15 +115,40 @@ int sem_destroy(sem_t *sem)
  */
 int sem_post(sem_t *sem)
 {
-  if(!sem->initialized_ )
+  if(!parameters_are_valid((size_t)sem, 0) || !sem->initialized_)
   {
-    return -1;
+    return -1;    //Error: Sem not initalized or sem address not valid
   }
-  pthread_spin_lock(&sem->lock); //lock for atomicity
-  sem->value++;
-  pthread_spin_unlock(&sem->lock);
 
+  int rv = pthread_mutex_lock(&sem->count_mutex_);
+  assert(rv == 0 && "failed to lock mutex in sem_post");
+
+  sem->count_++;
+  rv = pthread_cond_signal(&sem->count_cond_);
+  assert(rv == 0 && "failed to send signal in sem_post");
+
+  rv = pthread_mutex_unlock(&sem->count_mutex_);
+  assert(rv == 0 && "failed to unlock mutex in sem_post");
   return 0;
 }
 
 
+/**
+ * function stub
+ * posix compatible signature - do not change the signature!
+ */
+int sem_destroy(sem_t *sem)
+{
+  if(!parameters_are_valid((size_t)sem, 0) || !sem->initialized_)
+  {
+    return -1;    //Error: Sem not initalized or sem address not valid
+  }
+
+  int rv = pthread_mutex_destroy(&sem->count_mutex_);
+  assert(rv == 0 && "failed to destroy mutex in sem_destroy");
+  rv = pthread_cond_destroy(&sem->count_cond_);
+  assert(rv == 0 && "failed to destroy cond in sem_destroy");
+
+  sem->initialized_ = 1;
+  return 0;
+}

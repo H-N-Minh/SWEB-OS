@@ -18,8 +18,9 @@ private:
    * @param user true if the fault occurred in user mode, else from kernel mode
    * @param present true if the fault happened on a already mapped page
    * @param switch_to_us the switch to userspace flag of the current thread
+   * @return 1 if valid, 0 if invalid or segmentation fault, 69 if its growing stack
    */
-  static inline bool checkPageFaultIsValid(size_t address, bool user, bool present, bool switch_to_us);
+  static inline int checkPageFaultIsValid(size_t address, bool user, bool present, bool switch_to_us);
 
   /**
    * Print out the pagefault information. Check if the pagefault is valid, or the thread state is corrupt.

@@ -30,13 +30,19 @@ class Syscall
     static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
     static void pthreadExit(void* value_ptr); 
     static int pthreadJoin(size_t thread_id, void**value_ptr); 
-    static int pthreadDetach(size_t thread,  bool threads_locked = false);
 
     /**
-      * @param is_tVector_locked_in_Exit if true: threads_ vector already locked (locked in Exit()).
+     * If thread is active, set join_state to Detached, else remove the retval of the dead thread from retval_map
+     * @param is_threads_vector_locked if the threads_ vector is already locked, set this to true. Default is false
+     * @return 0 on success, -1 if the given thread is already Detached or the given thread doesnt have a retval in retval_map
+    */
+    static int pthreadDetach(size_t thread,  bool is_threads_vector_locked = false);
+
+    /**
+      * @param is_threads_vector_locked if true: threads_ vector already locked (locked in Exit()).
       * @return -1 if thread doesnt exist in vector. else return 0: set the flag wants_to_be_canceled_ to true.
     */
-    static int pthreadCancel(size_t thread_id, bool is_tVector_locked_in_Exit = false);
+    static int pthreadCancel(size_t thread_id, bool is_threads_vector_locked = false);
 
     static unsigned int sleep(unsigned int seconds);
 
@@ -57,5 +63,8 @@ class Syscall
     static uint32 forkProcess();
 
     static uint64_t get_current_timestamp_64_bit();
+
+    static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);
+    static size_t brkMemory(size_t new_brk_addr);
 };
 

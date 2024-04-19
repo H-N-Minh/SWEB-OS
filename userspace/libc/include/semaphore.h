@@ -9,17 +9,13 @@ extern "C" {
 //semaphores typedefs
 #ifndef SEM_T_DEFINED_
 #define SEM_T_DEFINED_
-
-struct semaphore_struct {
-    pthread_spinlock_t lock;
-    unsigned value;
+typedef struct {
+    pthread_mutex_t count_mutex_;
+    pthread_cond_t count_cond_;
     size_t initialized_;
-};
+    size_t count_;
+} sem_t;
 
-//pthread spinlock typedefs
-typedef struct semaphore_struct sem_t;
-
-//typedef unsigned int sem_t;
 #endif // SEM_T_DEFINED_
 
 extern int sem_init(sem_t *sem, int pshared, unsigned value);

@@ -12,6 +12,7 @@ extern int fork6();
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
 
+// TODO: test fork while holding a lock
 
 // set to 1 to test, 0 to skip
 // all 4 & 5 & 6 requires lot of physical memory so each should be tested alone

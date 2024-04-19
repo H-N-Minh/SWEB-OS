@@ -39,6 +39,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   }
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 
+  user_mem_manager_ = new UserSpaceMemoryManager(loader_);
+
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
 
   threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, false));
@@ -63,6 +65,8 @@ UserProcess::UserProcess(const UserProcess& other)
   other.loader_->arch_memory_.lock_.release();
   if (!loader_){assert(0 && "No loader in fork");}
 
+  user_mem_manager_ = new UserSpaceMemoryManager(loader_);
+
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
 
@@ -83,6 +87,9 @@ UserProcess::~UserProcess()
 
   delete working_dir_;
   working_dir_ = nullptr;
+
+  delete user_mem_manager_;
+  user_mem_manager_ = nullptr;
 
 
   /////

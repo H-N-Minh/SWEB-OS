@@ -5,6 +5,7 @@
 #include "Mutex.h"
 #include "Condition.h"
 #include "types.h"
+#include "UserSpaceMemoryManager.h"
 
 class UserProcess
 {
@@ -54,6 +55,7 @@ class UserProcess
         ustl::string filename_;
         uint32 terminal_number_;
         Loader* loader_;
+        UserSpaceMemoryManager* user_mem_manager_;
 
         //Threads
         static int64 tid_counter_;
