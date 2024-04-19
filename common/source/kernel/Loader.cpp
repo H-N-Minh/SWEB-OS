@@ -400,6 +400,8 @@ void Loader::copyPage(size_t virtual_addr)
 
     entry->present = 1;
     entry->writeable = 1;
+    entry->cow = 0;
+
 
   }
   else

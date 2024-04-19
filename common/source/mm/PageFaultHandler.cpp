@@ -69,7 +69,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   if (checkPageFaultIsValid(address, user, present, switch_to_us))
   {
-    if(writing)
+    if(writing) //bit of entry->writable = =1?
     {
       if (currentThread->loader_->isCOW(address))
       {
