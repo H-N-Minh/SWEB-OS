@@ -13,11 +13,19 @@ enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, P
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE};
 
+typedef struct {
+    int detach_state;  // Detach state: PTHREAD_CREATE_JOINABLE or PTHREAD_CREATE_DETACHED
+    void *stack_addr;  // Stack address
+    size_t stack_size; // Stack size
+    int priority;      // Thread priority
+    int initialized;
+} pthread_attr_t;
+
 class UserThread : public Thread
 {
     public:
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                    Loader* loader, UserProcess* process, void* func, void* para, void* pcreate_helper, bool execv = false);
+                   Loader* loader, UserProcess* process, void* func, void* attr, void* arg, void* pcreate_helper, bool execv = false);
 
         UserThread(UserThread& other, UserProcess* process); // COPY CONSTRUCTOR
 

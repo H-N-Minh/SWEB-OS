@@ -46,7 +46,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
 
-  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, false));
+  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0,0, 0, 0, false));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
 }
 
@@ -147,12 +147,13 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
   return false;
 }
 
-int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg)
-{
-  debug(USERPROCESS, "UserProcess::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
 
+
+int UserProcess::createThread(size_t* thread, void* start_routine, void* attr, void* wrapper, void* arg)
+{
   threads_lock_.acquire();  
-  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, 
+  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_,
+                                          this, start_routine, attr,
                                           arg, wrapper, false);
   if(new_thread)
   {

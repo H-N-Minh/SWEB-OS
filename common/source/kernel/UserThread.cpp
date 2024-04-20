@@ -13,9 +13,8 @@
 #include "ArchMemory.h"
 #include "UserSpaceMemoryManager.h"
 
-
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                       Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
+                       Loader* loader, UserProcess* process, void* func, void* attr, void* arg, void* pcreate_helper, bool execv)
             : Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
               thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), join_state_lock_("join_state_lock_"),
               cancel_state_type_lock_("cancel_state_type_lock_"), guarded_(0)
@@ -36,12 +35,17 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
     size_t page_for_stack = PageManager::instance()->allocPPN();
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
+
     loader_->arch_memory_.lock_.acquire();
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
+  void* user_stack_ptr1 = (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid_-1));
+  debug(TAI_THREAD, "-------------------user_stack_ptr1 (%p) \n", user_stack_ptr1);
+
     size_t user_stack_ptr = (size_t) (USER_BREAK - MAX_STACK_AMOUNT * PAGE_SIZE * tid_ - (META_SIZE + 1) * sizeof(pointer));
+
     debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
     top_stack_ = user_stack_ptr + 6 * sizeof(pointer);       // 1. Guard
     mutex_flag_ = user_stack_ptr + 5 * sizeof(pointer);      // 2. Mutex flag
@@ -57,28 +61,40 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
                                          (void*) user_stack_ptr, getKernelStackStartPointer());
 
-    if(execv)
-    {
-      user_registers_->rdi = process_->exec_argc_;
-      user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
-    }
+      if(execv)
+      {
+        user_registers_->rdi = process_->exec_argc_;
+        user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
+      }
 
-        debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
-               user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
+          debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
+                 user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
     }
     else // create the thread for pthread create
     {
-        ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper, (void*) user_stack_ptr,
-                                         getKernelStackStartPointer());
+      if(attr)
+      {
+        pthread_attr_t* attr_k;
+        attr_k = reinterpret_cast<pthread_attr_t*>(attr);
 
-        user_registers_->rdi = (size_t)func;
-        user_registers_->rsi = (size_t)arg;
-        user_registers_->rdx = top_stack_; // address of the top of stack, relevant for userspace locks
-        debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
-                user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
+        debug(TAI_THREAD, "-------------------UserThread::UserThread: attr (%p) \n", attr_k);
+        debug(TAI_THREAD, "-------------------UserThread::UserThread: attrk (%p) \n", attr_k);
 
-        debug(GROW_STACK, "UserThread ctor for pthread_create: Child guard is set up immediately (in userspace)\n");
-        guarded_ = 1;
+        size_t stack_size = attr_k->stack_size;
+        debug(TAI_THREAD, "-------------------UserThread::UserThread: stack_size (%zu) \n", stack_size);
+      }
+
+      ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper, (void*) user_stack_ptr,
+                                       getKernelStackStartPointer());
+
+      user_registers_->rdi = (size_t)func;
+      user_registers_->rsi = (size_t)arg;
+      user_registers_->rdx = top_stack_; // address of the top of stack, relevant for userspace locks
+      debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
+              user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
+
+      debug(GROW_STACK, "UserThread ctor for pthread_create: Child guard is set up immediately (in userspace)\n");
+      guarded_ = 1;
     }
 
 
@@ -148,7 +164,7 @@ UserThread::~UserThread()
 
     process_->fd_ = process_->execv_fd_;
 
-    UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_,0, 0, 0, true);
+    UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_,0,0, 0, 0, true);
     process_->threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
   }

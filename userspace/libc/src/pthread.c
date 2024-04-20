@@ -28,7 +28,7 @@ size_t __META_INITIALIZED__ = 0;
 // }
 
 
- // commented out for now because this is needed only when thread has multiple stacks
+// commented out for now because this is needed only when thread has multiple stacks
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
@@ -172,7 +172,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     counter1++;
     //*mutex_waiter_list =(size_t)&mutex->waiting_list_;
     //mutex->waiting_list_ = mutex_waiter_list;
-    size_t* next_element = (size_t*)&mutex->waiting_list_;  
+    size_t* next_element = (size_t*)&mutex->waiting_list_;
     int added_to_waiting_list = 0;
     while(!added_to_waiting_list)
     {
@@ -192,15 +192,15 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     //pthread_spin_unlock(&mutex->mutex_lock_);
     mutex->mutex_lock_.held_by_ = 0;
     asm("xchg %0,%1"
-          : "=r" (*mutex_flag)
-          : "m" (mutex->mutex_lock_.locked_), "0" (*mutex_flag)
-          : "memory");
+            : "=r" (*mutex_flag)
+            : "m" (mutex->mutex_lock_.locked_), "0" (*mutex_flag)
+            : "memory");
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
     //pthread_spin_lock(&mutex->mutex_lock_);
   }
   // if(counter1 != 0 && counter1 != 1)
   //   assert(0 && "yield more than once");
-    //printf("counterabc %d\n", counter1);
+  //printf("counterabc %d\n", counter1);
   mutex->locked_ = 1;
   mutex->held_by_ = mutex_waiter_list;
   rv= pthread_spin_unlock(&mutex->mutex_lock_);
@@ -460,7 +460,7 @@ int pthread_cond_wait(pthread_cond_t *cond, pthread_mutex_t *mutex)
 
   // adding curent thread to the waiting list
   addWaiterToList(&cond->waiting_list_, cond_waiter_list);
-  
+
   // current thread signal that it wants to sleep
   assert(!*(size_t*) cond_flag && "threads cond_flag_ is already true, this should not happen");
   int rv = pthread_mutex_unlock(mutex);
@@ -542,9 +542,9 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
   do
   {
     asm("xchg %0,%1"
-        : "=r" (old_val)
-        : "m" (lock->locked_), "0" (old_val)
-        : "memory");
+            : "=r" (old_val)
+            : "m" (lock->locked_), "0" (old_val)
+            : "memory");
   } while (old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
   lock->held_by_ = current_thread_ptr;
   return 0;
@@ -726,10 +726,69 @@ void wakeUpThread(size_t* request_to_sleep)
   do
   {
     asm("xchg %0,%1"
-        : "=r" (old_val)
-        : "m" (*request_to_sleep), "0" (old_val)
-        : "memory");
+            : "=r" (old_val)
+            : "m" (*request_to_sleep), "0" (old_val)
+            : "memory");
   } while (!old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
 
   *request_to_sleep = 0;
+}
+
+int pthread_attr_init(pthread_attr_t *attr)
+{
+  if (attr == NULL)
+  {
+    return -1;
+  }
+  if (attr->initialized == 1)
+  {
+    return -1;
+  }
+
+  attr->detach_state = PTHREAD_CREATE_JOINABLE; // Default detach state
+  attr->stack_addr = NULL; // Default stack address
+  attr->stack_size = DEFAULT_STACK_SIZE;
+  attr->priority = 0;      // Default priority
+
+  attr->initialized = 1;
+  return 0; // Success
+}
+
+int pthread_attr_destroy(pthread_attr_t *attr) {
+  if (attr == NULL)
+  {
+    return -1;
+  }
+  attr->initialized = 0;
+  return 0;
+}
+
+int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
+{
+  if (attr == NULL)
+    return -1;
+  if (detachstate != PTHREAD_CREATE_JOINABLE && detachstate != PTHREAD_CREATE_DETACHED)
+    return -1;
+  attr->detach_state = detachstate;
+  return 0;
+}
+
+int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate)
+{
+  if (attr == NULL || detachstate == NULL)
+    return -1;
+  *detachstate = attr->detach_state;
+  return 0;
+}
+
+int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
+{
+  if (attr == NULL || attr->initialized != 1 || stacksize < PTHREAD_STACK_MIN)
+  {
+    return -1;
+  }
+
+  attr->stack_size = stacksize;
+
+  return 0;
 }
