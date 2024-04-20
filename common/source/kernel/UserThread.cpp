@@ -33,7 +33,26 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
   }
 
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  
     size_t page_for_stack = PageManager::instance()->allocPPN();
+    debug(TAI_THREAD, "-------------------page_for_stack (%zu) \n", page_for_stack);
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
 
     loader_->arch_memory_.lock_.acquire();
