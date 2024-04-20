@@ -160,7 +160,7 @@ ArchMemory::~ArchMemory()
                 if (pt[pti].present)
                 {
                   debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
-                  if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
+                  if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) <= 1)
                   {
                     debug(FORK, "free page and set present in destructor  \n");
                     pt[pti].present = 0;
@@ -168,8 +168,8 @@ ArchMemory::~ArchMemory()
                   }
                   else
                   {
-                    debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                     PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                    //debug(FORK, "dont free page in destructor not last thread ref : %d\n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   }
                 }
               }
