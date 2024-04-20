@@ -75,5 +75,10 @@ int main(int argc, char *argv[])
         printf("Exec7 successful!\n");
         return 0;
     }
+    else if(strcmp(argv[0], "8") == 0)
+    {
+        printf("Exec8 successful!\n");
+        return 0;
+    }
     assert(0);
 }

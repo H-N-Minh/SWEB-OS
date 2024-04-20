@@ -7,6 +7,7 @@ extern int exec4();
 extern int exec5();
 extern int exec6();
 extern int exec7();
+extern int exec8();
 
 
 int main()
@@ -18,6 +19,7 @@ int main()
     exec5();  //Exec without arguments
     exec6();  //Exec with multiple threads
     exec7();  //Exec with multiple threads
+    exec8();  //Exec with two pages of arguments (Todo)
           
 
     sleep(3);
