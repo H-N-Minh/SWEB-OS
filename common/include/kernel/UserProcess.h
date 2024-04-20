@@ -6,6 +6,8 @@
 #include "Condition.h"
 #include "types.h"
 #include "UserSpaceMemoryManager.h"
+#include "LocalFileDescriptorTable.h"
+#include "sostream.h"
 
 class UserProcess
 {
@@ -82,5 +84,9 @@ class UserProcess
 
         uint64_t clock_{0};
         uint64_t tsc_start_scheduling_{0};
+
+        LocalFileDescriptorTable localFileDescriptorTable;
+
+        ustl::string str() const;
 };
 

@@ -23,7 +23,7 @@ class Syscall
 
     static uint32 get_thread_count();
 
-
+    static l_off_t lseek(size_t fd, l_off_t offset, uint8 whence);
     static uint32 pipe(int file_descriptor_array[2]);
 
 
