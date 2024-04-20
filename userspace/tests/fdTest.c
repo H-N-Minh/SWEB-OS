@@ -12,21 +12,34 @@ int main() {
 
   printf("Opening file: %s\n", TEST_FILE);
 
-  int fd = open(TEST_FILE, O_RDWR);
-  if (fd < 0) {
+  int local_fd = open(TEST_FILE, O_RDWR);
+  if (local_fd < 0) {
     printf("Failed to open file");
-    return fd;
+    return local_fd;
   }
 
+  printf("Local file descriptor: %d\n", local_fd);
+
+  int fds[5];
+  char path[20] = "usr/file0.txt";
+  for(int i = 0; i < 5; i++) {
+    path[8] = '0' + i;
+    fds[i] = open(path, O_RDWR);
+    printf("Opened file: %s --> Local FD: %d\n", path, fds[i]);
+  }
+
+
+
+
   char* writeData = ":/";
-  ssize_t bytesWritten = write(fd, writeData, strlen(writeData));
+  ssize_t bytesWritten = write(local_fd, writeData, strlen(writeData));
   if (bytesWritten < 0) {
     printf("Failed to write to file");
     return -1;
   }
 
-  lseek(fd, 0, SEEK_SET);
-  ssize_t bytesRead = read(fd, buf, BUF_SIZE - 1);
+  lseek(local_fd, 0, SEEK_SET);
+  ssize_t bytesRead = read(local_fd, buf, BUF_SIZE - 1);
   if (bytesRead < 0) {
     printf("Failed to read from file");
     return -1;
@@ -34,7 +47,7 @@ int main() {
   buf[bytesRead] = '\0';
   printf("Read from file: %s\n", buf);
 
-  if (close(fd) < 0) {
+  if (close(local_fd) < 0) {
     printf("Failed to close file");
     return -1;
   }

@@ -7,6 +7,7 @@
 #include "types.h"
 #include "LocalFileDescriptorTable.h"
 
+
 #define PTHREAD_CREATE_JOINABLE 0
 #define PTHREAD_CREATE_DETACHED 1
 
@@ -16,8 +17,7 @@ struct KernelThreadAttributes {
 
 class UserProcess
 {
-    LocalFileDescriptorTable local_fd_table_;
-    static UserProcess* currentProcess_;
+
 
     public:
         /**
@@ -42,12 +42,6 @@ class UserProcess
 
         bool isThreadInVector(UserThread* test_thread);
 
-        LocalFileDescriptorTable& getLocalFileDescriptorTable() {
-          return local_fd_table_;
-        }
-        static UserProcess* currentProcess() {
-          return currentProcess_;
-        }
 
         
          //bool isThreadInVector(UserThread* test_thread);
@@ -100,6 +94,10 @@ class UserProcess
 
         uint64_t clock_{0};
         uint64_t tsc_start_scheduling_{0};
+
+        LocalFileDescriptorTable localFileDescriptorTable;
+
+         ustl::string str() const;
 
 };
 

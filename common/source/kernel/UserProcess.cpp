@@ -11,6 +11,7 @@
 #include "ArchInterrupts.h"
 #include "types.h"
 #include "Syscall.h"
+#include "sostream.h"
 
 
 #define POINTER_SIZE 8
@@ -18,13 +19,12 @@
 int64 UserProcess::tid_counter_ = 1;
 int64 UserProcess::pid_counter_ = 1;
 
-UserProcess* UserProcess::currentProcess_ = nullptr;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
 
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
     threads_lock_("thread_lock_"),  execv_lock_(" execv_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
-    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_")
+    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
 {
   ProcessRegistry::instance()->processStart();
   if (fd_ >= 0)
@@ -53,7 +53,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
     terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"), execv_lock_(" execv_lock_"),
-    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_")
+    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -84,14 +84,12 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-  local_fd_table_.closeAllFileDescriptors();
+  localFileDescriptorTable.closeAllFileDescriptors();
   delete working_dir_;
   working_dir_ = nullptr;
 
 
-  /////
-  //local_fd_table_.closeAllFileDescriptors();
-  /////
+
 
   ProcessRegistry::instance()->processExit();
 }
@@ -388,4 +386,11 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   
   assert(0 && "Sucessful exec should not return");
 
+}
+
+
+ustl::string UserProcess::str() const {
+  ustl::ostringstream oss;
+  oss << "Process ID: " << pid_ ;
+  return oss.str();
 }
