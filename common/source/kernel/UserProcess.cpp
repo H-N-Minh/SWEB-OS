@@ -138,7 +138,7 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
   return false;
 }
 
-
+//Todos: locking
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
   UserThread& currentUserThread = *((UserThread*)currentThread);
@@ -155,12 +155,14 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     return -1;
   }
 
+  //check if path exist
   int32 execv_fd = VfsSyscall::open(path, O_RDONLY);
   if(execv_fd < 0)
   {
     VfsSyscall::close(execv_fd);
     return -1;
   }
+  VfsSyscall::close(execv_fd);
 
 
   threads_lock_.acquire();
@@ -184,6 +186,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
 
   //allocate a free physical page and get the virtual address of the identity mapping
+
   size_t page_for_args = PageManager::instance()->allocPPN();
   size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
 
@@ -207,22 +210,13 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
   }
   
-
-
-
-  virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);             //todos__ not sure if i have to do it again
-  debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
-        
-
-  
-
-  //locking?? TODO
-
+  execv_fd = VfsSyscall::open(path, O_RDONLY);   //todos maybe deepcopy path
+  if(execv_fd < 0)
+  {
+    assert(".... .....!!!!");
+  }
   loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.vpn_stack_);  //cancel
-  
-  //memset((void*) ArchMemory::getIdentAddressOfPPN(currentUserThread.page_for_stack_), 0, PAGE_SIZE);
   size_t old_cr3 = currentThread->user_registers_->cr3;
-
   loader_->replaceLoader(execv_fd);
   VfsSyscall::close(fd_);
   fd_ = execv_fd;
