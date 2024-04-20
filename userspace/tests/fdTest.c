@@ -6,20 +6,22 @@
 #define TEST_FILE "usr/test.txt"
 #define BUF_SIZE  128
 
+
 int main() {
   char buf[BUF_SIZE];
-  memset(buf, 0, BUF_SIZE);
+  int local_fd;
+  ssize_t bytesRead, bytesWritten;
 
   printf("Opening file: %s\n", TEST_FILE);
+  local_fd = open(TEST_FILE, O_RDWR);
 
-  int local_fd = open(TEST_FILE, O_RDWR);
   if (local_fd < 0) {
-    printf("Failed to open file");
-    return local_fd;
+    printf("Failed to open file\n");
+    return -1;
   }
-
   printf("Local file descriptor: %d\n", local_fd);
 
+  printf("Opening all files between 'usr/file0.txt' and 'usr/file4.txt'\n");
   int fds[5];
   char path[20] = "usr/file0.txt";
   for(int i = 0; i < 5; i++) {
@@ -28,28 +30,30 @@ int main() {
     printf("Opened file: %s --> Local FD: %d\n", path, fds[i]);
   }
 
-
-
-
+  printf("Writing to file: %s\n", TEST_FILE);
   char* writeData = ":/";
-  ssize_t bytesWritten = write(local_fd, writeData, strlen(writeData));
+  bytesWritten = write(local_fd, writeData, strlen(writeData));
   if (bytesWritten < 0) {
-    printf("Failed to write to file");
+    printf("Failed to write to file\n");
     return -1;
   }
 
+  printf("Reading from file: %s\n", TEST_FILE);
   lseek(local_fd, 0, SEEK_SET);
-  ssize_t bytesRead = read(local_fd, buf, BUF_SIZE - 1);
+  bytesRead = read(local_fd, buf, BUF_SIZE - 1);
   if (bytesRead < 0) {
-    printf("Failed to read from file");
+    printf("Failed to read from file\n");
     return -1;
   }
   buf[bytesRead] = '\0';
   printf("Read from file: %s\n", buf);
 
+  printf("Closing file: %s\n", TEST_FILE);
   if (close(local_fd) < 0) {
-    printf("Failed to close file");
+    printf("Failed to close file\n");
     return -1;
   }
+  printf("File closed successfully\n");
+
   return 0;
 }

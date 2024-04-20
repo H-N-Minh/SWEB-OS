@@ -129,13 +129,32 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 {
-  FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(fd);
-  if (!file_descriptor)
+  debug(SYSCALL, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
+
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+  if (localFileDescriptor == nullptr)
   {
-    debug(SYSCALL, "Syscall::lseek -Invalid file descriptor: %zu\n", fd);
+    debug(SYSCALL, "Syscall::lseek - Invalid local file descriptor: %zu\n", fd);
     return -1;
   }
-  return VfsSyscall::lseek(fd, offset, whence);
+
+  size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
+
+  // Properly declare the file_descriptor variable
+  FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(global_fd);
+
+  if (!file_descriptor)
+  {
+    debug(SYSCALL, "Syscall::lseek - Invalid global file descriptor: %zu\n", global_fd);
+    return -1;
+  }
+
+  l_off_t position = VfsSyscall::lseek(global_fd, offset, whence);
+  debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
+  return position;
 }
 
 
@@ -330,71 +349,100 @@ int Syscall::pthreadCancel(size_t thread_id, bool is_threads_vector_locked)
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 {
+  debug(SYSCALL, "Syscall::write: Writing to fd: %zu with buffer size: %zu\n", fd, size);
   //WARNING: this might fail if Kernel PageFaults are not handled
   if ((buffer >= USER_BREAK) || (buffer + size > USER_BREAK))
   {
+    debug(SYSCALL, "Syscall::write: Buffer exceeds USER_BREAK\n");
     return -1U;
   }
 
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
 
-  size_t num_written = 0;
+  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
 
-  if (fd == fd_stdout) //stdout
+  if (fd == fd_stdout)
   {
-    //debug(SYSCALL, "Syscall::write: %.*s\n", (int)size, (char*) buffer);
+    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
     kprintf("%.*s", (int)size, (char*) buffer);
-    num_written = size;
+    return size;
   }
-  else
+  else if (localFileDescriptor != nullptr)
   {
-    num_written = VfsSyscall::write(fd, (char*) buffer, size);
+    debug(SYSCALL, "Syscall::write: Found local file descriptor: %zu\n", localFileDescriptor->getLocalFD());
+    size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
+    size_t num_written = VfsSyscall::write(global_fd, (char*) buffer, size);
+    debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
+    return num_written;
   }
-  return num_written;
+
+  debug(SYSCALL, "Syscall::write: No valid local file descriptor found for fd: %zu\n", fd);
+  return -1U;
 }
+
 
 size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 {
+  debug(SYSCALL, "Syscall::read: Attempting to read from fd: %zu with buffer size: %zu\n", fd, count);
   if ((buffer >= USER_BREAK) || (buffer + count > USER_BREAK))
   {
+    debug(SYSCALL, "Syscall::read: Buffer exceeds USER_BREAK\n");
     return -1U;
   }
 
-  size_t num_read = 0;
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
 
-//  if (fd >= 3 && fd <= 1024) {  //unsure about number
-//    Pipe* pipe = static_cast<Pipe *>(FileDescriptorManager::getInstance().getAssociatedObject((int)fd));
-//    size_t i = 0;
-//    char c;
-//
-//    while (i < count && pipe->read(c)) {
-//      reinterpret_cast<char *>(buffer)[i++] = c;
-//    }
-//    return i;
-//  }
-  if (fd == fd_stdin)
+  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+
+  if (localFileDescriptor != nullptr)
   {
-    num_read = currentThread->getTerminal()->readLine((char*) buffer, count);
-    debug(SYSCALL, "Syscall::read: %.*s\n", (int)num_read, (char*) buffer);
+    debug(SYSCALL, "Syscall::read: Found local file descriptor: %zu\n", localFileDescriptor->getLocalFD());
+    size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
+    size_t num_read = VfsSyscall::read(global_fd, (char*) buffer, count);
+    debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
     return num_read;
   }
 
-  num_read = VfsSyscall::read(fd, (char*) buffer, count);
-  return num_read;
+  else if (fd == fd_stdin)
+  {
+    debug(SYSCALL, "Syscall::read: Reading from stdin\n");
+    size_t num_read = currentThread->getTerminal()->readLine((char*) buffer, count);
+    debug(SYSCALL, "Syscall::read: Read %zu bytes from stdin\n", num_read);
+    return num_read;
+  }
+
+  debug(SYSCALL, "Syscall::read: No valid local file descriptor found\n");
+  return -1U;
 }
 
 size_t Syscall::close(size_t fd)
 {
-  return VfsSyscall::close(fd);
+  debug(SYSCALL, "Syscall::close: Attempting to close fd: %zu\n", fd);
+
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+
+  if (localFileDescriptor != nullptr)
+  {
+    debug(SYSCALL, "Syscall::close: Found local file descriptor: %zu\n", localFileDescriptor->getLocalFD());
+    size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
+    int result = VfsSyscall::close(global_fd);
+    if (result == 0)
+    {
+      current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
+    }
+    debug(SYSCALL, "Syscall::close: Close result for global fd: %zu was %d\n", global_fd, result);
+    return result;
+  }
+
+  debug(SYSCALL, "Syscall::close: No valid local file descriptor found for fd: %zu\n", fd);
+  return -1U;
 }
 
-//size_t Syscall::open(size_t path, size_t flags)
-//{
-//  if (path >= USER_BREAK)
-//  {
-//    return -1U;
-//  }
-//  return VfsSyscall::open((char*) path, flags);
-//}
 
 size_t Syscall::open(size_t path, size_t flags)
 {
