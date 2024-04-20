@@ -409,44 +409,88 @@ PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
 
 void Loader::copyPage(size_t virtual_addr)
 {
-    PageTableEntry* entry = findPageTableEntry(virtual_addr);
-    if (entry)
-    {
-      size_t new_page_ppn = PageManager::instance()->allocPPN();
+  PageTableEntry* entry = findPageTableEntry(virtual_addr);
+  if (entry)
+  {
+    size_t new_page_ppn = PageManager::instance()->allocPPN();
 
-      //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
 
-      PageManager::instance()->getReferenceCount(entry->page_ppn);
+    PageManager::instance()->getReferenceCount(entry->page_ppn);
 
-      pointer original_page = ArchMemory::getIdentAddressOfPPN(entry->page_ppn);
-      pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
-      memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+    pointer original_page = ArchMemory::getIdentAddressOfPPN(entry->page_ppn);
+    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+    memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
-      //update the page table entry to point to the new physical page
-      entry->page_ppn = new_page_ppn;
+    //update the page table entry to point to the new physical page
+    entry->page_ppn = new_page_ppn;
 
-      //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
-      entry->present = 1;
-      entry->writeable = 1;
-      entry->cow = 0;
+    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+    entry->present = 1;
+    entry->writeable = 1;
+    entry->cow = 0;
 
-      //    for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
-  //    {
-  //      if (entry[pti].present)
-  //      {
-  //        size_t new_page_ppn = PageManager::instance()->allocPPN();
-  //        pointer original_page = ArchMemory::getIdentAddressOfPPN(entry[pti].page_ppn);
-  //        pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
-  //        memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
-  //
-  //        entry[pti].page_ppn = new_page_ppn;
-  //      }
-  //    }
+    //    for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+//    {
+//      if (entry[pti].present)
+//      {
+//        size_t new_page_ppn = PageManager::instance()->allocPPN();
+//        pointer original_page = ArchMemory::getIdentAddressOfPPN(entry[pti].page_ppn);
+//        pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+//        memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+//
+//        entry[pti].page_ppn = new_page_ppn;
+//      }
+//    }
 
-    }
-    else
-    {
-      // Page table entry not found, should not be happening
-      //do assert later here
-    }
+  }
+  else
+  {
+    // Page table entry not found, should not be happening
+    //do assert later here
+  }
 }
+
+//void Loader::copyPage(size_t virtual_addr)
+//{
+//  PageTableEntry* entry = findPageTableEntry(virtual_addr);
+//  if (entry)
+//  {
+//    size_t new_page_ppn = PageManager::instance()->allocPPN();
+//
+//    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+//
+//    PageManager::instance()->getReferenceCount(entry->page_ppn);
+//
+//    pointer original_page = ArchMemory::getIdentAddressOfPPN(entry->page_ppn);
+//    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+//    memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+//
+//    //update the page table entry to point to the new physical page
+//    entry->page_ppn = new_page_ppn;
+//
+//    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+//    entry->present = 1;
+//    entry->writeable = 1;
+//    entry->cow = 0;
+//
+//    //    for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+////    {
+////      if (entry[pti].present)
+////      {
+////        size_t new_page_ppn = PageManager::instance()->allocPPN();
+////        pointer original_page = ArchMemory::getIdentAddressOfPPN(entry[pti].page_ppn);
+////        pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+////        memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+////
+////        entry[pti].page_ppn = new_page_ppn;
+////      }
+////    }
+//
+//  }
+//  else
+//  {
+//    // Page table entry not found, should not be happening
+//    //do assert later here
+//  }
+//}
