@@ -76,17 +76,17 @@ int32 VfsSyscall::mkdir(const char* pathname, int32)
 
 static const char* readdirPrefix(uint32 inode_type)
 {
-    switch (inode_type)
-    {
+  switch (inode_type)
+  {
     case I_DIR:
-        return "[D] ";
+      return "[D] ";
     case I_FILE:
-        return "[F] ";
+      return "[F] ";
     case I_LNK:
-        return "[L] ";
+      return "[L] ";
     default:
-        return "";
-    }
+      return "";
+  }
 }
 
 Dirent* VfsSyscall::readdir(const char* pathname, char* buffer, size_t size)
@@ -438,8 +438,8 @@ int32 VfsSyscall::mount(const char *device_name, const char *dir_name, const cha
   FileSystemType* type = vfs.getFsType(file_system_name);
   if (!type)
   {
-      debug(VFSSYSCALL, "(mount) Unknown file system %s\n", file_system_name);
-      return -1;
+    debug(VFSSYSCALL, "(mount) Unknown file system %s\n", file_system_name);
+    return -1;
   }
 
   return vfs.mount(device_name, dir_name, file_system_name, flag);

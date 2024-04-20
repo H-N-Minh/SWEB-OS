@@ -16,7 +16,7 @@ extern "C" {
 
 //pthread typedefs
 typedef size_t pthread_t;
-typedef unsigned int pthread_attr_t;
+//typedef unsigned int pthread_attr_t;
 
 //pthread spinlock
 struct pthread_spinlock_struct {
@@ -62,6 +62,23 @@ typedef unsigned int pthread_condattr_t;
 
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
+
+#define PTHREAD_CREATE_JOINABLE 0
+#define PTHREAD_CREATE_DETACHED 1
+
+typedef struct {
+  int detachstate; // PTHREAD_CREATE_DETACHED or PTHREAD_CREATE_JOINABLE
+//  int schedpolicy; // Scheduling policy
+//  struct sched_param schedparam; // Scheduling parameters
+//  void *stackaddr; // Stack address
+//  size_t stacksize; // Stack size
+} pthread_attr_t;
+
+int pthread_attr_init(pthread_attr_t *attr);
+
+int pthread_attr_destroy(pthread_attr_t *attr);
+
+int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 
 
 extern int pthread_create(pthread_t *thread,

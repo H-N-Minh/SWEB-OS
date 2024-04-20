@@ -152,14 +152,14 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
   if (new_brk_addr > MAX_HEAP_SIZE || new_brk_addr < heap_start)
   {
     debug(SBRK, "Syscall::brkMemory: address %p is not within heap segment\n", (void*) new_brk_addr);
-    return -1; 
+    return -1;
   }
-  
+
   int successly_brk = heap_manager->brk(new_brk_addr);
   if (successly_brk == 0)
   {
     debug(SBRK, "Syscall::brkMemory: brk done with address %p\n", (void*) new_brk_addr);
-    return 0; 
+    return 0;
   }
   else
   {
@@ -184,9 +184,9 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
   if (potential_new_break > MAX_HEAP_SIZE || potential_new_break < heap_start)
   {
     debug(SBRK, "Syscall::sbrk: size %zd is too big\n", size);
-    return -1; 
+    return -1;
   }
-  
+
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
   pointer reserved_space = 0;
   reserved_space = heap_manager->sbrk(size, 0);
@@ -199,7 +199,7 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
   {
     debug(SBRK, "Syscall::sbrk: sbrk done with return %p\n", (void*) reserved_space);
     *(pointer*) return_ptr = reserved_space;
-    return 0; 
+    return 0;
   }
 }
 */
@@ -354,14 +354,14 @@ void Syscall::exit(size_t exit_code, bool from_exec)
   {
     debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
   }
-  
+
   if(!from_exec)
   {
     debug(SYSCALL, "EXIT: Last Thread %zu calls pthread exit. \n",currentThread->getTID());
     pthreadExit((void*)exit_code);
     assert(false && "This should never happen");
   }
-  
+
 }
 
 

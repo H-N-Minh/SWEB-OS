@@ -17,11 +17,15 @@ public:
         cond_empty(&mtx, "Pipe Empty Condition"),
         cond_full(&mtx, "Pipe Full Condition")
   {
-    debug(Fabi, "Pipe::Pipe called\n");
+    debug(PIPE, "Pipe::Pipe called\n");
+  }
+
+  ~Pipe() {
+    debug(PIPE, "Pipe::~Pipe called\n");
   }
 
   bool read(char &c) {
-    debug(Fabi, "Pipe::read called\n");
+    debug(PIPE, "Pipe::read called\n");
 
     ScopeLock l(mtx);
 
@@ -35,12 +39,14 @@ public:
       cond_full.signal();
     }
 
+    debug(PIPE, "Pipe::read read char: %c\n", c);
+
     cond_full.signal();
     return true;
   }
 
   bool write(char c) {
-    debug(Fabi, "Pipe::write called with char: %c\n", c);
+    debug(PIPE, "Pipe::write called with char: %c\n", c);
 
     ScopeLock l(mtx);
 
@@ -54,11 +60,14 @@ public:
 
     buffer_.put(c);
     cond_empty.signal();
+
+    debug(PIPE, "Pipe::write wrote char: %c\n", c);
+
     return true;
   }
 
   void close() {
-    debug(Fabi, "Pipe::close called\n");
+    debug(PIPE, "Pipe::close called\n");
 
     ScopeLock l(mtx);
     closed_ = true;

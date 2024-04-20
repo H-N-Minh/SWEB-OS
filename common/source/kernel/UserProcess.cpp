@@ -6,16 +6,20 @@
 #include "PageManager.h"
 #include "Scheduler.h"
 #include "Mutex.h"
+#include "UserProcess.h"
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"
 #include "types.h"
 #include "Syscall.h"
 #include "UserThread.h"
+#include "sostream.h"
+
 
 #define POINTER_SIZE 8
 
 int64 UserProcess::tid_counter_ = 1;
 int64 UserProcess::pid_counter_ = 1;
+
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
@@ -84,6 +88,7 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
+  localFileDescriptorTable.closeAllFileDescriptors();
   delete working_dir_;
   working_dir_ = nullptr;
 
