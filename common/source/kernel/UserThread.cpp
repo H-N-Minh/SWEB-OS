@@ -33,9 +33,18 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
   }
 
-    size_t page_for_stack = PageManager::instance()->allocPPN();
-    debug(TAI_THREAD, "-------------------page_for_stack (%zu) \n", page_for_stack);
+  size_t page_for_stack;
+  if (!func)
+  {
+    page_for_stack = PageManager::instance()->allocPPN();
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
+  }
+  else
+  {
+    debug(TAI_THREAD, "-------------------EXPAND STACK HAHAHAHA \n");
+    page_for_stack = PageManager::instance()->allocPPN();
+    vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
+  }
 
     loader_->arch_memory_.lock_.acquire();
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
@@ -280,171 +289,6 @@ bool UserThread::schedulable()
     }
   }
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 
 
 

@@ -2,7 +2,8 @@
 #include <stdio.h>
 #define NUM_THREADS 1
 
-void thread_function(void *arg) {
+void thread_function(void *arg)
+{
   int thread_id = *((int*)arg);
   printf("Hello from thread %d\n", thread_id);
 }
