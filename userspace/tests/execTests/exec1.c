@@ -5,7 +5,7 @@
 //Exec without NULL as argument
 int exec1()
 {
-    const char * path = "usr/exec4_testprogram.sweb";
+    const char * path = "usr/exec_testprogram.sweb";
 
     int rv = execv(path, NULL);
 

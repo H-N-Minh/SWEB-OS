@@ -20,7 +20,7 @@ int64 UserProcess::pid_counter_ = 1;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
-    threads_lock_("thread_lock_"),  execv_lock_(" execv_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
+    threads_lock_("thread_lock_"),  one_thread_left_lock_("one_thread_left_lock_"),
     one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_")
 {
   ProcessRegistry::instance()->processStart();
@@ -43,7 +43,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
 
-  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0, false));
+  threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
 }
 
@@ -51,7 +51,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 // COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
-    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"), execv_lock_(" execv_lock_"),
+    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"), 
     one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_")
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
@@ -98,8 +98,11 @@ UserProcess::~UserProcess()
 
   ProcessRegistry::instance()->processExit();
 }
+
+
 UserThread* UserProcess::getUserThread(size_t tid)
 {
+  assert(threads_lock_.heldBy() == currentThread && "getUserThread used without holding threads_lock");
   for (size_t i = 0; i < threads_.size(); i++)
   {
     if (threads_[i]->getTID() == tid)
@@ -111,16 +114,15 @@ UserThread* UserProcess::getUserThread(size_t tid)
 
 int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr)
 {
-  //TODO: assert that it holds thread lock
+  assert(threads_lock_.heldBy() == currentThread && "getUserThread used without holding threads_lock");
   ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);                                                   
   if(iterator != thread_retval_map_.end())
   {
-    void *return_value = thread_retval_map_[tid];
-    thread_retval_map_.erase(iterator);
     if(value_ptr != NULL)
     {
-      *value_ptr = return_value;
+      *value_ptr = thread_retval_map_[tid];
     }
+    thread_retval_map_.erase(iterator);
     return 0;
   }
   else
@@ -141,106 +143,6 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
     } 
   }
   return false;
-}
-
-int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg)
-{
-  debug(USERPROCESS, "UserProcess::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
-
-  threads_lock_.acquire();  
-  UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine, 
-                                          arg, wrapper, false);
-  if(new_thread)
-  {
-    debug(USERPROCESS, "UserProcess::createThread: Adding new thread to scheduler\n");
-    threads_.push_back(new_thread);
-    Scheduler::instance()->addNewThread(new_thread);
-    *thread = new_thread->getTID();
-    threads_lock_.release();  
-    return 0;
-  }
-  else
-  {
-    debug(USERPROCESS, "UserProcess::createThread: ERROR: Thread not created\n");
-    threads_lock_.release();  
-    return -1;
-  }
-}
-
-int UserProcess::joinThread(size_t thread_id, void**value_ptr)
-{
-  debug(SYSCALL, "UserProcess:joinThread: called, thread_id: %zu and %p\n", thread_id, value_ptr);
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-
-  threads_lock_.acquire();
-
-  //find thread in threadlist
-  UserThread* thread_to_be_joined = getUserThread(thread_id);
-  if(!thread_to_be_joined)
-  {
-    //Check if thread has already terminated
-    int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
-    threads_lock_.release();
-    return thread_in_retval_map;
-  }
-  currentUserThread.thread_gets_killed_lock_.acquire();
-  thread_to_be_joined->join_threads_.push_back(&currentUserThread);
-  threads_lock_.release();
-  
-  //wait for thread get killed
-  while(!currentUserThread.thread_killed)
-  {
-    currentUserThread.thread_gets_killed_.wait();
-  }     
-  currentUserThread.thread_killed = false;               
-  currentUserThread.thread_gets_killed_lock_.release(); 
-
-  threads_lock_.acquire();
-  int thread_in_retval_map = removeRetvalFromMapAndSetReval(thread_id, value_ptr);
-  threads_lock_.release();
-
-  return thread_in_retval_map;
-}
-
-
-void UserProcess::exitThread(void* value_ptr)
-{
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  //remove thread from process' thread vector
-  threads_lock_.acquire();
-  ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);
-  threads_.erase(exiting_thread);
-
-  if(threads_.size() == 0)  // last thread in process
-  {
-      debug(SYSCALL, "Syscall::pthreadExit: last thread alive\n");
-      currentUserThread.last_thread_alive_ = true;
-      thread_retval_map_.clear();
-  }
-
-  currentUserThread.join_state_lock_.acquire();
-  if(currentUserThread.join_state_ == PTHREAD_CREATE_JOINABLE && !currentUserThread.last_thread_alive_ )
-  {
-    debug(SYSCALL, "Syscall::pthreadExit: saving return value in thread_retval_map_ in case the thread is joinable\n");
-    thread_retval_map_[currentUserThread.getTID()] = value_ptr;
-  }
-  currentUserThread.join_state_lock_.release();
-
-
-  if(threads_.size() == 1)  // only one thread left
-  {
-    one_thread_left_lock_.acquire();
-    one_thread_left_ = true;
-    one_thread_left_condition_.signal();
-    one_thread_left_lock_.release();
-
-  }
-
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",currentUserThread.getTID());
-  unmapThreadStack(&currentUserThread.loader_->arch_memory_, currentUserThread.top_stack_);
-  threads_lock_.release();
-  currentUserThread.kill();
-
 }
 
 void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
@@ -273,110 +175,59 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
 }
 
+//Todos: locking
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
   UserThread& currentUserThread = *((UserThread*)currentThread);
-  
-  int space_left = 4000;   //page size (more or less)
-  size_t array_offset = 0;
 
-  bool finished = false;
-
-  //go through all arguments, check if the are valid and if there is enough space
-  int argc = 0;
-  while(!finished)
+  if(!Syscall::check_parameter((size_t)path, false) || !Syscall::check_parameter((size_t)argv, false))
   {
-    if(!Syscall::check_parameter((size_t)argv[argc], true))
-    { 
-      debug(SYSCALL, "Execv: parameters not in userspace\n");
-      return -1;
-    }
-
-    if(argv[argc] == NULL)
-    {
-      space_left-= POINTER_SIZE;
-      finished = true;
-    }
-    else
-    {
-      space_left-= (strlen(argv[argc]) + 1 + POINTER_SIZE);
-      array_offset+= strlen(argv[argc]) + 1;
-      argc++;
-    }
-    if(space_left < 0)
-    {
-      debug(SYSCALL, "Execv: no space left\n");
-      return -1;
-    } 
+    return -1;
+  }
+  
+  int argc = 0;
+  int array_offset = 0;
+  if(!check_parameters_for_exec(argv, argc, array_offset))
+  {
+    return -1;
   }
 
+  //check if path exist
+  int32 execv_fd = VfsSyscall::open(path, O_RDONLY);
+  if(execv_fd < 0)
+  {
+    VfsSyscall::close(execv_fd);
+    return -1;
+  }
+  VfsSyscall::close(execv_fd);
 
-  //open the filedescriptor of the new program
-  execv_lock_.acquire();
-  //
+
+  threads_lock_.acquire();
   currentUserThread.cancel_state_type_lock_.acquire();
   if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
   {
+    VfsSyscall::close(execv_fd);
+    threads_lock_.release();
     currentUserThread.cancel_state_type_lock_.release();
-    execv_lock_.release();
     return -1;
   }
   currentUserThread.cancel_state_type_lock_.release();
 
-
-  execv_fd_ = VfsSyscall::open(path, O_RDONLY);
-  if(execv_fd_ < 0)
-  {
-    execv_lock_.release();
-    return -1;
-  }
-
-  //create loader for the new binary                                 
-  execv_loader_ = new Loader(execv_fd_);
-  if (!execv_loader_ || !execv_loader_->loadExecutableAndInitProcess())
-  {
-    debug(USERPROCESS, "Error: loading %s failed!\n", path);
-    delete execv_loader_;
-    execv_loader_ = 0;
-    VfsSyscall::close(execv_fd_);
-    execv_lock_.release();
-    return -1;
-  }
-
   //cancel all other threads
-  Syscall::exit(0, true);
-  execv_lock_.release();
-  
-
-  threads_lock_.acquire();
-  if(threads_.size() > 1)
-  {
-    one_thread_left_ = false;
-  }
-  else
-  {
-    one_thread_left_ = true;
-  }
+  cancelAllOtherThreads();
+  currentUserThread.send_kill_notification();
+  one_thread_left_ = (threads_.size() > 1) ? false : true;
   threads_lock_.release();
-  //wait for the other threads to die
-  one_thread_left_lock_.acquire();
-  while(!one_thread_left_)
-  {
-    one_thread_left_condition_.wait();
-  }
-  one_thread_left_lock_.release();
 
-  thread_retval_map_.clear();
-
-
-  
+  waitForThreadsToDie();
 
 
   //allocate a free physical page and get the virtual address of the identity mapping
-  execv_ppn_args_ = PageManager::instance()->allocPPN();
-  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(execv_ppn_args_);
 
-  exec_array_offset_ = array_offset;
+  size_t page_for_args = PageManager::instance()->allocPPN();
+  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
+
+  int exec_array_offset_ = array_offset;
   size_t offset = 0;
   size_t offset1 = USER_BREAK - PAGE_SIZE;
   
@@ -396,17 +247,125 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
   }
   
-  exec_argc_ = argc;
-
-
-
-  //execv_lock_.release();
-  ustl::vector<UserThread*>::iterator exiting_thread = ustl::find(threads_.begin(), threads_.end(), currentThread);
-  threads_.erase(exiting_thread);
-  ((UserThread*)currentThread)->last_thread_before_exec_ = true;
-  ((UserThread*)currentThread)->kill();
+  execv_fd = VfsSyscall::open(path, O_RDONLY);   //todos maybe deepcopy path
+  if(execv_fd < 0)
+  {
+    assert(".... .....!!!!");
+  }
+  loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.vpn_stack_);  //cancel
+  size_t old_cr3 = currentThread->user_registers_->cr3;
+  loader_->replaceLoader(execv_fd);
+  VfsSyscall::close(fd_);
+  fd_ = execv_fd;
 
   
-  assert(0 && "Sucessful exec should not return");
+  ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
+
+  
+  currentThread->user_registers_->rdi = argc;
+  currentThread->user_registers_->cr3 = old_cr3;
+
+
+  size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
+  loader_->arch_memory_.lock_.acquire();
+  bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
+  loader_->arch_memory_.lock_.release();
+  currentThread->user_registers_->rsi = USER_BREAK - PAGE_SIZE + exec_array_offset_;
+  assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
+
+  // assert(0);
+
+  return 0;
+}
+
+
+bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& array_offset)
+{
+  int space_left = 4000;   //page size (more or less)
+  bool finished = false;
+
+  //go through all arguments, check if the are valid and if there is enough space
+  while(!finished)
+  {
+    if(!Syscall::check_parameter((size_t)argv[argc], true))
+    { 
+      debug(USERPROCESS, "Execv: parameters not in userspace\n");
+      return false;
+    }
+
+    if(argv[argc] == NULL)
+    {
+      space_left-= POINTER_SIZE;
+      finished = true;
+    }
+    else
+    {
+      space_left-= (strlen(argv[argc]) + 1 + POINTER_SIZE);
+      array_offset+= strlen(argv[argc]) + 1;
+      argc++;
+    }
+    if(space_left < 0)
+    {
+      debug(USERPROCESS, "Execv: no space left\n");
+      return false;
+    } 
+  }
+  return true;
+}
+
+void UserProcess::waitForThreadsToDie()
+{
+  //wait for the other threads to die
+  one_thread_left_lock_.acquire();
+  while(!one_thread_left_)
+  {
+    one_thread_left_condition_.wait();
+  }
+  one_thread_left_lock_.release();
+
+  thread_retval_map_.clear();
+
+  assert(threads_.size() == 1 && "Not all threads removed from threads_");
+  assert(thread_retval_map_.size() == 0 && "There are still values in retval map");
+
+}
+
+
+void UserProcess::exitProcess(size_t exit_code)
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+
+  debug(USERPROCESS, "UserProcess::exitProcess: Thread (%zu) called exit_code: %zd.\n", currentUserThread.getTID(), exit_code);
+
+  threads_lock_.acquire();
+  cancelAllOtherThreads();
+  threads_lock_.release();
+
+  debug(USERPROCESS, "UserProcess::exitProcess: Last Thread %zu calls pthread exit. \n", currentUserThread.getTID());
+  currentUserThread.exitThread((void*)exit_code);
+  assert(false && "This should never happen");
+
+}
+
+void UserProcess::cancelAllOtherThreads()
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  assert(threads_lock_.heldBy() == currentThread);
+
+  for (auto& thread : threads_)
+  {
+    if(thread != &currentUserThread)
+    {
+      size_t thread_id = thread->getTID();
+      thread->cancel_state_type_lock_.acquire();
+      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
+      thread->cancel_state_type_lock_.release();
+      debug(USERPROCESS, "UserProcess::exitProcess: Thread %zu gets canceled. \n",thread_id);
+      currentUserThread.detachThread(thread_id);
+      assert(currentUserThread.cancelThread(thread_id) == 0 && "pthreadCancel failed in exit.\n");
+      debug(USERPROCESS, "UserProcess::exitProcess: Thread %zu was canceled sucessfully. \n",thread_id);
+    } 
+  }
+
 
 }

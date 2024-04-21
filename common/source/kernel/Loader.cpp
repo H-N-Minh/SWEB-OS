@@ -171,6 +171,21 @@ void* Loader::getEntryFunction() const
   return (void*)hdr_->e_entry;
 }
 
+void Loader::replaceLoader(int32 execv_fd)
+{
+  delete userspace_debug_info_;
+  delete hdr_;
+  userspace_debug_info_ = nullptr;
+  hdr_ = nullptr;
+
+  phdrs_.clear();
+  
+
+  fd_ = execv_fd;
+
+  loadExecutableAndInitProcess();
+}
+
 bool Loader::loadExecutableAndInitProcess()
 {
   debug ( LOADER,"Loader::loadExecutableAndInitProcess: going to load an executable\n" );

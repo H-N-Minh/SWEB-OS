@@ -225,7 +225,9 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
 
-  assert(m.page_ppn != 0 && m.page_size == PAGE_SIZE && m.pt[m.pti].present);
+  assert(m.page_ppn != 0);
+  assert(m.page_size == PAGE_SIZE);
+  assert(m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
 
   PageManager::instance()->freePPN(m.page_ppn);
@@ -438,3 +440,68 @@ PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()
 {
   return kernel_page_map_level_4;
 }
+
+
+void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
+{
+  lock_.acquire();
+  ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
+
+  PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
+  for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // free only lower half
+  {
+    if (pml4[pml4i].present)
+    {
+      PageDirPointerTableEntry* pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(pml4[pml4i].page_ppn);
+      for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
+      {
+        if (pdpt[pdpti].pd.present)
+        {
+          assert(pdpt[pdpti].pd.size == 0);
+          PageDirEntry* pd = (PageDirEntry*) getIdentAddressOfPPN(pdpt[pdpti].pd.page_ppn);
+          for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
+          {
+            if (pd[pdi].pt.present)
+            {
+              assert(pd[pdi].pt.size == 0);
+              PageTableEntry* pt = (PageTableEntry*) getIdentAddressOfPPN(pd[pdi].pt.page_ppn);
+              for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+              {
+                if (pt[pti].present)
+                {
+                  if(m.page_ppn != pt[pti].page_ppn)
+                  {
+                    pt[pti].present = 0;
+                    PageManager::instance()->freePPN(pt[pti].page_ppn);
+                    ((uint64*)pt)[pti] = 0; 
+                  }
+                }
+              }
+              if(m.pt_ppn != pd[pdi].pt.page_ppn)
+              {
+                pd[pdi].pt.present = 0;
+                PageManager::instance()->freePPN(pd[pdi].pt.page_ppn);
+                ((uint64*)pd)[pdi] = 0; 
+              }
+            }
+          }
+          if(m.pd_ppn != pdpt[pdpti].pd.page_ppn)
+          {
+            pdpt[pdpti].pd.present = 0;
+            PageManager::instance()->freePPN(pdpt[pdpti].pd.page_ppn);
+            ((uint64*)pdpt)[pdpti] = 0; 
+          }
+        }
+      }
+      if(m.pdpt_ppn != pml4[pml4i].page_ppn)
+      {
+        pml4[pml4i].present = 0;
+        PageManager::instance()->freePPN(pml4[pml4i].page_ppn);
+        ((uint64*)pml4)[pml4i] = 0; 
+      }
+    }
+  }
+  lock_.release();
+}
+
+

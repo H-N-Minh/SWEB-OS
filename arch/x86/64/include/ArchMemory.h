@@ -103,7 +103,9 @@ class ArchMemory
     ArchMemory(ArchMemory const &src);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
+    
     bool accessSharedMemoryPage(uint64 page_ppn);
+    void deleteEverythingExecpt(size_t virtual_page);
 
   private:
     /**
