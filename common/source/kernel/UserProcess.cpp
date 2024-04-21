@@ -193,7 +193,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     return -1;
   }
-  
+
   int argc = 0;
   int array_offset = 0;
   if(!check_parameters_for_exec(argv, argc, array_offset))
@@ -267,15 +267,15 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   VfsSyscall::close(fd_);
   fd_ = execv_fd;
 
-  
+
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
 
-  
+
   currentThread->user_registers_->rdi = argc;
   currentThread->user_registers_->cr3 = old_cr3;
 
 
-  size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
+  size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
   loader_->arch_memory_.lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
   loader_->arch_memory_.lock_.release();
@@ -297,7 +297,7 @@ bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& 
   while(!finished)
   {
     if(!Syscall::check_parameter((size_t)argv[argc], true))
-    { 
+    {
       debug(USERPROCESS, "Execv: parameters not in userspace\n");
       return false;
     }
@@ -317,7 +317,7 @@ bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& 
     {
       debug(USERPROCESS, "Execv: no space left\n");
       return false;
-    } 
+    }
   }
   return true;
 }
@@ -368,13 +368,13 @@ void UserProcess::cancelAllOtherThreads()
     {
       size_t thread_id = thread->getTID();
       thread->cancel_state_type_lock_.acquire();
-      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
+      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;
       thread->cancel_state_type_lock_.release();
       debug(USERPROCESS, "UserProcess::exitProcess: Thread %zu gets canceled. \n",thread_id);
       currentUserThread.detachThread(thread_id);
       assert(currentUserThread.cancelThread(thread_id) == 0 && "pthreadCancel failed in exit.\n");
       debug(USERPROCESS, "UserProcess::exitProcess: Thread %zu was canceled sucessfully. \n",thread_id);
-    } 
+    }
   }
 }
 

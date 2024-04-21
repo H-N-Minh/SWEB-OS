@@ -113,7 +113,6 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_fork:
       return_value = forkProcess();
-      debug(FORK, "return_value %zu \n",return_value);
       break;
     case sc_pipe:
       return_value = pipe((int*) arg1);
@@ -187,14 +186,14 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
   if (new_brk_addr > MAX_HEAP_SIZE || new_brk_addr < heap_start)
   {
     debug(SBRK, "Syscall::brkMemory: address %p is not within heap segment\n", (void*) new_brk_addr);
-    return -1; 
+    return -1;
   }
-  
+
   int successly_brk = heap_manager->brk(new_brk_addr);
   if (successly_brk == 0)
   {
     debug(SBRK, "Syscall::brkMemory: brk done with address %p\n", (void*) new_brk_addr);
-    return 0; 
+    return 0;
   }
   else
   {
@@ -219,9 +218,9 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
   if (potential_new_break > MAX_HEAP_SIZE || potential_new_break < heap_start)
   {
     debug(SBRK, "Syscall::sbrk: size %zd is too big\n", size);
-    return -1; 
+    return -1;
   }
-  
+
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
   pointer reserved_space = 0;
   reserved_space = heap_manager->sbrk(size, 0);
@@ -234,7 +233,7 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
   {
     debug(SBRK, "Syscall::sbrk: sbrk done with return %p\n", (void*) reserved_space);
     *(pointer*) return_ptr = reserved_space;
-    return 0; 
+    return 0;
   }
 }
 
@@ -263,6 +262,7 @@ uint32 Syscall::pipe(int file_descriptor_array[2])
   debug(SYSCALL, "Syscall::pipe allocated file descriptors: read_fd = %d, write_fd = %d\n", read_fd, write_fd);
 
   return 0;
+
 }
 
 
@@ -346,9 +346,9 @@ void Syscall::exit(size_t exit_code)
   {
     debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
   }
-  
-  
-  
+
+
+
   current_process.exitProcess(exit_code);
   assert(false && "This should never happen");
 }
@@ -359,7 +359,6 @@ int Syscall::execv(const char *path, char *const argv[])
   UserProcess& current_process = *currentUserThread.process_;
   return current_process.execvProcess(path, argv);
 }
-
 
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
@@ -459,7 +458,6 @@ size_t Syscall::close(size_t fd)
   return -1U;
 }
 
-
 size_t Syscall::open(size_t path, size_t flags)
 {
   if (path >= USER_BREAK)
@@ -495,8 +493,6 @@ size_t Syscall::open(size_t path, size_t flags)
 
   return localFileDescriptor->getLocalFD();
 }
-
-
 
 void Syscall::outline(size_t port, pointer text)
 {
@@ -661,8 +657,6 @@ unsigned int Syscall::clock(void)
 
   return (unsigned int)clock_in_microseconds;
 }
-
-
 
 uint64_t Syscall::get_current_timestamp_64_bit()
 {      

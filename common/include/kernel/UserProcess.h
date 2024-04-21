@@ -12,8 +12,6 @@
 
 class UserProcess
 {
-
-
     public:
         /**
          * Constructor
@@ -92,7 +90,6 @@ class UserProcess
 
         LocalFileDescriptorTable localFileDescriptorTable;
 
-         ustl::string str() const;
-
+        ustl::string str() const;
 };
 

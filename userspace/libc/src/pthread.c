@@ -737,3 +737,62 @@ void wakeUpThread(size_t* request_to_sleep)
 
   *request_to_sleep = 0;
 }
+
+int pthread_attr_init(pthread_attr_t *attr)
+{
+  if (attr == NULL)
+  {
+    return -1;
+  }
+  if (attr->initialized == 1)
+  {
+    return -1;
+  }
+
+  attr->detach_state = PTHREAD_CREATE_JOINABLE; // Default detach state
+  attr->stack_addr = NULL; // Default stack address
+  attr->stack_size = DEFAULT_STACK_SIZE;
+  attr->priority = 0;      // Default priority
+
+  attr->initialized = 1;
+  return 0; // Success
+}
+
+int pthread_attr_destroy(pthread_attr_t *attr) {
+  if (attr == NULL)
+  {
+    return -1;
+  }
+  attr->initialized = 0;
+  return 0;
+}
+
+int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
+{
+  if (attr == NULL)
+    return -1;
+  if (detachstate != PTHREAD_CREATE_JOINABLE && detachstate != PTHREAD_CREATE_DETACHED)
+    return -1;
+  attr->detach_state = detachstate;
+  return 0;
+}
+
+int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate)
+{
+  if (attr == NULL || detachstate == NULL)
+    return -1;
+  *detachstate = attr->detach_state;
+  return 0;
+}
+
+int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
+{
+  if (attr == NULL || attr->initialized != 1 || stacksize < PTHREAD_STACK_MIN)
+  {
+    return -1;
+  }
+
+  attr->stack_size = stacksize;
+
+  return 0;
+}

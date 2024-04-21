@@ -13,6 +13,14 @@ enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, P
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE, PCD_TO_BE_JOINED, PCJ_TO_BE_JOINED};
 
+typedef struct {
+    int detach_state;  // Detach state: PTHREAD_CREATE_JOINABLE or PTHREAD_CREATE_DETACHED
+    void *stack_addr;  // Stack address
+    size_t stack_size; // Stack size
+    int priority;      // Thread priority
+    int initialized;
+} pthread_attr_t;
+
 class UserThread : public Thread
 {
     public:
@@ -34,7 +42,7 @@ class UserThread : public Thread
         void exitThread(void* value_ptr);
         int detachThread(size_t thread_id);
 
-        
+
         UserProcess* process_;
         size_t vpn_stack_;
         size_t user_stack_ptr_;            //Todos: copy in fork

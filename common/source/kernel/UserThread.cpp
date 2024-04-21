@@ -77,7 +77,6 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 }
 
 
-
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_), user_stack_ptr_(other.user_stack_ptr_),
              page_for_stack_(other.page_for_stack_),
@@ -181,7 +180,7 @@ bool UserThread::schedulable()
   }
 
   if(wants_to_be_canceled_ && switch_to_userspace_
-    && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+    && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE)))
   {
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
 
@@ -242,7 +241,7 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
   {
     debug(USERTHREAD, "UserThread:pthreadJoin: No running thread id %zu can be found.\n", thread_id);
 
-   //check if thread has already terminated 
+   //check if thread has already terminated
     int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, value_ptr);
     process_->threads_lock_.release();
     return thread_in_retval_map;
@@ -254,7 +253,7 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
     process_->threads_lock_.release();
     return -1;
   }
-  else 
+  else
   {
     thread_to_be_joined->join_state_ = PCJ_TO_BE_JOINED;
   }
@@ -263,14 +262,14 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
   thread_gets_killed_lock_.acquire();
   thread_to_be_joined->join_threads_.push_back(this);
   process_->threads_lock_.release();
-  
+
   //wait for thread get killed
   while(!thread_killed)
   {
     thread_gets_killed_.wait();
-  }     
-  thread_killed = false;               
-  thread_gets_killed_lock_.release(); 
+  }
+  thread_killed = false;
+  thread_gets_killed_lock_.release();
 
   process_->threads_lock_.acquire();
   int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, value_ptr);
@@ -319,16 +318,16 @@ void UserThread::exitThread(void* value_ptr)
 }
 
 int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, unsigned int* attr)
-{ 
-  if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true) 
-  || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true) 
+{
+  if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true)
+  || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true)
   || !Syscall::check_parameter((size_t)wrapper))
   {
     return -1;
   }
   debug(USERPROCESS, "UserThread::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
 
-  process_->threads_lock_.acquire();  
+  process_->threads_lock_.acquire();
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
   if(new_thread)
@@ -337,13 +336,13 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
     process_->threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
     *thread = new_thread->getTID();
-    process_->threads_lock_.release();  
+    process_->threads_lock_.release();
     return 0;
   }
   else
   {
     debug(USERPROCESS, "UserThread::createThread: ERROR: Thread not created\n");
-    process_->threads_lock_.release();  
+    process_->threads_lock_.release();
     return -1;
   }
 }
