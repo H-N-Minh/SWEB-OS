@@ -169,7 +169,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentUserThread.cancel_state_type_lock_.acquire();
   if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
   {
-    VfsSyscall::close(execv_fd);
     threads_lock_.release();
     currentUserThread.cancel_state_type_lock_.release();
     return -1;
@@ -181,9 +180,12 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentUserThread.send_kill_notification();
   one_thread_left_ = (threads_.size() > 1) ? false : true;
   threads_lock_.release();
-
   waitForThreadsToDie();
 
+  if(!check_parameters_for_exec(argv, argc, array_offset))
+  {
+    assert(0);         //Todos
+  }
 
   //allocate a free physical page and get the virtual address of the identity mapping
 
@@ -193,14 +195,35 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   int exec_array_offset_ = array_offset;
   size_t offset = 0;
   size_t offset1 = USER_BREAK - PAGE_SIZE;
+
+  // if(exec_array_offset_ > PAGE_SIZE)
+  // {
+  //   size_t page_for_args_2 = PageManager::instance()->allocPPN();
+  //   size_t virtual_address_2 =  ArchMemory::getIdentAddressOfPPN(page_for_args);
+  // }
   
   for(int i = 0; i < argc; i++)
   {
     //write the arguments one by one to the new phsical page via identity mapping
-    memcpy((char*)virtual_address + offset, argv[i], strlen(argv[i])+1);
+    char* start_next_string = (char*)virtual_address + offset;
+    int len_string = strlen(argv[i])+1;
+    char* end_next_string = (char*)((size_t)start_next_string + (size_t)len_string);  //Todos: not sure if this is right here
 
+    char* start_next_array_element = (char*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE);
+    // char* end_next_array_element = (char*)(virtual_address + exec_array_offset_ + (i + 1) * POINTER_SIZE);
+
+    if((size_t)(start_next_string - virtual_address) < PAGE_SIZE && (size_t)(end_next_string - virtual_address) < PAGE_SIZE)
+    {
+       memcpy(start_next_string, argv[i], len_string);
+    }
+   
+ 
     //store the offset of each argument in the page, at the end of all arguments
-    memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset1, POINTER_SIZE);
+    memcpy(start_next_array_element, &offset1, POINTER_SIZE);
+    
+    
+    
+    
     offset += strlen(argv[i]) + 1;
     offset1 += strlen(argv[i]) + 1;
   }
@@ -213,7 +236,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   execv_fd = VfsSyscall::open(path, O_RDONLY);   //todos maybe deepcopy path
   if(execv_fd < 0)
   {
-    assert(".... .....!!!!");
+    assert(0);      //Todos: maybe change to exit
   }
   loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.vpn_stack_);  //cancel
   size_t old_cr3 = currentThread->user_registers_->cr3;
@@ -244,7 +267,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
 bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& array_offset)
 {
-  int space_left = 4000;   //page size (more or less)
+  int space_left = PAGE_SIZE;
   bool finished = false;
 
   //go through all arguments, check if the are valid and if there is enough space
