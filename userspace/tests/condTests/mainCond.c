@@ -11,6 +11,7 @@ extern int cond6();
 extern int cond7();
 
 // set to 1 to test, 0 to skip
+//TODO: add test to check overflow/underflow when header data of page is corrupted
 #define COND1 1         // simple test where child has to wait for parent's signal
 #define COND2 1         // similar to cond1, but with more conds and both has to wait for each other
 #define COND3 1         // test large number of threads on same cond

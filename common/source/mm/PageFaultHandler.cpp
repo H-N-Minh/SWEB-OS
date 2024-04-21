@@ -7,11 +7,15 @@
 #include "Loader.h"
 #include "Syscall.h"
 #include "ArchThreads.h"
+#include "UserSpaceMemoryManager.h"
+#include "UserThread.h"
+#include "UserProcess.h"
+
 extern "C" void arch_contextSwitch();
 
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
 
-inline bool PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
+inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
                                                     bool present, bool switch_to_us)
 {
   assert((user == switch_to_us) && "Thread is in user mode even though is should not be.");
@@ -32,14 +36,42 @@ inline bool PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   }
   else if(present)
   {
-    debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+    if (currentThread->loader_->isCOW(address))
+    {
+      debug(PAGEFAULT_TEST, "pagefault even though the address is mapped BUT ITS COW.\n");
+      return true;
+    }
+    else
+    {
+      debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+    }
+  }
+  else if(user && !present && 
+          address > null_reference_check_border_ && address < USER_BREAK)
+  {
+    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
+    UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+    assert(manager && "UserSpaceMemoryManager is not initialized.");
+    int retval = manager->checkValidGrowingStack(address);
+    
+    if(retval == 11)  // corruption detected
+    {
+      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. Exiting with error 11\n");
+      return 0;
+    }
+    else if(retval == 1)  // valid growing stack
+    {
+      return 69;
+    }
+    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
+    return 1;
   }
   else
   {
     // everything seems to be okay
-    return true;
+    return 1;
   }
-  return false;
+  return 0;
 }
 
 inline void PageFaultHandler::handlePageFault(size_t address, bool user,
@@ -59,9 +91,42 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  if (checkPageFaultIsValid(address, user, present, switch_to_us))
+  int status = checkPageFaultIsValid(address, user, present, switch_to_us);
+  if (status == 1)
   {
-    currentThread->loader_->loadPage(address);
+    if(writing) //bit of entry->writable = =1?
+    {
+      if (currentThread->loader_->isCOW(address))
+      {
+        debug(PAGEFAULT_TEST, "is COW, copying Page\n");
+        currentThread->loader_->copyPage(address);
+      }
+      else
+      {
+        currentThread->loader_->loadPage(address);
+      }
+    }
+    else
+      currentThread->loader_->loadPage(address);
+  }
+  else if (status == 69)
+  {
+    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
+    UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+    assert(manager && "UserSpaceMemoryManager is not initialized.");
+    int status = manager->increaseStackSize(address);
+    if (status == -1)
+    {
+      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
+      if (currentThread->loader_)
+        Syscall::exit(9999);
+      else
+        currentThread->kill();
+      }
+    else
+    {
+      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
+    }
   }
   else
   {

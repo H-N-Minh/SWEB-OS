@@ -178,6 +178,18 @@ int64 ArchThreads::atomic_add(int64 &value, int64 increment)
   return (int64) ArchThreads::atomic_add((uint64 &) value, increment);
 }
 
+int64 ArchThreads::atomic_sub(int64 &value, int64 decrement)
+{
+  int64 ret = -decrement;
+  __asm__ __volatile__(
+  "lock; xadd %0, %1;"
+  : "+r"(ret), "+m"(value)
+  :
+  : "memory"
+  );
+  return ret;
+}
+
 void ArchThreads::atomic_set(uint32& target, uint32 value)
 {
   __atomic_store_n(&(target), value, __ATOMIC_SEQ_CST);

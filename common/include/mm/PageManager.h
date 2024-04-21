@@ -4,6 +4,8 @@
 #include "paging-definitions.h"
 #include "SpinLock.h"
 
+#include "umap.h"
+
 #define DYNAMIC_KMM (0) // Please note that this means that the KMM depends on the page manager
 // and you will have a harder time implementing swapping. Pros only!
 
@@ -51,6 +53,17 @@ class PageManager
     void printBitmap();
 
     uint32 getNumPagesForUser() const;
+
+    struct PageInfo{
+        uint32 reference_count;
+    };
+
+    ustl::map<uint32, PageInfo> page_reference_counts_;
+
+    void incrementReferenceCount(uint64 page_number);
+    void decrementReferenceCount(uint64 page_number);
+
+    uint32 getReferenceCount(uint64 page_number);
 
   private:
     bool reservePages(uint32 ppn, uint32 num = 1);

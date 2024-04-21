@@ -6,6 +6,10 @@
 
 #define USER_BREAK 0x0000800000000000ULL
 
+// CHANGES TO THESE DEFINE MUST ALSO BE CHANGED IN KERNEL
+#define GUARD_MARKER 0xbadcafe00000ULL
+#define MAX_STACK_AMOUNT 4
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,24 +19,24 @@ typedef size_t pthread_t;
 typedef unsigned int pthread_attr_t;
 
 //pthread spinlock
-struct pthread_spinlock_struct { 
-    size_t  locked_; 
+struct pthread_spinlock_struct {
+    size_t  locked_;
     size_t initialized_;
     void* held_by_;
-}; 
+};
 
 typedef struct pthread_spinlock_struct pthread_spinlock_t;
 
 
 
 //pthread mutex
-struct pthread_mutex_struct { 
+struct pthread_mutex_struct {
     size_t initialized_;
     size_t *waiting_list_;
     pthread_spinlock_t mutex_lock_;
     size_t *held_by_;
     size_t locked_;
-}; 
+};
 
 
 
@@ -51,8 +55,8 @@ typedef unsigned int pthread_mutexattr_t;
 //pthread cond typedefs
 typedef struct pthread_cond_struct
 {
-  size_t initialized_;
-  size_t waiting_list_;     // pointer to linked list of waiting threads
+    size_t initialized_;
+    size_t waiting_list_;     // pointer to linked list of waiting threads
 } pthread_cond_t;
 typedef unsigned int pthread_condattr_t;
 
@@ -61,15 +65,15 @@ enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
 
 extern int pthread_create(pthread_t *thread,
-         const pthread_attr_t *attr, void *(*start_routine)(void *),
-         void *arg);
+                          const pthread_attr_t *attr, void *(*start_routine)(void *),
+                          void *arg);
 
 
 /**pthread_create_wrapper is the wrapper that we need to run first
 //the wrapper will take 2 parameter
 //first one for the function that we want to run
 //second one is the parameter of the function */
-void pthread_create_wrapper(void* start_routine, void* arg);
+void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack);
 
 extern void pthread_exit(void *value_ptr);
 
@@ -125,14 +129,14 @@ extern int parameters_are_valid(size_t ptr, int allowed_to_be_null);
 extern void print_waiting_list(size_t* waiting_list, int before);
 
 /**
- * return the address of the top of the current stack. 
+ * return the address of the top of the current stack.
  * @return non null pointer
 */
 extern size_t getTopOfThisStack();
 
 /**
- * return the address of the top of the first stack. 
- * @return non null pointer
+ * return the address of the top of the first stack, which is the 1st GUARD_MARKER
+ * @return the address found, or 0 if not found
 */
 extern size_t getTopOfFirstStack();
 

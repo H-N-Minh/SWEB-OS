@@ -12,6 +12,9 @@ char const *user_progs[] = {
                             // "/usr/stateTypeTest.sweb",
                             // "/usr/spinTest.sweb",
                             // "/usr/pthreadCreate.sweb",
+// UserSpace Memory -------------------------------------------------
+                            // "/usr/mallocTests.sweb",
+                            //"/usr/growingStackTests.sweb",
 
 // SEM & COND -------------------------------------------------
                             // "/usr/condTests.sweb",
@@ -31,14 +34,14 @@ char const *user_progs[] = {
                             // "/usr/pthreadExitTests.sweb",
                             // "/usr/pthreadDetachTests.sweb",                                        
 
-                            "/usr/execTests.sweb",
+                            // "/usr/execTests.sweb",
                             // "/usr/exec5.sweb",
 
 
 
                             //"/usr/forkExecTests.sweb",  
 
-                            // "/usr/userspaceLocksTests.sweb",                                    
+                            // "/usr/userspaceLocksTests.sweb",
 
                             // "/usr/sleepAndClockTests.sweb", 
 

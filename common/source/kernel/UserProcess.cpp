@@ -6,11 +6,11 @@
 #include "PageManager.h"
 #include "Scheduler.h"
 #include "Mutex.h"
-#include "UserProcess.h"
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"
 #include "types.h"
 #include "Syscall.h"
+#include "UserThread.h"
 
 #define POINTER_SIZE 8
 
@@ -39,6 +39,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   }
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
 
+  user_mem_manager_ = new UserSpaceMemoryManager(loader_);
+
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
 
   threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
@@ -63,6 +65,8 @@ UserProcess::UserProcess(const UserProcess& other)
   other.loader_->arch_memory_.lock_.release();
   if (!loader_){assert(0 && "No loader in fork");}
 
+  user_mem_manager_ = new UserSpaceMemoryManager(loader_);
+
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
 
@@ -83,6 +87,9 @@ UserProcess::~UserProcess()
 
   delete working_dir_;
   working_dir_ = nullptr;
+
+  delete user_mem_manager_;
+  user_mem_manager_ = nullptr;
 
 
   /////
@@ -136,6 +143,36 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
     } 
   }
   return false;
+}
+
+void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
+{
+  debug(SYSCALL, "pthreadExit: Unmapping thread's stack\n");
+  assert(top_stack && "Error: top_stack is NULL in unmapThreadStack\n");
+  assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
+
+  uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
+  for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
+  {
+    if (arch_memory->checkAddressValid(top_stack))
+    {
+      size_t* guard1 = (size_t*) top_stack;
+      size_t* guard2 = (size_t*) (top_stack - sizeof(size_t) * (META_SIZE - 1) );
+      *guard1 = 0;
+      *guard2 = 0;
+      arch_memory->lock_.acquire();
+      arch_memory->unmapPage(top_vpn);
+      arch_memory->lock_.release();
+      top_vpn--;
+      top_stack -= PAGE_SIZE;
+    }
+    else
+    {
+      break;
+    }
+  }
+
+  debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
 }
 
 //Todos: locking

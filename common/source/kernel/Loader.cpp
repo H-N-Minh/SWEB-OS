@@ -10,6 +10,7 @@
 #include "FileDescriptor.h"
 #include "Scheduler.h"
 
+#include "assert.h"
 Loader::Loader(ssize_t fd) : fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0){}
 
 Loader::Loader(const Loader &src, int32 fd)
@@ -19,7 +20,6 @@ Loader::Loader(const Loader &src, int32 fd)
   debug(FORK, "Loader-Copy constructor called.\n");
 
   readHeaders();
- 
 
   debug ( LOADER,"loadExecutableAndInitProcess: Entry: %zx, num Sections %zx\n",hdr_->e_entry, (size_t)hdr_->e_phnum );
   if (LOADER & OUTPUT_ADVANCED)
@@ -36,6 +36,33 @@ Loader::~Loader()
   delete hdr_;
   userspace_debug_info_ = nullptr;
   hdr_ = nullptr;
+}
+
+void* Loader::getBrkStart()
+{
+  debug(SBRK, "Loader:getBrkStart: Calculating the start address of Heap\n");
+
+  // Iterate through all sections and get the highest segment address
+  pointer highest_segment = 0;
+  program_binary_lock_.acquire();
+  for(ustl::list<Elf::Phdr>::iterator it = phdrs_.begin(); it != phdrs_.end(); it++)
+  {
+    size_t segment_start = (*it).p_vaddr;
+    size_t segment_size = (*it).p_filesz;
+    size_t segment_end = segment_start + segment_size;
+    if(segment_end > highest_segment)
+    {
+      highest_segment = segment_end;
+    }
+  }
+  program_binary_lock_.release();
+  assert(highest_segment > 0 && "Loader:getBrkStart: ERROR! No segment found.\n");
+
+  // Calculate the start address of the heap (1 page up from the highest segment's page)
+  size_t highest_segment_page_start = highest_segment - (highest_segment % PAGE_SIZE);
+  void* heap_start = (void*) (highest_segment_page_start + PAGE_SIZE*2);
+  debug(SBRK, "Loader:getBrkStart: The start address of the heap is %p\n", heap_start);
+  return heap_start;
 }
 
 void Loader::loadPage(pointer virtual_address)
@@ -329,4 +356,121 @@ bool Loader::prepareHeaders()
     }
   }
   return phdrs_.size() > 0;
+}
+
+bool Loader::isCOW(size_t virtual_addr)
+{
+  PageTableEntry* entry = findPageTableEntry(virtual_addr);
+
+  if (entry && entry->cow)
+    return true;
+  else
+    return false;
+}
+
+PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
+{
+//  size_t offset = virtual_addr & 0xfff;
+//  size_t pml1i = (virtual_addr >> 12) & 0b111111111;
+//  size_t pml2i = (virtual_addr >> (12 + 9)) & 0b111111111;
+//  size_t pml3i = (virtual_addr >> (12 + 9 + 9)) & 0b111111111;
+//  size_t pml4i = (virtual_addr >> (12 + 9 + 9 + 9)) & 0b111111111;
+//
+//  debug(PAGEFAULT_TEST, "Indices: Pml4i: %lx pml3i: %lx pml2i: %lx pml1i: %lx offset: %lx\n", pml4i, pml3i, pml2i, pml1i, offset);
+
+  VPN vpn {.packed = virtual_addr};
+  //debug(PAGEFAULT_TEST, "Indices: Pml4i: %lx pml3i: %lx pml2i: %lx pml1i: %lx offset: %lx\n", vpn.pml4i, vpn.pml3i, vpn.pml2i, vpn.pml1i, vpn.offset);
+
+  //GET PPN FROM Archmemory
+
+  size_t pml4_ppn = currentThread->loader_->arch_memory_.page_map_level_4_;
+  //debug(PAGEFAULT_TEST, "pml4_ppn %lx\n", pml4_ppn);
+
+  //get the physical address of the PML4 table
+  PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) ArchMemory::getIdentAddressOfPPN(pml4_ppn);
+  if (!pml4[vpn.pml4i].present)
+  {
+    debug(PAGEFAULT_TEST, "pml4 entry not present!\n");
+    return nullptr;
+  }
+
+  size_t pml3_ppn = pml4[vpn.pml4i].page_ppn;
+  PageDirPointerTableEntry* pml3 = (PageDirPointerTableEntry*) ArchMemory::getIdentAddressOfPPN(pml3_ppn);
+  if (!pml3[vpn.pml3i].pd.present)
+  {
+    debug(PAGEFAULT_TEST, "pml3 entry not present!\n");
+    return nullptr;
+  }
+
+  size_t pml2_ppn = pml3[vpn.pml3i].pd.page_ppn;
+  PageDirPageTableEntry* pml2 = (PageDirPageTableEntry*) ArchMemory::getIdentAddressOfPPN(pml2_ppn);
+  if (!pml2[vpn.pml2i].present)
+  {
+    debug(PAGEFAULT_TEST, "pml2 entry not present!\n");
+    return nullptr;
+  }
+
+  size_t pml1_ppn = pml2[vpn.pml2i].page_ppn;
+  PageTableEntry* pml1 = (PageTableEntry*) ArchMemory::getIdentAddressOfPPN(pml1_ppn);
+  if (!pml1[vpn.pml1i].present)
+  {
+    debug(PAGEFAULT_TEST, "pml1 entry not present!\n");
+    return nullptr;
+  }
+
+  //debug(PAGEFAULT_TEST, "page table entry found at address: %p\n", &pml1[vpn.pml1i]);
+
+  return &pml1[vpn.pml1i];
+}
+
+void Loader::copyPage(size_t virtual_addr)
+{
+  PageTableEntry* entry = findPageTableEntry(virtual_addr);
+  if (entry)
+  {
+    size_t new_page_ppn = PageManager::instance()->allocPPN();
+
+    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+
+    PageManager::instance()->getReferenceCount(entry->page_ppn);
+
+    pointer original_page = ArchMemory::getIdentAddressOfPPN(entry->page_ppn);
+    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+    memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+
+    PageManager::instance()->decrementReferenceCount(entry->page_ppn);
+
+    if(PageManager::instance()->getReferenceCount(entry->page_ppn) == 0)
+    {
+      PageManager::instance()->freePPN(entry->page_ppn);
+    }
+    //update the page table entry to point to the new physical page
+    entry->page_ppn = new_page_ppn;
+
+    PageManager::instance()->incrementReferenceCount(entry->page_ppn);
+
+    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+    entry->present = 1;
+    entry->writeable = 1;
+    entry->cow = 0;
+
+    //    for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+//    {
+//      if (entry[pti].present)
+//      {
+//        size_t new_page_ppn = PageManager::instance()->allocPPN();
+//        pointer original_page = ArchMemory::getIdentAddressOfPPN(entry[pti].page_ppn);
+//        pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+//        memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+//
+//        entry[pti].page_ppn = new_page_ppn;
+//      }
+//    }
+
+  }
+  else
+  {
+    // Page table entry not found, should not be happening
+    //do assert later here
+  }
 }
