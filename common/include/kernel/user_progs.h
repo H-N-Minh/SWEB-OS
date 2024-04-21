@@ -4,7 +4,7 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             // "/usr/pthreadCreateTests.sweb",
-                            // "/usr/pthreadJoinTests.sweb",
+                            "/usr/pthreadJoinTests.sweb",
 
 
                             // "/usr/userspaceLocksTests.sweb",

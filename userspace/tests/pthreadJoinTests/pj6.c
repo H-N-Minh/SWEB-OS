@@ -23,6 +23,7 @@ int function2(void* thread_id)
     return 6;
 }
 
+//more complex join and cancel test
 int pj6()
 {
     pthread_t thread_id1;

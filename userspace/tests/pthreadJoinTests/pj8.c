@@ -15,18 +15,19 @@ int pj8()
   assert(pthread_create_rv == 0);
 
 
+  void* value_ptr;
 
   //No thread id provided
-  void* value_ptr;
   int pthread_join_rv = pthread_join(NULL, &value_ptr);
   assert(pthread_join_rv != 0);
 
   //Wrong thread id provided
-  void* value_ptr;
-  int pthread_join_rv = pthread_join((void*)27, &value_ptr);
+  pthread_join_rv = pthread_join(27, &value_ptr);
   assert(pthread_join_rv != 0);
 
-  //value
+  //value_ptr not in userspace
+  pthread_join_rv = pthread_join(thread_id, (void*)0x0000800000000000ULL);
+  assert(pthread_join_rv != 0);
 
 
 

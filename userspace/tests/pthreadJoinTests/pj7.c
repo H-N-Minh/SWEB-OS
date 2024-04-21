@@ -9,7 +9,7 @@ void function_pj7()
     function_pj7_reached = 1;
 }
 
-
+//join void function
 int pj7()
 {
     pthread_t thread_id;

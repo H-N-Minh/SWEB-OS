@@ -9,7 +9,8 @@ void* addition(void* arg) {
 }
 
 //Simple pthread join with returnvalue
-int pj5() {
+int pj5() 
+{
     pthread_t thread;
     size_t numbers[2] = {33, 36};
 
@@ -23,8 +24,5 @@ int pj5() {
     assert(rv_join == 0);
     assert(sum == 69);
     //printf("Sum of %zu and %zu is: %zu \n", numbers[0], numbers[1], sum);
-
-
-    
     return 0;
 }

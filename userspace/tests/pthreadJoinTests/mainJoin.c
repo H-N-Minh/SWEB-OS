@@ -10,6 +10,9 @@ extern int pj4();
 extern int pj5();
 extern int pj6();
 extern int pj7();
+extern int pj8();
+
+extern int pjlast();
 
 void check_return_value(int testnumber, int rv, int* successful_tests, char* description)
 {
@@ -68,9 +71,18 @@ int main()
     number_of_tests++;
     check_return_value(6, rv, &successful_tests, "more complex join and cancel test");
 
-    rv = pj7();          //join void function (not sure what the restriction on that are though)
+    rv = pj7();          //join void function
     number_of_tests++;
     check_return_value(7, rv, &successful_tests, "join void");
+
+    rv = pj8();          //sanity checks
+    number_of_tests++;
+    check_return_value(8, rv, &successful_tests, "sanity checks");
+
+    printf("-------------------------------------------------------------\n");
+    printf("PthreadJoin:Test last successful!\n");
+    printf("Description: Invalid userspace addresss as value_ptr\n");
+    printf("_____________________________________________________________\n\n");
 
     if(successful_tests == number_of_tests)
     {
@@ -81,6 +93,9 @@ int main()
         printf("\n\npthreadJoin() testcases fail\n");
         assert(0);
     }
+
+    pjlast();          //value_ptr invalild userspace address (should kill process)
+    assert(0);
 
 }
 
