@@ -271,20 +271,20 @@ int Syscall::pthreadDetach(size_t thread_id, bool is_threads_vector_locked)
 
 
 
-int Syscall::pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address)         
+int Syscall::pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address)
 {
   debug(SYSCALL, "Syscall::pthreadCreate pthreadCreated called\n");
-  if(!check_parameter((size_t)thread) || !check_parameter((size_t)attr, true) || !check_parameter((size_t)start_routine) 
-      || !check_parameter((size_t)arg, true) || !check_parameter((size_t)wrapper_address))
+  if(!check_parameter((size_t)thread) || !check_parameter((size_t)attr, true) || !check_parameter((size_t)start_routine)
+     || !check_parameter((size_t)arg, true) || !check_parameter((size_t)wrapper_address))
   {
     return -1;
   }
-  int rv = ((UserThread*) currentThread)->process_->createThread(thread, start_routine, wrapper_address, arg,
-                                                                 reinterpret_cast<KernelThreadAttributes*>(attr));
-  debug(SYSCALL, "Syscall::Pthread_CREATE: finished with return (%d) for thread (%zu)\n", rv, *thread);
-
+  int rv = ((UserThread*) currentThread)->process_->createThread(thread, start_routine, wrapper_address, arg);
+  debug(SYSCALL, "Syscall::pthreadCreate: finished with return (%d) for thread (%zu)\n", rv, *thread);
   return rv;
 }
+
+
 
 
 

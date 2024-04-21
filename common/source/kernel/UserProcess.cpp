@@ -139,37 +139,30 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
 }
 
 
-
-int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, KernelThreadAttributes* attr)
+int UserProcess::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg)
 {
   debug(USERPROCESS, "UserProcess::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
 
-  //uint64 tid_counter = ArchThreads::atomic_add(tid_counter_, 1);
   threads_lock_.acquire();
-
-
   UserThread* new_thread = new UserThread(working_dir_, filename_, Thread::USER_THREAD, terminal_number_, loader_, this, start_routine,
-
                                           arg, wrapper, false);
-
-  if(new_thread) {
+  if(new_thread)
+  {
     debug(USERPROCESS, "UserProcess::createThread: Adding new thread to scheduler\n");
     threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
     *thread = new_thread->getTID();
     threads_lock_.release();
-
-    if(attr && attr->detachstate == PTHREAD_CREATE_DETACHED) {
-      //new_thread->detach();
-    }
-
     return 0;
-  } else {
+  }
+  else
+  {
     debug(USERPROCESS, "UserProcess::createThread: ERROR: Thread not created\n");
     threads_lock_.release();
     return -1;
   }
 }
+
 
 int UserProcess::joinThread(size_t thread_id, void**value_ptr)
 {

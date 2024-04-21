@@ -38,7 +38,7 @@ class UserProcess
          */
         UserThread* getUserThread(size_t tid);
 
-        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, KernelThreadAttributes* attr);
+        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
 
         bool isThreadInVector(UserThread* test_thread);
 

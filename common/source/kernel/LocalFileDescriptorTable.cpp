@@ -1,6 +1,6 @@
 #include "LocalFileDescriptorTable.h"
 
-LocalFileDescriptorTable::LocalFileDescriptorTable() = default;
+LocalFileDescriptorTable::LocalFileDescriptorTable() : lfds_lock_("Local FDs Lock") {}
 
 LocalFileDescriptorTable::~LocalFileDescriptorTable()
 {
@@ -18,12 +18,10 @@ LocalFileDescriptorTable::~LocalFileDescriptorTable()
   local_fds_.clear();
 }
 
-LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset)
-{
+LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset) {
+  ScopeLock l(lfds_lock_);
   size_t local_fd_id = generateLocalFD();
-
   global_fd->incrementRefCount();
-
   auto* local_fd = new LocalFileDescriptor(global_fd, mode, offset, local_fd_id);
   local_fds_.push_back(local_fd);
   return local_fd;
@@ -32,6 +30,7 @@ LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDes
 
 LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_fd_id) const
 {
+  ScopeLock l(lfds_lock_);
   for(auto &fd : local_fds_)
   {
     if(fd->getLocalFD() == (size_t)local_fd_id)
@@ -48,12 +47,8 @@ size_t LocalFileDescriptorTable::generateLocalFD()
   return next_fd++;
 }
 
-//void LocalFileDescriptorTable::closeLocalFileDescriptor(LocalFileDescriptor *local_fd) {
-//  local_fd = nullptr;
-//}
-
-
 void LocalFileDescriptorTable::closeAllFileDescriptors() {
+  ScopeLock l(lfds_lock_);
   for (auto &fd: local_fds_) {
     fd->getGlobalFileDescriptor()->decrementRefCount();
 
@@ -70,6 +65,7 @@ void LocalFileDescriptorTable::closeAllFileDescriptors() {
 }
 
 void LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* local_fd) {
+  ScopeLock l(lfds_lock_);
   auto it = ustl::find(local_fds_.begin(), local_fds_.end(), local_fd);
   if (it != local_fds_.end()) {
     FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor();
