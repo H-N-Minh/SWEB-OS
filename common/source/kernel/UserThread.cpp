@@ -334,8 +334,8 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
     debug(USERPROCESS, "UserThread::createThread: Adding new thread to scheduler\n");
     process_->threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
-    *thread = new_thread->getTID();
     process_->threads_lock_.release();  
+    *thread = new_thread->getTID();
     return 0;
   }
   else

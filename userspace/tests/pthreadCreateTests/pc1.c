@@ -38,7 +38,5 @@ int pc1()
     rv = pthread_create(&thread_id, (void*)0x0000800000000000ULL, (void * (*)(void *))function1, NULL);
     assert(rv != 0 && "Test6: Invalid ptr to attr provided");
 
-    printf("pc1 successful!\n");
-
     return 0;
 }

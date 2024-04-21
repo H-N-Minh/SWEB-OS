@@ -62,7 +62,7 @@ int pc3()
         assert(thread_id[i] != 0);
     }
     
-    printf("pc3 successful!\n");
+
     
     return 0;
 }

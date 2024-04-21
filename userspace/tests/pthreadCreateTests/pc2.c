@@ -19,7 +19,7 @@ int pc2()
     assert(thread_id != 424242 && "thread_id was not set");
     assert(thread_id != 0 && "UserThread has ID of KernelThread");
 
-    printf("pc2 successful!\n");
+
 
     return 0;
 }

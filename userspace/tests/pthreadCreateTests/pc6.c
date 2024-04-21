@@ -32,9 +32,6 @@ int pc6()
       int rv = pthread_join(thread_id[i], &retval);
       assert(rv == 0);
       assert(retval = (void*)5);
-    }
-    
-    printf("pc6 successful!\n");
-    
+    }    
     return 0;
 }
