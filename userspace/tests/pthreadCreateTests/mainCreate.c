@@ -1,6 +1,8 @@
 #include "stdio.h"
 #include "assert.h"
 
+#define PRINT_DESCRIPTION 1
+
 extern int pc1();
 extern int pc2();
 extern int pc3();
@@ -15,18 +17,24 @@ void check_return_value(int testnumber, int rv, int* successful_tests, char* des
 {
     if(rv == 0)
     {
-        printf("-------------------------------------------------------------\n");
-        printf("PthreadChreate:Test %d successful!\n", testnumber);
-        printf("Description: %s\n", description);
-        printf("_____________________________________________________________\n\n");
+        if(PRINT_DESCRIPTION)
+        {
+            printf("-------------------------------------------------------------\n");
+            printf("PthreadChreate:Test %d successful!\n", testnumber);
+            printf("Description: %s\n", description);
+            printf("_____________________________________________________________\n\n");
+        }
         (*successful_tests)++;
     }
     else
     {
-        printf("-------------------------------------------------------------\n");
-        printf("PthreadChreate:Test %d successful!\n", testnumber);
-        printf("Description: %s\n", description);
-        printf("_____________________________________________________________\n\n");
+        if(PRINT_DESCRIPTION)
+        {
+            printf("-------------------------------------------------------------\n");
+            printf("PthreadChreate:Test %d successful!\n", testnumber);
+            printf("Description: %s\n", description);
+            printf("_____________________________________________________________\n\n");
+        }
     }
 }
 

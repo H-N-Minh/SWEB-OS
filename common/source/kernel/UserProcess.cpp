@@ -112,16 +112,13 @@ UserThread* UserProcess::getUserThread(size_t tid)
 }
 
 
-int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr)
+int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void*& return_value)
 {
   assert(threads_lock_.heldBy() == currentThread && "getUserThread used without holding threads_lock");
   ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);                                                   
   if(iterator != thread_retval_map_.end())
   {
-    if(value_ptr != NULL)
-    {
-      *value_ptr = thread_retval_map_[tid];
-    }
+    return_value = thread_retval_map_[tid];
     thread_retval_map_.erase(iterator);
     return 0;
   }

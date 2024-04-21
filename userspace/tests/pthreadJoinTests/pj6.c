@@ -53,6 +53,6 @@ int pj6()
     assert(join_rv == 100); //global value
 
 
-    printf("pj6 successful!\n");
+
     return 0;
 }

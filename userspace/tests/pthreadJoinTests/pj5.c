@@ -24,7 +24,7 @@ int pj5() {
     assert(sum == 69);
     //printf("Sum of %zu and %zu is: %zu \n", numbers[0], numbers[1], sum);
 
-    printf("pj5 successful!\n");
+
     
     return 0;
 }

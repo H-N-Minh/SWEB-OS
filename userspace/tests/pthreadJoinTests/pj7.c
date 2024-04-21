@@ -21,7 +21,6 @@ int pj7()
     int pthread_join_rv = pthread_join(thread_id, NULL);
     assert(pthread_join_rv == 0);
 
-    printf("pj7 successful!\n");
 
     return 0;
 }

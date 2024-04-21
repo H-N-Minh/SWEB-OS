@@ -29,7 +29,7 @@ int pj4()
     assert(rv_join1 != 0 && "Joining the same thread twice should not be successfull");
     assert(value_ptr1 == (void*)42 && "value ptr should not get set on unsuccessfull join");
     
-    printf("pj4 successful!\n");
+
     return 0;
 }
  
