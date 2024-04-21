@@ -438,8 +438,16 @@ void Loader::copyPage(size_t virtual_addr)
     pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
     memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
+    PageManager::instance()->decrementReferenceCount(entry->page_ppn);
+
+    if(PageManager::instance()->getReferenceCount(entry->page_ppn) == 0)
+    {
+      PageManager::instance()->freePPN(entry->page_ppn);
+    }
     //update the page table entry to point to the new physical page
     entry->page_ppn = new_page_ppn;
+
+    PageManager::instance()->incrementReferenceCount(entry->page_ppn);
 
     //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
     entry->present = 1;

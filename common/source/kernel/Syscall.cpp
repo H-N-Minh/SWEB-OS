@@ -89,7 +89,6 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = pthreadJoin((size_t)arg1, (void **)arg2);
       break;
     case sc_pthread_detach:
-      return_value = -1;
       return_value = pthreadDetach((size_t)arg1);
       break;
     case sc_pthread_cancel:

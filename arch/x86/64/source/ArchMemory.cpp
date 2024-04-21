@@ -107,6 +107,9 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
 
+                  debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
+                  PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
+
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
               }
@@ -120,16 +123,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
   lock_.release();
 }
 
-bool::ArchMemory::accessSharedMemoryPage(uint64 page_ppn)
-{
-  uint64 physical_private_page = PageManager::instance()->allocPPN();
-  pointer private_page = getIdentAddressOfPPN(physical_private_page);
-
-  pointer original_page = getIdentAddressOfPPN(page_ppn);
-  memcpy((void*) private_page, (void*) original_page, PAGE_SIZE);
-
-  return true;
-}
 
 ArchMemory::~ArchMemory()
 {
@@ -159,17 +152,19 @@ ArchMemory::~ArchMemory()
               {
                 if (pt[pti].present)
                 {
-                  debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
-                  if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) <= 1)
+                  if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
                   {
                     debug(FORK, "free page and set present in destructor  \n");
                     pt[pti].present = 0;
                     PageManager::instance()->freePPN(pt[pti].page_ppn);
+                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                    debug(FORK, "getReferenceCount in destructor (free) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   }
                   else
                   {
+                    pt[pti].present = 0;
                     PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
-                    //debug(FORK, "dont free page in destructor not last thread ref : %d\n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                    debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   }
                 }
               }
@@ -230,7 +225,19 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
 
-  PageManager::instance()->freePPN(m.page_ppn);
+  if(PageManager::instance()->getReferenceCount(m.page_ppn) == 1)
+  {
+    PageManager::instance()->decrementReferenceCount(m.page_ppn);
+    debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (free)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+    PageManager::instance()->freePPN(m.page_ppn);
+  }
+  else
+  {
+    PageManager::instance()->decrementReferenceCount(m.page_ppn);
+    debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (decrease)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+    return true;
+  }
+
 
   ((uint64*)m.pt)[m.pti] = 0; // for easier debugging
   bool empty = checkAndRemove<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti);
@@ -302,6 +309,9 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   if (m.page_ppn == 0)
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
+    uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
+    PageManager::instance()->incrementReferenceCount(page_ppn);
+    debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
     return true;
   }
   return false;
@@ -471,9 +481,19 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                 {
                   if(m.page_ppn != pt[pti].page_ppn)
                   {
-                    pt[pti].present = 0;
-                    PageManager::instance()->freePPN(pt[pti].page_ppn);
-                    ((uint64*)pt)[pti] = 0; 
+                    if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
+                    {
+                      PageManager::instance()->freePPN(pt[pti].page_ppn);
+                      PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                      debug(FORK, "getReferenceCount in exec_destructor (free) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                      ((uint64*)pt)[pti] = 0;
+                    }
+                    else
+                    {
+                      PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                      debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                      ((uint64*)pt)[pti] = 0;
+                    }
                   }
                 }
               }
