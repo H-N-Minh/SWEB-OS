@@ -3,6 +3,8 @@
 #include "assert.h"
 #include "sched.h"
 
+#define NUM_THREADS 250
+
 int all_threads_created = 0;
 
 int function_pc6()
@@ -14,19 +16,19 @@ int function_pc6()
     return i;
 }
 
-//starting 250 threads
+//running 250 threads in paralell
 int pc6()
 {
-    pthread_t thread_id[250];
+    pthread_t thread_id[NUM_THREADS];
 
-    for(int i = 0; i < 250; i++)
+    for(int i = 0; i < NUM_THREADS; i++)
     {
         int rv = pthread_create(&thread_id[i], NULL, (void * (*)(void *))function_pc6, NULL);
         assert(rv == 0);
     }
     all_threads_created = 1;
 
-    for(int i = 0; i < 250; i++)
+    for(int i = 0; i < NUM_THREADS; i++)
     {
       void* retval;
       int rv = pthread_join(thread_id[i], &retval);

@@ -8,6 +8,7 @@ int function1()
     return 0;
 }
 
+//sanity checks
 int pc1()
 {
     pthread_t thread_id;
