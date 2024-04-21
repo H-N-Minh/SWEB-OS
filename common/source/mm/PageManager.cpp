@@ -331,7 +331,7 @@ void PageManager::incrementReferenceCount(uint64 page_number)
   else
   {
     //page number not found, initialize reference count to 1
-    ArchThreads::atomic_set(reinterpret_cast<int32 &>(page_reference_counts_[page_number]), 2);
+    ArchThreads::atomic_set(reinterpret_cast<int32 &>(page_reference_counts_[page_number]), 1);
   }
 }
 

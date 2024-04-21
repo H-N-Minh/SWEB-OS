@@ -42,4 +42,4 @@
 #define sc_tortillas_bootup 1337
 #define sc_tortillas_finished 1338
 
-#define sc_pipe 1500
+#define sc_pipe 111

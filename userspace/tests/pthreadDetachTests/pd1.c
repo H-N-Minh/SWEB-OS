@@ -14,12 +14,6 @@ int pd1()
   int rv  = pthread_detach(2);
   assert(rv != 0);
 
-  
-  rv = pthread_detach(1);
-  assert(rv == 0);
-  //a nonjoinable thread should not be able to get detached
-  rv = pthread_detach(1);
-  assert(rv != 0);
 
   pthread_t pid;
   rv = pthread_create(&pid, NULL, (void*)pd1_function, NULL);
@@ -28,6 +22,16 @@ int pd1()
   assert(rv == 0);
   //pthread join after detach should fail
   rv = pthread_join(pid, NULL);
+  assert(rv != 0);
+
+  pthread_t pid2;
+  rv = pthread_create(&pid2, NULL, (void*)pd1_function, NULL);
+  assert(rv == 0);
+
+  rv = pthread_detach(pid2);
+  assert(rv == 0);
+  //a nonjoinable thread should not be able to get detached
+  rv = pthread_detach(pid2);
   assert(rv != 0);
 
   printf("pd1 successful!\n");

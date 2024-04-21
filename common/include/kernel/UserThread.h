@@ -11,13 +11,13 @@ class UserProcess;
 // PTHREAD_CANCEL_EXIT: similar to PTHREAD_CANCEL_ASYNCHRONOUS, except thread gets canceled no matter what CancelState is.
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE};
+enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE, PCD_TO_BE_JOINED, PCJ_TO_BE_JOINED};
 
 class UserThread : public Thread
 {
     public:
         UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                    Loader* loader, UserProcess* process, void* func, void* para, void* pcreate_helper, bool execv = false);
+                    Loader* loader, UserProcess* process, void* func, void* para, void* pcreate_helper);
 
         UserThread(UserThread& other, UserProcess* process); // COPY CONSTRUCTOR
 
@@ -27,8 +27,18 @@ class UserThread : public Thread
         void kill() override;
         void send_kill_notification();
         bool schedulable() override;
+
+        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, unsigned int* attr);
+        int cancelThread(size_t thread_id);
+        int joinThread(size_t thread_id, void**value_ptr);
+        void exitThread(void* value_ptr);
+        int detachThread(size_t thread_id);
+
+        
         UserProcess* process_;
         size_t vpn_stack_;
+        size_t user_stack_ptr_;            //Todos: copy in fork
+        size_t page_for_stack_;
 
         //exit
         bool last_thread_alive_{false};

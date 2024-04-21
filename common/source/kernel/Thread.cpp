@@ -1,5 +1,4 @@
 #include "Thread.h"
-
 #include "kprintf.h"
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"

@@ -171,6 +171,21 @@ void* Loader::getEntryFunction() const
   return (void*)hdr_->e_entry;
 }
 
+void Loader::replaceLoader(int32 execv_fd)
+{
+  delete userspace_debug_info_;
+  delete hdr_;
+  userspace_debug_info_ = nullptr;
+  hdr_ = nullptr;
+
+  phdrs_.clear();
+  
+
+  fd_ = execv_fd;
+
+  loadExecutableAndInitProcess();
+}
+
 bool Loader::loadExecutableAndInitProcess()
 {
   debug ( LOADER,"Loader::loadExecutableAndInitProcess: going to load an executable\n" );
@@ -423,8 +438,16 @@ void Loader::copyPage(size_t virtual_addr)
     pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
     memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
+    PageManager::instance()->decrementReferenceCount(entry->page_ppn);
+
+    if(PageManager::instance()->getReferenceCount(entry->page_ppn) == 0)
+    {
+      PageManager::instance()->freePPN(entry->page_ppn);
+    }
     //update the page table entry to point to the new physical page
     entry->page_ppn = new_page_ppn;
+
+    PageManager::instance()->incrementReferenceCount(entry->page_ppn);
 
     //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
     entry->present = 1;
