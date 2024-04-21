@@ -76,6 +76,8 @@ UserProcess::UserProcess(const UserProcess& other)
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
 
+//
+
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", child_thread->getTID());
   Scheduler::instance()->addNewThread(child_thread);
 }

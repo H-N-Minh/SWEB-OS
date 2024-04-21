@@ -3,7 +3,9 @@
 
 
 LocalFileDescriptor::LocalFileDescriptor(FileDescriptor *global_fd, uint32_t mode, size_t offset, size_t local_fd_id)
-    : global_fd_(global_fd), mode_(mode), offset_(offset), localFD_(local_fd_id) {}
+    : global_fd_(global_fd), mode_(mode), offset_(offset), localFD_(local_fd_id) {
+  global_fd_->incrementRefCount();
+}
 
 
 LocalFileDescriptor::~LocalFileDescriptor() {
