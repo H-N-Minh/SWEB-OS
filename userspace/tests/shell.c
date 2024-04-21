@@ -348,9 +348,11 @@ int main(int argc, char* argv[]) {
   printAvailableCommands();
   __syscall(sc_pseudols, (size_t)SHELL_EXECUTABLE_PREFIX,
             (size_t)dir_content, sizeof(dir_content), 0, 0);
+  __syscall(sc_tortillas_bootup, 0, 0, 0, 0, 0);
   while(running) {
     readCommand();
     handleCommand();
+    __syscall(sc_tortillas_finished, 0, 0, 0, 0, 0);
   }
   return exit_code;
 }

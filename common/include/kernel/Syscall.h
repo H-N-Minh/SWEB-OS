@@ -65,5 +65,9 @@ class Syscall
     static uint32 forkProcess();
 
     static uint64_t get_current_timestamp_64_bit();
+
+    // minhsbrk2
+    // static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);
+    // static size_t brkMemory(size_t new_brk_addr);
 };
 

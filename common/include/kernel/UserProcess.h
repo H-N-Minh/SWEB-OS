@@ -5,15 +5,10 @@
 #include "Mutex.h"
 #include "Condition.h"
 #include "types.h"
+
+#include "UserSpaceMemoryManager.h"
 #include "LocalFileDescriptorTable.h"
 
-
-#define PTHREAD_CREATE_JOINABLE 0
-#define PTHREAD_CREATE_DETACHED 1
-
-struct KernelThreadAttributes {
-  int detachstate; // PTHREAD_CREATE_DETACHED or PTHREAD_CREATE_JOINABLE
-};
 
 class UserProcess
 {
@@ -62,6 +57,8 @@ class UserProcess
 
         int execvProcess(const char *path, char *const argv[]);
 
+        void unmapThreadStack(ArchMemory* arch_memory, size_t top_stack);
+
         static int64 pid_counter_;
         int32 pid_;
 
@@ -70,6 +67,7 @@ class UserProcess
         ustl::string filename_;
         uint32 terminal_number_;
         Loader* loader_;
+        UserSpaceMemoryManager* user_mem_manager_;
 
         //Threads
         static int64 tid_counter_;

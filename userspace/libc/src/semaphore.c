@@ -23,7 +23,7 @@ int sem_init(sem_t *sem, int pshared, unsigned value)
   // if (DEBUGMINH == 1) {
   //   printf("Semaphore init passed checks\n");
   // }
-  
+
   int rv = pthread_mutex_init(&sem->count_mutex_, 0);
   assert(rv == 0 && "failed to init mutex in sem_init");
   rv = pthread_cond_init(&sem->count_cond_, 0);

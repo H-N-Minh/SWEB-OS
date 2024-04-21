@@ -10,6 +10,7 @@ char const *user_progs[] = {
                             //"/usr/pipeTest.sweb",
 
 
+
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
 
                             // "/usr/pc4.sweb",
@@ -18,13 +19,16 @@ char const *user_progs[] = {
                             // "/usr/stateTypeTest.sweb",
                             // "/usr/spinTest.sweb",
                             // "/usr/pthreadCreate.sweb",
+// UserSpace Memory -------------------------------------------------
+                            // "/usr/mallocTests.sweb",
+                            //"/usr/growingStackTests.sweb",
 
 // SEM & COND -------------------------------------------------
                             // "/usr/condTests.sweb",
                             // "/usr/semTests.sweb",
 
 // FORK-------------------------------------------------
-                            //"/usr/forkTests.sweb",
+                            // "/usr/forkTests.sweb",
 
 
                         
@@ -45,9 +49,10 @@ char const *user_progs[] = {
 
                             //"/usr/forkExecTests.sweb",  
 
-                            // "/usr/userspaceLocksTests.sweb",                                    
+                            // "/usr/userspaceLocksTests.sweb",
 
                             //"/usr/sleepAndClockTests.sweb",
+
 
                             0
                            };

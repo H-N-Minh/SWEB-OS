@@ -21,10 +21,10 @@ int increment_mutex_counter(void* thread_id)
 
         mutex_counter++;
         // if (DEBUGMODE2) printf("mutex_counter added = %ld\n", mutex_counter);
-        if (mutex_counter % 10000 == 0)
-        {
-            printf("mutex_counter = %ld\n", mutex_counter);
-        }
+        // if (mutex_counter % 10000 == 0)
+        // {
+        //     printf("mutex_counter = %ld\n", mutex_counter);
+        // }
         int rv_unlock = pthread_mutex_unlock(&mutex);
         
         assert(rv_unlock == 0);

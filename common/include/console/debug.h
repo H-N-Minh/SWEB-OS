@@ -50,18 +50,23 @@ const size_t USERTHREAD         = Ansi_Yellow | OUTPUT_ENABLED ;
 const size_t PROCESS_REG        = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
+
 const size_t PIPE               = Ansi_Cyan ;
 const size_t FILEDESCRIPTOR     = Ansi_Cyan | OUTPUT_ENABLED;
-const size_t Fabi               = Ansi_Cyan ;
 
 
-const size_t FORK          = Ansi_Red;
+
+
+const size_t FORK          = Ansi_Red | OUTPUT_ENABLED;
+const size_t PAGEFAULT_TEST          = Ansi_Red| OUTPUT_ENABLED;
 
 //group memory management
 const size_t PM                 = Ansi_Green| OUTPUT_ENABLED;
 const size_t PAGEFAULT          = Ansi_Green| OUTPUT_ENABLED;
 const size_t CPU_ERROR          = Ansi_Red| OUTPUT_ENABLED ;
 const size_t KMM                = Ansi_Yellow;
+const size_t SBRK               = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t GROW_STACK         = Ansi_Green  | OUTPUT_ENABLED;
 
 //group driver
 const size_t DRIVER             = Ansi_Yellow| OUTPUT_ENABLED;
@@ -99,8 +104,10 @@ const size_t M_ZONE             = Ansi_Yellow;
 
 //Personal's debug
 
-const size_t TAI_THREAD               = Ansi_Yellow  ;
-const size_t MINH                     = Ansi_Red     ;
+const size_t TAI_THREAD               = Ansi_Yellow  | OUTPUT_ENABLED;
+const size_t MINH                     = Ansi_Red     | OUTPUT_ENABLED;
+const size_t Fabi                     = Ansi_Red;
+
 
 const size_t USERSPACE_LOCKS         = Ansi_Red     | OUTPUT_ENABLED;
 

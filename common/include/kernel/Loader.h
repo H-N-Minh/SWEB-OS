@@ -29,11 +29,20 @@ class Loader
      */
     void loadPage(pointer virtual_address);
 
+    /**
+     * Return the start address of Heap
+    */
+    void* getBrkStart();
+
     Stabs2DebugInfo const* getDebugInfos() const;
 
     void* getEntryFunction() const;
 
     ArchMemory arch_memory_;
+
+    bool isCOW(size_t virtual_addr);
+    PageTableEntry* findPageTableEntry(size_t virtual_addr);
+    void copyPage(size_t virtual_addr);
 
   private:
 
