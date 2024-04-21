@@ -33,26 +33,13 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
   }
 
-  size_t page_for_stack;
-  if (!func)
-  {
-    page_for_stack = PageManager::instance()->allocPPN();
-    vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
-  }
-  else
-  {
-    debug(TAI_THREAD, "-------------------EXPAND STACK HAHAHAHA \n");
-    page_for_stack = PageManager::instance()->allocPPN();
-    vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
-  }
+  size_t page_for_stack = PageManager::instance()->allocPPN();
+  vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
 
     loader_->arch_memory_.lock_.acquire();
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
-
-  void* user_stack_ptr1 = (void*) (USER_BREAK - sizeof(pointer) - PAGE_SIZE * (tid_-1));
-  debug(TAI_THREAD, "-------------------user_stack_ptr1 (%p) \n", user_stack_ptr1);
 
     size_t user_stack_ptr = (size_t) (USER_BREAK - MAX_STACK_AMOUNT * PAGE_SIZE * tid_ - (META_SIZE + 1) * sizeof(pointer));
 
@@ -87,11 +74,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
         pthread_attr_t* attr_k;
         attr_k = reinterpret_cast<pthread_attr_t*>(attr);
 
-        debug(TAI_THREAD, "-------------------UserThread::UserThread: attr (%p) \n", attr_k);
-        debug(TAI_THREAD, "-------------------UserThread::UserThread: attrk (%p) \n", attr_k);
-
         size_t stack_size = attr_k->stack_size;
-        debug(TAI_THREAD, "-------------------UserThread::UserThread: stack_size (%zu) \n", stack_size);
+        debug(TAI_THREAD, "UserThread::UserThread: stack_size (%zu) \n", stack_size);
       }
 
       ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper, (void*) user_stack_ptr,
