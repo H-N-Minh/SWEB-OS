@@ -96,5 +96,6 @@ class UserProcess
         //UserProcess* getCurrentProcess();
 
         int waitProcess(size_t pid, int* status, int options);
+        size_t exit_code_;
 };
 

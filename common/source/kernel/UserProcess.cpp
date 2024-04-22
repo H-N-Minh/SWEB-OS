@@ -357,6 +357,7 @@ void UserProcess::exitProcess(size_t exit_code)
 
   debug(USERPROCESS, "UserProcess::exitProcess: Last Thread %zu calls pthread exit. \n", currentUserThread.getTID());
   currentUserThread.exitThread((void*)exit_code);
+  exit_code_ = exit_code;
   assert(false && "This should never happen");
 
 }
@@ -414,25 +415,22 @@ int UserProcess::waitProcess(size_t pid, int* status, int options)
     return -1;
   }
 
-//  if (process_to_wait->one_thread_left_ )
-//  {
-//    if (status != nullptr)
-//    {
-//      *status = process_to_wait->exit_status_;
-//    }
-//    threads_lock_.release();
-//    return pid;
-//  }
-//
+  if (process_to_wait->one_thread_left_)
+  {
+    if (status != nullptr)
+    {
+      *status = process_to_wait->exit_code_;
+    }
+    //threads_lock_.release();
+    return 0;
+  }
+
 //  while (!process_to_wait->one_thread_left_)
 //  {
-//    process_to_wait->one_thread_left_condition_.wait(threads_lock_);
+//    process_to_wait->one_thread_left_condition_.wait();
 //  }
-//
-//  // If status pointer is provided, store exit status of the process
-//  if (status != nullptr) {
-//    *status = process_to_wait->exit_status_;
-//  }
+
+  //threads_lock_.release();
 
   return 0;
 }
