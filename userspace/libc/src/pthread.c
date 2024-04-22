@@ -753,7 +753,7 @@ int pthread_attr_destroy(pthread_attr_t *attr) {
 
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
 {
-  if(!parameters_are_valid((size_t)attr, 0))
+  if(!parameters_are_valid((size_t)attr, 0) || attr->initialized != 1)
   {
     return -1;
   }
@@ -767,7 +767,7 @@ int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
 
 int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate)
 {
-  if(!parameters_are_valid((size_t)attr, 0) || !parameters_are_valid((size_t)detachstate, 0))
+  if(!parameters_are_valid((size_t)attr, 0) || !parameters_are_valid((size_t)detachstate, 0) || attr->initialized != 1)
   {
     return -1;
   }

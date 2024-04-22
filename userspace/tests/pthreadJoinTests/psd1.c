@@ -7,6 +7,12 @@ int function_psd1()
     return 6;
 }
 
+int function_psd1_2()
+{
+    while(1){}
+    return 4;
+}
+
 
 int psd1()
 {
@@ -43,6 +49,46 @@ int psd1()
 
   //init attribute with address not in userspace should fail
   rv = pthread_attr_init((void*)0x0000800000000000ULL);
+  assert(rv != 0);
+
+
+  pthread_t thread_id_3;
+  pthread_attr_t attr_3;
+
+  rv = pthread_attr_init(&attr_3);
+  assert(rv == 0);
+
+  //detachstate after init should be joinable
+  int detach_state;
+  rv = pthread_attr_getdetachstate(&attr_3, &detach_state);
+  assert(rv == 0);
+  assert(detach_state == PTHREAD_CREATE_JOINABLE);
+
+  //setting pthread_attribute to detach
+  rv = pthread_attr_setdetachstate(&attr_3, PTHREAD_CREATE_DETACHED);
+  assert(rv == 0);
+
+  //detachstate should be now detached
+  rv = pthread_attr_getdetachstate(&attr_3, &detach_state);
+  assert(rv == 0);
+  assert(detach_state == PTHREAD_CREATE_DETACHED);
+
+  rv = pthread_create(&thread_id_3, &attr_3, (void*)function_psd1_2, NULL);
+  assert(rv == 0);
+
+  //join and cancel should fail if state is detached
+  rv = pthread_join(thread_id_3, NULL);
+  assert(rv != 0);
+  rv = pthread_detach(thread_id_3);
+  assert(rv != 0);
+
+  //set and get should fail if attributes is not initalized
+  rv = pthread_attr_destroy(&attr_3);
+  assert(rv == 0);
+
+  rv = pthread_attr_setdetachstate(&attr_3, PTHREAD_CREATE_DETACHED);
+  assert(rv != 0);
+  rv = pthread_attr_getdetachstate(&attr_3, &detach_state);
   assert(rv != 0);
 
 
