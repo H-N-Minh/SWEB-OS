@@ -240,7 +240,8 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
     debug(USERTHREAD, "UserThread:pthreadJoin: No running thread id %zu can be found.\n", thread_id);
 
    //check if thread has already terminated 
-    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, value_ptr);
+    void* return_value;
+    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, return_value);
     process_->threads_lock_.release();
     if(value_ptr != NULL && thread_in_retval_map == 0)
     {
