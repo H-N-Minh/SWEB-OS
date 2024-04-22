@@ -79,3 +79,15 @@ void LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* lo
     delete local_fd;
   }
 }
+
+ustl::vector<LocalFileDescriptor*> LocalFileDescriptorTable::getLocalFileDescriptors() const
+{
+  ScopeLock l(lfds_lock_);
+  return local_fds_;
+}
+
+void LocalFileDescriptorTable::addLocalFileDescriptor(LocalFileDescriptor* local_fd)
+{
+  ScopeLock l(lfds_lock_);
+  local_fds_.push_back(local_fd);
+}

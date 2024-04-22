@@ -54,13 +54,12 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   debug(USERPROCESS, "ctor: Done creating Thread\n");
 }
 
-
 // COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
-  : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
+    : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_),
 
-    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"),
-    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
+      terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"),
+      one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -78,7 +77,11 @@ UserProcess::UserProcess(const UserProcess& other)
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
 
-//
+  for(auto &fd : other.localFileDescriptorTable.getLocalFileDescriptors())
+  {
+    auto* newLFD = new LocalFileDescriptor(*fd);
+    this->localFileDescriptorTable.addLocalFileDescriptor(newLFD);
+  }
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", child_thread->getTID());
   Scheduler::instance()->addNewThread(child_thread);
