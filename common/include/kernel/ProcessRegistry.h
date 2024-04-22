@@ -41,6 +41,8 @@ class ProcessRegistry : public Thread
     static ProcessRegistry* instance();
     void createProcess(const char* path);
 
+    ustl::vector<UserProcess*> processes_;
+    void addProcess(UserProcess* process);
 
   private:
 

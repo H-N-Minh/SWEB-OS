@@ -122,5 +122,13 @@ void ProcessRegistry::createProcess(const char* path)
     Scheduler::instance()->addNewThread(process->threads_.front());
     process->threads_lock_.release();
     debug(PROCESS_REG, "added thread %s\n", path);
+
+    processes_.push_back(process);
+}
+
+void ProcessRegistry::addProcess(UserProcess* process)
+{
+  //TODO LOCK HERE
+  processes_.push_back(process);
 }
 

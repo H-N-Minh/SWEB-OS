@@ -18,6 +18,7 @@
 #include "PageManager.h"
 #include "ArchThreads.h"
 #include "UserSpaceMemoryManager.h"
+#include "ProcessRegistry.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -284,6 +285,9 @@ uint32 Syscall::forkProcess()
   else
   {
     debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
+    ProcessRegistry* processRegistry = ProcessRegistry::instance();
+    processRegistry->addProcess(child);
+
     return (uint32) currentThread->user_registers_->rax;
   }
 }
