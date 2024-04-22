@@ -91,5 +91,10 @@ class UserProcess
         LocalFileDescriptorTable localFileDescriptorTable;
 
         ustl::string str() const;
+
+        //UserProcess* current_process_;
+        //UserProcess* getCurrentProcess();
+
+        int waitProcess(size_t pid, int* status, int options);
 };
 

@@ -130,6 +130,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_brk:
       // return_value = brkMemory(arg1);
       break;
+    case sc_wait_pid:
+       return_value = wait_pid(arg1, (size_t)arg2, arg3);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -670,3 +673,12 @@ uint64_t Syscall::get_current_timestamp_64_bit()
   return ((uint64_t)edx<<32) + eax;
 }
 
+uint32 Syscall::wait_pid(size_t pid, size_t status, size_t options)
+{
+  
+  UserProcess* current_process = ((UserThread*) currentThread)->process_;
+  //debug(WAIT_PID, "-----------------------current_process->pid_ %d \n", current_process->pid_);
+  current_process->waitProcess(pid, (int*) status, options);
+
+  return 0;
+}

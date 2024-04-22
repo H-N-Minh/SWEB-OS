@@ -52,6 +52,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 
   threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
+
 }
 
 
@@ -82,6 +83,7 @@ UserProcess::UserProcess(const UserProcess& other)
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", child_thread->getTID());
   Scheduler::instance()->addNewThread(child_thread);
+
 }
 
 
@@ -383,4 +385,11 @@ ustl::string UserProcess::str() const {
   ustl::ostringstream oss;
   oss << "Process ID: " << pid_;
   return oss.str();
+}
+
+int UserProcess::waitProcess(size_t pid, int* status, int options)
+{
+
+  debug(WAIT_PID, "--------------pid %zu status %p option %d\n", pid, status, options);
+  return 0;
 }
