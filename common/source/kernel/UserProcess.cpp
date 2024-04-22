@@ -28,7 +28,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
 
     threads_lock_("thread_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
-    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
+    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable(),
+    process_exit_lock_("process_exit_lock_"), process_exit_condition_(&process_exit_lock_, "process_exit_condition_")
 {
   ProcessRegistry::instance()->processStart();
   if (fd_ >= 0)
@@ -63,7 +64,8 @@ UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
 
     terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"),
-    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
+    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable(),
+    process_exit_lock_("process_exit_lock_"), process_exit_condition_(&process_exit_lock_, "process_exit_condition_")
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -91,6 +93,11 @@ UserProcess::UserProcess(const UserProcess& other)
 
 UserProcess::~UserProcess()
 {
+  process_exit_lock_.acquire();
+  process_exit_ = true;
+  process_exit_condition_.signal();
+  process_exit_lock_.release();
+
   assert(Scheduler::instance()->isCurrentlyCleaningUp());
   debug(USERPROCESS, "Delete loader %p from process %d.\n", loader_, pid_);
   delete loader_;
@@ -105,8 +112,6 @@ UserProcess::~UserProcess()
 
   delete user_mem_manager_;
   user_mem_manager_ = nullptr;
-
-
 
 
   ProcessRegistry::instance()->processExit();
@@ -425,12 +430,13 @@ int UserProcess::waitProcess(size_t pid, int* status, int options)
     return 0;
   }
 
-  process_to_wait->one_thread_left_lock_.acquire();
-  while (!process_to_wait->one_thread_left_)
+  process_to_wait->process_exit_lock_.acquire();
+  debug(WAIT_PID, "-----------------------CURRENTLY WAITING\n");
+  while (!process_to_wait->process_exit_)
   {
-    process_to_wait->one_thread_left_condition_.wait();
+    process_to_wait->process_exit_condition_.wait();
   }
-  process_to_wait->one_thread_left_lock_.release();
+  process_to_wait->process_exit_lock_.release();
 
   //threads_lock_.release();
 
