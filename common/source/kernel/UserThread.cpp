@@ -334,15 +334,22 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
     return -1;
   }
   debug(USERPROCESS, "UserThread::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
-
-  JoinState join_state = (attr && attr->detach_state == PTHREAD_CREATE_DETACHED) ? PTHREAD_CREATE_DETACHED : PTHREAD_CREATE_JOINABLE;
   
-
-  // thread_to_be_detached ->join_state_lock_.acquire();
-  //   if(thread_to_be_detached->join_state_ == PTHREAD_CREATE_DETACHED || thread_to_be_detached->join_state_ == PCD_TO_BE_JOINED)
-  //   {
-  //     thread_to_be_detached->join_state_lock_.release();
-
+  JoinState join_state;
+  if(attr)
+  {
+    if(attr->initialized == 0 || (PTHREAD_CREATE_DETACHED != attr->detach_state && PTHREAD_CREATE_JOINABLE != attr->detach_state))
+    {
+      return -1;
+    }
+    join_state = attr->detach_state;
+  }
+  else
+  {
+    join_state = PTHREAD_CREATE_JOINABLE;
+  }
+  
+  
 
 
   process_->threads_lock_.acquire();

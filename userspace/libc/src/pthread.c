@@ -15,7 +15,6 @@ size_t __META_INITIALIZED__ = 0;
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 {
-
   int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
   if (!retval && !__META_INITIALIZED__)  // if thread was created successfully and metadata is not setup
   {
@@ -717,6 +716,10 @@ void wakeUpThread(size_t* request_to_sleep)
 
 int pthread_attr_init(pthread_attr_t *attr)
 {
+  if(!parameters_are_valid((size_t)attr, 0))
+  {
+    return -1;
+  }
   if (attr == NULL)
   {
     return -1;
@@ -736,7 +739,11 @@ int pthread_attr_init(pthread_attr_t *attr)
 }
 
 int pthread_attr_destroy(pthread_attr_t *attr) {
-  if (attr == NULL)
+  if(!parameters_are_valid((size_t)attr, 0))
+  {
+    return -1;
+  }
+  if (attr == NULL || attr->initialized == 0)
   {
     return -1;
   }
@@ -746,6 +753,10 @@ int pthread_attr_destroy(pthread_attr_t *attr) {
 
 int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
 {
+  if(!parameters_are_valid((size_t)attr, 0))
+  {
+    return -1;
+  }
   if (attr == NULL)
     return -1;
   if (detachstate != PTHREAD_CREATE_JOINABLE && detachstate != PTHREAD_CREATE_DETACHED)
@@ -756,6 +767,10 @@ int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
 
 int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate)
 {
+  if(!parameters_are_valid((size_t)attr, 0) || !parameters_are_valid((size_t)detachstate, 0))
+  {
+    return -1;
+  }
   if (attr == NULL || detachstate == NULL)
     return -1;
   *detachstate = attr->detach_state;
