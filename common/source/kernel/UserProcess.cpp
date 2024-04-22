@@ -425,10 +425,12 @@ int UserProcess::waitProcess(size_t pid, int* status, int options)
     return 0;
   }
 
-//  while (!process_to_wait->one_thread_left_)
-//  {
-//    process_to_wait->one_thread_left_condition_.wait();
-//  }
+  process_to_wait->one_thread_left_lock_.acquire();
+  while (!process_to_wait->one_thread_left_)
+  {
+    process_to_wait->one_thread_left_condition_.wait();
+  }
+  process_to_wait->one_thread_left_lock_.release();
 
   //threads_lock_.release();
 

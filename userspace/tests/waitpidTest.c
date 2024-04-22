@@ -17,12 +17,14 @@ int main()
   }
   else if (pid == 0)
   {
+    sleep(1);
     printf("Child process running...\n");
   }
   else
   {
-    printf("Parent process waiting for child to terminate...\n");
     waitpid(pid, &status, 0);
+    printf("Parent process waiting for child to terminate...\n");
+
   }
 
   return 0;
