@@ -23,6 +23,7 @@ int function2(void* thread_id)
     return 6;
 }
 
+//more complex join and cancel test
 int pj6()
 {
     pthread_t thread_id1;
@@ -53,6 +54,6 @@ int pj6()
     assert(join_rv == 100); //global value
 
 
-    printf("pj6 successful!\n");
+
     return 0;
 }

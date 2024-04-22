@@ -8,6 +8,7 @@ int function1()
     return 0;
 }
 
+//sanity checks
 int pc1()
 {
     pthread_t thread_id;
@@ -37,8 +38,6 @@ int pc1()
     //Test6: Invalid ptr to attr provided
     rv = pthread_create(&thread_id, (void*)0x0000800000000000ULL, (void * (*)(void *))function1, NULL);
     assert(rv != 0 && "Test6: Invalid ptr to attr provided");
-
-    printf("pc1 successful!\n");
 
     return 0;
 }
