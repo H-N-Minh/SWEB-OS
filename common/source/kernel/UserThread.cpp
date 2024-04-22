@@ -325,7 +325,7 @@ void UserThread::exitThread(void* value_ptr)
 
 }
 
-int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, unsigned int* attr)
+int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, pthread_attr_t* attr)
 {
   if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true)
   || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true)
@@ -335,11 +335,22 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
   }
   debug(USERPROCESS, "UserThread::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
 
+  JoinState join_state = (attr && attr->detach_state == PTHREAD_CREATE_DETACHED) ? PTHREAD_CREATE_DETACHED : PTHREAD_CREATE_JOINABLE;
+  
+
+  // thread_to_be_detached ->join_state_lock_.acquire();
+  //   if(thread_to_be_detached->join_state_ == PTHREAD_CREATE_DETACHED || thread_to_be_detached->join_state_ == PCD_TO_BE_JOINED)
+  //   {
+  //     thread_to_be_detached->join_state_lock_.release();
+
+
+
   process_->threads_lock_.acquire();
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
   if(new_thread)
   {
+    new_thread->join_state_ = join_state;
     debug(USERPROCESS, "UserThread::createThread: Adding new thread to scheduler\n");
     process_->threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);

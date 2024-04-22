@@ -318,7 +318,7 @@ int Syscall::pthreadDetach(size_t thread_id)
 int Syscall::pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address)         
 {
   debug(SYSCALL, "Syscall::pthreadCreate pthreadCreated called\n");
-  int rv = ((UserThread*) currentThread)->createThread(thread, start_routine, wrapper_address, arg, attr);
+  int rv = ((UserThread*) currentThread)->createThread(thread, start_routine, wrapper_address, arg, (pthread_attr_t*)attr);
   return rv;
 }
 

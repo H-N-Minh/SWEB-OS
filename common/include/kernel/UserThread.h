@@ -14,7 +14,7 @@ enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE, PCD_TO_BE_JOINED, PCJ_TO_BE_JOINED};
 
 typedef struct {
-    int detach_state;  // Detach state: PTHREAD_CREATE_JOINABLE or PTHREAD_CREATE_DETACHED
+    JoinState detach_state;  // Detach state: PTHREAD_CREATE_JOINABLE or PTHREAD_CREATE_DETACHED
     void *stack_addr;  // Stack address
     size_t stack_size; // Stack size
     int priority;      // Thread priority
@@ -36,7 +36,7 @@ class UserThread : public Thread
         void send_kill_notification();
         bool schedulable() override;
 
-        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, unsigned int* attr);
+        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, pthread_attr_t* attr);
         int cancelThread(size_t thread_id);
         int joinThread(size_t thread_id, void**value_ptr);
         void exitThread(void* value_ptr);
