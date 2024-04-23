@@ -276,9 +276,15 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   size_t page_for_args = PageManager::instance()->allocPPN();
   size_t next_page_for_args = NULL;
-  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
-
   int exec_array_offset_ = array_offset;
+
+  if(exec_array_offset_ + (argc + 1) * POINTER_SIZE > PAGE_SIZE)
+  {
+    next_page_for_args = PageManager::instance()->allocPPN();
+  }
+
+  // size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
+
   size_t offset = 0;
   size_t offset1 = USER_BREAK - 2 * PAGE_SIZE;
 
@@ -301,7 +307,12 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   if(argc > 0)
   {
     //storing the pointer to the virtual address of the single elements in the array
-    memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
+    // memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
+    
+    char* start_next_array_element = (char*)((size_t)exec_array_offset_ + argc * POINTER_SIZE);
+    char* null = NULL;
+
+    write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&null , POINTER_SIZE);
   }
   
   execv_fd = VfsSyscall::open(path, O_RDONLY);   //todos maybe deepcopy path
@@ -326,6 +337,14 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   size_t virtual_page = USER_BREAK / PAGE_SIZE - 2;
   loader_->arch_memory_.lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
+  if(next_page_for_args)
+  {
+    size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
+    loader_->arch_memory_.lock_.acquire();
+    bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
+     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
+
+  }
   loader_->arch_memory_.lock_.release();
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset_;
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
