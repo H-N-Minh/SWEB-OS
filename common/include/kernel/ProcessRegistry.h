@@ -44,11 +44,10 @@ class ProcessRegistry : public Thread
     ustl::vector<UserProcess*> processes_;
     void addProcess(UserProcess* process);
 
-    Mutex process_exit_lock_;                                //Locking order: x
-    Condition process_exit_condition_;
+    Condition process_exit_status_map_condition_;
 
     Mutex process_exit_status_map_lock_;
-    ustl::map<size_t, int> process_exit_status_map_;
+    ustl::map<size_t, size_t> process_exit_status_map_;
 
 
   private:

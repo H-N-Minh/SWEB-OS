@@ -395,12 +395,16 @@ int UserProcess::waitProcess(size_t pid, int* status, int options)
 
   while (ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end())
   {
+    debug(WAIT_PID, "--------------WAITING\n");
     ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
-    ProcessRegistry::instance()->process_exit_condition_.wait();
+    ProcessRegistry::instance()->process_exit_status_map_condition_.wait();
     ProcessRegistry::instance()->process_exit_status_map_lock_.release();
   }
+  debug(WAIT_PID, "--------------DONE WAITING\n");
 
-  *status = ProcessRegistry::instance()->process_exit_status_map_[pid];
+  *status = (int)ProcessRegistry::instance()->process_exit_status_map_[pid];
+
+  //at this point the waited process is already(should die) so delete if from map
   ProcessRegistry::instance()->process_exit_status_map_.erase(pid);
 
   return 0;

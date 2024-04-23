@@ -346,13 +346,13 @@ int Syscall::pthreadCancel(size_t thread_id)
 void Syscall::exit(size_t exit_code)
 
 {
-  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zdd\n", currentThread->getTID(), exit_code);
+  debug(SYSCALL, "-----------------Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
   ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
   ProcessRegistry::instance()->process_exit_status_map_[current_process.pid_] = exit_code;
-  ProcessRegistry::instance()->process_exit_condition_.broadcast();
+  ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
   ProcessRegistry::instance()->process_exit_status_map_lock_.release();
 
   if (exit_code != 69)
