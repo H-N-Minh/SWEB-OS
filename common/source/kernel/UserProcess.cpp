@@ -340,9 +340,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   if(next_page_for_args)
   {
     size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
-    loader_->arch_memory_.lock_.acquire();
-    bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
-     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
+    bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , next_page_for_args, 1);
+    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
 
   }
   loader_->arch_memory_.lock_.release();
@@ -354,7 +353,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
 bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& array_offset)
 {
-  int space_left = PAGE_SIZE;
+  int space_left = 2 * PAGE_SIZE;
   bool finished = false;
 
   //go through all arguments, check if the are valid and if there is enough space
