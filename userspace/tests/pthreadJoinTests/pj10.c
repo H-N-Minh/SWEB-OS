@@ -20,17 +20,17 @@ void pd2_function_2(pthread_t tid)
 
 
 
-int pd2()
+int pj10()
 {
   pthread_t tid;
   assert(pthread_create(&tid, NULL, (void*)pd2_function, NULL) == 0);
 
-  sleep(1);
+  sleep(2);
 
   pthread_t tid_2;
   assert(pthread_create(&tid_2, NULL, (void*)pd2_function_2, (void*)tid) == 0);
 
-  sleep(1);
+  sleep(2);
 
   assert(pthread_detach(tid) == 0);
 
@@ -42,7 +42,6 @@ int pd2()
 
   assert(pthread_join(tid, NULL) == -1);
 
-  printf("pd2 successful!\n");
   return 0;
 
 }

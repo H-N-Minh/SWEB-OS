@@ -14,7 +14,7 @@ int function_psd1_2()
 }
 
 
-int psd1()
+int pc8()
 {
   //pthread create with wrong attributes fails (we only have check fo detach)
   pthread_t thread_id;
@@ -90,6 +90,23 @@ int psd1()
   assert(rv != 0);
   rv = pthread_attr_getdetachstate(&attr_3, &detach_state);
   assert(rv != 0);
+
+
+  //testing set and test for joinable (should now be detach or joinable)
+  rv = pthread_attr_init(&attr_3);
+  assert(rv == 0);
+
+  rv = pthread_attr_setdetachstate(&attr_3, PTHREAD_CREATE_JOINABLE);
+  assert(rv == 0);
+  rv = pthread_attr_getdetachstate(&attr_3, &detach_state);
+  assert(rv == 0);
+  assert(detach_state == PTHREAD_CREATE_JOINABLE);
+
+  rv = pthread_create(&thread_id_3, &attr_3, (void*)function_psd1_2, NULL);
+  assert(rv == 0);
+  rv = pthread_detach(thread_id_3);
+  assert(rv == 0);
+
 
 
 

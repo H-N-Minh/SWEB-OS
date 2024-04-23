@@ -8,10 +8,10 @@ int pd1_function()
   return 0;
 }
 
-int pd1()
+int pj9()
 {
   //pthread detach should return error if thread cannot be found
-  int rv  = pthread_detach(2);
+  int rv  = pthread_detach(879);
   assert(rv != 0);
 
 
@@ -20,6 +20,7 @@ int pd1()
   assert(rv == 0);
   rv = pthread_detach(pid);
   assert(rv == 0);
+  
   //pthread join after detach should fail
   rv = pthread_join(pid, NULL);
   assert(rv != 0);
@@ -34,7 +35,6 @@ int pd1()
   rv = pthread_detach(pid2);
   assert(rv != 0);
 
-  printf("pd1 successful!\n");
-  
+
   return 0;
 }

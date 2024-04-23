@@ -34,22 +34,7 @@ class UserProcess
         int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
 
         bool isThreadInVector(UserThread* test_thread);
-
-
-        
-         //bool isThreadInVector(UserThread* test_thread);
-
-
-        /**
-         * Checks if retval of thread with tid is in thread_retval map and removes it.
-         * If value_ptr != NULL it stores the return value into the given address.
-         * Returns 0 on success and -1 on failure.
-         * @param tid thread_id
-         * @param value_ptr address to location, where return value should get stored
-         */
         int removeRetvalFromMapAndSetReval(size_t tid, void*& return_value);
-
-
 
         int execvProcess(const char *path, char *const argv[]);
         void exitProcess(size_t exit_code);

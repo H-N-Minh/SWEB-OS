@@ -29,7 +29,5 @@ int pj8()
   pthread_join_rv = pthread_join(thread_id, (void*)0x0000800000000000ULL);
   assert(pthread_join_rv != 0);
 
-
-
-    return 0;
+  return 0;
 }

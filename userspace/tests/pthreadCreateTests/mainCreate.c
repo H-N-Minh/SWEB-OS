@@ -10,6 +10,7 @@ extern int pc4();
 extern int pc5();
 extern int pc6();
 extern int pc7();
+extern int pc8();
 
 extern int pclast();
 
@@ -71,7 +72,11 @@ int main()
 
     rv = pc7();  //calling pthread_create inside pthread_create inside pthread_create
     number_of_tests++;
-    check_return_value(6, rv, &successful_tests, "rcalling pthread_create inside pthread_create inside pthread_create");
+    check_return_value(7, rv, &successful_tests, "rcalling pthread_create inside pthread_create inside pthread_create");
+
+    rv = pc8();  //test pthread_create attribute detached stuff
+    number_of_tests++;
+    check_return_value(8, rv, &successful_tests, "test pthread_create attribute detached stuff");
 
 
     printf("-------------------------------------------------------------\n");

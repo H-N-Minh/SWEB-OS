@@ -369,13 +369,6 @@ bool Loader::isCOW(size_t virtual_addr)
 
 PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
 {
-  //  size_t offset = virtual_addr & 0xfff;
-  //  size_t pml1i = (virtual_addr >> 12) & 0b111111111;
-  //  size_t pml2i = (virtual_addr >> (12 + 9)) & 0b111111111;
-  //  size_t pml3i = (virtual_addr >> (12 + 9 + 9)) & 0b111111111;
-  //  size_t pml4i = (virtual_addr >> (12 + 9 + 9 + 9)) & 0b111111111;
-  //
-  //  debug(PAGEFAULT_TEST, "Indices: Pml4i: %lx pml3i: %lx pml2i: %lx pml1i: %lx offset: %lx\n", pml4i, pml3i, pml2i, pml1i, offset);
 
     VPN vpn {.packed = virtual_addr};
     //debug(PAGEFAULT_TEST, "Indices: Pml4i: %lx pml3i: %lx pml2i: %lx pml1i: %lx offset: %lx\n", vpn.pml4i, vpn.pml3i, vpn.pml2i, vpn.pml1i, vpn.offset);
