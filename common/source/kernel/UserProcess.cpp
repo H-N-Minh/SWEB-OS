@@ -19,7 +19,7 @@
 
 #define POINTER_SIZE 8
 
-int64 UserProcess::tid_counter_ = 1;
+int64 UserProcess::tid_counter_ = 2;
 int64 UserProcess::pid_counter_ = 1;
 
 
@@ -181,6 +181,48 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
 }
 
+void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, int len_string)
+{
+  size_t virtual_address = ArchMemory::getIdentAddressOfPPN(ppn);
+  size_t virtual_address_2;
+  if(next_page)
+  {
+    virtual_address_2 = ArchMemory::getIdentAddressOfPPN(next_page);
+  }
+
+  //everythings fits on first page
+  if(offset < PAGE_SIZE && offset + len_string < PAGE_SIZE)
+  {
+    char* start_next_string = (char*)virtual_address + offset; 
+    debug(FORK, "Write to first page, start from %p, and write %d characters.\n", start_next_string, len_string); 
+    // debug(FORK, "String is %s\n", string);
+    memcpy(start_next_string, string, len_string);
+  }
+  else if(offset > PAGE_SIZE && offset + len_string > PAGE_SIZE)
+  {
+    char* start_next_string = (char*)virtual_address_2 + offset - PAGE_SIZE;  
+    debug(FORK, "Write to second page, start from %p, and write %d characters.\n", start_next_string, len_string); 
+    // debug(FORK, "String is %s\n", string);
+    memcpy(start_next_string, string, len_string);
+  }
+  else
+  {
+    //first page
+    size_t len_first_page = PAGE_SIZE - offset;
+    char* start_next_string1 = (char*)virtual_address + offset;  
+    memcpy(start_next_string1, string, len_first_page);
+
+    //second page
+    size_t len_second_page = len_string - len_first_page;
+    char* start_next_string2 = (char*)virtual_address_2;  
+    memcpy(start_next_string2, (char*)((size_t)string + len_first_page), len_second_page);
+
+    debug(FORK, "Write to first and second page, first: %p,%ld, second: %p,%ld.\n", start_next_string1, len_first_page, start_next_string2, len_second_page); 
+    // debug(FORK, "String is %s\n", string);
+    // debug(FORK, "String is %s\n", (char*)((size_t)string + len_first_page));
+  }
+}
+
 //Todos: locking
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
@@ -237,35 +279,20 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   int exec_array_offset_ = array_offset;
   size_t offset = 0;
-  size_t offset1 = USER_BREAK - PAGE_SIZE;
+  size_t offset1 = USER_BREAK - 2 * PAGE_SIZE;
 
-  // if(exec_array_offset_ > PAGE_SIZE)
-  // {
-  //   size_t page_for_args_2 = PageManager::instance()->allocPPN();
-  //   size_t virtual_address_2 =  ArchMemory::getIdentAddressOfPPN(page_for_args);
-  // }
   
   for(int i = 0; i < argc; i++)
   {
     //write the arguments one by one to the new phsical page via identity mapping
     char* start_next_string = (char*)virtual_address + offset;
     int len_string = strlen(argv[i])+1;
-    char* end_next_string = (char*)((size_t)start_next_string + (size_t)len_string);  //Todos: not sure if this is right here
 
     char* start_next_array_element = (char*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE);
-    // char* end_next_array_element = (char*)(virtual_address + exec_array_offset_ + (i + 1) * POINTER_SIZE);
+    memcpy(start_next_string, argv[i], len_string);
 
-    if((size_t)(start_next_string - virtual_address) < PAGE_SIZE && (size_t)(end_next_string - virtual_address) < PAGE_SIZE)
-    {
-       memcpy(start_next_string, argv[i], len_string);
-    }
-   
- 
     //store the offset of each argument in the page, at the end of all arguments
     memcpy(start_next_array_element, &offset1, POINTER_SIZE);
-    
-    
-    
     
     offset += strlen(argv[i]) + 1;
     offset1 += strlen(argv[i]) + 1;
@@ -295,11 +322,11 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->cr3 = old_cr3;
 
 
-  size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
+  size_t virtual_page = USER_BREAK / PAGE_SIZE - 2;
   loader_->arch_memory_.lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
   loader_->arch_memory_.lock_.release();
-  currentThread->user_registers_->rsi = USER_BREAK - PAGE_SIZE + exec_array_offset_;
+  currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset_;
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
 
   // assert(0);

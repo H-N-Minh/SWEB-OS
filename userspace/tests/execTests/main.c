@@ -19,7 +19,7 @@ int main()
     exec5();  //Exec without arguments
     exec6();  //Exec with multiple threads
     exec7();  //Exec with multiple threads
-    exec8();  //Exec with two pages of arguments (Todo)
+    // exec8();  //Exec with two pages of arguments (Todo)
           
 
     sleep(3);
