@@ -7,7 +7,6 @@
 #include "VirtualFileSystem.h"
 #include "PageManager.h"
 #include "Mutex.h"
-#include "UserProcess.h"
 
 ProcessRegistry* ProcessRegistry::instance_ = 0;
 
@@ -129,10 +128,10 @@ void ProcessRegistry::createProcess(const char* path)
     //processes_.push_back(process);
 }
 
-void ProcessRegistry::addProcess(UserProcess* process)
-{
-  //TODO LOCK HERE
-  processes_.push_back(process);
-}
+//void ProcessRegistry::addProcess(UserProcess* process)
+//{
+//  //TODO LOCK HERE
+//  processes_.push_back(process);
+//}
 
 

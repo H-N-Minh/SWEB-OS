@@ -5,8 +5,6 @@
 #include "Mutex.h"
 #include "Condition.h"
 
-//#include "uvector.h"
-
 class ProcessRegistry : public Thread
 {
   public:
@@ -41,8 +39,8 @@ class ProcessRegistry : public Thread
     static ProcessRegistry* instance();
     void createProcess(const char* path);
 
-    ustl::vector<UserProcess*> processes_;
-    void addProcess(UserProcess* process);
+    //ustl::vector<UserProcess*> processes_;
+    //void addProcess(UserProcess* process);
 
     Condition process_exit_status_map_condition_;
 

@@ -286,7 +286,7 @@ uint32 Syscall::forkProcess()
   {
     debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
     ProcessRegistry* processRegistry = ProcessRegistry::instance();
-    processRegistry->addProcess(child);
+    //processRegistry->addProcess(child);
 
     return (uint32) currentThread->user_registers_->rax;
   }
@@ -359,8 +359,6 @@ void Syscall::exit(size_t exit_code)
   {
     debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
   }
-
-
 
   current_process.exitProcess(exit_code);
   assert(false && "This should never happen");
