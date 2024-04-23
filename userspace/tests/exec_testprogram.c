@@ -72,12 +72,14 @@ int main(int argc, char *argv[])
     }
     else if(strcmp(argv[0], "7") == 0)
     {
+        assert(argc == 1);
+        // assert(argv[1] == NULL);
         printf("Exec7 successful!\n");
-        assert(strcmp(argv[1], NULL) == 0);
         return 0;
     }
     else if(strcmp(argv[0], "8") == 0)
     {
+        assert(argc == 7);
         char* long_word = "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjjaaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjj"
                       "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjjaaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjj"
                       "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjjaaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjj"
@@ -90,7 +92,7 @@ int main(int argc, char *argv[])
         assert(strcmp(argv[4], long_word) == 0);
         assert(strcmp(argv[5], long_word) == 0);
         assert(strcmp(argv[6], long_word) == 0);
-        // assert(strcmp(argv[7], NULL) == 0);
+        // assert(argv[7] == NULL);
 
     // char *argv[] = {"8", long_word, long_word, long_word, long_word, long_word, long_word, (char *)0 
 
