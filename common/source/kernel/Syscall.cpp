@@ -350,13 +350,10 @@ void Syscall::exit(size_t exit_code)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  ProcessRegistry::instance()->process_exit_lock_.acquire();
-  //current_process.process_exit_ = true;
-  ProcessRegistry::instance()->exit_ready = true;
-  debug(WAIT_PID, "Syscall::EXIT: Process ID %d with exit con %d\n", current_process.pid_, current_process.process_exit_);
-
+  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+  ProcessRegistry::instance()->process_exit_status_map_[current_process.pid_] = exit_code;
   ProcessRegistry::instance()->process_exit_condition_.broadcast();
-  ProcessRegistry::instance()->process_exit_lock_.release();
+  ProcessRegistry::instance()->process_exit_status_map_lock_.release();
 
   if (exit_code != 69)
   {

@@ -393,49 +393,15 @@ int UserProcess::waitProcess(size_t pid, int* status, int options)
 
   debug(WAIT_PID, "--------------pid %zu status %p option %d\n", pid, status, options);
 
-  //threads_lock_.acquire();
-
-  UserProcess* process_to_wait = nullptr;
-  for (auto& process : ProcessRegistry::instance()->processes_)
+  while (ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end())
   {
-    debug(WAIT_PID, "-----------------------pid list in waitProcess %d \n", process->pid_);
-    if (process->pid_ == (int32)pid)
-    {
-      debug(WAIT_PID, "-----------------------found process_to_wait %d \n", process->pid_);
-      process_to_wait = process;
-      break;
-    }
-  }
-
-  if (process_to_wait == nullptr)
-  {
-    //threads_lock_.release();
-    return -1;
-  }
-
-  if (process_to_wait->one_thread_left_)
-  {
-    if (status != nullptr)
-    {
-      *status = process_to_wait->exit_code_;
-    }
-    //threads_lock_.release();
-    return 0;
-  }
-
-  ProcessRegistry::instance()->process_exit_lock_.acquire();
-  debug(WAIT_PID, "-----------------------CURRENTLY WAITING\n");
-
-  while (!process_to_wait->process_exit_)
-  {
-    debug(WAIT_PID, "-----------------------CURRENTLY WAITING\n");
-    debug(WAIT_PID, "Process ID %d with exit con %d\n", process_to_wait->pid_, process_to_wait->process_exit_);
+    ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
     ProcessRegistry::instance()->process_exit_condition_.wait();
-    debug(WAIT_PID, "-----------------------DONE WAITING\n");
+    ProcessRegistry::instance()->process_exit_status_map_lock_.release();
   }
-  ProcessRegistry::instance()->process_exit_lock_.release();
 
-  //threads_lock_.release();
+  *status = ProcessRegistry::instance()->process_exit_status_map_[pid];
+  ProcessRegistry::instance()->process_exit_status_map_.erase(pid);
 
   return 0;
 }
