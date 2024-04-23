@@ -194,14 +194,14 @@ void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, in
   if(offset < PAGE_SIZE && offset + len_string < PAGE_SIZE)
   {
     char* start_next_string = (char*)virtual_address + offset; 
-    debug(FORK, "Write to first page, start from %p, and write %d characters.\n", start_next_string, len_string); 
+    // debug(FORK, "Write to first page, start from %p, and write %d characters.\n", start_next_string, len_string); 
     // debug(FORK, "String is %s\n", string);
     memcpy(start_next_string, string, len_string);
   }
   else if(offset > PAGE_SIZE && offset + len_string > PAGE_SIZE)
   {
     char* start_next_string = (char*)virtual_address_2 + offset - PAGE_SIZE;  
-    debug(FORK, "Write to second page, start from %p, and write %d characters.\n", start_next_string, len_string); 
+    // debug(FORK, "Write to second page, start from %p, and write %d characters.\n", start_next_string, len_string); 
     // debug(FORK, "String is %s\n", string);
     memcpy(start_next_string, string, len_string);
   }
@@ -217,7 +217,7 @@ void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, in
     char* start_next_string2 = (char*)virtual_address_2;  
     memcpy(start_next_string2, (char*)((size_t)string + len_first_page), len_second_page);
 
-    debug(FORK, "Write to first and second page, first: %p,%ld, second: %p,%ld.\n", start_next_string1, len_first_page, start_next_string2, len_second_page); 
+    // debug(FORK, "Write to first and second page, first: %p,%ld, second: %p,%ld.\n", start_next_string1, len_first_page, start_next_string2, len_second_page); 
     // debug(FORK, "String is %s\n", string);
     // debug(FORK, "String is %s\n", (char*)((size_t)string + len_first_page));
   }
@@ -289,11 +289,11 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     // char* start_next_string = (char*)virtual_address + offset;
     int len_string = strlen(argv[i])+1;
 
-    char* start_next_array_element = (char*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE);
+    char* start_next_array_element = (char*)((size_t)exec_array_offset_ + i * POINTER_SIZE);
     write_to_page(page_for_args, next_page_for_args, offset, argv[i], len_string);
 
     //store the offset of each argument in the page, at the end of all arguments
-    memcpy(start_next_array_element, &offset1, POINTER_SIZE);
+    write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&offset1 , POINTER_SIZE);
     
     offset += strlen(argv[i]) + 1;
     offset1 += strlen(argv[i]) + 1;
