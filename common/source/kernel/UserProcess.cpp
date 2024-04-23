@@ -285,7 +285,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   if(argc > 0)
   {
     page_for_args = PageManager::instance()->allocPPN();
-    if(exec_array_offset_ + (argc + 1) * POINTER_SIZE > PAGE_SIZE)
+    if(exec_array_offset_ + argc * POINTER_SIZE > PAGE_SIZE)
     {
       next_page_for_args = PageManager::instance()->allocPPN();
     }
@@ -305,13 +305,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     
     offset += strlen(argv[i]) + 1;
   }
-  if(argc > 0)
-  { 
-    char* start_next_array_element = (char*)(exec_array_offset_ + argc * POINTER_SIZE);
-    char* null = NULL;
-    
-    write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&null , POINTER_SIZE);
-  }
+
   
   execv_fd = VfsSyscall::open(path, O_RDONLY);   //todos maybe deepcopy path
   if(execv_fd < 0)
