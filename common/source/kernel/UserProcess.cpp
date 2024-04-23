@@ -275,6 +275,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   //allocate a free physical page and get the virtual address of the identity mapping
 
   size_t page_for_args = PageManager::instance()->allocPPN();
+  size_t next_page_for_args = NULL;
   size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
 
   int exec_array_offset_ = array_offset;
@@ -285,11 +286,11 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   for(int i = 0; i < argc; i++)
   {
     //write the arguments one by one to the new phsical page via identity mapping
-    char* start_next_string = (char*)virtual_address + offset;
+    // char* start_next_string = (char*)virtual_address + offset;
     int len_string = strlen(argv[i])+1;
 
     char* start_next_array_element = (char*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE);
-    memcpy(start_next_string, argv[i], len_string);
+    write_to_page(page_for_args, next_page_for_args, offset, argv[i], len_string);
 
     //store the offset of each argument in the page, at the end of all arguments
     memcpy(start_next_array_element, &offset1, POINTER_SIZE);
@@ -328,9 +329,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   loader_->arch_memory_.lock_.release();
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset_;
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
-
-  // assert(0);
-
   return 0;
 }
 
