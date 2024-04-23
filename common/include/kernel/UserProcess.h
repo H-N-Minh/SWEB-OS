@@ -92,13 +92,6 @@ class UserProcess
 
         ustl::string str() const;
 
-        //UserProcess* current_process_;
-        //UserProcess* getCurrentProcess();
-
-        int waitProcess(size_t pid, int* status, int options);
-        size_t exit_code_;
-
-        bool process_exit_{false};
-
+        long int waitProcess(long int pid, int* status, int options);
 };
 

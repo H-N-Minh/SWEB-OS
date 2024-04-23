@@ -355,7 +355,6 @@ void UserProcess::exitProcess(size_t exit_code)
 
   debug(USERPROCESS, "UserProcess::exitProcess: Last Thread %zu calls pthread exit. \n", currentUserThread.getTID());
   currentUserThread.exitThread((void*)exit_code);
-  exit_code_ = exit_code;
   assert(false && "This should never happen");
 
 }
@@ -388,7 +387,7 @@ ustl::string UserProcess::str() const {
   return oss.str();
 }
 
-int UserProcess::waitProcess(size_t pid, int* status, int options)
+long int UserProcess::waitProcess(long int pid, int* status, int options)
 {
 
   debug(WAIT_PID, "--------------pid %zu status %p option %d\n", pid, status, options);
@@ -407,5 +406,5 @@ int UserProcess::waitProcess(size_t pid, int* status, int options)
   //at this point the waited process is already(should die) so delete if from map
   ProcessRegistry::instance()->process_exit_status_map_.erase(pid);
 
-  return 0;
+  return pid;
 }
