@@ -12,9 +12,11 @@
 ProcessRegistry* ProcessRegistry::instance_ = 0;
 
 ProcessRegistry::ProcessRegistry(FileSystemInfo *root_fs_info, char const *progs[]) :
-        Thread(root_fs_info, "ProcessRegistry", Thread::KERNEL_THREAD), progs_(progs), progs_running_(0),
-        counter_lock_("ProcessRegistry::counter_lock_"),
-        all_processes_killed_(&counter_lock_, "ProcessRegistry::all_processes_killed_")
+        Thread(root_fs_info, "ProcessRegistry", Thread::KERNEL_THREAD),
+        process_exit_lock_("process_exit_lock_"), process_exit_condition_(&process_exit_lock_, "process_exit_condition_"),
+        progs_(progs),
+        progs_running_(0),
+        counter_lock_("ProcessRegistry::counter_lock_"), all_processes_killed_(&counter_lock_, "ProcessRegistry::all_processes_killed_")
 {
     instance_ = this; // instance_ is static! -> Singleton-like behaviour
 }

@@ -99,7 +99,6 @@ class UserProcess
         size_t exit_code_;
 
         bool process_exit_{false};
-        Mutex process_exit_lock_;                                //Locking order: x
-        Condition process_exit_condition_;
+
 };
 

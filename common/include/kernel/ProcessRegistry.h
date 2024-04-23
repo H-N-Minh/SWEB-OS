@@ -44,6 +44,9 @@ class ProcessRegistry : public Thread
     ustl::vector<UserProcess*> processes_;
     void addProcess(UserProcess* process);
 
+    Mutex process_exit_lock_;                                //Locking order: x
+    Condition process_exit_condition_;
+
   private:
 
     char const **progs_;
