@@ -47,7 +47,7 @@ LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_
 
 size_t LocalFileDescriptorTable::generateLocalFD()
 {
-  static size_t next_fd = 0;
+  static size_t next_fd = 3;
   return next_fd++;
 }
 

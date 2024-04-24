@@ -156,12 +156,8 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
   size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
 
   FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(global_fd);
+  assert(file_descriptor != nullptr && "File descriptor pointer is null");
   debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %zu; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount());
-  if (!file_descriptor)
-  {
-    debug(SYSCALL, "Syscall::lseek - Invalid global file descriptor: %zu\n", global_fd);
-    return -1;
-  }
 
   l_off_t position = VfsSyscall::lseek(global_fd, offset, whence);
   debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
@@ -385,8 +381,10 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
   }
   else if (localFileDescriptor != nullptr)
   {
-    debug(SYSCALL, "Syscall::write: Found local file descriptor: %zu\n", localFileDescriptor->getLocalFD());
-    size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
+    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+
+    size_t global_fd = global_fd_obj->getFd();
     size_t num_written = VfsSyscall::write(global_fd, (char*) buffer, size);
     debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
     return num_written;
@@ -414,8 +412,10 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 
   if (localFileDescriptor != nullptr)
   {
-    debug(SYSCALL, "Syscall::read: Found local file descriptor: %zu\n", localFileDescriptor->getLocalFD());
-    size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
+    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+
+    size_t global_fd = global_fd_obj->getFd();
     size_t num_read = VfsSyscall::read(global_fd, (char*) buffer, count);
     debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
     return num_read;
@@ -444,8 +444,10 @@ size_t Syscall::close(size_t fd)
 
   if (localFileDescriptor != nullptr)
   {
-    debug(SYSCALL, "Syscall::close: Found local file descriptor: %zu\n", localFileDescriptor->getLocalFD());
-    size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
+    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+
+    size_t global_fd = global_fd_obj->getFd();
     int result = VfsSyscall::close(global_fd);
     if (result == 0)
     {
