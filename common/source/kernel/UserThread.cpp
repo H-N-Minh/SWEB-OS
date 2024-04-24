@@ -308,6 +308,8 @@ void UserThread::exitThread(void* value_ptr)
   }
   join_state_lock_.release();
 
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
 
   if(process_->threads_.size() == 1)  // only one thread left
   {
@@ -315,11 +317,8 @@ void UserThread::exitThread(void* value_ptr)
     process_->one_thread_left_ = true;
     process_->one_thread_left_condition_.signal();
     process_->one_thread_left_lock_.release();
-
   }
 
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
-  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
   process_->threads_lock_.release();
   kill();
 

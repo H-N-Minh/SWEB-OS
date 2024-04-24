@@ -593,41 +593,42 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
 {
+  UserThread& currentUserThread = *((UserThread*)currentThread);
   if(state != CancelState::PTHREAD_CANCEL_DISABLE && state != CancelState::PTHREAD_CANCEL_ENABLE)
   {
     debug(SYSCALL, "Syscall::pthread_setcancelstate: given state is not recognizable\n");
     return -1;
   }
   debug(SYSCALL, "Syscall::pthread_setcancelstate: thread (%zu) is setted cancel state to (%d)\n", currentThread->getTID(), state);
-  ((UserThread*) currentThread)->cancel_state_type_lock_.acquire();
-  *oldstate = (int) ((UserThread*) currentThread)->cancel_state_;
+  currentUserThread.cancel_state_type_lock_.acquire();
+  *oldstate = (int) currentUserThread.cancel_state_;
 
-  ((UserThread*) currentThread)->cancel_state_ = (CancelState)state;
+  currentUserThread.cancel_state_ = (CancelState)state;
 
-  debug(SYSCALL, "current state %s, previous state %s\n",
-        state == CancelState::PTHREAD_CANCEL_ENABLE ? "ENABLED" : "DISABLED",
-        *oldstate == CancelState::PTHREAD_CANCEL_ENABLE ? "ENABLED" : "DISABLED");
-  ((UserThread*) currentThread)->cancel_state_type_lock_.release();
+  currentUserThread.cancel_state_type_lock_.release();
   return 0;
 }
 
 int Syscall::pthread_setcanceltype(int type, int *oldtype)
 {
-    if(type != CancelType::PTHREAD_CANCEL_ASYNCHRONOUS && type != PTHREAD_CANCEL_DEFERRED)
-    {
-        debug(SYSCALL, "Syscall::pthread_setcanceltype: given type is not recognizable\n");
-        return -1;
-    }
-    ((UserThread*) currentThread)->cancel_state_type_lock_.acquire();
-    CancelType previous_type = ((UserThread*) currentThread)->cancel_type_;
-    *oldtype = (int)previous_type;
-    ((UserThread*) currentThread)->cancel_type_ = (CancelType)type;
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  if(type != CancelType::PTHREAD_CANCEL_ASYNCHRONOUS && type != PTHREAD_CANCEL_DEFERRED)
+  {
+      debug(SYSCALL, "Syscall::pthread_setcanceltype: given type is not recognizable\n");
+      return -1;
+  }
+  currentUserThread.cancel_state_type_lock_.acquire();
+  CancelType previous_type =  currentUserThread.cancel_type_;
+  if(previous_type == PTHREAD_CANCEL_EXIT)
+  {
+     currentUserThread.cancel_state_type_lock_.release();
+    return -1;
+  }
+  *oldtype = (int)previous_type;
+  currentUserThread.cancel_type_ = (CancelType)type;
 
-    debug(SYSCALL, "current type %s, previous type %s\n",
-          type == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS",
-          *oldtype == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS");
-    ((UserThread*) currentThread)->cancel_state_type_lock_.release();
-    return 0;
+  currentUserThread.cancel_state_type_lock_.release();
+  return 0;
 }
 
 unsigned int Syscall::clock(void)
