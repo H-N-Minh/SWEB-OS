@@ -155,9 +155,8 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 
   size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
 
-  // Properly declare the file_descriptor variable
   FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(global_fd);
-
+  debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %zu; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount());
   if (!file_descriptor)
   {
     debug(SYSCALL, "Syscall::lseek - Invalid global file descriptor: %zu\n", global_fd);
@@ -376,6 +375,7 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
   UserProcess& current_process = *currentUserThread.process_;
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+  debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
 
   if (fd == fd_stdout)
   {

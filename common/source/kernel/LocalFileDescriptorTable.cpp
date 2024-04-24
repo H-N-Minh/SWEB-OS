@@ -1,4 +1,5 @@
 #include "LocalFileDescriptorTable.h"
+#include "debug.h"
 
 LocalFileDescriptorTable::LocalFileDescriptorTable() : lfds_lock_("Local FDs Lock") {}
 
@@ -24,6 +25,7 @@ LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDes
   global_fd->incrementRefCount();
   auto* local_fd = new LocalFileDescriptor(global_fd, mode, offset, local_fd_id);
   local_fds_.push_back(local_fd);
+  debug(FILEDESCRIPTOR, "Created and added local file descriptor with local FD ID: %zu\n", local_fd_id);
   return local_fd;
 }
 
@@ -35,9 +37,11 @@ LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_
   {
     if(fd->getLocalFD() == (size_t)local_fd_id)
     {
+      debug(FILEDESCRIPTOR, "Getting local file descriptor with local FD ID: %d\n", local_fd_id);
       return fd;
     }
   }
+
   return nullptr;
 }
 
@@ -59,7 +63,7 @@ void LocalFileDescriptorTable::closeAllFileDescriptors() {
 
       delete fd;
     }
-
+    debug(FILEDESCRIPTOR, "Closing all local file descriptors.\n");
     local_fds_.clear();
   }
 }
@@ -74,7 +78,7 @@ void LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* lo
     if (global_fd->getRefCount() == 0) {
       delete global_fd;
     }
-
+    debug(FILEDESCRIPTOR, "Removing local file descriptor: %zu\n", local_fd->getLocalFD());
     local_fds_.erase(it);
     delete local_fd;
   }
@@ -90,4 +94,5 @@ void LocalFileDescriptorTable::addLocalFileDescriptor(LocalFileDescriptor* local
 {
   ScopeLock l(lfds_lock_);
   local_fds_.push_back(local_fd);
+  debug(FILEDESCRIPTOR, "Adding local file descriptor: %zu\n", local_fd->getLocalFD());
 }

@@ -79,7 +79,18 @@ UserProcess::UserProcess(const UserProcess& other)
 
   for(auto &fd : other.localFileDescriptorTable.getLocalFileDescriptors())
   {
+    //int original_permissions = fd->getMode();
+    //debug(FILEDESCRIPTOR, "Original Local FD: %zu Permissions: %d\n", fd->getLocalFD(), original_permissions);
+
     auto* newLFD = new LocalFileDescriptor(*fd);
+    newLFD->getGlobalFileDescriptor()->incrementRefCount();
+    debug(FILEDESCRIPTOR, "UserProcess::ctor: Global FD = %u; RefCount = %d\n", newLFD->getGlobalFileDescriptor()->getFd(), newLFD->getGlobalFileDescriptor()->getRefCount());
+
+    //debug(FILEDESCRIPTOR, "Copy-ctor: Copying Local FD: %zu from parent to child\n", newLFD->getLocalFD());
+
+    int permissions = newLFD->getMode();
+    debug(FILEDESCRIPTOR, "Copy-ctor: Copied Local FD: %zu Permissions: %d\n", newLFD->getLocalFD(), permissions);
+
     this->localFileDescriptorTable.addLocalFileDescriptor(newLFD);
   }
 
