@@ -20,16 +20,6 @@ int main() {
   }
   printf("Local file descriptor: %d\n", local_fd);
 
-  printf("Opening all files between 'usr/file0.txt' and 'usr/file4.txt'\n");
-  int fds[5];
-  char path[20] = "usr/file0.txt";
-  for(int i = 0; i < 5; i++) {
-    path[8] = '0' + i;
-    fds[i] = open(path, O_RDWR);
-    printf("Opened file: %s --> Local FD: %d\n", path, fds[i]);
-  }
-
-
   pid_t pid = fork();
 
   if (pid == 0) // child process
@@ -38,14 +28,11 @@ int main() {
     printf("Child's local_fd: %d\n", local_fd);
 
     printf("Reading from file: %s\n", TEST_FILE);
-    printf("Before lseek\n");
     if (lseek(local_fd, 0, SEEK_SET) == -1) {
       printf("lseek error");
       return -1;
     }
-    printf("After lseek, before read\n");
     bytesRead = read(local_fd, buf, BUF_SIZE - 1);
-    printf("After read\n");
     if (bytesRead < 0) {
       printf("Failed to read from file\n");
       return -1;
@@ -72,11 +59,13 @@ int main() {
     return -1;
   }
 
+  printf("Child process completed, back in parent process.\n");
+
   printf("Writing to file: %s\n", TEST_FILE);
   char* writeData = ":/";
-  printf("Before write operation in %s process, FD: %d\n", (pid == 0 ? "Child":"parent"), local_fd);
+  printf("Before write operation in parent process, FD: %d\n", local_fd);
   bytesWritten = write(local_fd, writeData, strlen(writeData));
-  printf("After write operation in %s process, returned: %zd\n", (pid == 0 ? "Child":"parent"), bytesWritten);
+  printf("After write operation in parent process, returned: %zd\n", bytesWritten);
   if (bytesWritten < 0) {
     printf("Failed to write to file\n");
     return -1;

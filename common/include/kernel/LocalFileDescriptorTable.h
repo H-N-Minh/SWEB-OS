@@ -15,7 +15,7 @@ public:
 
   void closeAllFileDescriptors();
   void removeLocalFileDescriptor(LocalFileDescriptor* local_fd);
-
+  void removeLocalFileDescriptorUnlocked(LocalFileDescriptor* local_fd);
   ustl::vector<LocalFileDescriptor*> getLocalFileDescriptors() const;
   void addLocalFileDescriptor(LocalFileDescriptor* local_fd);
 

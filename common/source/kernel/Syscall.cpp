@@ -141,7 +141,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 {
-  debug(SYSCALL, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
+  //debug(SYSCALL, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
@@ -160,7 +160,7 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
   debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %zu; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount());
 
   l_off_t position = VfsSyscall::lseek(global_fd, offset, whence);
-  debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
+  //debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
   return position;
 }
 
@@ -359,7 +359,7 @@ int Syscall::execv(const char *path, char *const argv[])
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 {
-  debug(SYSCALL, "Syscall::write: Writing to fd: %zu with buffer size: %zu\n", fd, size);
+  //debug(SYSCALL, "Syscall::write: Writing to fd: %zu with buffer size: %zu\n", fd, size);
   //WARNING: this might fail if Kernel PageFaults are not handled
   if ((buffer >= USER_BREAK) || (buffer + size > USER_BREAK))
   {
@@ -371,11 +371,11 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
   UserProcess& current_process = *currentUserThread.process_;
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
-  debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
+  //debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
 
   if (fd == fd_stdout)
   {
-    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
+    //debug(SYSCALL, "Syscall::write: Writing to stdout\n");
     kprintf("%.*s", (int)size, (char*) buffer);
     return size;
   }
@@ -386,7 +386,7 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
     size_t global_fd = global_fd_obj->getFd();
     size_t num_written = VfsSyscall::write(global_fd, (char*) buffer, size);
-    debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
+    //debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
     return num_written;
   }
 
@@ -398,7 +398,7 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
 size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 {
-  debug(SYSCALL, "Syscall::read: Attempting to read from fd: %zu with buffer size: %zu\n", fd, count);
+  //debug(SYSCALL, "Syscall::read: Attempting to read from fd: %zu with buffer size: %zu\n", fd, count);
   if ((buffer >= USER_BREAK) || (buffer + count > USER_BREAK))
   {
     debug(SYSCALL, "Syscall::read: Buffer exceeds USER_BREAK\n");
@@ -417,15 +417,15 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 
     size_t global_fd = global_fd_obj->getFd();
     size_t num_read = VfsSyscall::read(global_fd, (char*) buffer, count);
-    debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
+    //debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
     return num_read;
   }
 
   else if (fd == fd_stdin)
   {
-    debug(SYSCALL, "Syscall::read: Reading from stdin\n");
+    //debug(SYSCALL, "Syscall::read: Reading from stdin\n");
     size_t num_read = currentThread->getTerminal()->readLine((char*) buffer, count);
-    debug(SYSCALL, "Syscall::read: Read %zu bytes from stdin\n", num_read);
+    //debug(SYSCALL, "Syscall::read: Read %zu bytes from stdin\n", num_read);
     return num_read;
   }
 
@@ -435,7 +435,7 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 
 size_t Syscall::close(size_t fd)
 {
-  debug(SYSCALL, "Syscall::close: Attempting to close fd: %zu\n", fd);
+  //debug(SYSCALL, "Syscall::close: Attempting to close fd: %zu\n", fd);
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
@@ -453,7 +453,7 @@ size_t Syscall::close(size_t fd)
     {
       current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
     }
-    debug(SYSCALL, "Syscall::close: Close result for global fd: %zu was %d\n", global_fd, result);
+   // debug(SYSCALL, "Syscall::close: Close result for global fd: %zu was %d\n", global_fd, result);
     return result;
   }
 

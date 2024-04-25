@@ -5,7 +5,6 @@
 
 LocalFileDescriptor::LocalFileDescriptor(FileDescriptor *global_fd, uint32_t mode, size_t offset, size_t local_fd_id)
     : global_fd_(global_fd), mode_(mode), offset_(offset), localFD_(local_fd_id) {
-  global_fd_->incrementRefCount();
   debug(FILEDESCRIPTOR, "Created LocalFileDescriptor with local FD: %zu, global FD: %d, mode: %u, offset: %zu\n", localFD_, global_fd_->getFd(), mode_, offset_);
 }
 
@@ -22,7 +21,6 @@ LocalFileDescriptor::LocalFileDescriptor(const LocalFileDescriptor &other) noexc
 
 
 LocalFileDescriptor::~LocalFileDescriptor() {
-  global_fd_->decrementRefCount();
   debug(FILEDESCRIPTOR, "Deleted LocalFileDescriptor with local FD: %zu, global FD: %d\n", localFD_, global_fd_->getFd());
 }
 
