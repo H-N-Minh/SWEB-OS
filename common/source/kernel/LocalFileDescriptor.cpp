@@ -26,7 +26,7 @@ LocalFileDescriptor::~LocalFileDescriptor() {
 
 
 FileDescriptor *LocalFileDescriptor::getGlobalFileDescriptor() const{
-  debug(Fabi, "getGlobalFileDescriptor:: Global FD = %u; Local FD = %zu; RefCount = %d\n;", global_fd_->getFd(), localFD_, global_fd_->getRefCount());
+  debug(Fabi, "getGlobalFileDescriptor:: Global FD = %u; Local FD = %zu; RefCount3 = %d\n;", global_fd_->getFd(), localFD_, global_fd_->getRefCount3());
   return global_fd_;
 }
 
@@ -45,4 +45,3 @@ size_t LocalFileDescriptor::getOffset() const {
 size_t LocalFileDescriptor::getLocalFD() const {
   return localFD_;
 }
-

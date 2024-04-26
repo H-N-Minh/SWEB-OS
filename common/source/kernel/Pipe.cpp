@@ -31,7 +31,7 @@ bool Pipe::read(char &c) {
     cond_full.signal();
   }
 
-  debug(PIPE, "Pipe::read read char: %c\n");
+  //debug(PIPE, "Pipe::read read char: %c\n");
 
   cond_full.signal();
   return true;

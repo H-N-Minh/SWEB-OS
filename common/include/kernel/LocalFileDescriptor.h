@@ -23,4 +23,6 @@ private:
   uint32_t mode_;
   size_t offset_;
   size_t localFD_;
+
+  ustl::atomic<int> ref_count2;
 };

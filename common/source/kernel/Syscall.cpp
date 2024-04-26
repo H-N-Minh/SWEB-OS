@@ -157,7 +157,7 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 
   FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(global_fd);
   assert(file_descriptor != nullptr && "File descriptor pointer is null");
-  debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %zu; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount());
+  debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %u; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount3());
 
   l_off_t position = VfsSyscall::lseek(global_fd, offset, whence);
   //debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
@@ -359,7 +359,7 @@ int Syscall::execv(const char *path, char *const argv[])
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 {
-  //debug(SYSCALL, "Syscall::write: Writing to fd: %zu with buffer size: %zu\n", fd, size);
+  debug(SYSCALL, "Syscall::write: Writing to fd: %zu with buffer size: %zu\n", fd, size);
   //WARNING: this might fail if Kernel PageFaults are not handled
   if ((buffer >= USER_BREAK) || (buffer + size > USER_BREAK))
   {
@@ -400,7 +400,7 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
 size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 {
-  //debug(SYSCALL, "Syscall::read: Attempting to read from fd: %zu with buffer size: %zu\n", fd, count);
+  debug(SYSCALL, "Syscall::read: Attempting to read from fd: %zu with buffer size: %zu\n", fd, count);
   if ((buffer >= USER_BREAK) || (buffer + count > USER_BREAK))
   {
     debug(SYSCALL, "Syscall::read: Buffer exceeds USER_BREAK\n");
@@ -439,7 +439,7 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 
 size_t Syscall::close(size_t fd)
 {
-  //debug(SYSCALL, "Syscall::close: Attempting to close fd: %zu\n", fd);
+  debug(SYSCALL, "Syscall::close: Attempting to close fd: %zu\n", fd);
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
@@ -452,15 +452,18 @@ size_t Syscall::close(size_t fd)
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
     size_t global_fd = global_fd_obj->getFd();
-    int result = VfsSyscall::close(global_fd);
+    int result = 0;
+    if (global_fd_obj->getRefCount() == 1)
+    {
+      result = VfsSyscall::close(global_fd);
+    }
     if (result == 0)
     {
       current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
     }
-   // debug(SYSCALL, "Syscall::close: Close result for global fd: %zu was %d\n", global_fd, result);
+    debug(SYSCALL, "Syscall::close: Close result for global fd: %zu was %d\n", global_fd, result);
     return result;
   }
-
   debug(SYSCALL, "Syscall::close: No valid local file descriptor found for fd: %zu\n", fd);
   return -1U;
 }

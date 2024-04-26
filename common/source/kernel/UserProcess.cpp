@@ -80,12 +80,12 @@ UserProcess::UserProcess(const UserProcess& other)
   for(auto &fd : other.localFileDescriptorTable.getLocalFileDescriptors())
   {
     auto* newLFD = new LocalFileDescriptor(*fd);
-    debug(FILEDESCRIPTOR, "UserProcess::ctor: Global FD = %u; RefCount = %d\n", newLFD->getGlobalFileDescriptor()->getFd(), newLFD->getGlobalFileDescriptor()->getRefCount());
+    debug(FILEDESCRIPTOR, "UserProcess::ctor: Global FD = %u; RefCount = %d\n", newLFD->getGlobalFileDescriptor()->getFd(), newLFD->getGlobalFileDescriptor()->getRefCount3());
 
     int permissions = newLFD->getMode();
     debug(FILEDESCRIPTOR, "Copy-ctor: Copied Local FD: %zu Permissions: %d\n", newLFD->getLocalFD(), permissions);
-
-    debug(Fabi, "UserProcess:: Global FD = %u; Local FD = %zu; RefCount = %d\n; Process ID = %u\n; Filename = %s", newLFD->getGlobalFileDescriptor()->getFd(), newLFD->getLocalFD(), newLFD->getGlobalFileDescriptor()->getRefCount(), pid_, filename_.c_str());
+    newLFD->getGlobalFileDescriptor()->incrementRefCount3();
+    debug(Fabi, "UserProcess:: Global FD = %u; Local FD = %zu; RefCount = %d\n; Process ID = %u\n; Filename = %s", newLFD->getGlobalFileDescriptor()->getFd(), newLFD->getLocalFD(), newLFD->getGlobalFileDescriptor()->getRefCount3(), pid_, filename_.c_str());
 
     this->localFileDescriptorTable.addLocalFileDescriptor(newLFD);
   }
