@@ -12,8 +12,6 @@
 
 class UserProcess
 {
-
-
     public:
         /**
          * Constructor
@@ -49,7 +47,7 @@ class UserProcess
          * @param tid thread_id
          * @param value_ptr address to location, where return value should get stored
          */
-        int removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr);
+        int removeRetvalFromMapAndSetReval(size_t tid, void*& return_value);
 
 
 
@@ -92,7 +90,6 @@ class UserProcess
 
         LocalFileDescriptorTable localFileDescriptorTable;
 
-         ustl::string str() const;
-
+        ustl::string str() const;
 };
 

@@ -11,7 +11,15 @@ class UserProcess;
 // PTHREAD_CANCEL_EXIT: similar to PTHREAD_CANCEL_ASYNCHRONOUS, except thread gets canceled no matter what CancelState is.
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3, PTHREAD_CANCEL_EXIT=4};
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
-enum JoinState {PTHREAD_CREATE_DETACHED, PTHREAD_CREATE_JOINABLE, PCD_TO_BE_JOINED, PCJ_TO_BE_JOINED};
+enum JoinState {PTHREAD_CREATE_DETACHED = 5, PTHREAD_CREATE_JOINABLE = 4, PCD_TO_BE_JOINED = 6, PCJ_TO_BE_JOINED = 7};
+
+typedef struct {
+    JoinState detach_state;  // Detach state: PTHREAD_CREATE_JOINABLE or PTHREAD_CREATE_DETACHED
+    void *stack_addr;  // Stack address
+    size_t stack_size; // Stack size
+    int priority;      // Thread priority
+    int initialized;
+} pthread_attr_t;
 
 class UserThread : public Thread
 {
@@ -28,13 +36,13 @@ class UserThread : public Thread
         void send_kill_notification();
         bool schedulable() override;
 
-        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, unsigned int* attr);
+        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, pthread_attr_t* attr);
         int cancelThread(size_t thread_id);
         int joinThread(size_t thread_id, void**value_ptr);
         void exitThread(void* value_ptr);
         int detachThread(size_t thread_id);
 
-        
+
         UserProcess* process_;
         size_t vpn_stack_;
         size_t user_stack_ptr_;            //Todos: copy in fork

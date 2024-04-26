@@ -11,31 +11,10 @@
 // a flag for the 1st thread of the process to setup its metadata
 size_t __META_INITIALIZED__ = 0;
 
-// /**
-//  * function stub
-//  * posix compatible signature - do not change the signature!
-//  */
-// int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-//                     void *(*start_routine)(void *), void *arg)
-// {
-//   return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
-// }
-
-// //wrapper function. In pthread create
-// void pthread_create_wrapper(void* start_routine, void* arg)
-// {
-//   void* retval = ((void* (*)(void*))start_routine)(arg);
-//   pthread_exit(retval);
-// }
-
-
- // commented out for now because this is needed only when thread has multiple stacks
-
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 {
-
   int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
   if (!retval && !__META_INITIALIZED__)  // if thread was created successfully and metadata is not setup
   {
@@ -155,9 +134,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   }
   int rv = pthread_spin_lock(&mutex->mutex_lock_);
   assert(rv == 0);
-  // size_t stack_variable;
-  // size_t* mutex_flag = (size_t*)((size_t)&stack_variable + 4088 - (size_t)(&stack_variable)%4096);
-  // size_t* mutex_waiter_list = (size_t*)((size_t)&stack_variable + 4080 - (size_t)(&stack_variable)%4096);
+
   size_t top_stack = getTopOfFirstStack();
   assert(top_stack && "top_stack cant be found");
   size_t* mutex_flag = (size_t*) (top_stack - sizeof(size_t));
@@ -174,8 +151,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   while (mutex->locked_)
   {
     counter1++;
-    //*mutex_waiter_list =(size_t)&mutex->waiting_list_;
-    //mutex->waiting_list_ = mutex_waiter_list;
+
     size_t* next_element = (size_t*)&mutex->waiting_list_;  
     int added_to_waiting_list = 0;
     while(!added_to_waiting_list)
@@ -736,4 +712,80 @@ void wakeUpThread(size_t* request_to_sleep)
   } while (!old_val && !__syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0));
 
   *request_to_sleep = 0;
+}
+
+int pthread_attr_init(pthread_attr_t *attr)
+{
+  if(!parameters_are_valid((size_t)attr, 0))
+  {
+    return -1;
+  }
+  if (attr == NULL)
+  {
+    return -1;
+  }
+  if (attr->initialized == 1)
+  {
+    return -1;
+  }
+
+  attr->detach_state = PTHREAD_CREATE_JOINABLE; // Default detach state
+  attr->stack_addr = NULL; // Default stack address
+  attr->stack_size = DEFAULT_STACK_SIZE;
+  attr->priority = 0;      // Default priority
+
+  attr->initialized = 1;
+  return 0; // Success
+}
+
+int pthread_attr_destroy(pthread_attr_t *attr) {
+  if(!parameters_are_valid((size_t)attr, 0))
+  {
+    return -1;
+  }
+  if (attr == NULL || attr->initialized == 0)
+  {
+    return -1;
+  }
+  attr->initialized = 0;
+  return 0;
+}
+
+int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate)
+{
+  if(!parameters_are_valid((size_t)attr, 0) || attr->initialized != 1)
+  {
+    return -1;
+  }
+  if (attr == NULL)
+    return -1;
+  if (detachstate != PTHREAD_CREATE_JOINABLE && detachstate != PTHREAD_CREATE_DETACHED)
+    return -1;
+  attr->detach_state = detachstate;
+  return 0;
+}
+
+int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate)
+{
+  if(!parameters_are_valid((size_t)attr, 0) || !parameters_are_valid((size_t)detachstate, 0) || attr->initialized != 1)
+  {
+    return -1;
+  }
+  if (attr == NULL || detachstate == NULL)
+    return -1;
+  *detachstate = attr->detach_state;
+  return 0;
+}
+
+int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
+{
+  return -1;
+  // if (attr == NULL || attr->initialized != 1 || stacksize < PTHREAD_STACK_MIN)
+  // {
+  //   return -1;
+  // }
+
+  // attr->stack_size = stacksize;
+
+  // return 0;
 }

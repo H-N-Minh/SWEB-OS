@@ -19,7 +19,7 @@
 
 #define POINTER_SIZE 8
 
-int64 UserProcess::tid_counter_ = 1;
+int64 UserProcess::tid_counter_ = 2;
 int64 UserProcess::pid_counter_ = 1;
 
 
@@ -131,16 +131,13 @@ UserThread* UserProcess::getUserThread(size_t tid)
 }
 
 
-int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr)
+int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void*& return_value)
 {
   assert(threads_lock_.heldBy() == currentThread && "getUserThread used without holding threads_lock");
   ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);                                                   
   if(iterator != thread_retval_map_.end())
   {
-    if(value_ptr != NULL)
-    {
-      *value_ptr = thread_retval_map_[tid];
-    }
+    return_value = thread_retval_map_[tid];
     thread_retval_map_.erase(iterator);
     return 0;
   }
@@ -194,6 +191,48 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
 }
 
+void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, int len_string)
+{
+  size_t virtual_address = ArchMemory::getIdentAddressOfPPN(ppn);
+  size_t virtual_address_2;
+  if(next_page)
+  {
+    virtual_address_2 = ArchMemory::getIdentAddressOfPPN(next_page);
+  }
+
+  //everythings fits on first page
+  if(offset < PAGE_SIZE && offset + len_string < PAGE_SIZE)
+  {
+    char* start_next_string = (char*)virtual_address + offset; 
+    // debug(FORK, "Write to first page, start from %p, and write %d characters.\n", start_next_string, len_string); 
+    // debug(FORK, "String is %s\n", string);
+    memcpy(start_next_string, string, len_string);
+  }
+  else if(offset > PAGE_SIZE && offset + len_string > PAGE_SIZE)
+  {
+    char* start_next_string = (char*)virtual_address_2 + offset - PAGE_SIZE;  
+    // debug(FORK, "Write to second page, start from %p, and write %d characters.\n", start_next_string, len_string); 
+    // debug(FORK, "String is %s\n", string);
+    memcpy(start_next_string, string, len_string);
+  }
+  else
+  {
+    //first page
+    size_t len_first_page = PAGE_SIZE - offset;
+    char* start_next_string1 = (char*)virtual_address + offset;  
+    memcpy(start_next_string1, string, len_first_page);
+
+    //second page
+    size_t len_second_page = len_string - len_first_page;
+    char* start_next_string2 = (char*)virtual_address_2;  
+    memcpy(start_next_string2, (char*)((size_t)string + len_first_page), len_second_page);
+
+    // debug(FORK, "Write to first and second page, first: %p,%ld, second: %p,%ld.\n", start_next_string1, len_first_page, start_next_string2, len_second_page); 
+    // debug(FORK, "String is %s\n", string);
+    // debug(FORK, "String is %s\n", (char*)((size_t)string + len_first_page));
+  }
+}
+
 //Todos: locking
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
@@ -203,7 +242,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     return -1;
   }
-  
+
   int argc = 0;
   int array_offset = 0;
   if(!check_parameters_for_exec(argv, argc, array_offset))
@@ -225,7 +264,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentUserThread.cancel_state_type_lock_.acquire();
   if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
   {
-    VfsSyscall::close(execv_fd);
     threads_lock_.release();
     currentUserThread.cancel_state_type_lock_.release();
     return -1;
@@ -237,39 +275,60 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentUserThread.send_kill_notification();
   one_thread_left_ = (threads_.size() > 1) ? false : true;
   threads_lock_.release();
-
   waitForThreadsToDie();
 
+  if(!check_parameters_for_exec(argv, argc, array_offset))
+  {
+    assert(0);         //Todos
+  }
 
   //allocate a free physical page and get the virtual address of the identity mapping
 
   size_t page_for_args = PageManager::instance()->allocPPN();
-  size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
-
+  size_t next_page_for_args = NULL;
   int exec_array_offset_ = array_offset;
+
+  if(exec_array_offset_ + (argc + 1) * POINTER_SIZE > PAGE_SIZE)
+  {
+    next_page_for_args = PageManager::instance()->allocPPN();
+  }
+
+  // size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
+
   size_t offset = 0;
-  size_t offset1 = USER_BREAK - PAGE_SIZE;
+  size_t offset1 = USER_BREAK - 2 * PAGE_SIZE;
+
   
   for(int i = 0; i < argc; i++)
   {
     //write the arguments one by one to the new phsical page via identity mapping
-    memcpy((char*)virtual_address + offset, argv[i], strlen(argv[i])+1);
+    // char* start_next_string = (char*)virtual_address + offset;
+    int len_string = strlen(argv[i])+1;
+
+    char* start_next_array_element = (char*)((size_t)exec_array_offset_ + i * POINTER_SIZE);
+    write_to_page(page_for_args, next_page_for_args, offset, argv[i], len_string);
 
     //store the offset of each argument in the page, at the end of all arguments
-    memcpy((void*)(virtual_address + exec_array_offset_ + i * POINTER_SIZE), &offset1, POINTER_SIZE);
+    write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&offset1 , POINTER_SIZE);
+    
     offset += strlen(argv[i]) + 1;
     offset1 += strlen(argv[i]) + 1;
   }
   if(argc > 0)
   {
     //storing the pointer to the virtual address of the single elements in the array
-    memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
+    // memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
+    
+    char* start_next_array_element = (char*)((size_t)exec_array_offset_ + argc * POINTER_SIZE);
+    char* null = NULL;
+
+    write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&null , POINTER_SIZE);
   }
   
   execv_fd = VfsSyscall::open(path, O_RDONLY);   //todos maybe deepcopy path
   if(execv_fd < 0)
   {
-    assert(".... .....!!!!");
+    assert(0);      //Todos: maybe change to exit
   }
   loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.vpn_stack_);  //cancel
   size_t old_cr3 = currentThread->user_registers_->cr3;
@@ -277,37 +336,41 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   VfsSyscall::close(fd_);
   fd_ = execv_fd;
 
-  
+
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
 
-  
+
   currentThread->user_registers_->rdi = argc;
   currentThread->user_registers_->cr3 = old_cr3;
 
 
-  size_t virtual_page = USER_BREAK / PAGE_SIZE - 1; 
+  size_t virtual_page = USER_BREAK / PAGE_SIZE - 2;
   loader_->arch_memory_.lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
+  if(next_page_for_args)
+  {
+    size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
+    bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , next_page_for_args, 1);
+    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
+
+  }
   loader_->arch_memory_.lock_.release();
-  currentThread->user_registers_->rsi = USER_BREAK - PAGE_SIZE + exec_array_offset_;
+  currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset_;
   assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
-
-  // assert(0);
-
   return 0;
 }
 
 
 bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& array_offset)
 {
-  int space_left = 4000;   //page size (more or less)
+  int space_left = 2 * PAGE_SIZE;
   bool finished = false;
 
   //go through all arguments, check if the are valid and if there is enough space
   while(!finished)
   {
     if(!Syscall::check_parameter((size_t)argv[argc], true))
-    { 
+    {
       debug(USERPROCESS, "Execv: parameters not in userspace\n");
       return false;
     }
@@ -327,7 +390,7 @@ bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& 
     {
       debug(USERPROCESS, "Execv: no space left\n");
       return false;
-    } 
+    }
   }
   return true;
 }
@@ -378,13 +441,13 @@ void UserProcess::cancelAllOtherThreads()
     {
       size_t thread_id = thread->getTID();
       thread->cancel_state_type_lock_.acquire();
-      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;  
+      thread->cancel_type_ = PTHREAD_CANCEL_EXIT;
       thread->cancel_state_type_lock_.release();
       debug(USERPROCESS, "UserProcess::exitProcess: Thread %zu gets canceled. \n",thread_id);
       currentUserThread.detachThread(thread_id);
       assert(currentUserThread.cancelThread(thread_id) == 0 && "pthreadCancel failed in exit.\n");
       debug(USERPROCESS, "UserProcess::exitProcess: Thread %zu was canceled sucessfully. \n",thread_id);
-    } 
+    }
   }
 }
 

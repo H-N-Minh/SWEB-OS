@@ -1,5 +1,5 @@
 #include "UserProcess.h"
-#include "UserThread.h"
+#include "UserThread.h" //
 #include "Console.h"
 #include "ArchThreads.h"
 #include "Loader.h"
@@ -75,7 +75,6 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
   switch_to_userspace_ = 1;
 }
-
 
 
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
@@ -181,7 +180,7 @@ bool UserThread::schedulable()
   }
 
   if(wants_to_be_canceled_ && switch_to_userspace_
-    && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+    && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE)))
   {
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
 
@@ -233,9 +232,7 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
     return -1;
   }
 
-
   process_->threads_lock_.acquire();
-
   //check if thread is running
   UserThread* thread_to_be_joined = process_->getUserThread(thread_id);
   if(!thread_to_be_joined)
@@ -243,8 +240,13 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
     debug(USERTHREAD, "UserThread:pthreadJoin: No running thread id %zu can be found.\n", thread_id);
 
    //check if thread has already terminated 
-    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, value_ptr);
+    void* return_value;
+    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, return_value);
     process_->threads_lock_.release();
+    if(value_ptr != NULL && thread_in_retval_map == 0)
+    {
+      *value_ptr = return_value;
+    }
     return thread_in_retval_map;
   }
   thread_to_be_joined->join_state_lock_.acquire();
@@ -254,7 +256,7 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
     process_->threads_lock_.release();
     return -1;
   }
-  else 
+  else
   {
     thread_to_be_joined->join_state_ = PCJ_TO_BE_JOINED;
   }
@@ -263,18 +265,23 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
   thread_gets_killed_lock_.acquire();
   thread_to_be_joined->join_threads_.push_back(this);
   process_->threads_lock_.release();
-  
+
   //wait for thread get killed
   while(!thread_killed)
   {
     thread_gets_killed_.wait();
-  }     
-  thread_killed = false;               
-  thread_gets_killed_lock_.release(); 
+  }
+  thread_killed = false;
+  thread_gets_killed_lock_.release();
 
   process_->threads_lock_.acquire();
-  int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, value_ptr);
+  void* return_value;
+  int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, return_value);
   process_->threads_lock_.release();
+  if(value_ptr != NULL && thread_in_retval_map == 0)
+  {
+    *value_ptr = return_value;
+  }
 
   return thread_in_retval_map;
 }
@@ -318,32 +325,50 @@ void UserThread::exitThread(void* value_ptr)
 
 }
 
-int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, unsigned int* attr)
-{ 
-  if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true) 
-  || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true) 
+int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, pthread_attr_t* attr)
+{
+  if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true)
+  || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true)
   || !Syscall::check_parameter((size_t)wrapper))
   {
     return -1;
   }
   debug(USERPROCESS, "UserThread::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
+  
+  JoinState join_state;
+  if(attr)
+  {
+    if(attr->initialized == 0 || (PTHREAD_CREATE_DETACHED != attr->detach_state && PTHREAD_CREATE_JOINABLE != attr->detach_state))
+    {
+      return -1;
+    }
+    join_state = attr->detach_state;
+  }
+  else
+  {
+    join_state = PTHREAD_CREATE_JOINABLE;
+  }
+  
+  
 
-  process_->threads_lock_.acquire();  
+
+  process_->threads_lock_.acquire();
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
   if(new_thread)
   {
+    new_thread->join_state_ = join_state;
     debug(USERPROCESS, "UserThread::createThread: Adding new thread to scheduler\n");
     process_->threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
-    *thread = new_thread->getTID();
     process_->threads_lock_.release();  
+    *thread = new_thread->getTID();
     return 0;
   }
   else
   {
     debug(USERPROCESS, "UserThread::createThread: ERROR: Thread not created\n");
-    process_->threads_lock_.release();  
+    process_->threads_lock_.release();
     return -1;
   }
 }
@@ -392,7 +417,8 @@ int UserThread::detachThread(size_t thread_id)
   }
   else
   {
-    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, NULL);
+    void* not_used_rv;
+    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, not_used_rv);
     return thread_in_retval_map;
 
   }

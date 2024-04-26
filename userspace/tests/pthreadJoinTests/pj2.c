@@ -31,6 +31,6 @@ int pj2()
     assert(rv_join == 0);
     assert((size_t)value_ptr == 5 && "value_ptr does not match the returnvalue of thread");
     
-    printf("pj2 successful!\n");
+
     return 0;
 }
