@@ -325,7 +325,7 @@ void PageManager::incrementReferenceCount(uint64 page_number)
   if (it != page_reference_counts_.end())
   {
     //page number found, increment
-    ArchThreads::atomic_add(reinterpret_cast<int64 &>(it->second.reference_count), 1);
+    ArchThreads::atomic_add(reinterpret_cast<int64 &>(it->second), 1);
   }
   else
   {
@@ -341,11 +341,11 @@ void PageManager::decrementReferenceCount(uint64 page_number)
   if (it != page_reference_counts_.end())
   {
     //decrement the reference count
-    ArchThreads::atomic_sub(reinterpret_cast<int64 &>(it->second.reference_count), 1);
-    ArchThreads::atomic_set(reinterpret_cast<int32 &>(page_reference_counts_[page_number]), it->second.reference_count);
+    ArchThreads::atomic_sub(reinterpret_cast<int64 &>(it->second), 1);
+    ArchThreads::atomic_set(reinterpret_cast<int32 &>(page_reference_counts_[page_number]), it->second);
 
     //if reference count reaches zero, erase the entry from the map
-    if (it->second.reference_count == 0)
+    if (it->second == 0)
     {
       page_reference_counts_.erase(it);
     }
@@ -354,11 +354,10 @@ void PageManager::decrementReferenceCount(uint64 page_number)
 
 uint32 PageManager::getReferenceCount(uint64 page_number)
 {
-  // Check if the page number is in the map
   auto it = page_reference_counts_.find(static_cast<uint32>(page_number));
   if (it != page_reference_counts_.end())
   {
-    return it->second.reference_count;
+    return it->second;
   }
   else
   {

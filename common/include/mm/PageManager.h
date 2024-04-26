@@ -54,11 +54,11 @@ class PageManager
 
     uint32 getNumPagesForUser() const;
 
-    struct PageInfo{
-        uint32 reference_count;
-    };
+//    struct PageInfo{
+//        uint32 reference_count;
+//    };
 
-    ustl::map<uint32, PageInfo> page_reference_counts_;
+    ustl::map<uint32, uint32> page_reference_counts_;
 
     void incrementReferenceCount(uint64 page_number);
     void decrementReferenceCount(uint64 page_number);
