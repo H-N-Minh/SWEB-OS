@@ -367,6 +367,8 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
     return -1U;
   }
 
+  //implement write pipe using Pipe.h and Pipe.cpp
+
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
@@ -404,6 +406,8 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
     debug(SYSCALL, "Syscall::read: Buffer exceeds USER_BREAK\n");
     return -1U;
   }
+
+  //implement read pipe using Pipe.h and Pipe.cpp
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;

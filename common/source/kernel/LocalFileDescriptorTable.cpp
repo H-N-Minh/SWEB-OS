@@ -1,5 +1,6 @@
 #include "LocalFileDescriptorTable.h"
 #include "debug.h"
+#include "UserThread.h"
 
 LocalFileDescriptorTable::LocalFileDescriptorTable() : lfds_lock_("Local FDs Lock") {}
 
@@ -15,6 +16,9 @@ LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDes
   local_fds_.push_back(local_fd);
   global_fd->incrementRefCount();
   debug(FILEDESCRIPTOR, "Created and added local file descriptor with local FD ID: %zu. Current count: %d\n", local_fd_id, global_fd->getRefCount());
+  debug(FILEDESCRIPTOR, "After assignment in createLocalFileDescriptor: Global FD: %d\n", local_fd->getGlobalFileDescriptor()->getFd());
+  debug(Fabi, "createLocalFileDescriptor:: Global FD = %u; Local FD = %zu; RefCount = %d\n;", global_fd->getFd(), local_fd->getLocalFD(), global_fd->getRefCount());
+
   return local_fd;
 }
 
@@ -42,7 +46,7 @@ size_t LocalFileDescriptorTable::generateLocalFD()
 void LocalFileDescriptorTable::closeAllFileDescriptors() {
   ScopeLock l(lfds_lock_);
   while (!local_fds_.empty()) {
-    removeLocalFileDescriptorUnsafe(local_fds_.back());
+    removeLocalFileDescriptorUnlocked(local_fds_.back());
   }
   debug(FILEDESCRIPTOR, "Closed all local file descriptors.\n");
 }
@@ -56,12 +60,14 @@ void LocalFileDescriptorTable::removeLocalFileDescriptorUnlocked(LocalFileDescri
   auto it = ustl::find(local_fds_.begin(), local_fds_.end(), local_fd);
 
   if (it != local_fds_.end()) {
-    FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor();
+    FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor(); //here the global fd somehow gets 0;
+
+    debug(FILEDESCRIPTOR, "Before decrement in removeLocalFileDescriptorUnlocked: Global FD: %d\n", global_fd->getFd());
 
     debug(FILEDESCRIPTOR, "Decrementing ref count for global FD %d\n", global_fd->getFd());
     if (global_fd->getFd() > 2) {
       global_fd->decrementRefCount();
-      assert(global_fd->getRefCount() >= 0 && "Reference count is negative!");
+      assert(global_fd->getRefCount() <= 0 && "Reference count is negative!");
 
       if (global_fd->getRefCount() == 0) {
         debug(FILEDESCRIPTOR, "Ref count is 0 for global FD %d. Deleting it.\n",
@@ -72,6 +78,8 @@ void LocalFileDescriptorTable::removeLocalFileDescriptorUnlocked(LocalFileDescri
 
     debug(FILEDESCRIPTOR, "Removing local file descriptor: %zu\n", local_fd->getLocalFD());
     local_fds_.erase(it);
+
+    debug(Fabi, "removeLocalFileDescriptor:: Global FD = %u; Local FD = %zu; RefCount = %d\n;", global_fd->getFd(), local_fd->getLocalFD(), global_fd->getRefCount());
 
     delete local_fd;
   }

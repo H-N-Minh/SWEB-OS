@@ -106,7 +106,7 @@ const size_t M_ZONE             = Ansi_Yellow;
 
 const size_t TAI_THREAD               = Ansi_Yellow  ;
 const size_t MINH                     = Ansi_Red     ;
-const size_t Fabi                     = Ansi_Red;
+const size_t Fabi                     = Ansi_Red | OUTPUT_ENABLED;
 
 
 const size_t USERSPACE_LOCKS         = Ansi_Red     ;

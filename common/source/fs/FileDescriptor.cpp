@@ -30,11 +30,15 @@ FileDescriptor::~FileDescriptor()
 void FileDescriptor::incrementRefCount()
 {
   ref_count_.fetch_add(1);
+  debug(FILEDESCRIPTOR, "Incremented reference count for global FD %d. Current count: %d\n",
+        getFd(), getRefCount());
 }
 
 void FileDescriptor::decrementRefCount()
 {
   ref_count_.fetch_add(-1);
+  debug(FILEDESCRIPTOR, "Decremented reference count for global FD %d. Current count: %d\n",
+        getFd(), getRefCount());
 }
 int FileDescriptor::getRefCount() const
 {

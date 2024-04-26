@@ -85,6 +85,8 @@ UserProcess::UserProcess(const UserProcess& other)
     int permissions = newLFD->getMode();
     debug(FILEDESCRIPTOR, "Copy-ctor: Copied Local FD: %zu Permissions: %d\n", newLFD->getLocalFD(), permissions);
 
+    debug(Fabi, "UserProcess:: Global FD = %u; Local FD = %zu; RefCount = %d\n; Process ID = %u\n; Filename = %s", newLFD->getGlobalFileDescriptor()->getFd(), newLFD->getLocalFD(), newLFD->getGlobalFileDescriptor()->getRefCount(), pid_, filename_.c_str());
+
     this->localFileDescriptorTable.addLocalFileDescriptor(newLFD);
   }
 
