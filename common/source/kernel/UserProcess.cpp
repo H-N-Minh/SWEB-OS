@@ -464,10 +464,9 @@ long int UserProcess::waitProcess(long int pid, int* status, int options)
   }
   debug(WAIT_PID, "--------------DONE WAITING\n");
 
-  *status = (int)ProcessRegistry::instance()->process_exit_status_map_[pid];
-
-  //at this point the waited process is already(should die) so delete if from map
   ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+  *status = (int)ProcessRegistry::instance()->process_exit_status_map_[pid];
+  //at this point the waited process is already(should die) so delete if from map
   ProcessRegistry::instance()->process_exit_status_map_.erase(pid);
   ProcessRegistry::instance()->process_exit_status_map_lock_.release();
 
