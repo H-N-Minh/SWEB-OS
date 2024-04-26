@@ -105,10 +105,12 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   CHILD_pt[pti].writeable = 0; //read only
                   CHILD_pt[pti].cow = 1;
 
+                  PageManager::instance()->page_reference_counts_lock_.acquire();
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
 
                   debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
                   PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
+                  PageManager::instance()->page_reference_counts_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
@@ -152,6 +154,7 @@ ArchMemory::~ArchMemory()
               {
                 if (pt[pti].present)
                 {
+                  PageManager::instance()->page_reference_counts_lock_.acquire();
                   if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
                   {
                     debug(FORK, "free page and set present in destructor  \n");
@@ -166,6 +169,7 @@ ArchMemory::~ArchMemory()
                     PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
                     debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   }
+                  PageManager::instance()->page_reference_counts_lock_.release();
                 }
               }
               pd[pdi].pt.present = 0;
@@ -225,16 +229,19 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
 
+  PageManager::instance()->page_reference_counts_lock_.acquire();
   if(PageManager::instance()->getReferenceCount(m.page_ppn) == 1)
   {
     PageManager::instance()->decrementReferenceCount(m.page_ppn);
     debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (free)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
     PageManager::instance()->freePPN(m.page_ppn);
+    PageManager::instance()->page_reference_counts_lock_.release();
   }
   else
   {
     PageManager::instance()->decrementReferenceCount(m.page_ppn);
     debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (decrease)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+    PageManager::instance()->page_reference_counts_lock_.release();
     return true;
   }
 
@@ -310,8 +317,10 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
+    PageManager::instance()->page_reference_counts_lock_.acquire();
     PageManager::instance()->incrementReferenceCount(page_ppn);
     debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
+    PageManager::instance()->page_reference_counts_lock_.release();
     return true;
   }
   return false;
@@ -481,6 +490,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                 {
                   if(m.page_ppn != pt[pti].page_ppn)
                   {
+                    PageManager::instance()->page_reference_counts_lock_.acquire();
                     if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
                     {
                       PageManager::instance()->freePPN(pt[pti].page_ppn);
@@ -494,6 +504,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                       debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                       ((uint64*)pt)[pti] = 0;
                     }
+                    PageManager::instance()->page_reference_counts_lock_.release();
                   }
                 }
               }

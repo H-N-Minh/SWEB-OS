@@ -3,6 +3,7 @@
 #include "types.h"
 #include "paging-definitions.h"
 #include "SpinLock.h"
+#include "Mutex.h"
 
 #include "umap.h"
 
@@ -59,6 +60,7 @@ class PageManager
     };
 
     ustl::map<uint32, PageInfo> page_reference_counts_;
+    Mutex page_reference_counts_lock_;
 
     void incrementReferenceCount(uint64 page_number);
     void decrementReferenceCount(uint64 page_number);

@@ -9,7 +9,7 @@ void function_pj7()
     function_pj7_reached = 1;
 }
 
-
+//join void function
 int pj7()
 {
     pthread_t thread_id;
@@ -21,7 +21,6 @@ int pj7()
     int pthread_join_rv = pthread_join(thread_id, NULL);
     assert(pthread_join_rv == 0);
 
-    printf("pj7 successful!\n");
 
     return 0;
 }
