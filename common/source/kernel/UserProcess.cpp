@@ -49,6 +49,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
 
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
+  debug(WAIT_PID, "-----------------------pid_ in constructor %d \n", pid_);
+
 
   threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
@@ -66,6 +68,7 @@ UserProcess::UserProcess(const UserProcess& other)
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
+  debug(WAIT_PID, "-----------------------pid_ in cpy constructor %d \n", pid_);
 
   assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
@@ -83,7 +86,6 @@ UserProcess::UserProcess(const UserProcess& other)
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", child_thread->getTID());
   Scheduler::instance()->addNewThread(child_thread);
-
 }
 
 
@@ -103,8 +105,6 @@ UserProcess::~UserProcess()
 
   delete user_mem_manager_;
   user_mem_manager_ = nullptr;
-
-
 
 
   ProcessRegistry::instance()->processExit();
@@ -450,9 +450,27 @@ ustl::string UserProcess::str() const {
   return oss.str();
 }
 
-int UserProcess::waitProcess(size_t pid, int* status, int options)
+long int UserProcess::waitProcess(long int pid, int* status, int options)
 {
 
   debug(WAIT_PID, "--------------pid %zu status %p option %d\n", pid, status, options);
-  return 0;
+
+  while (ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end())
+  {
+    debug(WAIT_PID, "--------------WAITING\n");
+    ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+    ProcessRegistry::instance()->process_exit_status_map_condition_.wait();
+    ProcessRegistry::instance()->process_exit_status_map_lock_.release();
+  }
+  debug(WAIT_PID, "--------------DONE WAITING\n");
+
+  *status = (int)ProcessRegistry::instance()->process_exit_status_map_[pid];
+
+  //at this point the waited process is already(should die) so delete if from map
+  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+  ProcessRegistry::instance()->process_exit_status_map_.erase(pid);
+  ProcessRegistry::instance()->process_exit_status_map_lock_.release();
+
+
+  return pid;
 }

@@ -3,15 +3,28 @@
 #include <wait.h>
 #include <unistd.h>
 
-int main() {
+int main()
+{
   pid_t pid;
   int status;
 
-  pid = 2; // Create a child process
+  // Create a child process
+  pid = fork();
 
-  printf("%p\n", &status);
-
-  waitpid(pid, &status, 0);
+  if (pid < 0)
+  {
+    printf("Fork faild\n");
+  }
+  else if (pid == 0)
+  {
+    sleep(1);
+    printf("Child process running...\n");
+  }
+  else
+  {
+    waitpid(pid, &status, 0);
+    printf("Parent process waiting for child to terminate...\n");
+  }
 
   return 0;
 }

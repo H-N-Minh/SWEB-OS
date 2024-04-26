@@ -18,6 +18,7 @@
 #include "PageManager.h"
 #include "ArchThreads.h"
 #include "UserSpaceMemoryManager.h"
+#include "ProcessRegistry.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -131,7 +132,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       // return_value = brkMemory(arg1);
       break;
     case sc_wait_pid:
-       return_value = wait_pid(arg1, (size_t)arg2, arg3);
+       return_value = wait_pid((int)arg1, (size_t)arg2, arg3);
       break;
     default:
       return_value = -1;
@@ -284,6 +285,9 @@ uint32 Syscall::forkProcess()
   else
   {
     debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
+    //ProcessRegistry* processRegistry = ProcessRegistry::instance();
+    //processRegistry->addProcess(child);
+
     return (uint32) currentThread->user_registers_->rax;
   }
 }
@@ -342,15 +346,19 @@ int Syscall::pthreadCancel(size_t thread_id)
 void Syscall::exit(size_t exit_code)
 
 {
-  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zdd\n", currentThread->getTID(), exit_code);
+  debug(SYSCALL, "-----------------Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
+
+  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+  ProcessRegistry::instance()->process_exit_status_map_[current_process.pid_] = exit_code;
+  ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
+  ProcessRegistry::instance()->process_exit_status_map_lock_.release();
+
   if (exit_code != 69)
   {
     debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
   }
-
-
 
   current_process.exitProcess(exit_code);
   assert(false && "This should never happen");
@@ -673,12 +681,13 @@ uint64_t Syscall::get_current_timestamp_64_bit()
   return ((uint64_t)edx<<32) + eax;
 }
 
-uint32 Syscall::wait_pid(size_t pid, size_t status, size_t options)
+long int Syscall::wait_pid(long int pid, size_t status, size_t options)
 {
-  
-  UserProcess* current_process = ((UserThread*) currentThread)->process_;
-  //debug(WAIT_PID, "-----------------------current_process->pid_ %d \n", current_process->pid_);
-  current_process->waitProcess(pid, (int*) status, options);
+  if (pid < 0)
+  {
+    return -1;
+  }
 
-  return 0;
+  UserProcess* current_process = ((UserThread*) currentThread)->process_;
+  return current_process->waitProcess(pid, (int*) status, options);
 }
