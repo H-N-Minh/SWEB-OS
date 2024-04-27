@@ -477,8 +477,13 @@ ustl::string UserProcess::str() const {
 long int UserProcess::waitProcess(long int pid, int* status, int options)
 {
   debug(WAIT_PID, "waitProcess::pid %zu status %p option %d\n", pid, status, options);
-  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
 
+  if(!Syscall::check_parameter((size_t)status, true))
+  {
+    return -1;
+  }
+
+  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
   ProcessRegistry::instance()->processes_lock_.acquire();
   if(ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end() 
     && !isProcessInVectorById(pid))
@@ -487,10 +492,7 @@ long int UserProcess::waitProcess(long int pid, int* status, int options)
     ProcessRegistry::instance()->process_exit_status_map_lock_.release();
     return -1;
   }
-  ProcessRegistry::instance()->processes_lock_.release();
-  
-
-
+  ProcessRegistry::instance()->processes_lock_.release();  
 
   while (ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end())
   {
@@ -504,7 +506,10 @@ long int UserProcess::waitProcess(long int pid, int* status, int options)
   ProcessRegistry::instance()->process_exit_status_map_.erase(pid);
   ProcessRegistry::instance()->process_exit_status_map_lock_.release();
 
-  *status = status_tmp;
+  if(status != NULL)
+  {
+    *status = status_tmp;
+  }
 
   return pid;
 }

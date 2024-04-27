@@ -1,8 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <wait.h>
+#include "stdio.h"
+#include "stdlib.h"
+#include "unistd.h"
+#include "wait.h"
+#include "assert.h"
 
+//Create two childs in the parents and waitpid for both
 int waitpid2()
 {
   pid_t pid;
@@ -36,10 +38,14 @@ int waitpid2()
     }
     else //Parent 2
     {
-      waitpid(pid2, &status, 0);
+      int rv = waitpid(pid2, &status, 0);
+      assert(rv == pid2);
+      assert(status == 0);
       // printf("Parent process waiting for child 2 to terminate...\n");
 
-      waitpid(pid, &status, 0);
+      rv = waitpid(pid, &status, 0);
+      assert(rv == pid);
+      assert(status == 0);
       // printf("Parent process waiting for child 1 to terminate...\n");
     }
   }

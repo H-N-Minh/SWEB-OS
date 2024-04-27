@@ -1,8 +1,10 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include <wait.h>
+#include "stdio.h"
+#include "stdlib.h"
+#include "unistd.h"
+#include "wait.h"
+#include "assert.h"
 
+//Fork and waitpid and in the child again waitpid
 int waitpid3()
 {
   pid_t pid;
@@ -13,6 +15,7 @@ int waitpid3()
   if (pid < 0)
   {
     // printf("Fork failed\n");
+    assert(0);
     return 1;
   }
   else if (pid == 0)  //Child 1
@@ -23,6 +26,7 @@ int waitpid3()
     if (pid2 < 0)
     {
       // printf("Second Fork failed\n");
+      assert(0);
       return 1;
     }
     else if (pid2 == 0)  //Child 2
@@ -32,14 +36,18 @@ int waitpid3()
     }
     else //Parent 2
     {
-      waitpid(pid2, &status, 0);
+      int rv = waitpid(pid2, &status, 0);
+      assert(rv == pid2);
+      assert(status == 0); 
       // printf("First child process waiting for its child to terminate...\n");
     }
     return 5;
   }
   else //Parent 1
   {
-    waitpid(pid, &status, 0);
+    int rv = waitpid(pid, &status, 0);
+    assert(rv == pid);
+    assert(status == 0); 
     // printf("Parent process waiting for first child to terminate...\n");
   }
 
