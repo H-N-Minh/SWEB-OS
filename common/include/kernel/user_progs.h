@@ -12,7 +12,7 @@ char const *user_progs[] = {
 
                             // "/usr/userspaceLocksTests.sweb",
 
-                            // "/usr/waitpidTests.sweb",
+                            "/usr/waitpidTests.sweb",
 
 
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
@@ -31,7 +31,7 @@ char const *user_progs[] = {
                             // "/usr/semTests.sweb",
 
 // FORK-------------------------------------------------
-                            "/usr/forkTests.sweb",
+                            // "/usr/forkTests.sweb",
 
 
                         

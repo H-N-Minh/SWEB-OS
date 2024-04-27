@@ -13,10 +13,9 @@ ProcessRegistry* ProcessRegistry::instance_ = 0;
 ProcessRegistry::ProcessRegistry(FileSystemInfo *root_fs_info, char const *progs[]) :
         Thread(root_fs_info, "ProcessRegistry", Thread::KERNEL_THREAD),
         process_exit_status_map_condition_(&process_exit_status_map_lock_, "process_exit_condition_"),
-        process_exit_status_map_lock_("process_exit_status_map_lock_"),
-        progs_(progs),
-        progs_running_(0),
-        counter_lock_("ProcessRegistry::counter_lock_"), all_processes_killed_(&counter_lock_, "ProcessRegistry::all_processes_killed_")
+        process_exit_status_map_lock_("process_exit_status_map_lock_"),  processes_lock_("processes_lock_"),
+        progs_(progs), progs_running_(0), counter_lock_("ProcessRegistry::counter_lock_"), 
+        all_processes_killed_(&counter_lock_, "ProcessRegistry::all_processes_killed_")
 {
     instance_ = this; // instance_ is static! -> Singleton-like behaviour
 }
@@ -119,19 +118,14 @@ void ProcessRegistry::createProcess(const char* path)
         return;
     }
     debug(PROCESS_REG, "created userprocess %s\n", path);
-    debug(PROCESS_REG, "created userprocess %s\n", path);
+    
     process->threads_lock_.acquire();
     Scheduler::instance()->addNewThread(process->threads_.front());
     process->threads_lock_.release();
     debug(PROCESS_REG, "added thread %s\n", path);
 
-    //processes_.push_back(process);
+
 }
 
-//void ProcessRegistry::addProcess(UserProcess* process)
-//{
-//  //TODO LOCK HERE
-//  processes_.push_back(process);
-//}
 
 

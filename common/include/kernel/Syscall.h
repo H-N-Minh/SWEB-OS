@@ -62,7 +62,7 @@ class Syscall
 
     static uint64_t get_current_timestamp_64_bit();
 
-    static long int wait_pid(long int pid, size_t status, size_t options);
+    static long int wait_pid(long int pid, int* status, size_t options);
 
     // minhsbrk2
     // static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);

@@ -42,6 +42,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
     VfsSyscall::close(fd_);
     delete working_dir_;
     working_dir_ = 0;
+    ProcessRegistry::instance()->processExit();
     return;
   }
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
@@ -51,6 +52,9 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
   debug(WAIT_PID, "-----------------------pid_ in constructor %d \n", pid_);
 
+  ProcessRegistry::instance()->processes_lock_.acquire();
+  ProcessRegistry::instance()->processes_.push_back(this);
+  ProcessRegistry::instance()->processes_lock_.release();
 
   threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
@@ -82,7 +86,9 @@ UserProcess::UserProcess(const UserProcess& other)
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
 
-//
+  ProcessRegistry::instance()->processes_lock_.acquire();
+  ProcessRegistry::instance()->processes_.push_back(this);
+  ProcessRegistry::instance()->processes_lock_.release();
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", child_thread->getTID());
   Scheduler::instance()->addNewThread(child_thread);
@@ -106,9 +112,22 @@ UserProcess::~UserProcess()
   delete user_mem_manager_;
   user_mem_manager_ = nullptr;
 
-
+  ProcessRegistry::instance()->processes_lock_.acquire();
+  ustl::vector<UserProcess*>::iterator iterator = ustl::find(ProcessRegistry::instance()->processes_.begin(), ProcessRegistry::instance()->processes_.end(), this);
+  if(iterator != ProcessRegistry::instance()->processes_.end())
+  {
+    ProcessRegistry::instance()->processes_.erase(iterator);
+  }
+  else
+  {
+    assert(0 && "Process not found in process list.");
+  }
+  
+  ProcessRegistry::instance()->processes_lock_.release();
   ProcessRegistry::instance()->processExit();
 }
+
+
 
 
 UserThread* UserProcess::getUserThread(size_t tid)
@@ -142,10 +161,23 @@ int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void*& return_value)
 
 bool UserProcess::isThreadInVector(UserThread* test_thread)
 {
-  //TODO: check if lock is held
+  assert(threads_lock_.heldBy() == currentThread && "isThreadinVector used without holding threads_lock");
   for (auto& thread : threads_)
   {
     if(test_thread == thread)
+    {
+      return true;
+    } 
+  }
+  return false;
+}
+
+bool UserProcess::isProcessInVectorById(int32 process_id)
+{
+  assert(ProcessRegistry::instance()->processes_lock_.heldBy() == currentThread && "isProcessInVectorById used without holding the lock");
+  for (auto& process : ProcessRegistry::instance()->processes_)
+  {
+    if(process->pid_ == process_id)
     {
       return true;
     } 
@@ -444,15 +476,28 @@ ustl::string UserProcess::str() const {
 
 long int UserProcess::waitProcess(long int pid, int* status, int options)
 {
+  debug(WAIT_PID, "waitProcess::pid %zu status %p option %d\n", pid, status, options);
   ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
-  debug(WAIT_PID, "--------------pid %zu status %p option %d\n", pid, status, options);
+
+  ProcessRegistry::instance()->processes_lock_.acquire();
+  if(ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end() 
+    && !isProcessInVectorById(pid))
+  {
+    ProcessRegistry::instance()->processes_lock_.release();
+    ProcessRegistry::instance()->process_exit_status_map_lock_.release();
+    return -1;
+  }
+  ProcessRegistry::instance()->processes_lock_.release();
+  
+
+
 
   while (ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end())
   {
-    debug(WAIT_PID, "--------------WAITING\n");
+    debug(WAIT_PID, "waitProcess::WAITING\n");
     ProcessRegistry::instance()->process_exit_status_map_condition_.wait();
   }
-  debug(WAIT_PID, "--------------DONE WAITING\n");
+  debug(WAIT_PID, "waitProcess::DONE WAITING\n");
 
   int status_tmp = (int)ProcessRegistry::instance()->process_exit_status_map_[pid]; //set
   //at this point the waited process is already(should die) so delete if from map
@@ -463,3 +508,4 @@ long int UserProcess::waitProcess(long int pid, int* status, int options)
 
   return pid;
 }
+

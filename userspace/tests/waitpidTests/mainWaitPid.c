@@ -6,6 +6,7 @@
 extern int waitpid1();
 extern int waitpid2();
 extern int waitpid3();
+extern int waitpid4();
 
 
 void check_return_value(int testnumber, int rv, int* successful_tests, char* description)
@@ -39,14 +40,14 @@ int main()
     int number_of_tests = 0;
     int rv;
     
-
+    //simple waitpid where parent waits on running child
     rv = waitpid1();  
     if(rv == 5)
     {
         exit(0);
     }
     number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "");
+    check_return_value(number_of_tests, rv, &successful_tests, "simple waitpid where parent waits on running child");
 
     rv = waitpid2();  
     if(rv == 5)
@@ -63,6 +64,11 @@ int main()
     }
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "");
+
+    rv = waitpid4();  
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "");
+
 
 
     if(successful_tests == number_of_tests)

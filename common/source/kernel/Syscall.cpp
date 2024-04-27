@@ -132,7 +132,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       // return_value = brkMemory(arg1);
       break;
     case sc_wait_pid:
-       return_value = wait_pid((int)arg1, (size_t)arg2, arg3);
+       return_value = wait_pid((int)arg1, (int*)arg2, arg3);
       break;
     default:
       return_value = -1;
@@ -690,13 +690,13 @@ uint64_t Syscall::get_current_timestamp_64_bit()
   return ((uint64_t)edx<<32) + eax;
 }
 
-long int Syscall::wait_pid(long int pid, size_t status, size_t options)
+long int Syscall::wait_pid(long int pid, int* status, size_t options)
 {
-  if (pid < 0)
+  if (pid <= 0 || options != 0)
   {
     return -1;
   }
 
   UserProcess* current_process = ((UserThread*) currentThread)->process_;
-  return current_process->waitProcess(pid, (int*) status, options);
+  return current_process->waitProcess(pid, status, options);
 }

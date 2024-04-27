@@ -35,9 +35,8 @@ class UserProcess
 
         bool isThreadInVector(UserThread* test_thread);
 
+        bool isProcessInVectorById(int32 process_id);
 
-        
-         //bool isThreadInVector(UserThread* test_thread);
 
 
         /**
