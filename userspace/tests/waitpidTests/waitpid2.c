@@ -3,7 +3,7 @@
 #include <unistd.h>
 #include <wait.h>
 
-int main()
+int waitpid2()
 {
   pid_t pid;
   int status;
@@ -15,11 +15,12 @@ int main()
     printf("Fork failed\n");
     return 1;
   }
-  else if (pid == 0)
+  else if (pid == 0) //Child 1
   {
     printf("Child process 1 running...\n");
+    return 5;
   }
-  else
+  else //Parent 1
   {
     pid_t pid2 = fork();
 
@@ -28,11 +29,12 @@ int main()
       printf("Fork failed\n");
       return 1;
     }
-    else if (pid2 == 0)
+    else if (pid2 == 0) //Child 2
     {
       printf("Child process 2 running...\n");
+      return 5;
     }
-    else
+    else //Parent 2
     {
       waitpid(pid2, &status, 0);
       printf("Parent process waiting for child 2 to terminate...\n");

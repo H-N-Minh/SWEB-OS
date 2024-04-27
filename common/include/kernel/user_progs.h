@@ -3,7 +3,7 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                             "/usr/shell.sweb",
+                            //  "/usr/shell.sweb",
                           
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",
@@ -12,7 +12,7 @@ char const *user_progs[] = {
 
                             // "/usr/userspaceLocksTests.sweb",
 
-                            
+                            // "/usr/waitpidTests.sweb",
 
 
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
@@ -31,7 +31,7 @@ char const *user_progs[] = {
                             // "/usr/semTests.sweb",
 
 // FORK-------------------------------------------------
-                            // "/usr/forkTests.sweb",
+                            "/usr/forkTests.sweb",
 
 
                         
