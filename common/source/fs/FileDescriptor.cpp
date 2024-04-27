@@ -27,33 +27,20 @@ FileDescriptor::~FileDescriptor()
   debug(VFS_FILE, "Destroy file descriptor %p num %u\n", this, getFd());
 }
 
-//void FileDescriptor::incrementRefCount()
-//{
-//  ref_count_.fetch_add(1);
-//}
-//
-//void FileDescriptor::decrementRefCount()
-//{
-//  ref_count_.fetch_add(-1);
-//}
-//int FileDescriptor::getRefCount() const
-//{
-//  return ref_count_;
-//}
-void FileDescriptor::incrementRefCount3()
+void FileDescriptor::incrementRefCount()
 {
-  ref_count3_.fetch_add(1);
-  debug(Fabi, "Incremented reference count3 for global FD %d. Current count3: %d\n", getFd(), getRefCount3());
+  ref_count_.fetch_add(1);
+  debug(Fabi, "Incremented reference count3 for global FD %d. Current count3: %d\n", getFd(), getRefCount());
 }
-void FileDescriptor::decrementRefCount3()
+void FileDescriptor::decrementRefCount()
 {
-  ref_count3_.fetch_add(-1);
-  debug(Fabi, "Decremented reference count3 for global FD %d. Current count3: %d\n", getFd(), getRefCount3());
+  ref_count_.fetch_add(-1);
+  debug(Fabi, "Decremented reference count3 for global FD %d. Current count3: %d\n", getFd(), getRefCount());
 }
 
-int FileDescriptor::getRefCount3() const
+int FileDescriptor::getRefCount() const
 {
-  return ref_count3_.load();
+  return ref_count_.load();
 }
 
 FileDescriptorList::FileDescriptorList() :
@@ -83,7 +70,6 @@ int FileDescriptorList::add(FileDescriptor* fd)
     }
   }
 
-//  fd->incrementRefCount();
   fds_.push_back(fd);
 
   return 0;

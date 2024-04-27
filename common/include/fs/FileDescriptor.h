@@ -13,7 +13,7 @@ class FileDescriptorList;
 class FileDescriptor
 {
 private:
-  ustl::atomic<int> ref_count3_{0};
+  ustl::atomic<int> ref_count_{0};
 
 protected:
   size_t fd_;
@@ -30,9 +30,6 @@ public:
   void incrementRefCount();
   void decrementRefCount();
   int getRefCount() const;
-  void incrementRefCount3();
-  void decrementRefCount3();
-  int getRefCount3() const;
 };
 
 class FileDescriptorList

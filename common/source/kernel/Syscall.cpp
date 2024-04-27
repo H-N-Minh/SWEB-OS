@@ -156,7 +156,7 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 
   FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(global_fd);
   assert(file_descriptor != nullptr && "File descriptor pointer is null");
-  debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %u; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount3());
+  debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %u; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount());
 
   l_off_t position = VfsSyscall::lseek(global_fd, offset, whence);
   //debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
@@ -452,7 +452,7 @@ size_t Syscall::close(size_t fd)
 
     size_t global_fd = global_fd_obj->getFd();
     int result = 0;
-    if (global_fd_obj->getRefCount3() == 1)
+    if (global_fd_obj->getRefCount() == 1)
     {
       result = VfsSyscall::close(global_fd);
     }
