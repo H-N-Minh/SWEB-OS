@@ -2,7 +2,7 @@
 #include <stdlib.h>
 #include <pthread.h>
 
-#define STACK_SIZE (8 * 1024) // 6KB
+#define STACK_SIZE (7 * 1024) // 8KB
 
 void thread_function(void *arg)
 {
@@ -14,7 +14,6 @@ void thread_function(void *arg)
   }
 
   printf("%s\n", stack_data);
-
 }
 
 int main() {

@@ -452,24 +452,22 @@ ustl::string UserProcess::str() const {
 
 long int UserProcess::waitProcess(long int pid, int* status, int options)
 {
-
+  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
   debug(WAIT_PID, "--------------pid %zu status %p option %d\n", pid, status, options);
 
   while (ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end())
   {
     debug(WAIT_PID, "--------------WAITING\n");
-    ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
     ProcessRegistry::instance()->process_exit_status_map_condition_.wait();
-    ProcessRegistry::instance()->process_exit_status_map_lock_.release();
   }
   debug(WAIT_PID, "--------------DONE WAITING\n");
 
-  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
-  *status = (int)ProcessRegistry::instance()->process_exit_status_map_[pid];
+  int status_tmp = (int)ProcessRegistry::instance()->process_exit_status_map_[pid]; //set
   //at this point the waited process is already(should die) so delete if from map
   ProcessRegistry::instance()->process_exit_status_map_.erase(pid);
   ProcessRegistry::instance()->process_exit_status_map_lock_.release();
 
+  *status = status_tmp;
 
   return pid;
 }
