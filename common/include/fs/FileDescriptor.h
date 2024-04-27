@@ -18,7 +18,7 @@ private:
 protected:
   size_t fd_;
   File* file_;
-  ustl::atomic<int> ref_count_;
+//  ustl::atomic<int> ref_count_;
 
 public:
   explicit FileDescriptor ( File* file );

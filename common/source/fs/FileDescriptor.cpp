@@ -16,7 +16,7 @@ static size_t fd_num_ = 3;
 
 FileDescriptor::FileDescriptor(File* file) :
     fd_(ArchThreads::atomic_add(fd_num_, 1)),
-    file_(file), ref_count_(1)
+    file_(file)
 {
   debug(VFS_FILE, "Create file descriptor %u\n", getFd());
 }
@@ -27,19 +27,19 @@ FileDescriptor::~FileDescriptor()
   debug(VFS_FILE, "Destroy file descriptor %p num %u\n", this, getFd());
 }
 
-void FileDescriptor::incrementRefCount()
-{
-  ref_count_.fetch_add(1);
-}
-
-void FileDescriptor::decrementRefCount()
-{
-  ref_count_.fetch_add(-1);
-}
-int FileDescriptor::getRefCount() const
-{
-  return ref_count_;
-}
+//void FileDescriptor::incrementRefCount()
+//{
+//  ref_count_.fetch_add(1);
+//}
+//
+//void FileDescriptor::decrementRefCount()
+//{
+//  ref_count_.fetch_add(-1);
+//}
+//int FileDescriptor::getRefCount() const
+//{
+//  return ref_count_;
+//}
 void FileDescriptor::incrementRefCount3()
 {
   ref_count3_.fetch_add(1);
@@ -83,7 +83,7 @@ int FileDescriptorList::add(FileDescriptor* fd)
     }
   }
 
-  fd->incrementRefCount();
+//  fd->incrementRefCount();
   fds_.push_back(fd);
 
   return 0;
@@ -99,11 +99,11 @@ int FileDescriptorList::remove(FileDescriptor* fd)
     {
       fds_.erase(it);
 
-      fd->decrementRefCount();
-      if (fd->getRefCount() == 0)
-      {
-        delete fd;
-      }
+//      fd->decrementRefCount();
+//      if (fd->getRefCount() == 0)
+//      {
+//        delete fd;
+//      }
 
       return 0;
     }

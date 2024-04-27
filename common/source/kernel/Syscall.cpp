@@ -452,7 +452,7 @@ size_t Syscall::close(size_t fd)
 
     size_t global_fd = global_fd_obj->getFd();
     int result = 0;
-    if (global_fd_obj->getRefCount() == 1)
+    if (global_fd_obj->getRefCount3() == 1)
     {
       result = VfsSyscall::close(global_fd);
     }

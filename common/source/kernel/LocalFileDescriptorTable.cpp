@@ -56,33 +56,28 @@ void LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* lo
   removeLocalFileDescriptorUnlocked(local_fd);
 }
 
+void LocalFileDescriptorTable::deleteGlobalFileDescriptor(FileDescriptor* global_fd){
+  debug(FILEDESCRIPTOR, "Ref count is 0 for global FD %d. Deleting it.\n",
+        global_fd->getFd());
+  delete global_fd;
+  if (global_fd_list.remove(global_fd) == -1) {
+    debug(FILEDESCRIPTOR, "Failed to remove global FD %d.\n", global_fd->getFd());
+  }
+}
+
 void LocalFileDescriptorTable::removeLocalFileDescriptorUnlocked(LocalFileDescriptor* local_fd) {
   auto it = ustl::find(local_fds_.begin(), local_fds_.end(), local_fd);
-
   if (it != local_fds_.end()) {
-    FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor(); //here the global fd somehow gets 0;
-
+    FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor();
     debug(FILEDESCRIPTOR, "Before decrement in removeLocalFileDescriptorUnlocked: Global FD: %d\n", global_fd->getFd());
-
     debug(FILEDESCRIPTOR, "Decrementing ref count for global FD %d\n", global_fd->getFd());
-
     global_fd->decrementRefCount3();
-    //assert(global_fd->getRefCount3() < 0 && "Reference count is negative!");
 
     if (global_fd->getRefCount3() == 0) {
-      debug(FILEDESCRIPTOR, "Ref count is 0 for global FD %d. Deleting it.\n",
-            global_fd->getFd());
-      delete global_fd;
-      if (global_fd_list.remove(global_fd) == -1) {
-        debug(FILEDESCRIPTOR, "Failed to remove global FD %d.\n", global_fd->getFd());
-      }
+      deleteGlobalFileDescriptor(global_fd);
     }
-
-
     debug(FILEDESCRIPTOR, "Removing local file descriptor: %zu\n", local_fd->getLocalFD());
     local_fds_.erase(it);
-
-    debug(Fabi, "removeLocalFileDescriptor:: Global FD = %u; Local FD = %zu; RefCount2 = %d\n;", global_fd->getFd(), local_fd->getLocalFD(), global_fd->getRefCount3());
     delete local_fd;
   }
 }
