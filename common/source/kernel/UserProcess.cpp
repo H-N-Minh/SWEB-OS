@@ -353,7 +353,7 @@ bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& 
   {
     if(!Syscall::check_parameter((size_t)argv[argc], true))
     {
-      debug(USERPROCESS, "Execv: parameters not in userspace\n");
+      debug(EXEC, "Execv: parameters not in userspace\n");
       return false;
     }
 
@@ -370,7 +370,7 @@ bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& 
     }
     if(space_left < 0)
     {
-      debug(USERPROCESS, "Execv: no space left\n");
+      debug(EXEC, "Execv: no space left\n");
       return false;
     }
   }

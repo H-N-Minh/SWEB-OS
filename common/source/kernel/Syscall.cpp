@@ -337,7 +337,6 @@ int Syscall::pthreadCancel(size_t thread_id)
 
 
 void Syscall::exit(size_t exit_code)
-
 {
   debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zdd\n", currentThread->getTID(), exit_code);
   UserThread& currentUserThread = *((UserThread*)currentThread);
@@ -347,11 +346,10 @@ void Syscall::exit(size_t exit_code)
     debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
   }
 
-
-
   current_process.exitProcess(exit_code);
   assert(false && "This should never happen");
 }
+
 
 int Syscall::execv(const char *path, char *const argv[])
 {
@@ -593,6 +591,10 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
 {
+  if(!Syscall::check_parameter((size_t)oldstate, false))
+  {
+    return -1;
+  }
   UserThread& currentUserThread = *((UserThread*)currentThread);
   if(state != CancelState::PTHREAD_CANCEL_DISABLE && state != CancelState::PTHREAD_CANCEL_ENABLE)
   {
@@ -611,6 +613,10 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
 
 int Syscall::pthread_setcanceltype(int type, int *oldtype)
 {
+  if(!Syscall::check_parameter((size_t)oldtype, false))
+  {
+    return -1;
+  }
   UserThread& currentUserThread = *((UserThread*)currentThread);
   if(type != CancelType::PTHREAD_CANCEL_ASYNCHRONOUS && type != PTHREAD_CANCEL_DEFERRED)
   {
