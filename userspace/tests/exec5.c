@@ -5,7 +5,7 @@
 //Test: Exec without arguments
 int main()
 {
-    const char * path = "usr/exec5_testprogram.sweb";
+    const char * path = "usr/exec_testprogram.sweb";
     char *argv[] = { (char *)0 };
 
     execv(path, argv);
@@ -13,3 +13,4 @@ int main()
 
     return 0;
 }
+

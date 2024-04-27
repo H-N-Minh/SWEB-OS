@@ -92,7 +92,7 @@ class Thread
         void setState(ThreadState state);
 
 
-        uint32 kernel_stack_[2048];
+        uint32 kernel_stack_[2048]{};
         ArchThreadRegisters* kernel_registers_;
         ArchThreadRegisters* user_registers_;
         uint32 switch_to_userspace_;
@@ -120,8 +120,12 @@ class Thread
         unsigned long wakeup_timestamp_{0};
 
 
+
     private:
         volatile ThreadState state_;
+
+
+
 
     protected:
         size_t tid_;

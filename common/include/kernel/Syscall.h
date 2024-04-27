@@ -9,7 +9,7 @@ class Syscall
   public:
     static size_t syscallException(size_t syscall_number, size_t arg1, size_t arg2, size_t arg3, size_t arg4, size_t arg5);
 
-    static void exit(size_t exit_code, bool from_exec = false);
+    static void exit(size_t exit_code);
     static void outline(size_t port, pointer text);
 
     static size_t write(size_t fd, pointer buffer, size_t size);
@@ -23,7 +23,7 @@ class Syscall
 
     static uint32 get_thread_count();
 
-
+    static l_off_t lseek(size_t fd, l_off_t offset, uint8 whence);
     static uint32 pipe(int file_descriptor_array[2]);
 
 
@@ -33,16 +33,14 @@ class Syscall
 
     /**
      * If thread is active, set join_state to Detached, else remove the retval of the dead thread from retval_map
-     * @param is_threads_vector_locked if the threads_ vector is already locked, set this to true. Default is false
      * @return 0 on success, -1 if the given thread is already Detached or the given thread doesnt have a retval in retval_map
     */
-    static int pthreadDetach(size_t thread,  bool is_threads_vector_locked = false);
+    static int pthreadDetach(size_t thread);
 
     /**
-      * @param is_threads_vector_locked if true: threads_ vector already locked (locked in Exit()).
       * @return -1 if thread doesnt exist in vector. else return 0: set the flag wants_to_be_canceled_ to true.
     */
-    static int pthreadCancel(size_t thread_id, bool is_threads_vector_locked = false);
+    static int pthreadCancel(size_t thread_id);
 
     static unsigned int sleep(unsigned int seconds);
 
@@ -63,6 +61,8 @@ class Syscall
     static uint32 forkProcess();
 
     static uint64_t get_current_timestamp_64_bit();
+
+    static long int wait_pid(long int pid, size_t status, size_t options);
 
     // minhsbrk2
     // static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);

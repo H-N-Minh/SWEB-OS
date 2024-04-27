@@ -105,7 +105,12 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   CHILD_pt[pti].writeable = 0; //read only
                   CHILD_pt[pti].cow = 1;
 
+                  PageManager::instance()->page_reference_counts_lock_.acquire();
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
+
+                  debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
+                  PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
+                  PageManager::instance()->page_reference_counts_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
@@ -120,16 +125,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
   lock_.release();
 }
 
-bool::ArchMemory::accessSharedMemoryPage(uint64 page_ppn)
-{
-  uint64 physical_private_page = PageManager::instance()->allocPPN();
-  pointer private_page = getIdentAddressOfPPN(physical_private_page);
-
-  pointer original_page = getIdentAddressOfPPN(page_ppn);
-  memcpy((void*) private_page, (void*) original_page, PAGE_SIZE);
-
-  return true;
-}
 
 ArchMemory::~ArchMemory()
 {
@@ -159,18 +154,22 @@ ArchMemory::~ArchMemory()
               {
                 if (pt[pti].present)
                 {
-                  debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                  PageManager::instance()->page_reference_counts_lock_.acquire();
                   if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
                   {
                     debug(FORK, "free page and set present in destructor  \n");
                     pt[pti].present = 0;
                     PageManager::instance()->freePPN(pt[pti].page_ppn);
+                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                    debug(FORK, "getReferenceCount in destructor (free) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   }
                   else
                   {
-                    debug(FORK, "getReferenceCount in destructor %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                    pt[pti].present = 0;
                     PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                    debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   }
+                  PageManager::instance()->page_reference_counts_lock_.release();
                 }
               }
               pd[pdi].pt.present = 0;
@@ -225,10 +224,27 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
 
-  assert(m.page_ppn != 0 && m.page_size == PAGE_SIZE && m.pt[m.pti].present);
+  assert(m.page_ppn != 0);
+  assert(m.page_size == PAGE_SIZE);
+  assert(m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
 
-  PageManager::instance()->freePPN(m.page_ppn);
+  PageManager::instance()->page_reference_counts_lock_.acquire();
+  if(PageManager::instance()->getReferenceCount(m.page_ppn) == 1)
+  {
+    PageManager::instance()->decrementReferenceCount(m.page_ppn);
+    debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (free)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+    PageManager::instance()->freePPN(m.page_ppn);
+    PageManager::instance()->page_reference_counts_lock_.release();
+  }
+  else
+  {
+    PageManager::instance()->decrementReferenceCount(m.page_ppn);
+    debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (decrease)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+    PageManager::instance()->page_reference_counts_lock_.release();
+    return true;
+  }
+
 
   ((uint64*)m.pt)[m.pti] = 0; // for easier debugging
   bool empty = checkAndRemove<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti);
@@ -300,6 +316,11 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   if (m.page_ppn == 0)
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
+    uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
+    PageManager::instance()->page_reference_counts_lock_.acquire();
+    PageManager::instance()->incrementReferenceCount(page_ppn);
+    debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
+    PageManager::instance()->page_reference_counts_lock_.release();
     return true;
   }
   return false;
@@ -438,3 +459,80 @@ PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()
 {
   return kernel_page_map_level_4;
 }
+
+
+void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
+{
+  lock_.acquire();
+  ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
+
+  PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
+  for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // free only lower half
+  {
+    if (pml4[pml4i].present)
+    {
+      PageDirPointerTableEntry* pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(pml4[pml4i].page_ppn);
+      for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
+      {
+        if (pdpt[pdpti].pd.present)
+        {
+          assert(pdpt[pdpti].pd.size == 0);
+          PageDirEntry* pd = (PageDirEntry*) getIdentAddressOfPPN(pdpt[pdpti].pd.page_ppn);
+          for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
+          {
+            if (pd[pdi].pt.present)
+            {
+              assert(pd[pdi].pt.size == 0);
+              PageTableEntry* pt = (PageTableEntry*) getIdentAddressOfPPN(pd[pdi].pt.page_ppn);
+              for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+              {
+                if (pt[pti].present)
+                {
+                  if(m.page_ppn != pt[pti].page_ppn)
+                  {
+                    PageManager::instance()->page_reference_counts_lock_.acquire();
+                    if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
+                    {
+                      PageManager::instance()->freePPN(pt[pti].page_ppn);
+                      PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                      debug(FORK, "getReferenceCount in exec_destructor (free) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                      ((uint64*)pt)[pti] = 0;
+                    }
+                    else
+                    {
+                      PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
+                      debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                      ((uint64*)pt)[pti] = 0;
+                    }
+                    PageManager::instance()->page_reference_counts_lock_.release();
+                  }
+                }
+              }
+              if(m.pt_ppn != pd[pdi].pt.page_ppn)
+              {
+                pd[pdi].pt.present = 0;
+                PageManager::instance()->freePPN(pd[pdi].pt.page_ppn);
+                ((uint64*)pd)[pdi] = 0; 
+              }
+            }
+          }
+          if(m.pd_ppn != pdpt[pdpti].pd.page_ppn)
+          {
+            pdpt[pdpti].pd.present = 0;
+            PageManager::instance()->freePPN(pdpt[pdpti].pd.page_ppn);
+            ((uint64*)pdpt)[pdpti] = 0; 
+          }
+        }
+      }
+      if(m.pdpt_ppn != pml4[pml4i].page_ppn)
+      {
+        pml4[pml4i].present = 0;
+        PageManager::instance()->freePPN(pml4[pml4i].page_ppn);
+        ((uint64*)pml4)[pml4i] = 0; 
+      }
+    }
+  }
+  lock_.release();
+}
+
+

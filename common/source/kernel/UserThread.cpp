@@ -1,5 +1,5 @@
 #include "UserProcess.h"
-#include "UserThread.h"
+#include "UserThread.h" //
 #include "Console.h"
 #include "ArchThreads.h"
 #include "Loader.h"
@@ -15,67 +15,51 @@
 
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
-                       Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper, bool execv)
+                       Loader* loader, UserProcess* process, void* func, void* arg, void* pcreate_helper)
             : Thread(working_dir, name, type, loader), process_(process), thread_gets_killed_lock_("thread_gets_killed_lock_"), 
               thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"), join_state_lock_("join_state_lock_"),
               cancel_state_type_lock_("cancel_state_type_lock_"), guarded_(0)
 {
-  tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
-
-  if(execv)
-  {
-    size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(process_->execv_ppn_args_);
-    debug(USERTHREAD, "Value of %s.\n", ((char*)virtual_address));
-
-    size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
-    loader_->arch_memory_.lock_.acquire();
-    bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , process_->execv_ppn_args_, 1);
-    loader_->arch_memory_.lock_.release();
-    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
-  }
-
-    size_t page_for_stack = PageManager::instance()->allocPPN();
+    tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
+ 
+    page_for_stack_ = PageManager::instance()->allocPPN();
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
     loader_->arch_memory_.lock_.acquire();
-    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack, 1);
+    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack_, 1);
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    size_t user_stack_ptr = (size_t) (USER_BREAK - MAX_STACK_AMOUNT * PAGE_SIZE * tid_ - (META_SIZE + 1) * sizeof(pointer));
+    user_stack_ptr_ = (size_t) (USER_BREAK - MAX_STACK_AMOUNT * PAGE_SIZE * tid_ - (META_SIZE + 1) * sizeof(pointer));
     debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
-    top_stack_ = user_stack_ptr + 6 * sizeof(pointer);       // 1. Guard
-    mutex_flag_ = user_stack_ptr + 5 * sizeof(pointer);      // 2. Mutex flag
+    top_stack_ = user_stack_ptr_ + 6 * sizeof(pointer);       // 1. Guard
+    mutex_flag_ = user_stack_ptr_ + 5 * sizeof(pointer);      // 2. Mutex flag
     //                                                          3. Mutex waiter list
-    cond_flag_ = user_stack_ptr + 3 * sizeof(pointer);       // 4. Cond flag
+    cond_flag_ = user_stack_ptr_ + 3 * sizeof(pointer);       // 4. Cond flag
     //                                                          5. Cond waiter list
     //                                                          6. Guard
     //                                                          7. user_stack_ptr
     debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for waiting flag  %zd(=%zx).\n",
-          user_stack_ptr, user_stack_ptr, mutex_flag_, mutex_flag_);
+          user_stack_ptr_, user_stack_ptr_, mutex_flag_, mutex_flag_);
+
+
     if (!func) //for the first thread when we create a process
     {
         ArchThreads::createUserRegisters(user_registers_, loader_->getEntryFunction(),
-                                         (void*) user_stack_ptr, getKernelStackStartPointer());
-
-    if(execv)
-    {
-      user_registers_->rdi = process_->exec_argc_;
-      user_registers_->rsi = USER_BREAK - PAGE_SIZE + process_->exec_array_offset_;
-    }
+                                         (void*) user_stack_ptr_, getKernelStackStartPointer());
 
         debug(USERTHREAD, "Create First thread: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
-               user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
+               user_stack_ptr_, user_stack_ptr_, vpn_stack_, vpn_stack_);
     }
     else // create the thread for pthread create
     {
-        ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper, (void*) user_stack_ptr,
+        ArchThreads::createUserRegisters(user_registers_, (void*) pcreate_helper, (void*) user_stack_ptr_,
                                          getKernelStackStartPointer());
 
         user_registers_->rdi = (size_t)func;
         user_registers_->rsi = (size_t)arg;
         user_registers_->rdx = top_stack_; // address of the top of stack, relevant for userspace locks
         debug(USERTHREAD, "Pthread_create: Stack starts at %zd(=%zx) and virtual page is %zd(=%zx)\n\n",
-                user_stack_ptr, user_stack_ptr, vpn_stack_, vpn_stack_);
+                user_stack_ptr_, user_stack_ptr_, vpn_stack_, vpn_stack_);
 
         debug(GROW_STACK, "UserThread ctor for pthread_create: Child guard is set up immediately (in userspace)\n");
         guarded_ = 1;
@@ -94,8 +78,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
 
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
-            : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_),
+            : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_), user_stack_ptr_(other.user_stack_ptr_),
+             page_for_stack_(other.page_for_stack_),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
+
             join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"),
             cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_),
             cond_flag_(other.cond_flag_), mutex_flag_(other.mutex_flag_), guarded_(other.guarded_), top_stack_(other.top_stack_)
@@ -124,41 +110,21 @@ UserThread::~UserThread()
 
   assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread");
 
-  if(last_thread_alive_)
-  {
-    assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
-    assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
-    debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
-    delete process_;
-    process_ = 0;
-  }
-
-  if(unlikely(last_thread_before_exec_))
-  {
-    assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
-    assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
-
-    debug(USERTHREAD, "Last thread %ld before exec get destroyed.\n", getTID());
-    assert(Scheduler::instance()->isCurrentlyCleaningUp());
-    delete loader_;
-    process_->loader_ = process_->execv_loader_;
-    process_->execv_loader_ = 0;
-
-    VfsSyscall::close(process_->fd_);
-
-    process_->fd_ = process_->execv_fd_;
-
-    UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_, process_->loader_, process_,0, 0, 0, true);
-    process_->threads_.push_back(new_thread);
-    Scheduler::instance()->addNewThread(new_thread);
-  }
+    if(last_thread_alive_)
+    {
+        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
+        assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
+        debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
+        delete process_;
+        process_ = 0;
+    }
 }
 
 
 void UserThread::kill()
 {
-  debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", currentThread->getName(),
-        currentThread, getName(), this);
+  debug(THREAD, "kill: Called by <%s (%p)>. Preparing Thread <%s (%p)> for destruction\n", getName(),
+        this, getName(), this);
 
   assert(currentThread == this && "Only the thread itself can kill itself\n");
 
@@ -169,12 +135,9 @@ void UserThread::kill()
 
   setState(ToBeDestroyed); // vvv Code below this line may not be executed vvv
 
-  if (currentThread == this)
-  {
-    ArchInterrupts::enableInterrupts();
-    Scheduler::instance()->yield();
-    assert(false && "This should never happen, how are we still alive?");
-  }
+  ArchInterrupts::enableInterrupts();
+  Scheduler::instance()->yield();
+  assert(false && "This should never happen, how are we still alive?");
 }
 
 void UserThread::send_kill_notification()
@@ -216,21 +179,16 @@ bool UserThread::schedulable()
     waiting_for_lock = 1;
   }
 
-  if(wants_to_be_canceled_
-      && (switch_to_userspace_ || waiting_for_lock)
-      && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE)))
+  if(wants_to_be_canceled_ && switch_to_userspace_
+    && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE)))
   {
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
-    if (!switch_to_userspace_ && waiting_for_lock)  // TODO: maybe find a cleaner way to do this
-    {
-      *request_to_sleep_translated = 0;
-      *thread_waiting_for_lock_ptr = 0;
-      return true;
-    }
 
+    *request_to_sleep_translated = 0;
+    *thread_waiting_for_lock_ptr = 0;
+    
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     kernel_registers_->rdi     = (size_t)-1;
-    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
     switch_to_userspace_ = 0;
     return true;
   }
@@ -263,4 +221,208 @@ bool UserThread::schedulable()
     }
   }
 }
+
+int UserThread::joinThread(size_t thread_id, void**value_ptr)
+{
+  debug(USERTHREAD, "UserThread:joinThread: called, thread_id: %zu and %p\n", thread_id, value_ptr);
+
+  if(!Syscall::check_parameter((size_t)value_ptr, true) || (currentThread->getTID() == thread_id))
+  {
+    debug(USERTHREAD, "UserThread:pthreadJoin: Thread tries to join itself or invalid value_ptr.\n");
+    return -1;
+  }
+
+  process_->threads_lock_.acquire();
+  //check if thread is running
+  UserThread* thread_to_be_joined = process_->getUserThread(thread_id);
+  if(!thread_to_be_joined)
+  {
+    debug(USERTHREAD, "UserThread:pthreadJoin: No running thread id %zu can be found.\n", thread_id);
+
+   //check if thread has already terminated 
+    void* return_value;
+    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, return_value);
+    process_->threads_lock_.release();
+    if(value_ptr != NULL && thread_in_retval_map == 0)
+    {
+      *value_ptr = return_value;
+    }
+    return thread_in_retval_map;
+  }
+  thread_to_be_joined->join_state_lock_.acquire();
+  if(thread_to_be_joined->join_state_ != PTHREAD_CREATE_JOINABLE && thread_to_be_joined->join_state_ != PCJ_TO_BE_JOINED)
+  {
+    thread_to_be_joined->join_state_lock_.release();
+    process_->threads_lock_.release();
+    return -1;
+  }
+  else
+  {
+    thread_to_be_joined->join_state_ = PCJ_TO_BE_JOINED;
+  }
+
+  thread_to_be_joined->join_state_lock_.release();
+  thread_gets_killed_lock_.acquire();
+  thread_to_be_joined->join_threads_.push_back(this);
+  process_->threads_lock_.release();
+
+  //wait for thread get killed
+  while(!thread_killed)
+  {
+    thread_gets_killed_.wait();
+  }
+  thread_killed = false;
+  thread_gets_killed_lock_.release();
+
+  process_->threads_lock_.acquire();
+  void* return_value;
+  int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, return_value);
+  process_->threads_lock_.release();
+  if(value_ptr != NULL && thread_in_retval_map == 0)
+  {
+    *value_ptr = return_value;
+  }
+
+  return thread_in_retval_map;
+}
+
+void UserThread::exitThread(void* value_ptr)
+{
+  //remove thread from process' thread vector
+  process_->threads_lock_.acquire();
+  ustl::vector<UserThread*>::iterator exiting_thread_iterator = ustl::find(process_->threads_.begin(), process_->threads_.end(), this);
+  process_->threads_.erase(exiting_thread_iterator);
+
+  if(process_->threads_.size() == 0)  // last thread in process
+  {
+    debug(USERTHREAD, "UserThread::exitThread: last thread alive\n");
+    last_thread_alive_ = true;
+    process_->thread_retval_map_.clear();
+  }
+
+  join_state_lock_.acquire();
+  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)  //Todos: cleanup one thread left
+  {
+    debug(USERTHREAD, "UserThread::exitThread: saving return value in thread_retval_map_ in case the thread is joinable\n");
+    process_->thread_retval_map_[getTID()] = value_ptr;
+  }
+  join_state_lock_.release();
+
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+
+  if(process_->threads_.size() == 1)  // only one thread left
+  {
+    process_->one_thread_left_lock_.acquire();
+    process_->one_thread_left_ = true;
+    process_->one_thread_left_condition_.signal();
+    process_->one_thread_left_lock_.release();
+  }
+
+  process_->threads_lock_.release();
+  kill();
+
+}
+
+int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, pthread_attr_t* attr)
+{
+  if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true)
+  || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true)
+  || !Syscall::check_parameter((size_t)wrapper))
+  {
+    return -1;
+  }
+  debug(USERPROCESS, "UserThread::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
+  
+  JoinState join_state;
+  if(attr)
+  {
+    if(attr->initialized == 0 || (PTHREAD_CREATE_DETACHED != attr->detach_state && PTHREAD_CREATE_JOINABLE != attr->detach_state))
+    {
+      return -1;
+    }
+    join_state = attr->detach_state;
+  }
+  else
+  {
+    join_state = PTHREAD_CREATE_JOINABLE;
+  }
+  
+  
+
+
+  process_->threads_lock_.acquire();
+  UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
+                                          process_->loader_, process_, start_routine, arg, wrapper);
+  if(new_thread)
+  {
+    new_thread->join_state_ = join_state;
+    debug(USERPROCESS, "UserThread::createThread: Adding new thread to scheduler\n");
+    process_->threads_.push_back(new_thread);
+    Scheduler::instance()->addNewThread(new_thread);
+    process_->threads_lock_.release();  
+    *thread = new_thread->getTID();
+    return 0;
+  }
+  else
+  {
+    debug(USERPROCESS, "UserThread::createThread: ERROR: Thread not created\n");
+    process_->threads_lock_.release();
+    return -1;
+  }
+}
+
+int UserThread::cancelThread(size_t thread_id)
+{
+  assert(process_->threads_lock_.heldBy() == this && "Threads lock needs to be held when canceling threads");
+  UserThread* thread_to_be_canceled = process_->getUserThread(thread_id);
+  if(!thread_to_be_canceled)
+  {
+    debug(USERTHREAD, "UserThread::cancelThread: thread_id %zu doesnt exist in Vector\n", thread_id);
+    return -1;
+  }
+  debug(USERTHREAD, "UserThread::cancelThread: thread_id %zu setted to be canceled\n", thread_id);
+  thread_to_be_canceled->cancel_state_type_lock_.acquire();
+  thread_to_be_canceled->wants_to_be_canceled_ = true;
+  thread_to_be_canceled->cancel_state_type_lock_.release();
+  return 0;
+}
+
+int UserThread::detachThread(size_t thread_id)
+{
+  assert(process_->threads_lock_.heldBy() == this && "Threads lock needs to be held when detaching threads");
+  debug(USERTHREAD, "UserThread::detachThread: called, thread_id: %zu\n", thread_id);
+  UserThread* thread_to_be_detached = process_->getUserThread(thread_id);
+  if(thread_to_be_detached)
+  {
+    thread_to_be_detached ->join_state_lock_.acquire();
+    if(thread_to_be_detached->join_state_ == PTHREAD_CREATE_DETACHED || thread_to_be_detached->join_state_ == PCD_TO_BE_JOINED)
+    {
+      thread_to_be_detached->join_state_lock_.release();
+      return -1;    // thread is already detached
+    }
+
+    else if(thread_to_be_detached->join_state_ == PTHREAD_CREATE_JOINABLE)
+    {
+      thread_to_be_detached->join_state_ = PTHREAD_CREATE_DETACHED;
+    }
+
+    else //(thread_to_be_detached->join_state_ == PCJ_TO_BE_JOINED)
+    {
+      thread_to_be_detached->join_state_ = PCD_TO_BE_JOINED;
+    }
+    thread_to_be_detached->join_state_lock_.release();
+    return 0;
+  }
+  else
+  {
+    void* not_used_rv;
+    int thread_in_retval_map = process_->removeRetvalFromMapAndSetReval(thread_id, not_used_rv);
+    return thread_in_retval_map;
+
+  }
+
+  return 0;
+}
+
 

@@ -38,6 +38,8 @@ class Loader
 
     void* getEntryFunction() const;
 
+    void replaceLoader(int32 execv_fd);
+
     ArchMemory arch_memory_;
 
     bool isCOW(size_t virtual_addr);

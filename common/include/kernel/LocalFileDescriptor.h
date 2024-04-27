@@ -9,11 +9,11 @@ public:
 
   FileDescriptor* getGlobalFileDescriptor() const;
 
-  [[maybe_unused]] uint32_t getMode() const;
+  uint32_t getMode() const;
 
-  [[maybe_unused]] void setOffset(size_t offset);
+  void setOffset(size_t offset);
 
-  [[maybe_unused]] size_t getOffset() const;
+  size_t getOffset() const;
   size_t getLocalFD() const;
 
 

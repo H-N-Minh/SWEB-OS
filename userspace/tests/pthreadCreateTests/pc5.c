@@ -10,7 +10,8 @@ int functionpc5(char* simple_argument)
 }
 
 
-//Test: pthread create with simple argument
+
+//Test: pthread create with argument
 int pc5()
 {
     pthread_t thread_id;
@@ -24,6 +25,5 @@ int pc5()
     assert(rv == 0);
     assert((size_t)value_ptr == 34);
 
-    printf("pc5 successful!\n");
     return 0;
 }

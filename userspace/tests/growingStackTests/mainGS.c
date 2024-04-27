@@ -3,6 +3,7 @@
 #include "assert.h"
 
 extern int gs1();
+extern int writeToStack();
 
 /** TODO: 
  * - test calling pthread first, check if guards setup correctly, then call growing stack, then check guards again
@@ -18,6 +19,7 @@ extern int gs1();
 
 // set to 1 to test, 0 to skip
 #define GS1 1     // basic test for growing stack
+#define GS2 2     // threadStack.c
 
 int main()
 {
@@ -29,6 +31,14 @@ int main()
         if (retval == 0)                      { printf("===> gs1 successful!\n"); } 
         else                                  { printf("===> gs1 failed!\n");  return -1;}
     }
+
+  if (GS2)
+  {
+    printf("\nTesting threadStack.c ...\n");
+    retval = writeToStack();
+    if (retval == 0)                      { printf("===> threadStack.c successful!\n"); }
+    else                                  { printf("===> threadStack.c failed!\n");  return -1;}
+  }
 
     printf("\n\n---All tests completed! (press F12 to make sure all threads died correctly)---\n");
     return 0;

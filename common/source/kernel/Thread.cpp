@@ -1,5 +1,4 @@
 #include "Thread.h"
-
 #include "kprintf.h"
 #include "ArchThreads.h"
 #include "ArchInterrupts.h"
@@ -32,9 +31,11 @@ extern "C" void threadStartHack()
 }
 
 Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type, Loader* loader) :
-    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader), type_(type),
+    kernel_registers_(0), user_registers_(0), switch_to_userspace_(type == Thread::USER_THREAD ? 1 : 0), loader_(loader),type_(type),
     next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
     my_terminal_(0), working_dir_(working_dir), name_(ustl::move(name))
+
+
 
 {
     debug(THREAD, "Thread ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
@@ -43,8 +44,13 @@ Thread::Thread(FileSystemInfo *working_dir, ustl::string name, Thread::TYPE type
     kernel_stack_[0] = STACK_CANARY;
 }
 
-Thread::Thread(Thread &src, Loader* loader) 
-    : loader_(loader), type_(src.type_), next_thread_in_lock_waiters_list_(0), lock_waiting_on_(0), holding_lock_list_(0), state_(src.state_), name_(src.name_)
+
+Thread::Thread(Thread &src, Loader* loader)
+    : kernel_registers_(0), user_registers_(0), switch_to_userspace_(1), loader_(loader),  type_(src.type_),
+    next_thread_in_lock_waiters_list_(0),  lock_waiting_on_(0), holding_lock_list_(0), state_(Running), tid_(0),
+    my_terminal_(0), working_dir_(src.working_dir_)
+
+
 {
   debug(FORK, "Thread COPY-ctor, this is %p, stack is %p, fs_info ptr: %p\n", this, kernel_stack_, working_dir_);
   ArchThreads::createKernelRegisters(kernel_registers_, (void*) (0), getKernelStackStartPointer());

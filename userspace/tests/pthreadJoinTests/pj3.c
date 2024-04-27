@@ -26,7 +26,6 @@ int pj3()
         assert((size_t)value_ptr == 5);
     }
 
-    printf("pj3 successful!\n");
-    
+
     return 0;
 }

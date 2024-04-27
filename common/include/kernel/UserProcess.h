@@ -5,7 +5,10 @@
 #include "Mutex.h"
 #include "Condition.h"
 #include "types.h"
+
 #include "UserSpaceMemoryManager.h"
+#include "LocalFileDescriptorTable.h"
+
 
 class UserProcess
 {
@@ -27,10 +30,15 @@ class UserProcess
          *
          */
         UserThread* getUserThread(size_t tid);
-        
-         bool isThreadInVector(UserThread* test_thread);
 
-        [[maybe_unused]] size_t openFile(const ustl::string& path, uint32_t mode);
+        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
+
+        bool isThreadInVector(UserThread* test_thread);
+
+
+        
+         //bool isThreadInVector(UserThread* test_thread);
+
 
         /**
          * Checks if retval of thread with tid is in thread_retval map and removes it.
@@ -39,13 +47,20 @@ class UserProcess
          * @param tid thread_id
          * @param value_ptr address to location, where return value should get stored
          */
-        int removeRetvalFromMapAndSetReval(size_t tid, void**value_ptr);
+        int removeRetvalFromMapAndSetReval(size_t tid, void*& return_value);
 
-        int createThread(size_t* thread, void* start_routine, void* wrapper, void* arg);
-        int joinThread(size_t thread_id, void**value_ptr);
-        void exitThread(void* value_ptr);
+
 
         int execvProcess(const char *path, char *const argv[]);
+        void exitProcess(size_t exit_code);
+        void cancelAllOtherThreads();
+
+
+        bool check_parameters_for_exec(char *const argv[], int& argc, int& array_offset);
+        void waitForThreadsToDie();
+
+        static void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, int len_string);
+
 
         void unmapThreadStack(ArchMemory* arch_memory, size_t top_stack);
 
@@ -67,14 +82,6 @@ class UserProcess
         //Return value map (locked by threads lock)
         ustl::map<size_t, void*> thread_retval_map_;
 
-        //Exec
-        Mutex execv_lock_;                              //Locking order: x
-        Loader* execv_loader_{NULL};
-        int32 execv_fd_{NULL};  
-        size_t execv_ppn_args_{NULL};                   
-        size_t exec_argc_{0};    
-        size_t exec_array_offset_{0};
-
         
         bool one_thread_left_{false};
         Mutex one_thread_left_lock_;                                //Locking order: x
@@ -82,5 +89,11 @@ class UserProcess
 
         uint64_t clock_{0};
         uint64_t tsc_start_scheduling_{0};
+
+        LocalFileDescriptorTable localFileDescriptorTable;
+
+        ustl::string str() const;
+
+        long int waitProcess(long int pid, int* status, int options);
 };
 

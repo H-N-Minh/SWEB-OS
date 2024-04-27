@@ -39,7 +39,7 @@ PageManager* PageManager::instance()
  * The lock is created in the constructor and is passed a name to uniquely identify it.
  * This allows for easier debugging and tracking of locks.
  */
-PageManager::PageManager() : page_manager_lock_("PageManager::page_manager_lock_")
+PageManager::PageManager() : page_reference_counts_lock_("page_reference_counts_lock_"), page_manager_lock_("PageManager::page_manager_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -231,7 +231,6 @@ uint32 PageManager::allocPPN(uint32 page_size)
 {
   uint32 p;
   uint32 found = 0;
-
   assert((page_size % PAGE_SIZE) == 0);
 
   page_manager_lock_.acquire();
@@ -321,32 +320,33 @@ uint32 PageManager::getNumPagesForUser() const
 
 void PageManager::incrementReferenceCount(uint64 page_number)
 {
+  assert(page_reference_counts_lock_.heldBy() == currentThread);
   //check if the page number is already in the map
   auto it = page_reference_counts_.find(page_number);
   if (it != page_reference_counts_.end())
   {
     //page number found, increment
-    ArchThreads::atomic_add(reinterpret_cast<int64 &>(it->second.reference_count), 1);
+    page_reference_counts_[page_number]++;
   }
   else
   {
     //page number not found, initialize reference count to 1
-    ArchThreads::atomic_set(reinterpret_cast<int32 &>(page_reference_counts_[page_number]), 2);
+    page_reference_counts_[page_number] = 1;
   }
 }
 
 void PageManager::decrementReferenceCount(uint64 page_number)
 {
+  assert(page_reference_counts_lock_.heldBy() == currentThread);
   //check if the page number is in the map
   auto it = page_reference_counts_.find(page_number);
   if (it != page_reference_counts_.end())
   {
     //decrement the reference count
-    ArchThreads::atomic_sub(reinterpret_cast<int64 &>(it->second.reference_count), 1);
-    ArchThreads::atomic_set(reinterpret_cast<int32 &>(page_reference_counts_[page_number]), it->second.reference_count);
+    page_reference_counts_[page_number]--;
 
     //if reference count reaches zero, erase the entry from the map
-    if (it->second.reference_count == 0)
+    if (it->second == 0)
     {
       page_reference_counts_.erase(it);
     }
@@ -355,11 +355,12 @@ void PageManager::decrementReferenceCount(uint64 page_number)
 
 uint32 PageManager::getReferenceCount(uint64 page_number)
 {
+  assert(page_reference_counts_lock_.heldBy() == currentThread);
   // Check if the page number is in the map
   auto it = page_reference_counts_.find(static_cast<uint32>(page_number));
   if (it != page_reference_counts_.end())
   {
-    return it->second.reference_count;
+    return it->second;
   }
   else
   {

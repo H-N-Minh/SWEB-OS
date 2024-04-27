@@ -10,13 +10,28 @@
 #define GUARD_MARKER 0xbadcafe00000ULL
 #define MAX_STACK_AMOUNT 4
 
+#define DEFAULT_STACK_SIZE (2 * 1024 * 1024) // 2MB
+#define PTHREAD_STACK_MIN 16384 // 16 KB
+
 #ifdef __cplusplus
 extern "C" {
 #endif
 
 //pthread typedefs
 typedef size_t pthread_t;
-typedef unsigned int pthread_attr_t;
+
+enum ThreadCreateType {
+    PTHREAD_CREATE_JOINABLE = 4,
+    PTHREAD_CREATE_DETACHED = 5
+};
+
+typedef struct {
+    int detach_state;  // Detach state: PTHREAD_CREATE_JOINABLE or PTHREAD_CREATE_DETACHED
+    void *stack_addr;  // Stack address
+    size_t stack_size; // Stack size
+    int priority;      // Thread priority
+    int initialized;
+} pthread_attr_t;
 
 //pthread spinlock
 struct pthread_spinlock_struct {
@@ -62,6 +77,8 @@ typedef unsigned int pthread_condattr_t;
 
 enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
+
+
 
 
 extern int pthread_create(pthread_t *thread,
@@ -154,6 +171,14 @@ extern void addWaiterToList(size_t* waiting_list_adr, size_t new_waiter);
  * @param request_to_sleep the address of flag that is used to tell Scheduler to skip this thread
 */
 void wakeUpThread(size_t* request_to_sleep);
+
+extern int pthread_attr_init(pthread_attr_t *attr);
+extern int pthread_attr_destroy(pthread_attr_t *attr);
+
+extern int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
+extern int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate);
+
+extern int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
 
 #ifdef __cplusplus
 }

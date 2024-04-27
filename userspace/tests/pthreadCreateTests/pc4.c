@@ -28,8 +28,5 @@ int pc4()
     assert(thread_id2 != 424242 && "thread_id was not set");
     assert(thread_id1 != thread_id2 && "Two running thread cant have the same id.");
 
-    printf("pc4 successful!\n");
-
-
     return 0;
 }

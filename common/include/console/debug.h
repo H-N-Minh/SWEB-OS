@@ -50,8 +50,12 @@ const size_t PROCESS_REG        = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
 
-const size_t FORK          = Ansi_Red | OUTPUT_ENABLED;
-const size_t PAGEFAULT_TEST          = Ansi_Red| OUTPUT_ENABLED;
+const size_t PIPE               = Ansi_Cyan ;
+const size_t FILEDESCRIPTOR     = Ansi_Cyan ;
+
+const size_t FORK               = Ansi_Red | OUTPUT_ENABLED;
+const size_t PAGEFAULT_TEST     = Ansi_Red| OUTPUT_ENABLED;
+const size_t EXEC               = Ansi_Magenta;
 
 //group memory management
 const size_t PM                 = Ansi_Green| OUTPUT_ENABLED;
@@ -99,3 +103,4 @@ const size_t MINH                     = Ansi_Red     | OUTPUT_ENABLED;
 const size_t Fabi                     = Ansi_Red;
 
 const size_t USERSPACE_LOCKS         = Ansi_Red     | OUTPUT_ENABLED;
+const size_t WAIT_PID               = Ansi_Red   | OUTPUT_ENABLED;
