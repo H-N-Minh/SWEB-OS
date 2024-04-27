@@ -11,7 +11,6 @@ class Pipe {
 public:
 
   Pipe();
-
   ~Pipe();
 
   bool read(char &c);

@@ -235,32 +235,6 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 */
 
 
-uint32 Syscall::pipe(int file_descriptor_array[2])
-{
-  debug(SYSCALL, "Syscall::pipe called\n");
-
-  Pipe* new_pipe = new Pipe();
-
-  int read_fd = FileDescriptorManager::getInstance().allocateDescriptor(new_pipe, READ);
-  int write_fd = FileDescriptorManager::getInstance().allocateDescriptor(new_pipe, WRITE);
-
-
-  if (read_fd == -1 || write_fd == -1) {
-    debug(SYSCALL, "Syscall::pipe failed to allocate file descriptors\n");
-    delete new_pipe;
-    return -1;
-  }
-
-  file_descriptor_array[0] = read_fd;
-  file_descriptor_array[1] = write_fd;
-
-  debug(SYSCALL, "Syscall::pipe allocated file descriptors: read_fd = %d, write_fd = %d\n", read_fd, write_fd);
-
-  return 0;
-
-}
-
-
 // TODOs: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
@@ -356,6 +330,32 @@ int Syscall::execv(const char *path, char *const argv[])
 }
 
 
+uint32 Syscall::pipe(int file_descriptor_array[2])
+{
+  debug(SYSCALL, "Syscall::pipe called\n");
+
+  Pipe* new_pipe = new Pipe();
+
+  int read_fd = FileDescriptorManager::getInstance().allocateDescriptor(new_pipe, READ);
+  int write_fd = FileDescriptorManager::getInstance().allocateDescriptor(new_pipe, WRITE);
+
+
+  if (read_fd == -1 || write_fd == -1) {
+    debug(SYSCALL, "Syscall::pipe failed to allocate file descriptors\n");
+    delete new_pipe;
+    return -1;
+  }
+
+  file_descriptor_array[0] = read_fd;
+  file_descriptor_array[1] = write_fd;
+
+  debug(SYSCALL, "Syscall::pipe allocated file descriptors: read_fd = %d, write_fd = %d\n", read_fd, write_fd);
+
+  return 0;
+
+}
+
+
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 {
   debug(SYSCALL, "Syscall::write: Writing to fd: %zu with buffer size: %zu\n", fd, size);
@@ -366,29 +366,43 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
     return -1U;
   }
 
-  //implement write pipe using Pipe.h and Pipe.cpp
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
-  //debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
+  debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
 
   if (fd == fd_stdout)
   {
-    //debug(SYSCALL, "Syscall::write: Writing to stdout\n");
+    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
     kprintf("%.*s", (int)size, (char*) buffer);
     return size;
   }
-  else if (localFileDescriptor != nullptr)
-  {
-    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
-    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+  else if (localFileDescriptor != nullptr) {
+    Pipe* pipe = FileDescriptorManager::getInstance().getAssociatedPipe(fd);
+    if (pipe != nullptr) {
+      size_t num_written = 0;
+      char* buf = reinterpret_cast<char*>(buffer);
 
-    size_t global_fd = global_fd_obj->getFd();
-    size_t num_written = VfsSyscall::write(global_fd, (char*) buffer, size);
-    //debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
-    return num_written;
+      while (num_written < size) {
+        if (!pipe->write(buf[num_written])) {
+          break;
+        }
+
+        num_written++;
+      }
+
+      return num_written;
+    } else {
+      FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+      assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+
+      size_t global_fd = global_fd_obj->getFd();
+      size_t num_written = VfsSyscall::write(global_fd, (char *) buffer, size);
+      debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
+      return num_written;
+    }
   }
 
   debug(SYSCALL, "Syscall::write: No valid local file descriptor found for fd: %zu\n", fd);
@@ -406,29 +420,45 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
     return -1U;
   }
 
-  //implement read pipe using Pipe.h and Pipe.cpp
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
 
-  if (localFileDescriptor != nullptr)
-  {
-    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
-    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+  if (localFileDescriptor != nullptr) {
+    Pipe* pipe = FileDescriptorManager::getInstance().getAssociatedPipe(fd);
+    if (pipe != nullptr) {
+      size_t num_read = 0;
+      char* buf = reinterpret_cast<char*>(buffer);
 
-    size_t global_fd = global_fd_obj->getFd();
-    size_t num_read = VfsSyscall::read(global_fd, (char*) buffer, count);
-    //debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
-    return num_read;
+      while (num_read < count) {
+        char c;
+        if (!pipe->read(c)) {
+          break;
+        }
+
+        buf[num_read] = c;
+        num_read++;
+      }
+
+      return num_read;
+    } else {
+      FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+      assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+
+      size_t global_fd = global_fd_obj->getFd();
+      size_t num_read = VfsSyscall::read(global_fd, (char *) buffer, count);
+      debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
+      return num_read;
+    }
   }
 
   else if (fd == fd_stdin)
   {
-    //debug(SYSCALL, "Syscall::read: Reading from stdin\n");
+    debug(SYSCALL, "Syscall::read: Reading from stdin\n");
     size_t num_read = currentThread->getTerminal()->readLine((char*) buffer, count);
-    //debug(SYSCALL, "Syscall::read: Read %zu bytes from stdin\n", num_read);
+    debug(SYSCALL, "Syscall::read: Read %zu bytes from stdin\n", num_read);
     return num_read;
   }
 
