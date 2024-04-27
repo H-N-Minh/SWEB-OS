@@ -23,7 +23,7 @@ int main(void) {
   printf("test pipe1\n");
     int file_descriptor_array[2];
   printf("test pipe2\n");
-    pipe(file_descriptor_array);printf("test pipe\n");
+    pipe(file_descriptor_array);
   printf("test pip3e\n");
     int read_fd = file_descriptor_array[0];
   printf("test pipe4\n");

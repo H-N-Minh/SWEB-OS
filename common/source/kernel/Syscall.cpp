@@ -332,7 +332,7 @@ int Syscall::execv(const char *path, char *const argv[])
 
 uint32 Syscall::pipe(int file_descriptor_array[2])
 {
-  debug(SYSCALL, "Syscall::pipe called\n");
+  debug(PIPE, "Syscall::pipe called\n");
 
   Pipe* new_pipe = new Pipe();
 
@@ -341,7 +341,7 @@ uint32 Syscall::pipe(int file_descriptor_array[2])
 
 
   if (read_fd == -1 || write_fd == -1) {
-    debug(SYSCALL, "Syscall::pipe failed to allocate file descriptors\n");
+    debug(PIPE, "Syscall::pipe failed to allocate file descriptors\n");
     delete new_pipe;
     return -1;
   }
@@ -349,7 +349,7 @@ uint32 Syscall::pipe(int file_descriptor_array[2])
   file_descriptor_array[0] = read_fd;
   file_descriptor_array[1] = write_fd;
 
-  debug(SYSCALL, "Syscall::pipe allocated file descriptors: read_fd = %d, write_fd = %d\n", read_fd, write_fd);
+  debug(PIPE, "Syscall::pipe allocated file descriptors: read_fd = %d, write_fd = %d\n", read_fd, write_fd);
 
   return 0;
 

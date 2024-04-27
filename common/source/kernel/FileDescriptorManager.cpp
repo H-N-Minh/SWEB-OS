@@ -7,16 +7,11 @@ FileDescriptorManager& FileDescriptorManager::getInstance() {
   return instance;
 }
 
-
-FileDescriptorManager::FileDescriptorManager() : nextDescriptor(3) {
-  descriptors.reserve(4096);
-}
+FileDescriptorManager::FileDescriptorManager() : nextDescriptor(3) {}
 
 FileDescriptorManager::~FileDescriptorManager() = default;
 
-
 int FileDescriptorManager::allocateDescriptor(void* associatedObject, int flags) {
-
 
   for (auto& entry : descriptors) {
     if (entry.flags == DescriptorFlag::FREE) {
@@ -27,43 +22,28 @@ int FileDescriptorManager::allocateDescriptor(void* associatedObject, int flags)
   }
 
   if (associatedObject == nullptr) {
-    debug(FILEDESCRIPTOR, "FileDescriptorManager::allocateDescriptor: associatedObject is nullptr\n");
+    debug(PIPE, "FileDescriptorManager::allocateDescriptor: associatedObject is nullptr\n");
     return -1;
   }
 
-  if (descriptors.size() >= descriptors.capacity()) {
-    debug(FILEDESCRIPTOR, "FileDescriptorManager::allocateDescriptor: descriptor vector is full, increasing capacity\n");
-    if (descriptors.capacity() == 0) {
-      descriptors.reserve(1);
-    } else {
-      while (descriptors.size() >= descriptors.capacity()) {
-        descriptors.reserve(descriptors.capacity() * 2);
-      }
-    }
-  }
+  debug(PIPE, "FileDescriptorManager::allocateDescriptor called\n");
+  debug(PIPE, "Descriptor vector size: %lu\n", descriptors.size());
 
-  debug(FILEDESCRIPTOR, "FileDescriptorManager::allocateDescriptor called\n");
-  debug(FILEDESCRIPTOR, "Descriptor vector size: %lu, Capacity: %lu\n", descriptors.size(), descriptors.capacity());
   int descriptor = findFreeDescriptor();
   if (descriptor < 0) {
-    debug(Fabi, "FileDescriptorManager::allocateDescriptor negative descriptor returned from findFreeDescriptor\n");
+    debug(PIPE, "FileDescriptorManager::allocateDescriptor negative descriptor returned from findFreeDescriptor\n");
     return -1;
   }
 
-  if (descriptors.size() < descriptors.capacity()) {
-    descriptors.push_back(FileDescriptorEntry(descriptor, associatedObject, flags));
-  } else {
-    debug(FILEDESCRIPTOR, "FileDescriptorManager::allocateDescriptor descriptor vector is full\n");
-    return -1;
-  }
+  descriptors.push_back(FileDescriptorEntry(descriptor, associatedObject, flags));
 
-  debug(FILEDESCRIPTOR, "FileDescriptorManager::allocateDescriptor allocated descriptor: %d\n", descriptor);
+  debug(PIPE, "FileDescriptorManager::allocateDescriptor allocated descriptor: %d\n", descriptor);
 
   return descriptor;
 }
 
 void* FileDescriptorManager::getAssociatedObject(int fileDescriptor) {
-  debug(FILEDESCRIPTOR, "FileDescriptorManager::getAssociatedObject: Searching for fileDescriptor: %d\n", fileDescriptor);
+  debug(PIPE, "FileDescriptorManager::getAssociatedObject: Searching for fileDescriptor: %d\n", fileDescriptor);
 
   for (auto& entry : descriptors) {
     if (entry.descriptor == fileDescriptor) {
@@ -71,7 +51,7 @@ void* FileDescriptorManager::getAssociatedObject(int fileDescriptor) {
     }
   }
 
-  debug(FILEDESCRIPTOR, "FileDescriptorManager::getAssociatedObject: fileDescriptor not found: %d\n", fileDescriptor);
+  debug(PIPE, "FileDescriptorManager::getAssociatedObject: fileDescriptor not found: %d\n", fileDescriptor);
   return nullptr;
 }
 
@@ -88,7 +68,7 @@ Pipe* FileDescriptorManager::getAssociatedPipe(int fileDescriptor) {
 }
 
 void FileDescriptorManager::freeDescriptor(int fileDescriptor) {
-  debug(Fabi, "FileDescriptorManager::freeDescriptor: Trying to free fileDescriptor: %d\n", fileDescriptor);
+  debug(PIPE, "FileDescriptorManager::freeDescriptor: Trying to free fileDescriptor: %d\n", fileDescriptor);
 
   for (auto & descriptor : descriptors) {
     if (descriptor.descriptor == fileDescriptor) {
@@ -96,18 +76,18 @@ void FileDescriptorManager::freeDescriptor(int fileDescriptor) {
       return;
     }
   }
-  debug(FILEDESCRIPTOR, "FileDescriptorManager::freeDescriptor: fileDescriptor not found: %d\n", fileDescriptor);
+  debug(PIPE, "FileDescriptorManager::freeDescriptor: fileDescriptor not found: %d\n", fileDescriptor);
 }
 
 int FileDescriptorManager::findFreeDescriptor() {
-  debug(Fabi, "FileDescriptorManager::findFreeDescriptor: nextDescriptor before increment: %d\n", nextDescriptor);
+  debug(PIPE, "FileDescriptorManager::findFreeDescriptor: nextDescriptor before increment: %d\n", nextDescriptor);
 
   int nextDescInt = static_cast<int>(nextDescriptor);
   assert(nextDescInt >= 0 && "Next descriptor value overflowed!");
 
   int free_descriptor = nextDescriptor++;
 
-  debug(Fabi, "FileDescriptorManager::findFreeDescriptor: nextDescriptor after increment: %d\n", nextDescriptor);
+  debug(PIPE, "FileDescriptorManager::findFreeDescriptor: nextDescriptor after increment: %d\n", nextDescriptor);
 
   return free_descriptor;
 }

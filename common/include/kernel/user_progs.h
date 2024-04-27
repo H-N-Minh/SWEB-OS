@@ -54,5 +54,7 @@ char const *user_progs[] = {
 
                             // "/usr/sleepAndClockTests.sweb",
 
+                            "/usr/pipeTest.sweb",
+
                             0
                            };

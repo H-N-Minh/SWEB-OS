@@ -52,7 +52,7 @@ const size_t PROCESS_REG        = Ansi_Yellow  ;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     ;
 
-const size_t PIPE               = Ansi_Cyan ;
+const size_t PIPE               = Ansi_Cyan | OUTPUT_ENABLED;
 const size_t FILEDESCRIPTOR     = Ansi_Cyan ;
 
 const size_t FORK          = Ansi_Red ;
