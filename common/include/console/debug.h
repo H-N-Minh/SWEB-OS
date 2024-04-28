@@ -55,7 +55,7 @@ const size_t FILEDESCRIPTOR     = Ansi_Cyan ;
 
 const size_t FORK               = Ansi_Red | OUTPUT_ENABLED;
 const size_t PAGEFAULT_TEST     = Ansi_Red| OUTPUT_ENABLED;
-const size_t EXEC               = Ansi_Magenta | OUTPUT_ENABLED;
+const size_t EXEC               = Ansi_Magenta;
 
 //group memory management
 const size_t PM                 = Ansi_Green| OUTPUT_ENABLED;
