@@ -4,7 +4,9 @@
 #define PRINT_DESCRIPTION 1
 
 extern int sleep1();
+extern int sleep2();
 extern int clock1();
+extern int clock2();
 
 
 void check_return_value(int testnumber, int rv, int* successful_tests, char* description)
@@ -41,11 +43,19 @@ int main()
 
     rv = sleep1();          
     number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "");
+    check_return_value(number_of_tests, rv, &successful_tests, "Simple sleep");
+
+    rv = sleep2();          
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "Sleep in new thread");
 
     rv = clock1();          
     number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "");
+    check_return_value(number_of_tests, rv, &successful_tests, "Clock with and without sleep");
+
+    rv = clock2();          
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "Clock with two processes");
 
 
     if(successful_tests == number_of_tests)

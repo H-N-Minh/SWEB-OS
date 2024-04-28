@@ -655,16 +655,16 @@ unsigned int Syscall::clock(void)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-
   uint64_t current_time_stamp = get_current_timestamp_64_bit();
-  uint64_t clock = current_process.clock_ + current_time_stamp - current_process.tsc_start_scheduling_;
+  uint64_t clock = current_process.clock_ + (current_time_stamp - current_process.tsc_start_scheduling_);
 
+  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
   uint64_t clock_in_femtoseconds = (uint64_t)clock * timestamp_fs;
 
   if(clock_in_femtoseconds / timestamp_fs != clock)
   {
     //overflow occured - which also means the number is to big to represent as unsigned int
+    debug(SYSCALL, "Syscall::clock - Number too big");
     return -1;
   }
 
@@ -672,6 +672,7 @@ unsigned int Syscall::clock(void)
 
   if(clock_in_microseconds > BIGGEST_UNSIGNED_INT)
   {
+    debug(SYSCALL, "Syscall::clock - Number too big");
     return -1;
   }
 
