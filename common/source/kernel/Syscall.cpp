@@ -285,9 +285,6 @@ uint32 Syscall::forkProcess()
   else
   {
     debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
-    //ProcessRegistry* processRegistry = ProcessRegistry::instance();
-    //processRegistry->addProcess(child);
-
     return (uint32) currentThread->user_registers_->rax;
   }
 }
@@ -345,7 +342,7 @@ int Syscall::pthreadCancel(size_t thread_id)
 
 void Syscall::exit(size_t exit_code)
 {
-  debug(SYSCALL, "-----------------Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
+  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 

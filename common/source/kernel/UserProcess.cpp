@@ -408,6 +408,7 @@ bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& 
       return false;
     }
   }
+  debug(EXEC, "Arrayoffset: %d\n",array_offset);
   return true;
 }
 

@@ -6,16 +6,16 @@ char const *user_progs[] = {
                             //  "/usr/shell.sweb",
                           
 // Threads -------------------------------------------------------------------
-                            // "/usr/pthreadCreateTests.sweb",
-                            // "/usr/pthreadJoinDetachTests.sweb",
+                            // "/usr/pthreadCreateTests.sweb",           //
+                            // "/usr/pthreadJoinDetachTests.sweb",       //
 
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
 
 //Fork/Exec -------------------------------------------------------------------
-                            // "/usr/waitpidTests.sweb",
+                            // "/usr/waitpidTests.sweb",                //
                             // "/usr/forkTests.sweb",
-                            //"/usr/execTests.sweb",
+                            "/usr/execTests.sweb",
                             //"/usr/forkExecTests.sweb",  
 
 // UserspaceLocks ------------------------------------------------------------
@@ -24,7 +24,7 @@ char const *user_progs[] = {
                             // "/usr/semTests.sweb",
 
 //Other tests -----------------------------------------------------------------
-                            "/usr/sleepAndClockTests.sweb",
+                            // "/usr/sleepAndClockTests.sweb",          //
                             //"/usr/growingStackTests.sweb",
                             //"/usr/notest.sweb",
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 

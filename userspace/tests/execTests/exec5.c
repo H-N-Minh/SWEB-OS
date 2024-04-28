@@ -32,6 +32,6 @@ int exec5()
   } 
   else //parent
   {
-    return pid;
+    return 0;
   }
 }

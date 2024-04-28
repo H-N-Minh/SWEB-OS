@@ -15,7 +15,7 @@ void print_function()
   }   
 }
 
-//Test: Exec with arguments
+//Exec where another function is alive when exec
 int exec6()
 {
   pid_t pid = fork();
@@ -43,6 +43,6 @@ int exec6()
   } 
   else //parent
   {
-    return pid;
+    return 0;
   }
 }
