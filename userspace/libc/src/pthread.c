@@ -8,81 +8,33 @@
 #define __PAGE_SIZE__ 4096
 
 
-// a flag for the 1st thread of the process to setup its metadata
-size_t __META_INITIALIZED__ = 0;
 
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)
 {
-  int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
-  if (!retval && !__META_INITIALIZED__)  // if thread was created successfully and metadata is not setup
-  {
-    size_t top_stack = getTopOfThisStack();
-    *(size_t*) top_stack                               = GUARD_MARKER;
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_flag
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_waiter_list
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_flag
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_waiter_list
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = GUARD_MARKER;
-    __META_INITIALIZED__ = 1;
-  }
-  return retval;
+   return __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
 }
+
+
 /**wrapper function. In pthread create
 // top_stack points to the top of the 1st stack of the child thread
 // Since its the first stack of new thread, it should points to itself */
 void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
-
 {
   assert(top_stack && "top_stack of Child Thread is NULL");
   // setup the metadata for the new thread
-  *(size_t*) top_stack                               = GUARD_MARKER;
+  *(size_t*) top_stack                               = __GUARD_MARKER__;
   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_flag
   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_waiter_list
   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_flag
   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_waiter_list
-  top_stack -= sizeof(size_t);  *(size_t*) top_stack = GUARD_MARKER;
+  top_stack -= sizeof(size_t);  *(size_t*) top_stack = __GUARD_MARKER__;
 
   // Start the thread
   void* retval = ((void* (*)(void*))start_routine)(arg);
   pthread_exit(retval);
 }
-
-
-// commented out for now because this is needed only when thread has multiple stacks
-
-// int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
-//                     void *(*start_routine)(void *), void *arg)
-// {
-//   int retval = __syscall(sc_pthread_create, (size_t)thread, (size_t)attr, (size_t)start_routine, (size_t)arg, (size_t)pthread_create_wrapper);
-//   if (!retval)
-//   {
-//     // if top_stack is 0, it means this is the first stack of the parent thread, so it should point to itself
-//     size_t top_stack = getTopOfThisStack();
-//     if(*(size_t*) top_stack == 0)
-//     {
-//       *(size_t*) top_stack = top_stack;
-//       // these should already be 0, but just to be sure
-//       top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;
-//       top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;
-//     }
-//   }
-//   return retval;
-// }
-// /**wrapper function. In pthread create
-// // top_stack points to the top of the 1st stack of the child thread
-// // Since its the first stack of new thread, it should points to itself */
-// void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
-// {
-//   assert(top_stack && "top_stack of Child Thread is NULL");
-//   *(size_t*) top_stack = (size_t) top_stack;
-//   // these should already be 0, but just to be sure:
-//   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // linked list for waiting threads
-//   top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // boolean for request_to_sleep
-//   void* retval = ((void* (*)(void*))start_routine)(arg);
-//   pthread_exit(retval);
-// }
 
 
 /**
@@ -381,6 +333,7 @@ int pthread_cond_signal(pthread_cond_t *cond)
     // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
+    *(size_t*) thread_to_wakeup = 0;
     size_t* request_to_sleep = (size_t*) (thread_to_wakeup + sizeof(size_t));
     wakeUpThread(request_to_sleep);
   }
@@ -624,7 +577,7 @@ int parameters_are_valid(size_t ptr, int allowed_to_be_null)
   {
     return 0;
   }
-  if(ptr >= USER_BREAK)
+  if(ptr >= __USER_BREAK__)
   {
     return 0;
   }
@@ -652,22 +605,19 @@ size_t getTopOfThisStack()
 size_t getTopOfFirstStack()
 {
   size_t top_current_stack = getTopOfThisStack();
-  if (!__META_INITIALIZED__)
+  // In case the main thread has not had its guard set up yet
+  if (*(size_t*) top_current_stack == 0 && (top_current_stack + __PAGE_SIZE__) > __USER_BREAK__)
   {
     size_t top_stack = top_current_stack;
-    *(size_t*) top_stack                               = GUARD_MARKER;
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_flag
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_waiter_list
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_flag
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_waiter_list
-    top_stack -= sizeof(size_t);  *(size_t*) top_stack = GUARD_MARKER;
-    __META_INITIALIZED__ = 1;
-    return top_current_stack;
+    *(size_t*) top_stack = __GUARD_MARKER__;
+    top_stack -= sizeof(size_t) * (__META_SIZE__ - 1);
+    *(size_t*) top_stack = __GUARD_MARKER__;
   }
 
-  for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
+
+  for (size_t i = 0; i < __MAX_STACK_AMOUNT__; i++)
   {
-    if (top_current_stack && *(size_t*) top_current_stack == GUARD_MARKER)
+    if (top_current_stack && *(size_t*) top_current_stack == __GUARD_MARKER__)
     {
       return top_current_stack;
     }
@@ -731,7 +681,7 @@ int pthread_attr_init(pthread_attr_t *attr)
 
   attr->detach_state = PTHREAD_CREATE_JOINABLE; // Default detach state
   attr->stack_addr = NULL; // Default stack address
-  attr->stack_size = DEFAULT_STACK_SIZE;
+  attr->stack_size = __DEFAULT_STACK_SIZE__;
   attr->priority = 0;      // Default priority
 
   attr->initialized = 1;
@@ -780,7 +730,7 @@ int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate)
 int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
 {
   return -1;
-  // if (attr == NULL || attr->initialized != 1 || stacksize < PTHREAD_STACK_MIN)
+  // if (attr == NULL || attr->initialized != 1 || stacksize < __PTHREAD_STACK_MIN__)
   // {
   //   return -1;
   // }

@@ -4,14 +4,15 @@
 #include "sys/syscall.h"
 #include "../../../common/include/kernel/syscall-definitions.h"
 
-#define USER_BREAK 0x0000800000000000ULL
+#define __USER_BREAK__ 0x0000800000000000ULL
 
 // CHANGES TO THESE DEFINE MUST ALSO BE CHANGED IN KERNEL
-#define GUARD_MARKER 0xbadcafe00000ULL
-#define MAX_STACK_AMOUNT 4
+#define __GUARD_MARKER__ 0xbadcafe00000ULL
+#define __MAX_STACK_AMOUNT__ 4
+#define __META_SIZE__ 6     // If this is changed then the same define in UserThread.h should be changed too
 
-#define DEFAULT_STACK_SIZE (2 * 1024 * 1024) // 2MB
-#define PTHREAD_STACK_MIN 16384 // 16 KB
+#define __DEFAULT_STACK_SIZE__ (2 * 1024 * 1024) // 2MB
+#define __PTHREAD_STACK_MIN__ 16384 // 16 KB
 
 #ifdef __cplusplus
 extern "C" {
@@ -152,7 +153,7 @@ extern void print_waiting_list(size_t* waiting_list, int before);
 extern size_t getTopOfThisStack();
 
 /**
- * return the address of the top of the first stack, which is the 1st GUARD_MARKER
+ * return the address of the top of the first stack, which is the 1st __GUARD_MARKER__
  * @return the address found, or 0 if not found
 */
 extern size_t getTopOfFirstStack();

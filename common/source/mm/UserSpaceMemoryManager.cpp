@@ -158,7 +158,7 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
 }
 */
 
-void UserSpaceMemoryManager::initGuard()
+int UserSpaceMemoryManager::initGuard()
 {
   UserThread* current_thread = (UserThread*) currentThread;
 
@@ -174,17 +174,25 @@ void UserSpaceMemoryManager::initGuard()
 
     if (*guard1 == GUARD_MARKER  && *guard2 == GUARD_MARKER)
     {
-      debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: This is 1st growing stack, but guards are already set (likelly by pthread)\n");
+      debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: This is 1st growing stack, but guards are already set (likelly by locking in pthread.c)\n");
       current_thread->guarded_ = 1;
+      return 0;
     }
-    else
+    else if (*guard1 == 0 && *guard2 == 0)
     {
       debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: This is 1st growing stack, setting up the guards\n");
       *guard1 = GUARD_MARKER;
       *guard2 = GUARD_MARKER;
       current_thread->guarded_ = 1;
+      return 0;
+    }
+    else
+    {
+      debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: underflow detected. Segfault!!\n");
+      return -1;
     }
   }
+  return 0;
 }
 
 /**
@@ -227,7 +235,12 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
 
   // make sure guard is set up
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: passed sanity check, guards are setted\n");
-  initGuard();
+  int status = initGuard();
+  if (!status)
+  {
+    debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: Underflow detected. Segfault!!\n");
+    return 11;
+  }
 
   // get to top of stack where the meta data is stored 
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: checking for overflow/underflow corruption\n");
@@ -328,6 +341,7 @@ size_t UserSpaceMemoryManager::checkGuardValid()
       size_t* guard2 = (size_t*) (top_last_page - sizeof(size_t)*(META_SIZE - 1));
       if (*guard2 == GUARD_MARKER)
       {
+        debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: all guards are still intact\n");
         return top_last_page;
       }
       break;
