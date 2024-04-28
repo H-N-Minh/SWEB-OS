@@ -92,6 +92,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
   size_t* mutex_flag = (size_t*) (top_stack - sizeof(size_t));
   size_t* mutex_waiter_list = (size_t*) (top_stack - sizeof(size_t)*2);
 
+  // error handling making sure thread is not holding the lock already
   if(mutex->held_by_ == mutex_waiter_list)
   {
     //printf("Thread is already holding lock\n");
@@ -99,12 +100,13 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     assert(rv == 0);
     return -1;
   }
-  int counter1 = 0;
+  // int counter1 = 0;
   while (mutex->locked_)
   {
-    counter1++;
+    // counter1++;
 
     size_t* next_element = (size_t*)&mutex->waiting_list_;  
+    // adding the current thread to the waiting list
     int added_to_waiting_list = 0;
     while(!added_to_waiting_list)
     {
