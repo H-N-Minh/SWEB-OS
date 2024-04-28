@@ -158,17 +158,17 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
 }
 */
 
-void UserSpaceMemoryManager::initGuard(UserThread* current_thread, size_t top_current_page)
+void UserSpaceMemoryManager::initGuard()
 {
+  UserThread* current_thread = (UserThread*) currentThread;
+
   if (!current_thread->guarded_)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guard_ flag is 0, setting up the guards");
-    size_t top_last_page = top_current_page + PAGE_SIZE;
-    ArchMemory* arch_memory = &current_thread->process_->loader_->arch_memory_;
-    assert(arch_memory->checkAddressValid(top_last_page) && "last page of growing stack is not mapped");
+    size_t top_stack = current_thread->top_stack_;
 
-    size_t* guard1 = (size_t*) top_last_page;
-    size_t* guard2 = (size_t*) (top_last_page - sizeof(size_t)* (META_SIZE - 1));
+    size_t* guard1 = (size_t*) top_stack;
+    size_t* guard2 = (size_t*) (top_stack - sizeof(size_t)* (META_SIZE - 1));
     assert(guard1 && "guard1 pointer of the current stack is NULL");
     assert(guard2 && "guard2 pointer of the current stack is NULL");
 
@@ -211,12 +211,6 @@ int UserSpaceMemoryManager::sanityCheck(size_t address)
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is already mapped\n");
     return 0;
   }
-  size_t valid_address = address + PAGE_SIZE;   // address of the last page of stack should be valid
-  if (!arch_memory->checkAddressValid(valid_address))
-  {
-    debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: last page is not mapped -> not related to growing stack\n");
-    return 0;
-  }
   
   return 1;
 }
@@ -230,17 +224,14 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: address failed sanity check\n");
     return 0;
   }
-  UserThread* current_thread = (UserThread*) currentThread;
-  size_t top_current_page = getTopOfThisPage(address);
-  assert(top_current_page && "top_current_page pointer of the current stack is NULL");
 
   // make sure guard is set up
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: passed sanity check, guards are setted\n");
-  initGuard(current_thread, top_current_page);
+  initGuard();
 
-  // get to top of stack where the meta data is stored
-  debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: checking if guards are corrupted\n");
-  size_t top_current_stack = checkGuardValid(top_current_page);
+  // get to top of stack where the meta data is stored 
+  debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: checking for overflow/underflow corruption\n");
+  size_t top_current_stack = checkGuardValid();
   if (top_current_stack == 11)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted. Segfault!!\n");
@@ -248,7 +239,7 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
   }
 
   finalSanityCheck(address, top_current_stack);
-  debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: found a valid top of stack.\n");
+  debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: growing stack request is valid\n");
 
   return 1;
 }
@@ -261,6 +252,11 @@ void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current
 
   assert(address < top_current_stack && "address is not within range of growing stack");
   assert(address > top_current_stack - PAGE_SIZE*MAX_STACK_AMOUNT && "address is not within range of growing stack");
+
+  size_t* guard1 = (size_t*) top_current_stack;
+  size_t* guard2 = (size_t*) (top_current_stack - sizeof(size_t)* (META_SIZE - 1));
+  assert(guard1 && "guard1 is corrupted");
+  assert(guard2 && "guard2 is corrupted");
 }
 
 
@@ -270,7 +266,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   
   // Quick check to see if the address is (somewhat) valid
   size_t top_this_page = getTopOfThisPage(address);
-  size_t top_this_stack = checkGuardValid(top_this_page);
+  size_t top_this_stack = checkGuardValid();
   assert(top_this_stack != 11 && "UserSpaceMemoryManager::increaseStackSize: guards are corrupted. Segfault!!");
   finalSanityCheck(address, top_this_stack);
 
@@ -299,14 +295,14 @@ size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address)
   return top_stack;
 }
 
-size_t UserSpaceMemoryManager::checkGuardValid(size_t top_current_page)
+size_t UserSpaceMemoryManager::checkGuardValid()
 {
-  ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  size_t top_last_page = top_current_page + PAGE_SIZE;
+  size_t variable;
+  size_t top_last_page = getTopOfThisPage((size_t) &variable) + PAGE_SIZE;
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
-    // check if page is mapped or within user space
-    if (top_last_page > USER_BREAK || !arch_memory->checkAddressValid(top_last_page))
+    // check if page is within user space
+    if (top_last_page > USER_BREAK)
     {
       break;
     }
@@ -314,6 +310,21 @@ size_t UserSpaceMemoryManager::checkGuardValid(size_t top_current_page)
     // check if guards are valid
     if (top_last_page && *(size_t*) top_last_page == GUARD_MARKER)
     {
+      // Check if theres underflow from the thread below
+      size_t* guard3 = (size_t*) (top_last_page - PAGE_SIZE * MAX_STACK_AMOUNT);
+      ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
+      if (arch_memory->checkAddressValid((size_t) guard3))
+      {
+        debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: Theres another thread below us, checking for underflow corruption\n");
+        size_t* guard4 = (size_t*) ((size_t) guard3 - sizeof(size_t)*(META_SIZE - 1));
+        if (*guard3 != GUARD_MARKER || *guard4 != GUARD_MARKER)
+        {
+          debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: underflow corruption of next thread detected\n");
+          break;
+        }
+      }
+
+      // check if theres underflow from the current thread
       size_t* guard2 = (size_t*) (top_last_page - sizeof(size_t)*(META_SIZE - 1));
       if (*guard2 == GUARD_MARKER)
       {

@@ -62,10 +62,10 @@ class UserSpaceMemoryManager
     */
     size_t getTopOfThisPage(size_t address) ;
 
-    /** find the top of stack and then check if guards are valid
+    /** check for overflow/underflow corruption. If Guards are still intact, then return the top of the stack
      * @return ptr to top of stack if valid, 11 if guard is corrupted
     */
-    size_t checkGuardValid(size_t top_current_page);
+    size_t checkGuardValid();
 
     /**
      * Final check to make sure growing stack is valid
@@ -81,5 +81,5 @@ class UserSpaceMemoryManager
     /**
      * @brief if the guard_ flag is not set, then set up the guard for current thread
     */
-    void initGuard(UserThread* current_thread, size_t top_current_page);
+    void initGuard();
 };
