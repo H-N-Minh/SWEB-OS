@@ -19,7 +19,7 @@ int exec8()
 
     char *argv[] = {"8", long_word, long_word, long_word, long_word, long_word, long_word, (char *)0 };
 
-    int rv = execv(path, argv);
+    execv(path, argv);
 
     assert(0);
 

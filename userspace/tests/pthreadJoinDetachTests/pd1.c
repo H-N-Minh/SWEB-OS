@@ -11,7 +11,7 @@ int pd1_function()
 int pd1()
 {
   //pthread detach should return error if thread cannot be found
-  int rv  = pthread_detach(2);
+  int rv  = pthread_detach(29387);
   assert(rv != 0);
 
 
@@ -34,7 +34,6 @@ int pd1()
   rv = pthread_detach(pid2);
   assert(rv != 0);
 
-  printf("pd1 successful!\n");
   
   return 0;
 }
