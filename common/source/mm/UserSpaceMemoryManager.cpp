@@ -157,42 +157,6 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
 }
 */
 
-int UserSpaceMemoryManager::initGuard()
-{
-  UserThread* current_thread = (UserThread*) currentThread;
-
-  if (!current_thread->guarded_)
-  {
-    debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guard_ flag is 0, setting up the guards");
-    size_t top_stack = current_thread->top_stack_;
-
-    size_t* guard1 = (size_t*) top_stack;
-    size_t* guard2 = (size_t*) (top_stack - sizeof(size_t)* (META_SIZE - 1));
-    assert(guard1 && "guard1 pointer of the current stack is NULL");
-    assert(guard2 && "guard2 pointer of the current stack is NULL");
-
-    if (*guard1 == GUARD_MARKER  && *guard2 == GUARD_MARKER)
-    {
-      debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: This is 1st growing stack, but guards are already set (likelly by locking in pthread.c)\n");
-      current_thread->guarded_ = 1;
-      return 0;
-    }
-    else if (*guard1 == 0 && *guard2 == 0)
-    {
-      debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: This is 1st growing stack, setting up the guards\n");
-      *guard1 = GUARD_MARKER;
-      *guard2 = GUARD_MARKER;
-      current_thread->guarded_ = 1;
-      return 0;
-    }
-    else
-    {
-      debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: underflow detected. Segfault!!\n");
-      return -1;
-    }
-  }
-  return 0;
-}
 
 /**
  * @brief check if the address is a valid growing stack address
@@ -230,15 +194,6 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: address failed sanity check\n");
     return 0;
-  }
-
-  // make sure guard is set up
-  debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: passed sanity check, guards are setted\n");
-  int status = initGuard();
-  if (!status)
-  {
-    debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: Underflow detected. Segfault!!\n");
-    return 11;
   }
 
   // get to top of stack where the meta data is stored 

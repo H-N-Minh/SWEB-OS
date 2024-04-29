@@ -78,9 +78,4 @@ class UserSpaceMemoryManager
     */
     int sanityCheck(size_t address);
 
-    /**
-     * @brief if the guard_ flag is not set, then set up the guard for current thread
-     * @return 0 on success, else return -1
-    */
-    int initGuard();
 };
