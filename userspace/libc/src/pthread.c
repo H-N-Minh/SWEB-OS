@@ -20,18 +20,9 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 /**wrapper function. In pthread create
 // top_stack points to the top of the 1st stack of the child thread
 // Since its the first stack of new thread, it should points to itself */
-void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack)
+void pthread_create_wrapper(void* start_routine, void* arg)
 {
-  assert(top_stack && "top_stack of Child Thread is NULL");
-  // setup the metadata for the new thread
-  *(size_t*) top_stack                               = __GUARD_MARKER__;
-  top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_flag
-  top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // mutex_waiter_list
-  top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_flag
-  top_stack -= sizeof(size_t);  *(size_t*) top_stack = 0;   // cond_waiter_list
-  top_stack -= sizeof(size_t);  *(size_t*) top_stack = __GUARD_MARKER__;
-
-  // Start the thread
+  // Start the thread actual function
   void* retval = ((void* (*)(void*))start_routine)(arg);
   pthread_exit(retval);
 }

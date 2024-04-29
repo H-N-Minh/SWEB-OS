@@ -6,10 +6,10 @@
 
 #define __USER_BREAK__ 0x0000800000000000ULL
 
-// CHANGES TO THESE DEFINE MUST ALSO BE CHANGED IN KERNEL
+// CHANGES TO THESE DEFINE MUST ALSO BE CHANGED IN KERNEL!!
 #define __GUARD_MARKER__ 0xbadcafe00000ULL
 #define __MAX_STACK_AMOUNT__ 4
-#define __META_SIZE__ 6     // If this is changed then the same define in UserThread.h should be changed too
+
 
 #define __DEFAULT_STACK_SIZE__ (2 * 1024 * 1024) // 2MB
 #define __PTHREAD_STACK_MIN__ 16384 // 16 KB
@@ -91,7 +91,7 @@ extern int pthread_create(pthread_t *thread,
 //the wrapper will take 2 parameter
 //first one for the function that we want to run
 //second one is the parameter of the function */
-void pthread_create_wrapper(void* start_routine, void* arg, void* top_stack);
+void pthread_create_wrapper(void* start_routine, void* arg);
 
 extern void pthread_exit(void *value_ptr);
 
