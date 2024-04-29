@@ -652,10 +652,10 @@ unsigned int Syscall::clock(void)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
+  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
   uint64_t current_time_stamp = get_current_timestamp_64_bit();
   uint64_t clock = current_process.clock_ + (current_time_stamp - current_process.tsc_start_scheduling_);
 
-  uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
   uint64_t clock_in_femtoseconds = (uint64_t)clock * timestamp_fs;
 
   if(clock_in_femtoseconds / timestamp_fs != clock)
