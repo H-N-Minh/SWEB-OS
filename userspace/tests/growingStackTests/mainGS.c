@@ -1,6 +1,9 @@
 #include "stdio.h"
 #include "unistd.h"
 #include "assert.h"
+#include "unistd.h"
+#include "wait.h"
+#include "pthread.h"
 
 extern int gs1();
 extern int gs2();
@@ -23,6 +26,9 @@ extern int gs2();
 
 int main()
 {
+  pid_t cid = fork();
+  if (cid == 0)
+  {
     int retval = 0;
     if (GS1)
     {
@@ -42,4 +48,25 @@ int main()
 
     printf("\n\n---All tests completed! (press F12 to make sure all threads died correctly)---\n");
     return 0;
+  }
+  else
+  {
+    printf("Parent process is waiting for child process to finish...\n");
+    waitpid(cid, 0, 0);
+    printf("Child process is finished\n");
+    
+    int num = get_thread_count();
+    if (num == 4 || num == 6)
+    {
+      printf("All threads are destroyed correctly\n");
+      return 0;
+    }
+    else
+    {
+      printf("Some threads are still alive\n");
+      return -1;
+    }
+    
+  }
+  
 }
