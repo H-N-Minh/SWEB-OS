@@ -29,15 +29,8 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     loader_->arch_memory_.lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
-    user_stack_ptr_ = (size_t) (USER_BREAK - MAX_STACK_AMOUNT * PAGE_SIZE * tid_ - (META_SIZE + 1) * sizeof(pointer));
-    debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
-    top_stack_ = user_stack_ptr_ + 6 * sizeof(pointer);       // 1. Guard
-    mutex_flag_ = user_stack_ptr_ + 5 * sizeof(pointer);      // 2. Mutex flag
-    //                                                          3. Mutex waiter list
-    cond_flag_ = user_stack_ptr_ + 3 * sizeof(pointer);       // 4. Cond flag
-    //                                                          5. Cond waiter list
-    //                                                          6. Guard
-    //                                                          7. user_stack_ptr
+    user_stack_ptr_ = setupMetaHeader();
+
     debug(USERSPACE_LOCKS, "UserStackPointer %zd(=%zx) and position for waiting flag  %zd(=%zx).\n",
           user_stack_ptr_, user_stack_ptr_, mutex_flag_, mutex_flag_);
 
@@ -76,6 +69,30 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
   switch_to_userspace_ = 1;
 }
 
+size_t UserThread::setupMetaHeader()
+{
+  debug(USERTHREAD, "UserThread ctor: Setting up meta data at beginning of stack\n");
+  pointer iden_top_stack = ArchMemory::getIdentAddressOfPPN(page_for_stack_);
+  iden_top_stack += PAGE_SIZE - sizeof(pointer);
+  *(pointer*) iden_top_stack = GUARD_MARKER;
+  for (size_t i = 0; i < (META_SIZE - 1); i++)
+  {
+    iden_top_stack -= sizeof(size_t);
+    // *(pointer*) iden_top_stack = 0; 
+  }
+  *(pointer*) iden_top_stack = GUARD_MARKER;
+
+  size_t user_stack_ptr = (size_t) (USER_BREAK - MAX_STACK_AMOUNT * PAGE_SIZE * tid_ - (META_SIZE + 1) * sizeof(pointer));
+  debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
+  top_stack_ = user_stack_ptr + 6 * sizeof(pointer);       // 1. Guard
+  mutex_flag_ = user_stack_ptr + 5 * sizeof(pointer);      // 2. Mutex flag
+  //                                                          3. Mutex waiter list
+  cond_flag_ = user_stack_ptr + 3 * sizeof(pointer);       // 4. Cond flag
+  //                                                          5. Cond waiter list
+  //                                                          6. Guard
+  //                                                          7. user_stack_ptr
+  return user_stack_ptr;
+}
 
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_), user_stack_ptr_(other.user_stack_ptr_),

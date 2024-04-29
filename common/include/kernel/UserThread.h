@@ -42,6 +42,12 @@ class UserThread : public Thread
         void exitThread(void* value_ptr);
         int detachThread(size_t thread_id);
 
+        /**
+         * @brief setup the header for a thread stack including guards, metadata for userspace locks
+         * @return the top of the user stack, which is right under the meta header
+        */
+        size_t setupMetaHeader();
+
 
         UserProcess* process_;
         size_t vpn_stack_;

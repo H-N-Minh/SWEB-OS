@@ -607,15 +607,6 @@ size_t getTopOfThisStack()
 size_t getTopOfFirstStack()
 {
   size_t top_current_stack = getTopOfThisStack();
-  // In case the main thread has not had its guard set up yet
-  if (*(size_t*) top_current_stack == 0 && (top_current_stack + __PAGE_SIZE__) > __USER_BREAK__)
-  {
-    size_t top_stack = top_current_stack;
-    *(size_t*) top_stack = __GUARD_MARKER__;
-    top_stack -= sizeof(size_t) * (__META_SIZE__ - 1);
-    *(size_t*) top_stack = __GUARD_MARKER__;
-  }
-
 
   for (size_t i = 0; i < __MAX_STACK_AMOUNT__; i++)
   {

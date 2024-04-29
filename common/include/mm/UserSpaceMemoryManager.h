@@ -11,7 +11,7 @@
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
 #define MAX_STACK_AMOUNT 4    // if this is changed then update the define in pthread.h in userspace 
-
+#define GUARD_MARKER 0xbadcafe00000ULL  
 
 class UserSpaceMemoryManager
 {

@@ -6,7 +6,6 @@
 #include "UserProcess.h"
 #include "ArchMemory.h"
 
-#define GUARD_MARKER 0xbadcafe00000ULL  
 
 size_t UserSpaceMemoryManager::totalUsedHeap()
 {
