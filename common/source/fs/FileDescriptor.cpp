@@ -14,9 +14,10 @@ FileDescriptorList global_fd_list;
 
 static size_t fd_num_ = 3;
 
-FileDescriptor::FileDescriptor(File* file) :
+FileDescriptor::FileDescriptor(File* file, FileType type) :
     fd_(ArchThreads::atomic_add(fd_num_, 1)),
-    file_(file)
+    file_(file),
+    type_(type)
 {
   debug(VFS_FILE, "Create file descriptor %u\n", getFd());
 }

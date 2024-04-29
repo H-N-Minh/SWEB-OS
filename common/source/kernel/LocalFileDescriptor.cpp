@@ -3,8 +3,8 @@
 #include "debug.h"
 
 
-LocalFileDescriptor::LocalFileDescriptor(FileDescriptor *global_fd, uint32_t mode, size_t offset, size_t local_fd_id)
-    : global_fd_(global_fd), mode_(mode), offset_(offset), localFD_(local_fd_id) {
+LocalFileDescriptor::LocalFileDescriptor(FileDescriptor *global_fd, uint32_t mode, size_t offset, size_t local_fd_id, FileType type)
+    : global_fd_(global_fd), mode_(mode), offset_(offset), localFD_(local_fd_id), type_(type) {
   debug(FILEDESCRIPTOR, "Created LocalFileDescriptor with local FD: %zu, global FD: %d, mode: %u, offset: %zu\n", localFD_, global_fd_->getFd(), mode_, offset_);
 }
 
@@ -44,4 +44,8 @@ size_t LocalFileDescriptor::getOffset() const {
 
 size_t LocalFileDescriptor::getLocalFD() const {
   return localFD_;
+}
+
+FileType LocalFileDescriptor::getType() const {
+  return type_;
 }

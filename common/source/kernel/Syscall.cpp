@@ -8,7 +8,6 @@
 #include "File.h"
 #include "Scheduler.h"
 #include "Pipe.h"
-#include "FileDescriptorManager.h"
 #include "FileOperations.h"
 #include "uvector.h"
 #include "Mutex.h"
@@ -329,30 +328,27 @@ int Syscall::execv(const char *path, char *const argv[])
   return current_process.execvProcess(path, argv);
 }
 
-
-uint32 Syscall::pipe(int file_descriptor_array[2])
-{
+uint32 Syscall::pipe(int file_descriptor_array[2]) {
   debug(PIPE, "Syscall::pipe called\n");
 
-  Pipe* new_pipe = new Pipe();
+  Pipe* new_pipe = new Pipe(nullptr, FileDescriptor::FileType::REGULAR);
+  assert(new_pipe != nullptr && "Syscall::pipe: Pipe creation failed\n");
 
-  int read_fd = FileDescriptorManager::getInstance().allocateDescriptor(new_pipe, READ);
-  int write_fd = FileDescriptorManager::getInstance().allocateDescriptor(new_pipe, WRITE);
+  size_t read_fd = LocalFileDescriptorTable::instance()->createLocalFileDescriptor(
+      reinterpret_cast<FileDescriptor *>(new_pipe), O_RDONLY, 0, ::FileType::PIPE)->getLocalFD();
 
+  debug(PIPE, "Syscall::pipe: read_fd = %zu\n", read_fd);
 
-  if (read_fd == -1 || write_fd == -1) {
-    debug(PIPE, "Syscall::pipe failed to allocate file descriptors\n");
-    delete new_pipe;
-    return -1;
-  }
+  size_t write_fd = LocalFileDescriptorTable:: instance()->createLocalFileDescriptor(
+      reinterpret_cast<FileDescriptor *>(new_pipe), O_WRONLY, 0, ::FileType::PIPE)->getLocalFD();
+
+  debug(PIPE, "Syscall::pipe: write_fd = %zu\n", write_fd);
 
   file_descriptor_array[0] = read_fd;
   file_descriptor_array[1] = write_fd;
 
-  debug(PIPE, "Syscall::pipe allocated file descriptors: read_fd = %d, write_fd = %d\n", read_fd, write_fd);
-
+  debug(PIPE, "Syscall::pipe: returning %zu, %zu\n", read_fd, write_fd);
   return 0;
-
 }
 
 
@@ -380,24 +376,16 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
     return size;
   }
   else if (localFileDescriptor != nullptr) {
-    Pipe* pipe = FileDescriptorManager::getInstance().getAssociatedPipe(fd);
-    if (pipe != nullptr) {
-      size_t num_written = 0;
-      char* buf = reinterpret_cast<char*>(buffer);
+    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
-      while (num_written < size) {
-        if (!pipe->write(buf[num_written])) {
-          break;
-        }
-
-        num_written++;
-      }
-
+    if (global_fd_obj->getType() == FileDescriptor::FileType::PIPE){
+      Pipe* pipeObj = static_cast<Pipe*>(global_fd_obj);
+      size_t num_written = pipeObj->write((char*)buffer, size);
+      debug(SYSCALL, "Syscall::write: Wrote %zu bytes to pipe: %p\n", num_written, (void*)pipeObj);
       return num_written;
-    } else {
-      FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
-      assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
+    } else {
       size_t global_fd = global_fd_obj->getFd();
       size_t num_written = VfsSyscall::write(global_fd, (char *) buffer, size);
       debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
@@ -408,8 +396,6 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
   debug(SYSCALL, "Syscall::write: No valid local file descriptor found for fd: %zu\n", fd);
   return -1U;
 }
-
-
 
 size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 {
@@ -426,40 +412,28 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
 
-  if (localFileDescriptor != nullptr) {
-    Pipe* pipe = FileDescriptorManager::getInstance().getAssociatedPipe(fd);
-    if (pipe != nullptr) {
-      size_t num_read = 0;
-      char* buf = reinterpret_cast<char*>(buffer);
-
-      while (num_read < count) {
-        char c;
-        if (!pipe->read(c)) {
-          break;
-        }
-
-        buf[num_read] = c;
-        num_read++;
-      }
-
-      return num_read;
-    } else {
-      FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
-      assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
-
-      size_t global_fd = global_fd_obj->getFd();
-      size_t num_read = VfsSyscall::read(global_fd, (char *) buffer, count);
-      debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
-      return num_read;
-    }
-  }
-
-  else if (fd == fd_stdin)
+  if (fd == fd_stdin)
   {
     debug(SYSCALL, "Syscall::read: Reading from stdin\n");
     size_t num_read = currentThread->getTerminal()->readLine((char*) buffer, count);
     debug(SYSCALL, "Syscall::read: Read %zu bytes from stdin\n", num_read);
     return num_read;
+  }
+  else if (localFileDescriptor != nullptr) {
+    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+
+    if (global_fd_obj->getType() == FileDescriptor::FileType::PIPE){
+      Pipe* pipeObj = static_cast<Pipe*>(global_fd_obj);
+      bool success = pipeObj->read((char*)buffer, count);
+      debug(SYSCALL, "Syscall::read: Read %zu bytes from pipe: %p\n", success? count : 0, (void*)pipeObj);
+      return success? count : 0;
+    } else {
+      size_t global_fd = global_fd_obj->getFd();
+      size_t num_read = VfsSyscall::read(global_fd, (char *) buffer, count);
+      debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
+      return num_read;
+    }
   }
 
   debug(SYSCALL, "Syscall::read: No valid local file descriptor found\n");
@@ -518,7 +492,7 @@ size_t Syscall::open(size_t path, size_t flags)
   UserProcess& current_process = *currentUserThread.process_;
 
   FileDescriptor* globalFileDescriptor = VfsSyscall::getFileDescriptor(global_fd);
-  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.createLocalFileDescriptor(globalFileDescriptor, flags, 0);
+  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.createLocalFileDescriptor(globalFileDescriptor, flags, 0, ::FileType::REGULAR);
 
   debug(SYSCALL, "Syscall::open: Current Process: %s\n", current_process.str().c_str());
 

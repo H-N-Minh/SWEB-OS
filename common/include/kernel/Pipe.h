@@ -6,16 +6,17 @@
 #include "Condition.h"
 #include "sistream.h"
 #include "debug.h"
+#include "FileDescriptor.h"
 
-class Pipe {
+class Pipe: public FileDescriptor {
 public:
 
-  Pipe();
+  Pipe(File *file, FileType type);
   ~Pipe();
 
-  bool read(char &c);
+  size_t read(char* buffer, size_t count);
 
-  bool write(char c);
+  size_t write(const char* buffer, size_t size);
 
   void close();
 

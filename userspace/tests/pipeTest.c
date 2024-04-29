@@ -6,7 +6,7 @@
 
 void *write_to_pipe(void *arg) {
     int write_fd = *((int *)arg);
-    char msg[MSG_SIZE] = "Testing pipe IPC";
+    char msg[MSG_SIZE] = "Testing pipe communication!";
     write(write_fd, msg, sizeof(msg));
     return NULL;
 }

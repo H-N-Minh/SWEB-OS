@@ -2,6 +2,15 @@
 #include "debug.h"
 #include "UserThread.h"
 
+LocalFileDescriptorTable* LocalFileDescriptorTable::instance_ = nullptr;
+
+LocalFileDescriptorTable* LocalFileDescriptorTable::instance()
+{
+  if(!instance_)
+    instance_ = new LocalFileDescriptorTable;
+  return instance_;
+}
+
 LocalFileDescriptorTable::LocalFileDescriptorTable() : lfds_lock_("Local FDs Lock") {}
 
 LocalFileDescriptorTable::~LocalFileDescriptorTable()
@@ -9,10 +18,10 @@ LocalFileDescriptorTable::~LocalFileDescriptorTable()
   closeAllFileDescriptors();
 }
 
-LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset) {
+LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset, FileType type){
   ScopeLock l(lfds_lock_);
   size_t local_fd_id = generateLocalFD();
-  auto* local_fd = new LocalFileDescriptor(global_fd, mode, offset, local_fd_id);
+  auto* local_fd = new LocalFileDescriptor(global_fd, mode, offset, local_fd_id, type);
   local_fds_.push_back(local_fd);
   global_fd->incrementRefCount();
   debug(FILEDESCRIPTOR, "Created and added local file descriptor with local FD ID: %zu. Current count: %d\n", local_fd_id, global_fd->getRefCount());

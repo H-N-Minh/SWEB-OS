@@ -1,12 +1,9 @@
 #include "Pipe.h"
 
 
-Pipe::Pipe()
-    : buffer_(256),
-      closed_(false),
-      mtx("Pipe Mutex"),
-      cond_empty(&mtx, "Pipe Empty Condition"),
-      cond_full(&mtx, "Pipe Full Condition")
+Pipe::Pipe(File *file, FileType type)
+    : FileDescriptor(file, type), buffer_(256), closed_(false), mtx("Pipe Mutex"),
+      cond_empty(&mtx, "Pipe Empty Condition"), cond_full(&mtx, "Pipe Full Condition")
 {
   debug(PIPE, "Pipe::Pipe called\n");
 }
@@ -15,45 +12,59 @@ Pipe::~Pipe()
 {
   debug(PIPE, "Pipe::~Pipe called\n");
 }
-
-bool Pipe::read(char &c) {
+size_t Pipe::read(char* buffer, size_t count) {
   debug(PIPE, "Pipe::read called\n");
 
   ScopeLock l(mtx);
 
-  while (!closed_ && !buffer_.get(c)) {
-    cond_empty.wait();
-  }
+  size_t num_read = 0;
+  char c;
 
-  if (closed_ && !buffer_.get(c)) {
-    c = EOF;
-  } else {
+  while (num_read < count && !closed_){
+    while (!closed_ && !buffer_.get(c)) {
+      cond_empty.wait();
+    }
+
+    if (closed_ && !buffer_.get(c)) {
+      return num_read; // returns the number of characters read so far
+    }
+
+    buffer[num_read++] = c;
+
     cond_full.signal();
   }
 
-  cond_full.signal();
-  return true;
+  debug(PIPE, "Pipe::read: Read %zu bytes\n", num_read);
+  return num_read;
 }
-
-bool Pipe::write(char c) {
-  debug(PIPE, "Pipe::write called with char: %c\n", c);
+size_t Pipe::write(const char* buffer, size_t size) {
+  debug(PIPE, "Pipe::write called with buffer: %s\n", buffer);
 
   ScopeLock l(mtx);
 
-  while (!closed_ && buffer_.isFull()) {
+  size_t count = 0;
+
+  while (count < size && !closed_ && buffer_.isFull()) {
     cond_full.wait();
   }
 
-  if (closed_) {
-    return false;
+  while (count < size && !closed_) {
+    if (buffer_.isFull()) {
+      cond_full.wait();
+    } else {
+      buffer_.put(buffer[count++]);
+    }
   }
 
-  buffer_.put(c);
+  if (closed_) {
+    return -1;
+  }
+
   cond_empty.signal();
 
-  debug(PIPE, "Pipe::write wrote char: %c\n", c);
+  debug(PIPE, "Pipe::write: Wrote %zu bytes\n", count);
 
-  return true;
+  return count;
 }
 
 void Pipe::close() {

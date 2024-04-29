@@ -12,24 +12,31 @@ class FileDescriptorList;
 
 class FileDescriptor
 {
-private:
-  ustl::atomic<int> ref_count_{0};
-
 protected:
   size_t fd_;
   File* file_;
-//  ustl::atomic<int> ref_count_;
 
 public:
-  explicit FileDescriptor ( File* file );
+  enum class FileType {
+    REGULAR,
+    PIPE
+  };
+
+  explicit FileDescriptor(File* file, FileType type = FileType::REGULAR);
   virtual ~FileDescriptor();
   uint32 getFd() const { return fd_; }
   File* getFile() const { return file_; }
+
+  FileType getType() const { return type_; }
 
   friend File;
   void incrementRefCount();
   void decrementRefCount();
   int getRefCount() const;
+
+private:
+  ustl::atomic<int> ref_count_{0};
+  FileType type_;
 };
 
 class FileDescriptorList
