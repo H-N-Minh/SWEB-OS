@@ -50,7 +50,7 @@ char const *user_progs[] = {
 
                             //"/usr/forkExecTests.sweb",  
 
-                            // "/usr/userspaceLocksTests.sweb",
+                            "/usr/userspaceLocksTests.sweb",
 
                             // "/usr/sleepAndClockTests.sweb",
 

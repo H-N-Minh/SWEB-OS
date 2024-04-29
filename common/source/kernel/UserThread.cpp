@@ -74,7 +74,7 @@ size_t UserThread::setupMetaHeader()
   for (size_t i = 0; i < (META_SIZE - 1); i++)
   {
     iden_top_stack -= sizeof(size_t);
-    // *(pointer*) iden_top_stack = 0; 
+    *(pointer*) iden_top_stack = 0; 
   }
   *(pointer*) iden_top_stack = GUARD_MARKER;
 

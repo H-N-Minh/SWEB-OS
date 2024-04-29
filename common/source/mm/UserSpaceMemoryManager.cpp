@@ -264,44 +264,33 @@ size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address)
 
 size_t UserSpaceMemoryManager::checkGuardValid()
 {
-  size_t variable;
-  size_t top_last_page = getTopOfThisPage((size_t) &variable) + PAGE_SIZE;
-  for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
+  // guards of this thread
+  size_t guard1 = ((UserThread*) currentThread)->top_stack_;
+  assert(guard1 && "top_stack_ is uninitialized");
+  size_t guard2 = guard1 - sizeof(size_t)*(META_SIZE - 1);
+  // guards of the thread beneath
+  size_t guard3 = guard1 - PAGE_SIZE * MAX_STACK_AMOUNT;
+  size_t guard4 = guard3 - sizeof(size_t)*(META_SIZE - 1);
+  
+  debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: checking guards of current thread\n");
+  if (*(size_t*) guard1 != GUARD_MARKER || *(size_t*) guard2 != GUARD_MARKER)
   {
-    // check if page is within user space
-    if (top_last_page > USER_BREAK)
-    {
-      break;
-    }
-    
-    // check if guards are valid
-    if (top_last_page && *(size_t*) top_last_page == GUARD_MARKER)
-    {
-      // Check if theres underflow from the thread below
-      size_t* guard3 = (size_t*) (top_last_page - PAGE_SIZE * MAX_STACK_AMOUNT);
-      ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-      if (arch_memory->checkAddressValid((size_t) guard3))
-      {
-        debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: Theres another thread below us, checking for underflow corruption\n");
-        size_t* guard4 = (size_t*) ((size_t) guard3 - sizeof(size_t)*(META_SIZE - 1));
-        if (*guard3 != GUARD_MARKER || *guard4 != GUARD_MARKER)
-        {
-          debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: underflow corruption of next thread detected\n");
-          break;
-        }
-      }
-
-      // check if theres underflow from the current thread
-      size_t* guard2 = (size_t*) (top_last_page - sizeof(size_t)*(META_SIZE - 1));
-      if (*guard2 == GUARD_MARKER)
-      {
-        debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: all guards are still intact\n");
-        return top_last_page;
-      }
-      break;
-    }
-    top_last_page += PAGE_SIZE;
+    debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: guards of current thread are corrupted\n");
+    return 11;
   }
-  debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: guards are corrupted. exiting\n");
-  return 11;
+  debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards current thread is intact\n");
+
+  ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
+  if (arch_memory->checkAddressValid(guard3))
+  {
+    debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: Theres another thread below us, checking its guards\n");
+    if (*(size_t*) guard3 != GUARD_MARKER || *(size_t*) guard4 != GUARD_MARKER)
+    {
+      debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards of the thread below is corrupted\n");
+      return 11;
+    }
+  }
+
+  debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: All guards are still intact\n");
+  return guard1;
 }
