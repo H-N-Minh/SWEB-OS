@@ -89,8 +89,8 @@ void* growingBackward2()
 }
 
 
-// 4 threads, 2 will grow from 1st page to last page (1 with array and 1 just manual)
-//  the other 2 will grow from last page to 1st page (1 with array and 1 just manual)
+// 4 threads, 2 will grow from 1st page to last page (1 with array and 1 just manually byte by byte)
+//  the other 2 will grow from last page to 1st page (1 with array and 1 just manually byte by byte)
 // they all should success with return value 0
 int gs2()
 {
@@ -101,58 +101,69 @@ int gs2()
     printf("Failed to create thread 1\n");
     return -1;
   }
-  
-  if (pthread_create(&thread2, NULL, growingFoward2, NULL) != 0)
-  {
-    printf("Failed to create thread 2\n");
-    return -1;
-  }
-  
-  if (pthread_create(&thread3, NULL, growingBackward, NULL) != 0)
-  {
-    printf("Failed to create thread 3\n");
-    return -1;
-  }
-  
-  if (pthread_create(&thread4, NULL, growingBackward2, NULL) != 0)
-  {
-    printf("Failed to create thread 4\n");
-    return -1;
-  }
-  
-  // Wait for all threads to finish and check return values
-  int retval1, retval2, retval3, retval4;
-  
+  int retval1 = 0;
   if (pthread_join(thread1, (void**) &retval1) != 0)
   {
     printf("Failed to join thread 1\n");
     return -1;
   }
-  
+  if (retval1 != 0)
+  {
+    printf("growingFoward() failed\n");
+    return -1;
+  }
+  /////////////////////////////////////////////////
+  if (pthread_create(&thread2, NULL, growingFoward2, NULL) != 0)
+  {
+    printf("Failed to create thread 2\n");
+    return -1;
+  }
+  int retval2 = 0;
   if (pthread_join(thread2, (void**) &retval2) != 0)
   {
     printf("Failed to join thread 2\n");
     return -1;
   }
-  
+  if (retval2 != 0)
+  {
+    printf("growingFoward2() failed\n");
+    return -1;
+  }
+  /////////////////////////////////////////////////
+  if (pthread_create(&thread3, NULL, growingBackward, NULL) != 0)
+  {
+    printf("Failed to create thread 3\n");
+    return -1;
+  }
+  int retval3 = 0;
   if (pthread_join(thread3, (void**) &retval3) != 0)
   {
     printf("Failed to join thread 3\n");
     return -1;
   }
-  
+  if (retval3 != 0)
+  {
+    printf("growingBackward() failed\n");
+    return -1;
+  }
+  /////////////////////////////////////////////////
+  if (pthread_create(&thread4, NULL, growingBackward2, NULL) != 0)
+  {
+    printf("Failed to create thread 4\n");
+    return -1;
+  }
+  int retval4 = 0;
   if (pthread_join(thread4, (void**) &retval4) != 0)
   {
     printf("Failed to join thread 4\n");
     return -1;
   }
-  
-  // Check return values
-  if (retval1 != 0 || retval2 != 0 || retval3 != 0 || retval4 != 0)
+  if (retval4 != 0)
   {
-    printf("One or more threads did not exit with return value 0\n");
+    printf("growingBackward2() failed\n");
     return -1;
   }
+
 
   return 0;
 }
