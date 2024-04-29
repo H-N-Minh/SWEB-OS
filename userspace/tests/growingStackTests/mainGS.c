@@ -40,7 +40,7 @@ int main()
 
     if (GS2)
     {
-      printf("\nTesting gs2.c ...\n");
+      printf("\nTesting gs2: more complicated test ...\n");
       retval = gs2();
       if (retval == 0)                      { printf("===> gs2 successful!\n"); }
       else                                  { printf("===> gs2 failed!\n");  return -1;}
@@ -53,6 +53,11 @@ int main()
   {
     int status;
     waitpid(cid, &status, 0);
+    if (status != 0)
+    {
+      printf("Testing crashed with exit code %d\n", status);
+    }
+    
     for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
     {
     /* code */

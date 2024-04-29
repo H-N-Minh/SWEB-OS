@@ -4,12 +4,6 @@
 
 #define PAGE_SIZE1 4096
 
-size_t getTopOfThisPage(size_t address) 
-{
-  size_t top_stack = address - address%PAGE_SIZE1 + PAGE_SIZE1 - sizeof(size_t); 
-  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-  return top_stack;
-}
 
 // Test a very basic growing stack
 int gs1()
@@ -22,15 +16,15 @@ int gs1()
     p =(int*) ((size_t)p - PAGE_SIZE1);
     // printf("now accessing new p at %p (%zu) \n", p, (size_t) p);
     *p = 11;
-    printf("1 page added, currently 2 pages total\n");
+    assert(*p == 11 && "gs1: p = 11 failed");
 
     p =(int*) ((size_t)p - PAGE_SIZE1);
     *p = 22;
-    printf("2 page added, currently 3 pages total\n");
+    assert(*p == 22 && "gs1: p = 22 failed");
 
     p =(int*) ((size_t)p - PAGE_SIZE1);
     *p = 33;
-    printf("3 page added, currently 4 pages total\n");
+    assert(*p == 33 && "gs1: p = 33 failed");
 
     // p =(int*) ((size_t)p - PAGE_SIZE1);
     // *p = 44;

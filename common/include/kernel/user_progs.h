@@ -21,10 +21,10 @@ char const *user_progs[] = {
                             // "/usr/small_cancel_test.sweb",
                             // "/usr/stateTypeTest.sweb",
                             // "/usr/spinTest.sweb",
-                            // "/usr/pthreadCreate.sweb",
+                            "/usr/pthreadCreate.sweb",
 // UserSpace Memory -------------------------------------------------
                             // "/usr/mallocTests.sweb",
-                            "/usr/growingStackTests.sweb",
+                            // "/usr/growingStackTests.sweb",
 
 // SEM & COND -------------------------------------------------
                             // "/usr/condTests.sweb",
