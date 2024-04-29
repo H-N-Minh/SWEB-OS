@@ -8,7 +8,6 @@
 
 void* growingFoward()
 {
-  return (void*) 0;
   char stack_data[STACK_SIZE2];
   for (int i = 0; i < STACK_SIZE2; i++)
   {
@@ -28,7 +27,6 @@ void* growingFoward()
 
 void* growingFoward2()
 {
-  return (void*) 0;
   int x = 0;
   size_t p = (size_t) &x;
 
@@ -49,7 +47,6 @@ void* growingFoward2()
 
 void* growingBackward()
 {
-  return (void*) 0;
   char stack_data[STACK_SIZE2];
   for (int i = (STACK_SIZE2 - 1); i >= 0; i--)
   {
@@ -69,7 +66,6 @@ void* growingBackward()
 
 void* growingBackward2()
 {
-  return (void*) 0;
   int x = 0;
   size_t p = (size_t) &x;
 

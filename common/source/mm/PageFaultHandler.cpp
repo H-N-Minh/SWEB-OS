@@ -54,6 +54,10 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
     assert(manager && "UserSpaceMemoryManager is not initialized.");
     int retval = manager->checkValidGrowingStack(address);
     
+    // DEBUGMINH  TODO: remove this
+    debug(MINH, "address: (%p)[%zu] , retval: %d\n", (int*) address, address,  retval);
+    
+    
     if(retval == 11)  // corruption detected
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. Exiting with error 11\n");

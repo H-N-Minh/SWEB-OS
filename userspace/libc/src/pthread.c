@@ -339,30 +339,17 @@ int pthread_cond_signal(pthread_cond_t *cond)
  */
 int pthread_cond_broadcast(pthread_cond_t *cond)
 {
-  int DEBUGMINH = 0;    // TODO: remove this debugminh
-  if (DEBUGMINH == 1) {
-    printf(" got into broadcast\n");
-  }
   if(!parameters_are_valid((size_t)cond, 0) || !cond->initialized_)
   {
     return -1;    //Cond is Null, cond not initialized
   }
-  if (DEBUGMINH == 1) {
-    printf("passed parameters check\n");
-  }
   while (cond->waiting_list_)   // if theres at least 1 thread in the waiting list
   {
-    if (DEBUGMINH == 1) {
-      printf("got into while\n");
-    }
     // remove the first thread from the waiting list and wake it up
     size_t thread_to_wakeup = cond->waiting_list_;
     cond->waiting_list_ = *(size_t*) thread_to_wakeup;
     size_t* request_to_sleep = (size_t*) (thread_to_wakeup + sizeof(size_t));
     wakeUpThread(request_to_sleep);
-  }
-  if (DEBUGMINH == 1) {
-    printf("exiting broadcast\n");
   }
   return 0;
 }
