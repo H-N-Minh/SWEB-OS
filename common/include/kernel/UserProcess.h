@@ -94,5 +94,7 @@ class UserProcess
         ustl::string str() const;
 
         long int waitProcess(long int pid, int* status, int options);
+
+        bool process_creatation_failed_{false};
 };
 

@@ -12,6 +12,8 @@ char const *user_progs[] = {
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
 
+                            // "/usr/exitTests.sweb",
+
 //Fork/Exec -------------------------------------------------------------------
                             // "/usr/waitpidTests.sweb",                //
                             // "/usr/forkTests.sweb",
@@ -26,9 +28,9 @@ char const *user_progs[] = {
 //Other tests -----------------------------------------------------------------
                             // "/usr/sleepAndClockTests.sweb",          //
                             //"/usr/growingStackTests.sweb",
-                            //"/usr/notest.sweb",
+                            // "/usr/no_test.sweb",
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
 
-
+//Exit !!!!!!! ------------------------
                             0
                            };

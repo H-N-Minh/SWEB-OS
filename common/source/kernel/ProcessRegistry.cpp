@@ -111,10 +111,13 @@ void ProcessRegistry::createProcess(const char* path)
 
     debug(PROCESS_REG, "create process %s\n", path);
     UserProcess* process = new UserProcess(path, new FileSystemInfo(*working_dir_));
-    if(!process->loader_)
+    if(!process || !process->loader_)
     {
         debug(PROCESS_REG, "Process creation of %s failed.\n", path);
-        ProcessRegistry::instance()->processExit();
+        if(process)
+        {
+            delete process;
+        }
         return;
     }
     debug(PROCESS_REG, "created userprocess %s\n", path);

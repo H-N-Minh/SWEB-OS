@@ -37,12 +37,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   if (!loader_ || !loader_->loadExecutableAndInitProcess())
   {
     debug(USERPROCESS, "Error: loading %s failed!\n", filename.c_str());
-    delete loader_;
-    loader_ = 0;
-    VfsSyscall::close(fd_);
-    delete working_dir_;
-    working_dir_ = 0;
-    ProcessRegistry::instance()->processExit();
+    process_creatation_failed_ = true;
     return;
   }
   debug(USERPROCESS, "ctor: Done loading %s\n", filename.c_str());
@@ -97,7 +92,7 @@ UserProcess::UserProcess(const UserProcess& other)
 
 UserProcess::~UserProcess()
 {
-  assert(Scheduler::instance()->isCurrentlyCleaningUp());
+  assert(Scheduler::instance()->isCurrentlyCleaningUp() || process_creatation_failed_);
   debug(USERPROCESS, "Delete loader %p from process %d.\n", loader_, pid_);
   delete loader_;
   loader_ = 0;
@@ -117,12 +112,7 @@ UserProcess::~UserProcess()
   if(iterator != ProcessRegistry::instance()->processes_.end())
   {
     ProcessRegistry::instance()->processes_.erase(iterator);
-  }
-  else
-  {
-    assert(0 && "Process not found in process list.");
-  }
-  
+  }  
   ProcessRegistry::instance()->processes_lock_.release();
   ProcessRegistry::instance()->processExit();
 }
