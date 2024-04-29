@@ -19,7 +19,7 @@ extern int gs2();
 
 // set to 1 to test, 0 to skip
 #define GS1 1     // basic test for growing stack
-#define GS2 0     // threadStack.c
+#define GS2 1     // threadStack.c
 
 int main()
 {
