@@ -46,15 +46,18 @@ int main()
       else                                  { printf("===> gs2 failed!\n");  return -1;}
     }
 
-    printf("\n\n---All tests completed! (press F12 to make sure all threads died correctly)---\n");
+    printf("\n\n---All tests completed!\n");
     return 0;
   }
   else
   {
-    printf("Parent process is waiting for child process to finish...\n");
-    waitpid(cid, 0, 0);
-    printf("Child process is finished\n");
-    
+    int status;
+    waitpid(cid, &status, 0);
+    for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
+    {
+    /* code */
+    }
+
     int num = get_thread_count();
     if (num == 4 || num == 6)
     {
@@ -63,7 +66,7 @@ int main()
     }
     else
     {
-      printf("Some threads are still alive\n");
+      printf("%d threads are still alive\n", num);
       return -1;
     }
     
