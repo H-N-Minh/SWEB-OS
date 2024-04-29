@@ -26,7 +26,7 @@ char const *user_progs[] = {
                             // "/usr/semTests.sweb",
 
 //Other tests -----------------------------------------------------------------
-                            // "/usr/sleepAndClockTests.sweb",          //
+                            "/usr/sleepAndClockTests.sweb",          //
                             //"/usr/growingStackTests.sweb",
                             // "/usr/no_test.sweb",
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 

@@ -51,6 +51,12 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   ProcessRegistry::instance()->processes_.push_back(this);
   ProcessRegistry::instance()->processes_lock_.release();
 
+
+  while(Scheduler::instance()->getTicks() < 6)
+  {
+    Scheduler::instance()->yield();
+  }
+
   threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
 
