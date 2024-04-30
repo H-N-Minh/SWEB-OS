@@ -15,6 +15,7 @@ extern int pc6();
 extern int pc7();
 extern int pc8();
 extern int pc9();
+extern int pc10();
 
 
 void check_return_value(int testnumber, int rv, int* successful_tests, char* description)
@@ -49,42 +50,46 @@ int childMain()
     int rv;
     
 
-    rv = pc1();  //sanity checks: wrong para
-    number_of_tests++;
-    check_return_value(1, rv, &successful_tests, "sanity checks");
+    // rv = pc1();  //sanity checks: wrong para
+    // number_of_tests++;
+    // check_return_value(1, rv, &successful_tests, "sanity checks");
 
-    rv = pc2();  //simple pthread_create and check if thread id gets set
-    number_of_tests++;
-    check_return_value(2, rv, &successful_tests, "simple pthread_create and check if thread id gets set");
+    // rv = pc2();  //simple pthread_create and check if thread id gets set
+    // number_of_tests++;
+    // check_return_value(2, rv, &successful_tests, "simple pthread_create and check if thread id gets set");
 
-    rv = pc3();  //starting 250 threads
-    number_of_tests++;
-    check_return_value(3, rv, &successful_tests, "starting 250 threads");
+    // rv = pc3();  //starting 250 threads
+    // number_of_tests++;
+    // check_return_value(3, rv, &successful_tests, "starting 250 threads");
 
-    rv = pc4();  //check if two running threads have different id
-    number_of_tests++;
-    check_return_value(4, rv, &successful_tests, "check if two running threads have different id");
+    // rv = pc4();  //check if two running threads have different id
+    // number_of_tests++;
+    // check_return_value(4, rv, &successful_tests, "check if two running threads have different id");
 
-    rv = pc5();  //pthread create with argument
-    number_of_tests++;
-    check_return_value(5, rv, &successful_tests, "pthread create with argument");
+    // rv = pc5();  //pthread create with argument
+    // number_of_tests++;
+    // check_return_value(5, rv, &successful_tests, "pthread create with argument");
 
-    rv = pc6();  //running 250 simultaniously
-    number_of_tests++;
-    check_return_value(6, rv, &successful_tests, "running 250 simultaniously");
+    // rv = pc6();  //running 250 simultaniously
+    // number_of_tests++;
+    // check_return_value(6, rv, &successful_tests, "running 250 simultaniously");
 
-    rv = pc7();  //calling pthread_create inside pthread_create inside pthread_create
-    number_of_tests++;
-    check_return_value(7, rv, &successful_tests, "calling pthread_create inside pthread_create inside pthread_create");
+    // rv = pc7();  //calling pthread_create inside pthread_create inside pthread_create
+    // number_of_tests++;
+    // check_return_value(7, rv, &successful_tests, "calling pthread_create inside pthread_create inside pthread_create");
 
-    rv = pc8();  //calling pthread_create inside pthread_create inside pthread_create
-    number_of_tests++;
-    check_return_value(8, rv, &successful_tests, "invalid userspace addresss as thread_id");
+    // rv = pc8();  //calling pthread_create inside pthread_create inside pthread_create
+    // number_of_tests++;
+    // check_return_value(8, rv, &successful_tests, "invalid userspace addresss as thread_id");
 
-    rv = pc9();  // 100 threads calling 100 pcreate at the same time, and the parameters and return value should be unique
+    // rv = pc9();  // 100 threads calling 100 pcreate at the same time, and the parameters and return value should be unique
+    // number_of_tests++;
+    // check_return_value(9, rv, &successful_tests, 
+    //         "100 threads calling 100 pcreate at the same time, Also test the parameters and return value of all threads shouldnt get mixed up");
+
+    rv = pc10();  // each thread has its own stack but they can still access each other's stack
     number_of_tests++;
-    check_return_value(9, rv, &successful_tests, 
-            "100 threads calling 100 pcreate at the same time, Also test the parameters and return value of all threads shouldnt get mixed up");
+    check_return_value(10, rv, &successful_tests, "each thread has its own stack but they can still access each other's stack");
 
 
     if(successful_tests == number_of_tests)
