@@ -107,6 +107,7 @@ int main()
         int child_exit_code = childMain();
         exit(child_exit_code);
     } 
+    else
     {
         int status;
         waitpid(pid, &status, 0);

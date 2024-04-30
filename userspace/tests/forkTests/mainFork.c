@@ -1,6 +1,9 @@
 #include "stdio.h"
-#include "unistd.h"
 #include "assert.h"
+#include "unistd.h"
+#include "wait.h"
+#include "pthread.h"
+
 
 extern int fork1();
 extern int fork2();
@@ -18,12 +21,12 @@ extern int fork6();
 // all 4 & 5 & 6 requires lot of physical memory so each should be tested alone
 #define FORK1 1     //simple fork
 #define FORK2 1     // This tests if the 2 processes can have different values of same variable (they should). Both local and global variables are tested
-#define FORK3 1     // this tests fork together with pthread_create
-#define FORK4 1     // this tests multiple nested forks
-#define FORK5 1     // this tests multiple nested forks
+#define FORK3 1     // this tests fork then each calls pthread_create
+#define FORK4 1     // this tests multiple nested forks (each child will fork again)
+#define FORK5 1     // this tests multiple nested forks (same thread will fork multiple times)
 #define FORK6 1     // test the locking of archmemory (NOTE: not a really good test for locking)
 
-int main()
+int childMain()
 {
     int retval = 0;
 
@@ -31,7 +34,7 @@ int main()
     {
         retval = fork1();
         if (retval == PARENT_SUCCESS)         { printf("fork1 successful!\n"); } 
-        else if (retval == CHILD_SUCCESS)     { return 0; }                      // this kills all child processes
+        else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      // this kills all child processes
         else                                  { printf("fork1 failed!\n");  return -1;}
     }
 
@@ -39,7 +42,7 @@ int main()
     {
         retval = fork2();
         if (retval == PARENT_SUCCESS)         { printf("fork2 successful!\n"); } 
-        else if (retval == CHILD_SUCCESS)     { return 0; }                      
+        else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      
         else                                  { printf("fork2 failed!\n"); return -1;}
     }
 
@@ -47,7 +50,7 @@ int main()
     {
         retval = fork3();
         if (retval == PARENT_SUCCESS)         { printf("fork3 successful!\n"); } 
-        else if (retval == CHILD_SUCCESS)     { return 0; }                      
+        else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      
         else                                  { printf("fork3 failed!\n"); return -1;}
     }
 
@@ -55,7 +58,7 @@ int main()
     {
         retval = fork4();
         if (retval == PARENT_SUCCESS)         { printf("fork4 successful!\n"); } 
-        else if (retval == CHILD_SUCCESS)     { return 0; }                      
+        else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      
         else                                  { printf("fork4 failed!\n"); return -1;}
     }
 
@@ -63,7 +66,7 @@ int main()
     {
         retval = fork5();
         if (retval == PARENT_SUCCESS)         { printf("fork5 successful!\n"); } 
-        else if (retval == CHILD_SUCCESS)     { return 0; }                      
+        else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      
         else                                  { printf("fork5 failed!\n"); return -1;}
     }
 
@@ -71,9 +74,53 @@ int main()
     {
         retval = fork6();
         if (retval == PARENT_SUCCESS)         { printf("fork6 successful!\n"); }
-        else if (retval == CHILD_SUCCESS)     { return 0; }
+        else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }
         else                                  { printf("fork6 failed!\n"); return -1;}
     }
 
     return 0;
 }
+
+int main()
+{
+    pid_t pid = fork();
+    if (pid == 0) {
+        int child_exit_code = childMain();
+        exit(child_exit_code);
+    } 
+    else
+    {
+        int status;
+        waitpid(pid, &status, 0);
+        if (status == CHILD_SUCCESS)
+        {
+            return 0;
+        }
+        
+        else if (status != 0)
+        {
+            printf("Testing crashed with exit code %d\n", status);
+            return -1;
+        }
+        
+        for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
+        {
+            /* code */
+        }
+
+        int num = get_thread_count();
+        if (num == 4 || num == 6)
+        {
+            printf("===  All threads are destroyed correctly  ===\n");
+            return 0;
+        }
+        else
+        {
+            printf("===  %d threads are still alive===  \n", num);
+            return -1;
+        }
+        
+    }
+    return 0;
+}
+                    
