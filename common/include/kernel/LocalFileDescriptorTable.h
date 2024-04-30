@@ -23,10 +23,12 @@ public:
   ustl::vector<LocalFileDescriptor*> getLocalFileDescriptors() const;
   void addLocalFileDescriptor(LocalFileDescriptor* local_fd);
 
+  mutable Mutex lfds_lock_;
+
 private:
   ustl::vector<LocalFileDescriptor*> local_fds_;
   static size_t generateLocalFD();
-  mutable Mutex lfds_lock_;
+
 
   static LocalFileDescriptorTable* instance_;
 };

@@ -375,9 +375,12 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
     return -1U;
   }
 
-
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
+
+  LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+
+  lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
   debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
@@ -386,6 +389,7 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
   {
     debug(SYSCALL, "Syscall::write: Writing to stdout\n");
     kprintf("%.*s", (int)size, (char*) buffer);
+    lfdTable.lfds_lock_.release();
     return size;
   }
   else if (localFileDescriptor != nullptr) {
@@ -396,17 +400,20 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
       Pipe* pipeObj = static_cast<Pipe*>(global_fd_obj);
       size_t num_written = pipeObj->write((char*)buffer, size);
       debug(SYSCALL, "Syscall::write: Wrote %zu bytes to pipe: %p\n", num_written, (void*)pipeObj);
+      lfdTable.lfds_lock_.release();
       return num_written;
+
 
     } else {
       size_t global_fd = global_fd_obj->getFd();
       size_t num_written = VfsSyscall::write(global_fd, (char *) buffer, size);
       debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
+      lfdTable.lfds_lock_.release();
       return num_written;
     }
   }
-
   debug(SYSCALL, "Syscall::write: No valid local file descriptor found for fd: %zu\n", fd);
+  lfdTable.lfds_lock_.release();
   return -1U;
 }
 
@@ -419,15 +426,19 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
     return -1U;
   }
 
-
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
+
+  LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+
+  lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
 
   if (fd == fd_stdin)
   {
     debug(SYSCALL, "Syscall::read: Reading from stdin\n");
+    lfdTable.lfds_lock_.release();
     size_t num_read = currentThread->getTerminal()->readLine((char*) buffer, count);
     debug(SYSCALL, "Syscall::read: Read %zu bytes from stdin\n", num_read);
     return num_read;
@@ -440,16 +451,18 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
       Pipe* pipeObj = static_cast<Pipe*>(global_fd_obj);
       bool success = pipeObj->read((char*)buffer, count);
       debug(SYSCALL, "Syscall::read: Read %zu bytes from pipe: %p\n", success? count : 0, (void*)pipeObj);
+      lfdTable.lfds_lock_.release();
       return success? count : 0;
     } else {
       size_t global_fd = global_fd_obj->getFd();
       size_t num_read = VfsSyscall::read(global_fd, (char *) buffer, count);
       debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
+      lfdTable.lfds_lock_.release();
       return num_read;
     }
   }
-
   debug(SYSCALL, "Syscall::read: No valid local file descriptor found\n");
+  lfdTable.lfds_lock_.release();
   return -1U;
 }
 
@@ -459,6 +472,10 @@ size_t Syscall::close(size_t fd)
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
+
+  LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+
+  lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
 
@@ -478,9 +495,11 @@ size_t Syscall::close(size_t fd)
       current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
     }
     debug(SYSCALL, "Syscall::close: Close result for global fd: %zu was %d\n", global_fd, result);
+    lfdTable.lfds_lock_.release();
     return result;
   }
   debug(SYSCALL, "Syscall::close: No valid local file descriptor found for fd: %zu\n", fd);
+  lfdTable.lfds_lock_.release();
   return -1U;
 }
 
@@ -504,6 +523,11 @@ size_t Syscall::open(size_t path, size_t flags)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
+  LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+
+  lfdTable.lfds_lock_.acquire();
+
+
   FileDescriptor* globalFileDescriptor = VfsSyscall::getFileDescriptor(global_fd);
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.createLocalFileDescriptor(globalFileDescriptor, flags, 0, ::FileType::REGULAR);
 
@@ -511,12 +535,13 @@ size_t Syscall::open(size_t path, size_t flags)
 
   if (localFileDescriptor == nullptr) {
     debug(SYSCALL, "Syscall::open: LocalFileDescriptor creation failed\n");
+    lfdTable.lfds_lock_.release();
     return -1U;
   }
 
   debug(SYSCALL, "Syscall::open: Local file descriptor: %zu\n",
         localFileDescriptor->getLocalFD());
-
+  lfdTable.lfds_lock_.release();
   return localFileDescriptor->getLocalFD();
 }
 
