@@ -104,10 +104,6 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
       currentThread->loader_->copyPage(address);
     }
-    else
-    {
-      currentThread->loader_->loadPage(address);
-    }
   }
   else if (status == 69)
   {
