@@ -12,16 +12,13 @@ class FileDescriptorList;
 
 class FileDescriptor
 {
-private:
-  ustl::atomic<int> ref_count_{0};
-
 protected:
   size_t fd_;
   File* file_;
-//  ustl::atomic<int> ref_count_;
+  ustl::atomic<int> ref_count_;
 
 public:
-  explicit FileDescriptor ( File* file );
+  FileDescriptor ( File* file );
   virtual ~FileDescriptor();
   uint32 getFd() const { return fd_; }
   File* getFile() const { return file_; }
