@@ -55,8 +55,10 @@ const size_t USERTRACE          = Ansi_Red     ;
 const size_t PIPE               = Ansi_Cyan | OUTPUT_ENABLED;
 const size_t FILEDESCRIPTOR     = Ansi_Cyan ;
 
-const size_t FORK          = Ansi_Red ;
-const size_t PAGEFAULT_TEST          = Ansi_Red;
+
+const size_t FORK               = Ansi_Red | OUTPUT_ENABLED;
+const size_t PAGEFAULT_TEST     = Ansi_Red| OUTPUT_ENABLED;
+const size_t EXEC               = Ansi_Magenta;
 
 //group memory management
 
@@ -105,8 +107,8 @@ const size_t M_ZONE             = Ansi_Yellow;
 
 //Personal's debug
 
-const size_t TAI_THREAD               = Ansi_Yellow  ;
-const size_t MINH                     = Ansi_Red     ;
-const size_t Fabi                     = Ansi_Red | OUTPUT_ENABLED;
 
-const size_t USERSPACE_LOCKS         = Ansi_Red  ;
+const size_t USERSPACE_LOCKS         = Ansi_Red     | OUTPUT_ENABLED;
+const size_t WAIT_PID               = Ansi_Red   | OUTPUT_ENABLED;
+
+const size_t Fabi              = Ansi_Yellow ;

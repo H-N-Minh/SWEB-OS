@@ -40,7 +40,7 @@ void check_return_value(int testnumber, int rv, int* successful_tests, char* des
         if(PRINT_DESCRIPTION)
         {
             printf("-------------------------------------------------------------\n");
-            printf("PthreadJoinDetach:Test %d successful!\n", testnumber);
+            printf("PthreadJoinDetach:Test %d fail!\n", testnumber);
             printf("Description: %s\n", description);
             printf("_____________________________________________________________\n\n");
         }

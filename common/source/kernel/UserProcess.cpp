@@ -49,9 +49,12 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
 
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
+  debug(WAIT_PID, "-----------------------pid_ in constructor %d \n", pid_);
+
 
   threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
   debug(USERPROCESS, "ctor: Done creating Thread\n");
+
 }
 
 // COPY CONSTRUCTOR
@@ -64,6 +67,7 @@ UserProcess::UserProcess(const UserProcess& other)
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
+  debug(WAIT_PID, "-----------------------pid_ in cpy constructor %d \n", pid_);
 
   assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
@@ -111,8 +115,6 @@ UserProcess::~UserProcess()
 
   delete user_mem_manager_;
   user_mem_manager_ = nullptr;
-
-
 
 
   ProcessRegistry::instance()->processExit();
@@ -191,7 +193,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
 }
 
-void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, int len_string)
+void UserProcess::write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, int len_string)
 {
   size_t virtual_address = ArchMemory::getIdentAddressOfPPN(ppn);
   size_t virtual_address_2;
@@ -204,15 +206,13 @@ void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, in
   if(offset < PAGE_SIZE && offset + len_string < PAGE_SIZE)
   {
     char* start_next_string = (char*)virtual_address + offset; 
-    // debug(FORK, "Write to first page, start from %p, and write %d characters.\n", start_next_string, len_string); 
-    // debug(FORK, "String is %s\n", string);
+    debug(EXEC, "Write to first page, start from %p, and write %d characters.\n", start_next_string, len_string); 
     memcpy(start_next_string, string, len_string);
   }
   else if(offset > PAGE_SIZE && offset + len_string > PAGE_SIZE)
   {
     char* start_next_string = (char*)virtual_address_2 + offset - PAGE_SIZE;  
-    // debug(FORK, "Write to second page, start from %p, and write %d characters.\n", start_next_string, len_string); 
-    // debug(FORK, "String is %s\n", string);
+    debug(EXEC, "Write to second page, start from %p, and write %d characters.\n", start_next_string, len_string); 
     memcpy(start_next_string, string, len_string);
   }
   else
@@ -226,14 +226,11 @@ void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, in
     size_t len_second_page = len_string - len_first_page;
     char* start_next_string2 = (char*)virtual_address_2;  
     memcpy(start_next_string2, (char*)((size_t)string + len_first_page), len_second_page);
-
-    // debug(FORK, "Write to first and second page, first: %p,%ld, second: %p,%ld.\n", start_next_string1, len_first_page, start_next_string2, len_second_page); 
-    // debug(FORK, "String is %s\n", string);
-    // debug(FORK, "String is %s\n", (char*)((size_t)string + len_first_page));
+    
+    debug(EXEC, "Write to first and second page, first: %p,%ld, second: %p,%ld.\n", start_next_string1, len_first_page, start_next_string2, len_second_page); 
   }
 }
 
-//Todos: locking
 int UserProcess::execvProcess(const char *path, char *const argv[])
 {
   UserThread& currentUserThread = *((UserThread*)currentThread);
@@ -244,14 +241,21 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   }
 
   int argc = 0;
-  int array_offset = 0;
-  if(!check_parameters_for_exec(argv, argc, array_offset))
+  int exec_array_offset = 0;
+  //checks if the parameters are currently valid userspace addresses and if there is enough space on two pages
+  if(!check_parameters_for_exec(argv, argc, exec_array_offset))
   {
     return -1;
   }
 
+
+  int path_len = strlen(path)+1;
+  char kernel_path[path_len];
+  memcpy(kernel_path, path, path_len);
+
+
   //check if path exist
-  int32 execv_fd = VfsSyscall::open(path, O_RDONLY);
+  int32 execv_fd = VfsSyscall::open(kernel_path, O_RDONLY);
   if(execv_fd < 0)
   {
     VfsSyscall::close(execv_fd);
@@ -260,6 +264,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   VfsSyscall::close(execv_fd);
 
 
+  //kill all other threads and wait until all of them have unmapped there stacks
   threads_lock_.acquire();
   currentUserThread.cancel_state_type_lock_.acquire();
   if(((UserThread*)currentThread)->cancel_type_ == PTHREAD_CANCEL_EXIT)
@@ -270,93 +275,82 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   }
   currentUserThread.cancel_state_type_lock_.release();
 
-  //cancel all other threads
   cancelAllOtherThreads();
   currentUserThread.send_kill_notification();
   one_thread_left_ = (threads_.size() > 1) ? false : true;
   threads_lock_.release();
   waitForThreadsToDie();
 
-  if(!check_parameters_for_exec(argv, argc, array_offset))
-  {
-    assert(0);         //Todos
-  }
+  argc = 0;
+  exec_array_offset = 0;
+  check_parameters_for_exec(argv, argc, exec_array_offset);
 
-  //allocate a free physical page and get the virtual address of the identity mapping
 
+  //allocate one (or two) physical pages for the arguments
   size_t page_for_args = PageManager::instance()->allocPPN();
   size_t next_page_for_args = NULL;
-  int exec_array_offset_ = array_offset;
 
-  if(exec_array_offset_ + (argc + 1) * POINTER_SIZE > PAGE_SIZE)
+  if(exec_array_offset + (argc + 1) * POINTER_SIZE > PAGE_SIZE)
   {
     next_page_for_args = PageManager::instance()->allocPPN();
   }
 
-  // size_t virtual_address =  ArchMemory::getIdentAddressOfPPN(page_for_args);
 
   size_t offset = 0;
-  size_t offset1 = USER_BREAK - 2 * PAGE_SIZE;
+  size_t virtual_address_args = USER_BREAK - 2 * PAGE_SIZE;
 
   
   for(int i = 0; i < argc; i++)
   {
-    //write the arguments one by one to the new phsical page via identity mapping
-    // char* start_next_string = (char*)virtual_address + offset;
     int len_string = strlen(argv[i])+1;
+    char* start_next_array_element = (char*)((size_t)exec_array_offset + i * POINTER_SIZE);
+    //write next argument to page
+    UserProcess::write_to_page(page_for_args, next_page_for_args, offset, argv[i], len_string);
 
-    char* start_next_array_element = (char*)((size_t)exec_array_offset_ + i * POINTER_SIZE);
-    write_to_page(page_for_args, next_page_for_args, offset, argv[i], len_string);
-
-    //store the offset of each argument in the page, at the end of all arguments
-    write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&offset1 , POINTER_SIZE);
+    //write the pointer to the next argument to page 
+    UserProcess::write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&virtual_address_args , POINTER_SIZE);
     
     offset += strlen(argv[i]) + 1;
-    offset1 += strlen(argv[i]) + 1;
+    virtual_address_args += strlen(argv[i]) + 1;
   }
   if(argc > 0)
-  {
-    //storing the pointer to the virtual address of the single elements in the array
-    // memset((void*)(virtual_address + exec_array_offset_ + argc * POINTER_SIZE), NULL, POINTER_SIZE);
-    
-    char* start_next_array_element = (char*)((size_t)exec_array_offset_ + argc * POINTER_SIZE);
+  { 
+    char* start_next_array_element = (char*)((size_t)exec_array_offset + argc * POINTER_SIZE);
     char* null = NULL;
 
-    write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&null , POINTER_SIZE);
+    //nullterminate the array of pointers
+    UserProcess::write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&null , POINTER_SIZE);
   }
   
-  execv_fd = VfsSyscall::open(path, O_RDONLY);   //todos maybe deepcopy path
-  if(execv_fd < 0)
-  {
-    assert(0);      //Todos: maybe change to exit
-  }
-  loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.vpn_stack_);  //cancel
+  execv_fd = VfsSyscall::open(kernel_path, O_RDONLY);
+
+  //delete the archmemory of current thread besides first page of current stack
+  loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.vpn_stack_);
   size_t old_cr3 = currentThread->user_registers_->cr3;
+  //replace the loader of the current binary with the loader of the new binary
   loader_->replaceLoader(execv_fd);
   VfsSyscall::close(fd_);
   fd_ = execv_fd;
 
-
+  //create fresh user registers for the thread (only leave the cr3 the same)
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
-
-
-  currentThread->user_registers_->rdi = argc;
   currentThread->user_registers_->cr3 = old_cr3;
 
-
-  size_t virtual_page = USER_BREAK / PAGE_SIZE - 2;
+  //set argc and argv
+  currentThread->user_registers_->rdi = argc;
+  currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
+  
+  //map the argument page(s)
   loader_->arch_memory_.lock_.acquire();
-  bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , page_for_args, 1);
+  bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1);
+  assert(vpn_mapped &&  "Virtual page already mapped.");
   if(next_page_for_args)
   {
-    size_t virtual_page = USER_BREAK / PAGE_SIZE - 1;
-    bool vpn_mapped = loader_->arch_memory_.mapPage(virtual_page , next_page_for_args, 1);
-    assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
+    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 , next_page_for_args, 1);
+    assert(vpn_mapped && "Virtual page already mapped.");
 
   }
   loader_->arch_memory_.lock_.release();
-  currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset_;
-  assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen - in execv");
   return 0;
 }
 
@@ -371,7 +365,7 @@ bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& 
   {
     if(!Syscall::check_parameter((size_t)argv[argc], true))
     {
-      debug(USERPROCESS, "Execv: parameters not in userspace\n");
+      debug(EXEC, "Execv: parameters not in userspace\n");
       return false;
     }
 
@@ -388,7 +382,7 @@ bool UserProcess::check_parameters_for_exec(char *const argv[], int& argc, int& 
     }
     if(space_left < 0)
     {
-      debug(USERPROCESS, "Execv: no space left\n");
+      debug(EXEC, "Execv: no space left\n");
       return false;
     }
   }
@@ -456,4 +450,26 @@ ustl::string UserProcess::str() const {
   ustl::ostringstream oss;
   oss << "Process ID: " << pid_;
   return oss.str();
+}
+
+long int UserProcess::waitProcess(long int pid, int* status, int options)
+{
+  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+  debug(WAIT_PID, "--------------pid %zu status %p option %d\n", pid, status, options);
+
+  while (ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end())
+  {
+    debug(WAIT_PID, "--------------WAITING\n");
+    ProcessRegistry::instance()->process_exit_status_map_condition_.wait();
+  }
+  debug(WAIT_PID, "--------------DONE WAITING\n");
+
+  int status_tmp = (int)ProcessRegistry::instance()->process_exit_status_map_[pid]; //set
+  //at this point the waited process is already(should die) so delete if from map
+  ProcessRegistry::instance()->process_exit_status_map_.erase(pid);
+  ProcessRegistry::instance()->process_exit_status_map_lock_.release();
+
+  *status = status_tmp;
+
+  return pid;
 }
