@@ -23,7 +23,10 @@ int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
 void pthread_create_wrapper(void* start_routine, void* arg)
 {
   // Start the thread actual function
+  // DEBUGMINH TODO: delete this
+  // printf("pthread_create_wrapper started, start_routine %p, arg %p \n", start_routine, arg);
   void* retval = ((void* (*)(void*))start_routine)(arg);
+  // printf("pthread_create_wrapper finished\n");
   pthread_exit(retval);
 }
 

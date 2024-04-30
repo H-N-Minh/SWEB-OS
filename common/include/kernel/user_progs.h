@@ -10,11 +10,11 @@ char const *user_progs[] = {
                             // "/usr/pthreadJoinTests.sweb",
 
 
-                            // "/usr/userspaceLocksTests.sweb",
+                            "/usr/userspaceLocksTests.sweb",
 
                             // "/usr/waitpidTests.sweb",
 
-
+                            // "/usr/gs3.sweb",
                             // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
                             // "/usr/pc4.sweb",
                             // "/usr/smallpthreadcreate.sweb",
@@ -24,7 +24,7 @@ char const *user_progs[] = {
                             // "/usr/pthreadCreateTests.sweb",
 // UserSpace Memory -------------------------------------------------
                             // "/usr/mallocTests.sweb",
-                            "/usr/growingStackTests.sweb",
+                            // "/usr/growingStackTests.sweb",
 
 // SEM & COND -------------------------------------------------
                             // "/usr/condTests.sweb",
