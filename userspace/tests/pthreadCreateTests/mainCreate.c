@@ -14,6 +14,7 @@ extern int pc5();
 extern int pc6();
 extern int pc7();
 extern int pc8();
+extern int pc9();
 
 
 void check_return_value(int testnumber, int rv, int* successful_tests, char* description)
@@ -80,14 +81,19 @@ int childMain()
     number_of_tests++;
     check_return_value(8, rv, &successful_tests, "invalid userspace addresss as thread_id");
 
+    rv = pc9();  // 100 threads calling 100 pcreate at the same time, and the parameters and return value should be unique
+    number_of_tests++;
+    check_return_value(9, rv, &successful_tests, 
+            "100 threads calling 100 pcreate at the same time, Also test the parameters and return value of all threads shouldnt get mixed up");
+
 
     if(successful_tests == number_of_tests)
     {
-        printf("\n\n===All pthreadCreate() testcases successful===\n");
+        printf("\n\n===  All pthreadCreate() testcases successful  ===\n");
     }
     else
     {
-        printf("\n\n===pthreadCreate() testcases fail===\n");
+        printf("\n\n===  pthreadCreate() testcases fail  ===\n");
         assert(0);
     }
 
@@ -117,12 +123,12 @@ int main()
         int num = get_thread_count();
         if (num == 4 || num == 6)
         {
-            printf("===All threads are destroyed correctly===\n");
+            printf("===  All threads are destroyed correctly  ===\n");
             return 0;
         }
         else
         {
-            printf("===%d threads are still alive===\n", num);
+            printf("===  %d threads are still alive===  \n", num);
             return -1;
         }
         
