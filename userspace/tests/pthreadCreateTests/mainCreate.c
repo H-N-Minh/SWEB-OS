@@ -31,7 +31,7 @@ void check_return_value(int testnumber, int rv, int* successful_tests, char* des
         if(PRINT_DESCRIPTION)
         {
             printf("-------------------------------------------------------------\n");
-            printf("PthreadChreate:Test %d successful!\n", testnumber);
+            printf("PthreadChreate:Test %d fail!\n", testnumber);
             printf("Description: %s\n", description);
             printf("_____________________________________________________________\n\n");
         }

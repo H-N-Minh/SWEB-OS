@@ -1,4 +1,6 @@
 #include "wait.h"
+#include "../../../common/include/kernel/syscall-definitions.h"
+#include "sys/syscall.h"
 
 /**
  * function stub
@@ -6,7 +8,8 @@
  */
 pid_t waitpid(pid_t pid, int *status, int options)
 {
-  return -1;
+  return __syscall(sc_wait_pid, (long int)pid, (size_t )status, (size_t )options, 0x0, 0x0);
+
 }
 
 
