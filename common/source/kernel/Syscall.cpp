@@ -378,7 +378,6 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
     return -1U;
   }
 
-
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
@@ -389,38 +388,23 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
   if (fd == fd_stdout)
   {
     debug(SYSCALL, "Syscall::write: Writing to stdout\n");
-    kprintf("%.*s", (int)size, (char*) buffer);
     current_process.localFileDescriptorTable.lfds_lock_.release();
     return size;
   }
-  else if (localFileDescriptor != nullptr) {
-    // Pipe* pipe = FileDescriptorManager::getInstance().getAssociatedPipe(fd);
-    // if (pipe != nullptr) {
-    //   size_t num_written = 0;
-    //   char* buf = reinterpret_cast<char*>(buffer);
+  else if (localFileDescriptor != nullptr)
+  {
+    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
-    //   while (num_written < size) {
-    //     if (!pipe->write(buf[num_written])) {
-    //       break;
-    //     }
-
-    //     num_written++;
-    //   }
-    //   current_process.localFileDescriptorTable.lfds_lock_.release();
-    //   return num_written;
-    // } else {
-      FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
-      assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
-
-      size_t global_fd = global_fd_obj->getFd();
-      size_t num_written = VfsSyscall::write(global_fd, (char *) buffer, size);
-      debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
-      current_process.localFileDescriptorTable.lfds_lock_.release();
-      return num_written;
-    // }
+    size_t global_fd = global_fd_obj->getFd();
+    size_t num_written = VfsSyscall::write(global_fd, (char *) buffer, size);
+    debug(SYSCALL, "Syscall::write: Wrote %zu bytes to global fd: %zu\n", num_written, global_fd);
+    current_process.localFileDescriptorTable.lfds_lock_.release();
+    return num_written;
   }
 
   debug(SYSCALL, "Syscall::write: No valid local file descriptor found for fd: %zu\n", fd);
+  current_process.localFileDescriptorTable.lfds_lock_.release();
   return -1U;
 }
 
@@ -448,24 +432,8 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
     debug(SYSCALL, "Syscall::read: Read %zu bytes from stdin\n", num_read);
     return num_read;
   }
-  else if (localFileDescriptor != nullptr) {
-    // Pipe* pipe = FileDescriptorManager::getInstance().getAssociatedPipe(fd);
-    // if (pipe != nullptr) {
-    //   size_t num_read = 0;
-    //   char* buf = reinterpret_cast<char*>(buffer);
-
-    //   while (num_read < count) {
-    //     char c;
-    //     if (!pipe->read(c)) {
-    //       break;
-    //     }
-
-    //     buf[num_read] = c;
-    //     num_read++;
-    //   }
-    //   current_process.localFileDescriptorTable.lfds_lock_.release();
-    //   return num_read;
-    // } else {
+  else if (localFileDescriptor != nullptr) 
+  {
       FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
       assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
@@ -474,7 +442,6 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
       debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
       current_process.localFileDescriptorTable.lfds_lock_.release();
       return num_read;
-    // }
   }
 
   debug(SYSCALL, "Syscall::read: No valid local file descriptor found\n");
