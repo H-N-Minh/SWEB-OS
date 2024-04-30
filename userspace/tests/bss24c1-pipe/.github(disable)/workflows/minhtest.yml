@@ -1,0 +1,38 @@
+name: minhtest
+
+on: [push]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+
+    - name: Set up environment
+      run: |
+        sudo apt-get update -y
+        sudo DEBIAN_FRONTEND=noninteractive apt-get install -y git cmake gcc g++ qemu-utils qemu-system-x86 python3-yaml
+    - name: Build
+      run: |
+        echo "Building newest commit in $GITHUB_REF!"
+        sh setup_cmake.sh
+        cd /tmp/sweb
+        make -j$(nproc)
+        
+    - name: Test
+      id: tests
+      run: |
+        git clone https://github.com/PaideiaDilemma/Tortillas.git ./tortillas
+        cd tortillas
+        OUTPUT=$(python3 -m tortillas -C $GITHUB_WORKSPACE/.github/tortillas_config.yml -S ..)
+        echo "::set-output name=result::$OUTPUT"
+        echo $OUTPUT
+
+    - name: Test and send report to Discord
+      if: always()
+      uses: Ilshidur/action-discord@master
+      with:
+        args: "${{ job.status }}: ${{ steps.tests.outputs.result }}"
+      env:
+        DISCORD_WEBHOOK: ${{ secrets.DISCORD_WEBHOOK }}

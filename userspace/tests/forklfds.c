@@ -40,7 +40,9 @@ int main() {
     printf("Reading from file: %s\n", TEST_FILE);
     printf("Before lseek\n");
     if (lseek(local_fd, 0, SEEK_SET) == -1) {
-      printf("lseek error");
+
+      printf("lseek error\n");
+
       return -1;
     }
     printf("After lseek, before read\n");

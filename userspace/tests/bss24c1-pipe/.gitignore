@@ -1,0 +1,35 @@
+*~
+*.o
+*.sw?
+.#*
+*#
+doc/
+CMakeFiles
+CMakeCache.txt
+cmake_install.cmake
+Makefile
+./bin
+
+# Generated C++ files
+utils/add-debug/*/to_string.cc
+
+# IDE Files
+sweb.kdev*
+.settings
+.project
+.cproject
+.cdtproject
+.cdtbuild
+.idea
+cmake-build-*/*
+
+# OS-specific files
+*.DS_Store
+*Thumbs.db
+userspace/tests/pthreadCreate
+.vscode/launch.json
+.vscode/settings.json
+.vscode/tasks.json
+arch/x86/64/CMakeLists.include
+
+
