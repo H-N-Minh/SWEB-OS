@@ -99,7 +99,7 @@ int childMain()
     else
     {
         printf("\n\n===  pthreadCreate() testcases fail  ===\n");
-        assert(0);
+        return -1;
     }
 
     return 0;

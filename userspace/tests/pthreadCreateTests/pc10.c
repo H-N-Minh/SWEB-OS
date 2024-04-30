@@ -39,8 +39,9 @@ void* thread_func10_2(void* arg)
   assert(local_var == 56 );
 
   int flag2 = 0;
-  flag2_addr = &flag2;
+
   local_addr = &local_var;
+  flag2_addr = &flag2;
   
   while (flag2 != 1)
   {
