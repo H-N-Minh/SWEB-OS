@@ -4,7 +4,6 @@
 #include "wait.h"
 #include "pthread.h"
 
-
 extern int fork1();
 extern int fork2();
 extern int fork3();
@@ -84,6 +83,7 @@ int childMain()
         else                                  { printf("===> fork6 failed!\n"); return -1;}
     }
 
+    printf("\n\n===  All fork testcases successful  ===\n");
     return 0;
 }
 

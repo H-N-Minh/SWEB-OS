@@ -3,44 +3,81 @@
 #include "unistd.h"
 #include "pthread.h"
 #include "assert.h"
+#include "sched.h"
+#include "wait.h"
 
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
 
-#define NUM_THREADS 20     // without swaping, max is 20 threads, which fork into 40 threads and 20 processes
+#define NUM_THREADS 100     // 100 threads, which fork into 200 threads and 100 processes
 
-int fork6_global_var = 0;
+#define FAILURE9 666
 
-// test the locking of archmemory: create multiple threads of same process then fork at same time,
-// NOTE: not a really good test for locking, more like testing pthread_create and fork at the same time
-void* threadFunction(void* arg) {
+int bruv6 = 0;
+int all_threads_created9 = 0;
+
+
+size_t threadFunction6()
+{
+    while(!all_threads_created9){sched_yield();}
+    
     pid_t pid = fork();
     if (pid == 0) {
         // Child process
-        fork6_global_var += 69;
-        assert(fork6_global_var == 69 && "fork6_global_var should be 69 in every child process");
-    } else if (pid > 0) {
-        assert(fork6_global_var == 0 && "fork6_global_var should be 0 in every threads of parent process");
-    } else {
-        // Fork failed
-        printf("Fork failed in fork6\n");
-    }
-    
-    return NULL;
-}
-
-int fork6() {
-    pthread_t threads[NUM_THREADS];
-    
-    for (int i = 0; i < NUM_THREADS; i++) {
-        if (pthread_create(&threads[i], NULL, threadFunction, NULL) != 0) {
-            return -1;
+        bruv6 += 69;
+        assert(bruv6 == 69 && "fork6_global_var should be 69 in every child process");
+        exit(CHILD_SUCCESS);
+    } 
+    else if (pid > 0) 
+    {
+        int copy = bruv6;
+        copy += 420;
+        assert(copy == 420 && "fork6_global_var should be 420 in every threads of parent process");
+        int status;
+        waitpid(pid, &status, 0);
+        if (status == CHILD_SUCCESS)
+        {
+            return CHILD_SUCCESS;
         }
     }
-    
-    for (int i = 0; i < NUM_THREADS; i++) {
-        pthread_join(threads[i], NULL);
+    return FAILURE9;
+}
+
+
+
+//Test: 100 threads calling 100 fork at the same time
+int fork6() 
+{
+    pthread_t thread_id[NUM_THREADS];
+
+    // create 100 threads
+    for(int i = 0; i < NUM_THREADS; i++)
+    {
+        size_t rv = pthread_create(&thread_id[i], NULL, (void * (*)(void *))threadFunction6, NULL);
+        assert(rv == 0);
     }
 
-    return PARENT_SUCCESS;      // if reach this point without assert error then child process is successful too
+    for (size_t i = 0; i < 200000000; i++)  // wait a bit for all thread to be fully initialzied
+    {
+      /* code */
+    }
+    
+    all_threads_created9 = 1;
+    // all threads should now call fork at the same time
+
+    // joining all threads and checking return value
+    for(int i = 0; i < NUM_THREADS; i++)
+    {
+      size_t retval;
+      int rv = pthread_join(thread_id[i], (void**)&retval);
+      assert(rv == 0);
+      if ( retval != CHILD_SUCCESS)
+      {
+        return -1;
+      }
+    }
+
+    return PARENT_SUCCESS;
 }
+
+
