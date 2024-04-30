@@ -10,6 +10,7 @@ extern int fork3();
 extern int fork4();
 extern int fork5();
 extern int fork6();
+extern int fork7();
 
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
@@ -24,6 +25,7 @@ extern int fork6();
 #define FORK4 1     // this tests multiple nested forks (each child will fork again)
 #define FORK5 1     // this tests multiple nested forks (same thread will fork multiple times)
 #define FORK6 1     // 100 pcreate then all fork at same time
+#define FORK7 1     // fork with waitpid
 
 int childMain()
 {
@@ -81,6 +83,15 @@ int childMain()
         if (retval == PARENT_SUCCESS)         { printf("===> fork6 successful!\n"); }
         else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }
         else                                  { printf("===> fork6 failed!\n"); return -1;}
+    }
+
+    if (FORK7)
+    {
+        printf("\nTesting fork7: fork with waitpid...\n");
+        retval = fork7();
+        if (retval == PARENT_SUCCESS)         { printf("===> fork7 successful!\n"); }
+        else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }
+        else                                  { printf("===> fork7 failed!\n"); return -1;}
     }
 
     printf("\n\n===  All fork testcases successful  ===\n");

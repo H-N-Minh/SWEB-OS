@@ -3,7 +3,7 @@
 #include "assert.h"
 #include "sched.h"
 
-#define NUM_THREADS 250
+#define NUM_THREADS 350
 
 int all_threads_created = 0;
 int check_in [NUM_THREADS] = {0};
