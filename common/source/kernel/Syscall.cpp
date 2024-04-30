@@ -143,7 +143,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 {
-  debug(SYSCALL, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
+  //debug(SYSCALL, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
