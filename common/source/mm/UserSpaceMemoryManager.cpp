@@ -171,7 +171,7 @@ int UserSpaceMemoryManager::sanityCheck(size_t address)
     return 0;
   }
   UserThread* current_thread = (UserThread*) currentThread;
-  if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE))
+  if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE + sizeof(size_t)))
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is not in range of growing stack\n");
     return 0;
