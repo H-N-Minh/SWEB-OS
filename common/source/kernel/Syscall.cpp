@@ -17,7 +17,6 @@
 #include "PageManager.h"
 #include "ArchThreads.h"
 #include "UserSpaceMemoryManager.h"
-#include "ProcessRegistry.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -130,9 +129,6 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_brk:
       // return_value = brkMemory(arg1);
       break;
-    case sc_wait_pid:
-       return_value = wait_pid((int)arg1, (size_t)arg2, arg3);
-      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -143,7 +139,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 {
-  debug(SYSCALL, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
+  //debug(SYSCALL, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
@@ -253,9 +249,6 @@ uint32 Syscall::forkProcess()
   else
   {
     debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
-    //ProcessRegistry* processRegistry = ProcessRegistry::instance();
-    //processRegistry->addProcess(child);
-
     return (uint32) currentThread->user_registers_->rax;
   }
 }
@@ -312,25 +305,21 @@ int Syscall::pthreadCancel(size_t thread_id)
 
 
 void Syscall::exit(size_t exit_code)
+
 {
-  debug(SYSCALL, "-----------------Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
+  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zdd\n", currentThread->getTID(), exit_code);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-
-  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
-  ProcessRegistry::instance()->process_exit_status_map_[current_process.pid_] = exit_code;
-  ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
-  ProcessRegistry::instance()->process_exit_status_map_lock_.release();
-
   if (exit_code != 69)
   {
     debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
   }
 
+
+
   current_process.exitProcess(exit_code);
   assert(false && "This should never happen");
 }
-
 
 int Syscall::execv(const char *path, char *const argv[])
 {
@@ -617,50 +606,41 @@ bool Syscall::check_parameter(size_t ptr, bool allowed_to_be_null)
 
 int Syscall::pthread_setcancelstate(int state, int *oldstate)
 {
-  if(!Syscall::check_parameter((size_t)oldstate, false))
-  {
-    return -1;
-  }
-  UserThread& currentUserThread = *((UserThread*)currentThread);
   if(state != CancelState::PTHREAD_CANCEL_DISABLE && state != CancelState::PTHREAD_CANCEL_ENABLE)
   {
     debug(SYSCALL, "Syscall::pthread_setcancelstate: given state is not recognizable\n");
     return -1;
   }
   debug(SYSCALL, "Syscall::pthread_setcancelstate: thread (%zu) is setted cancel state to (%d)\n", currentThread->getTID(), state);
-  currentUserThread.cancel_state_type_lock_.acquire();
-  *oldstate = (int) currentUserThread.cancel_state_;
+  ((UserThread*) currentThread)->cancel_state_type_lock_.acquire();
+  *oldstate = (int) ((UserThread*) currentThread)->cancel_state_;
 
-  currentUserThread.cancel_state_ = (CancelState)state;
+  ((UserThread*) currentThread)->cancel_state_ = (CancelState)state;
 
-  currentUserThread.cancel_state_type_lock_.release();
+  debug(SYSCALL, "current state %s, previous state %s\n",
+        state == CancelState::PTHREAD_CANCEL_ENABLE ? "ENABLED" : "DISABLED",
+        *oldstate == CancelState::PTHREAD_CANCEL_ENABLE ? "ENABLED" : "DISABLED");
+  ((UserThread*) currentThread)->cancel_state_type_lock_.release();
   return 0;
 }
 
 int Syscall::pthread_setcanceltype(int type, int *oldtype)
 {
-  if(!Syscall::check_parameter((size_t)oldtype, false))
-  {
-    return -1;
-  }
-  UserThread& currentUserThread = *((UserThread*)currentThread);
-  if(type != CancelType::PTHREAD_CANCEL_ASYNCHRONOUS && type != PTHREAD_CANCEL_DEFERRED)
-  {
-      debug(SYSCALL, "Syscall::pthread_setcanceltype: given type is not recognizable\n");
-      return -1;
-  }
-  currentUserThread.cancel_state_type_lock_.acquire();
-  CancelType previous_type =  currentUserThread.cancel_type_;
-  if(previous_type == PTHREAD_CANCEL_EXIT)
-  {
-     currentUserThread.cancel_state_type_lock_.release();
-    return -1;
-  }
-  *oldtype = (int)previous_type;
-  currentUserThread.cancel_type_ = (CancelType)type;
+    if(type != CancelType::PTHREAD_CANCEL_ASYNCHRONOUS && type != PTHREAD_CANCEL_DEFERRED)
+    {
+        debug(SYSCALL, "Syscall::pthread_setcanceltype: given type is not recognizable\n");
+        return -1;
+    }
+    ((UserThread*) currentThread)->cancel_state_type_lock_.acquire();
+    CancelType previous_type = ((UserThread*) currentThread)->cancel_type_;
+    *oldtype = (int)previous_type;
+    ((UserThread*) currentThread)->cancel_type_ = (CancelType)type;
 
-  currentUserThread.cancel_state_type_lock_.release();
-  return 0;
+    debug(SYSCALL, "current type %s, previous type %s\n",
+          type == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS",
+          *oldtype == CancelType::PTHREAD_CANCEL_DEFERRED ? "DEFERRED" : "ASYNCHRONOUS");
+    ((UserThread*) currentThread)->cancel_state_type_lock_.release();
+    return 0;
 }
 
 unsigned int Syscall::clock(void)
@@ -703,13 +683,3 @@ uint64_t Syscall::get_current_timestamp_64_bit()
   return ((uint64_t)edx<<32) + eax;
 }
 
-long int Syscall::wait_pid(long int pid, size_t status, size_t options)
-{
-  if (pid < 0)
-  {
-    return -1;
-  }
-
-  UserProcess* current_process = ((UserThread*) currentThread)->process_;
-  return current_process->waitProcess(pid, (int*) status, options);
-}

@@ -158,7 +158,6 @@ void UserThread::send_kill_notification()
   currentUserThread.join_threads_.clear();
 }
 
-
 bool UserThread::schedulable()
 {
   bool running = (getState() == Running);
@@ -180,21 +179,16 @@ bool UserThread::schedulable()
     waiting_for_lock = 1;
   }
 
-  if(wants_to_be_canceled_ 
-      && (switch_to_userspace_ || waiting_for_lock)
-      && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
+  if(wants_to_be_canceled_ && switch_to_userspace_
+    && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE)))
   {
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());
-    if (!switch_to_userspace_ && waiting_for_lock)  // TODO: maybe find a cleaner way to do this
-    {
-      *request_to_sleep_translated = 0;
-      *thread_waiting_for_lock_ptr = 0;
-      return true;
-    }
+
+    *request_to_sleep_translated = 0;
+    *thread_waiting_for_lock_ptr = 0;
     
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     kernel_registers_->rdi     = (size_t)-1;
-    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
     switch_to_userspace_ = 0;
     return true;
   }
@@ -314,8 +308,6 @@ void UserThread::exitThread(void* value_ptr)
   }
   join_state_lock_.release();
 
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
-  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
 
   if(process_->threads_.size() == 1)  // only one thread left
   {
@@ -323,8 +315,11 @@ void UserThread::exitThread(void* value_ptr)
     process_->one_thread_left_ = true;
     process_->one_thread_left_condition_.signal();
     process_->one_thread_left_lock_.release();
+
   }
 
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
   process_->threads_lock_.release();
   kill();
 

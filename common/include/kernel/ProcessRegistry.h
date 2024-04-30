@@ -5,6 +5,8 @@
 #include "Mutex.h"
 #include "Condition.h"
 
+//#include "uvector.h"
+
 class ProcessRegistry : public Thread
 {
   public:
@@ -38,14 +40,6 @@ class ProcessRegistry : public Thread
 
     static ProcessRegistry* instance();
     void createProcess(const char* path);
-
-    //ustl::vector<UserProcess*> processes_;
-    //void addProcess(UserProcess* process);
-
-    Condition process_exit_status_map_condition_;
-
-    Mutex process_exit_status_map_lock_;
-    ustl::map<size_t, size_t> process_exit_status_map_;
 
 
   private:

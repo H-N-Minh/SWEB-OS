@@ -10,9 +10,6 @@
 #define sc_write 4
 #define sc_open 5
 #define sc_close 6
-
-#define sc_wait_pid 7
-
 #define sc_lseek 19
 #define sc_pseudols 43
 #define sc_outline 105

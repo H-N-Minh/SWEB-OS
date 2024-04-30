@@ -59,8 +59,6 @@ class UserProcess
         bool check_parameters_for_exec(char *const argv[], int& argc, int& array_offset);
         void waitForThreadsToDie();
 
-        static void write_to_page(size_t ppn, size_t next_page, size_t offset, char* string, int len_string);
-
 
         void unmapThreadStack(ArchMemory* arch_memory, size_t top_stack);
 
@@ -93,7 +91,5 @@ class UserProcess
         LocalFileDescriptorTable localFileDescriptorTable;
 
         ustl::string str() const;
-
-        long int waitProcess(long int pid, int* status, int options);
 };
 

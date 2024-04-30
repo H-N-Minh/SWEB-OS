@@ -326,12 +326,12 @@ void PageManager::incrementReferenceCount(uint64 page_number)
   if (it != page_reference_counts_.end())
   {
     //page number found, increment
-    page_reference_counts_[page_number]++;
+    page_reference_counts_[page_number].reference_count++;
   }
   else
   {
     //page number not found, initialize reference count to 1
-    page_reference_counts_[page_number] = 1;
+    page_reference_counts_[page_number].reference_count = 1;
   }
 }
 
@@ -343,10 +343,10 @@ void PageManager::decrementReferenceCount(uint64 page_number)
   if (it != page_reference_counts_.end())
   {
     //decrement the reference count
-    page_reference_counts_[page_number]--;
+    page_reference_counts_[page_number].reference_count--;
 
     //if reference count reaches zero, erase the entry from the map
-    if (it->second == 0)
+    if (it->second.reference_count == 0)
     {
       page_reference_counts_.erase(it);
     }
@@ -360,7 +360,7 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
   auto it = page_reference_counts_.find(static_cast<uint32>(page_number));
   if (it != page_reference_counts_.end())
   {
-    return it->second;
+    return it->second.reference_count;
   }
   else
   {
