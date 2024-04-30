@@ -705,7 +705,7 @@ uint64_t Syscall::get_current_timestamp_64_bit()
   return ((uint64_t)edx<<32) + eax;
 }
 
-long int Syscall::wait_pid(long int pid, int* status, size_t options)
+long int Syscall::wait_pid(long int pid, size_t status, size_t options)
 {
   if (pid <= 0 || options != 0)
   {
@@ -713,5 +713,5 @@ long int Syscall::wait_pid(long int pid, int* status, size_t options)
   }
 
   UserProcess* current_process = ((UserThread*) currentThread)->process_;
-  return current_process->waitProcess(pid, status, options);
+  return current_process->waitProcess(pid, (int*)status, options);
 }

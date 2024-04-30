@@ -353,16 +353,22 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     //nullterminate the array of pointers
     UserProcess::write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&null , POINTER_SIZE);
   }
+
+  VfsSyscall::close(fd_);
+  
+  loader_->replaceLoader(execv_fd);
+  localFileDescriptorTable.closeAllFileDescriptors();
   
   execv_fd = VfsSyscall::open(kernel_path, O_RDONLY);
-
+  fd_ = execv_fd;
+  
   //delete the archmemory of current thread besides first page of current stack
   loader_->arch_memory_.deleteEverythingExecpt(currentUserThread.vpn_stack_);
   size_t old_cr3 = currentThread->user_registers_->cr3;
   //replace the loader of the current binary with the loader of the new binary
-  loader_->replaceLoader(execv_fd);
-  VfsSyscall::close(fd_);
-  fd_ = execv_fd;
+
+  
+  
 
   //create fresh user registers for the thread (only leave the cr3 the same)
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
