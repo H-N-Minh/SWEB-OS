@@ -40,7 +40,7 @@ public:
 
   int add(FileDescriptor* fd);
   int remove(FileDescriptor* fd);
-  bool remove(size_t fd_num);
+
   FileDescriptor* getFileDescriptor(uint32 fd);
 
 private:
