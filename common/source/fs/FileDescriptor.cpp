@@ -16,7 +16,7 @@ static size_t fd_num_ = 3;
 
 FileDescriptor::FileDescriptor(File* file) :
     fd_(ArchThreads::atomic_add(fd_num_, 1)),
-    file_(file)
+    file_(file), ref_count_(1)
 {
   debug(VFS_FILE, "Create file descriptor %u\n", getFd());
 }
@@ -30,18 +30,17 @@ FileDescriptor::~FileDescriptor()
 void FileDescriptor::incrementRefCount()
 {
   ref_count_.fetch_add(1);
-  debug(Fabi, "Incremented reference count3 for global FD %d. Current count3: %d\n", getFd(), getRefCount());
 }
+
 void FileDescriptor::decrementRefCount()
 {
   ref_count_.fetch_add(-1);
-  debug(Fabi, "Decremented reference count3 for global FD %d. Current count3: %d\n", getFd(), getRefCount());
 }
-
 int FileDescriptor::getRefCount() const
 {
-  return ref_count_.load();
+  return ref_count_;
 }
+
 
 FileDescriptorList::FileDescriptorList() :
     fds_(), fd_lock_("File descriptor list lock")
@@ -70,6 +69,7 @@ int FileDescriptorList::add(FileDescriptor* fd)
     }
   }
 
+  fd->incrementRefCount();
   fds_.push_back(fd);
 
   return 0;
@@ -85,11 +85,11 @@ int FileDescriptorList::remove(FileDescriptor* fd)
     {
       fds_.erase(it);
 
-//      fd->decrementRefCount();
-//      if (fd->getRefCount() == 0)
-//      {
-//        delete fd;
-//      }
+      fd->decrementRefCount();
+      if (fd->getRefCount() == 0)
+      {
+        delete fd;
+      }
 
       return 0;
     }
