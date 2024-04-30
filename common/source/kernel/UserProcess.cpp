@@ -190,13 +190,13 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
+    arch_memory->lock_.acquire();
     if (arch_memory->checkAddressValid(top_stack))
     {
       size_t* guard1 = (size_t*) top_stack;
       size_t* guard2 = (size_t*) (top_stack - sizeof(size_t) * (META_SIZE - 1) );
       *guard1 = 0;
       *guard2 = 0;
-      arch_memory->lock_.acquire();
       arch_memory->unmapPage(top_vpn);
       arch_memory->lock_.release();
       top_vpn--;
@@ -204,6 +204,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
     }
     else
     {
+      arch_memory->lock_.release();
       break;
     }
   }

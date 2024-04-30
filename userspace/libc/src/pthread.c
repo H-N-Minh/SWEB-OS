@@ -168,24 +168,18 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
         break;
       }
     }
-    //*mutex_flag = 1;
-    //pthread_spin_unlock(&mutex->mutex_lock_);
     mutex->mutex_lock_.held_by_ = 0;
     asm("xchg %0,%1"
           : "=r" (*mutex_flag)
           : "m" (mutex->mutex_lock_.locked_), "0" (*mutex_flag)
           : "memory");
     __syscall(sc_sched_yield, 0x0, 0x0, 0x0, 0x0, 0x0);
-    //pthread_spin_lock(&mutex->mutex_lock_);
   }
-  // if(counter1 != 0 && counter1 != 1)
-  //   assert(0 && "yield more than once");
-    //printf("counterabc %d\n", counter1);
+
   mutex->locked_ = 1;
   mutex->held_by_ = mutex_waiter_list;
   rv= pthread_spin_unlock(&mutex->mutex_lock_);
   assert(rv == 0);
-  //assert(mutex->held_by_ == mutex_waiter_list && "Held by differs from thread currently holding the lock");
   return 0;
 }
 
@@ -507,8 +501,6 @@ int pthread_spin_init(pthread_spinlock_t *lock, int pshared)
  */
 int pthread_spin_lock(pthread_spinlock_t *lock)
 {
-  // size_t stack_variable;
-  // size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096 - sizeof(size_t));
   size_t* current_thread_ptr = (size_t*) getTopOfFirstStack();
   assert(current_thread_ptr && "top_stack cant be found");
 
@@ -536,8 +528,6 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
  */
 int pthread_spin_trylock(pthread_spinlock_t *lock)
 {
-  // size_t stack_variable;
-  // size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096 - sizeof(size_t));
   size_t* current_thread_ptr = (size_t*) getTopOfFirstStack();
   assert(current_thread_ptr && "top_stack cant be found");
   if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || lock->held_by_ == current_thread_ptr)
@@ -569,8 +559,6 @@ int pthread_spin_trylock(pthread_spinlock_t *lock)
  */
 int pthread_spin_unlock(pthread_spinlock_t *lock)
 {
-  // size_t stack_variable;
-  // size_t* current_thread_ptr = (size_t*)((size_t)&stack_variable + 4096 - (size_t)(&stack_variable)%4096 - sizeof(size_t));
   size_t* current_thread_ptr = (size_t*) getTopOfFirstStack();
   assert(current_thread_ptr && "top_stack cant be found");
   if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || !lock->locked_ || current_thread_ptr != lock->held_by_)
@@ -775,17 +763,4 @@ int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate)
     return -1;
   *detachstate = attr->detach_state;
   return 0;
-}
-
-int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize)
-{
-  return -1;
-  // if (attr == NULL || attr->initialized != 1 || stacksize < PTHREAD_STACK_MIN)
-  // {
-  //   return -1;
-  // }
-
-  // attr->stack_size = stacksize;
-
-  // return 0;
 }

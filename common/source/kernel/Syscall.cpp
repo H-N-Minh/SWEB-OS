@@ -269,8 +269,6 @@ uint32 Syscall::pipe(int file_descriptor_array[2])
 
 }
 
-
-// TODOs: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
   debug(FORK, "Syscall::forkProcess: start focking \n");
