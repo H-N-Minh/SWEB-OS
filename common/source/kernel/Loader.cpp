@@ -9,6 +9,8 @@
 #include "File.h"
 #include "FileDescriptor.h"
 #include "Scheduler.h"
+#include "UserThread.h"
+#include "UserProcess.h"
 
 Loader::Loader(ssize_t fd) : fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0){}
 
@@ -179,6 +181,8 @@ void Loader::replaceLoader(int32 execv_fd)
 
   phdrs_.clear();
   
+  ((UserThread*)currentThread)->process_->localFileDescriptorTable.closeAllFileDescriptors();
+  VfsSyscall::close(fd_);
 
   fd_ = execv_fd;
 
