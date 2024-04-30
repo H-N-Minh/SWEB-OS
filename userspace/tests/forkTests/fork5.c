@@ -23,16 +23,15 @@ int fork5() {
             continue;    // parent continues to fork
         } 
         else if (pid == 0) {   // child dies
-            assert(x == i  && "value x of the child should be the same as parent after fork");
-            return CHILD_SUCCESS;       // it says child process but the name here is only relative
+            assert(x == i  && "value x of the child should not be increased after fork");
+            return CHILD_SUCCESS; 
         } 
         else {
-            // handle fork error
             return -1;
         }
     }
 
     // only 1 last process would reach here
-    assert(x == MAX_FORK  && "last process (the 100th process) should have x = 100");
+    assert(x == MAX_FORK  && "parent process (the 100th process) should now have x = 100");
     return PARENT_SUCCESS;
 }

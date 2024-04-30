@@ -24,7 +24,7 @@ extern int fork6();
 #define FORK3 1     // this tests fork then each calls pthread_create
 #define FORK4 1     // this tests multiple nested forks (each child will fork again)
 #define FORK5 1     // this tests multiple nested forks (same thread will fork multiple times)
-#define FORK6 1     // test the locking of archmemory (NOTE: not a really good test for locking)
+#define FORK6 1     // 100 pcreate then all fork at same time
 
 int childMain()
 {
@@ -32,50 +32,56 @@ int childMain()
 
     if (FORK1)
     {
+        printf("\nTesting fork1: basic test...\n");
         retval = fork1();
-        if (retval == PARENT_SUCCESS)         { printf("fork1 successful!\n"); } 
+        if (retval == PARENT_SUCCESS)         { printf("===> fork1 successful!\n"); } 
         else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      // this kills all child processes
-        else                                  { printf("fork1 failed!\n");  return -1;}
+        else                                  { printf("===> fork1 failed!\n");  return -1;}
     }
 
     if (FORK2)
     {
+        printf("\nTesting fork2: 2 processes should have their own memory space...\n");
         retval = fork2();
-        if (retval == PARENT_SUCCESS)         { printf("fork2 successful!\n"); } 
+        if (retval == PARENT_SUCCESS)         { printf("===> fork2 successful!\n"); } 
         else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      
-        else                                  { printf("fork2 failed!\n"); return -1;}
+        else                                  { printf("===> fork2 failed!\n"); return -1;}
     }
 
     if (FORK3)
     {
+        printf("\nTesting fork3: fork and then pcreate...\n");
         retval = fork3();
-        if (retval == PARENT_SUCCESS)         { printf("fork3 successful!\n"); } 
+        if (retval == PARENT_SUCCESS)         { printf("===> fork3 successful!\n"); } 
         else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      
-        else                                  { printf("fork3 failed!\n"); return -1;}
+        else                                  { printf("===> fork3 failed!\n"); return -1;}
     }
 
     if (FORK4)
     {
+        printf("\nTesting fork4: recursive fork (each child forks again)...\n");
         retval = fork4();
-        if (retval == PARENT_SUCCESS)         { printf("fork4 successful!\n"); } 
+        if (retval == PARENT_SUCCESS)         { printf("===> fork4 successful!\n"); } 
         else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      
-        else                                  { printf("fork4 failed!\n"); return -1;}
+        else                                  { printf("===> fork4 failed!\n"); return -1;}
     }
 
     if (FORK5)
     {
+        printf("\nTesting fork5: recursive fork (same parent fork multiple child)...\n");
         retval = fork5();
-        if (retval == PARENT_SUCCESS)         { printf("fork5 successful!\n"); } 
+        if (retval == PARENT_SUCCESS)         { printf("===> fork5 successful!\n"); } 
         else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }                      
-        else                                  { printf("fork5 failed!\n"); return -1;}
+        else                                  { printf("===> fork5 failed!\n"); return -1;}
     }
 
     if (FORK6)
     {
+        printf("\nTesting fork6: 100 pcreate then all fork at same time...\n");
         retval = fork6();
-        if (retval == PARENT_SUCCESS)         { printf("fork6 successful!\n"); }
+        if (retval == PARENT_SUCCESS)         { printf("===> fork6 successful!\n"); }
         else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }
-        else                                  { printf("fork6 failed!\n"); return -1;}
+        else                                  { printf("===> fork6 failed!\n"); return -1;}
     }
 
     return 0;
@@ -102,7 +108,7 @@ int main()
             printf("Testing crashed with exit code %d\n", status);
             return -1;
         }
-        
+
         for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
         {
             /* code */

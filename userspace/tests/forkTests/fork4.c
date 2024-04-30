@@ -25,7 +25,7 @@ int fork4() {
             continue;    // child continues to fork
         } 
         else if (pid > 0) {   // parent dies
-            assert(x == i  && "value x of the parent should be the same after fork");
+            assert(x == i  && "value x of the parent should not be increased after fork, only childs does");
             if (first_parent)
             {
                 int status;
@@ -43,6 +43,6 @@ int fork4() {
     }
 
     // only 1 last process would reach here
-    assert(x == MAX_FORK  && "last process (the 100th process) should have x = 100");
+    assert(x == MAX_FORK  && "only the last process should reach here");
     return CHILD_SUCCESS;
 }
