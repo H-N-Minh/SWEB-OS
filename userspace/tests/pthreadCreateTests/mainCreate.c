@@ -1,5 +1,8 @@
 #include "stdio.h"
 #include "assert.h"
+#include "unistd.h"
+#include "wait.h"
+#include "pthread.h"
 
 #define PRINT_DESCRIPTION 1
 
@@ -10,8 +13,8 @@ extern int pc4();
 extern int pc5();
 extern int pc6();
 extern int pc7();
+extern int pc8();
 
-extern int pclast();
 
 void check_return_value(int testnumber, int rv, int* successful_tests, char* description)
 {
@@ -38,14 +41,14 @@ void check_return_value(int testnumber, int rv, int* successful_tests, char* des
     }
 }
 
-int main()
+int childMain()
 {
     int successful_tests = 0;
     int number_of_tests = 0;
     int rv;
     
 
-    rv = pc1();  //sanity checks
+    rv = pc1();  //sanity checks: wrong para
     number_of_tests++;
     check_return_value(1, rv, &successful_tests, "sanity checks");
 
@@ -57,9 +60,9 @@ int main()
     number_of_tests++;
     check_return_value(3, rv, &successful_tests, "starting 250 threads");
 
-    rv = pc4();  //check if to running threads have different id
+    rv = pc4();  //check if two running threads have different id
     number_of_tests++;
-    check_return_value(4, rv, &successful_tests, "check if to running threads have different id");
+    check_return_value(4, rv, &successful_tests, "check if two running threads have different id");
 
     rv = pc5();  //pthread create with argument
     number_of_tests++;
@@ -71,26 +74,59 @@ int main()
 
     rv = pc7();  //calling pthread_create inside pthread_create inside pthread_create
     number_of_tests++;
-    check_return_value(6, rv, &successful_tests, "rcalling pthread_create inside pthread_create inside pthread_create");
+    check_return_value(7, rv, &successful_tests, "calling pthread_create inside pthread_create inside pthread_create");
 
+    rv = pc8();  //calling pthread_create inside pthread_create inside pthread_create
+    number_of_tests++;
+    check_return_value(8, rv, &successful_tests, "invalid userspace addresss as thread_id");
 
-    printf("-------------------------------------------------------------\n");
-    printf("PthreadChreate:Test last successful! (if no assertion)\n");
-    printf("Description: invalid userspace addresss as thread_id\n");
-    printf("_____________________________________________________________\n\n");
 
     if(successful_tests == number_of_tests)
     {
-        printf("\n\nAll pthreadCreate() testcases successful\n");
+        printf("\n\n===All pthreadCreate() testcases successful===\n");
     }
     else
     {
-        printf("\n\npthreadCreate() testcases fail\n");
+        printf("\n\n===pthreadCreate() testcases fail===\n");
         assert(0);
     }
 
-    rv = pclast();  //invalid userspace addresss as thread_id (should kill process but no assertion)
-    assert(0);
+    return 0;
+}
 
+int main()
+{
+    pid_t pid = fork();
+    if (pid == 0) {
+        int child_exit_code = childMain();
+        exit(child_exit_code);
+    } 
+    {
+        int status;
+        waitpid(pid, &status, 0);
+        if (status != 0)
+        {
+            printf("Testing crashed with exit code %d\n", status);
+        }
+        
+        for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
+        {
+            /* code */
+        }
+
+        int num = get_thread_count();
+        if (num == 4 || num == 6)
+        {
+            printf("===All threads are destroyed correctly===\n");
+            return 0;
+        }
+        else
+        {
+            printf("===%d threads are still alive===\n", num);
+            return -1;
+        }
+        
+    }
+    return 0;
 }
                     

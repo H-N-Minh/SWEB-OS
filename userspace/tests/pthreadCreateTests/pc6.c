@@ -26,6 +26,12 @@ int pc6()
         int rv = pthread_create(&thread_id[i], NULL, (void * (*)(void *))function_pc6, NULL);
         assert(rv == 0);
     }
+
+    for (size_t i = 0; i < 200000000; i++)  // wait for all threads to be created
+    {
+      /* code */
+    }
+    
     all_threads_created = 1;
 
     for(int i = 0; i < NUM_THREADS; i++)
