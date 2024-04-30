@@ -26,7 +26,7 @@ size_t Pipe::read(char* buffer, size_t count) {
     }
 
     if (closed_ && !buffer_.get(c)) {
-      return num_read; // returns the number of characters read so far
+      return num_read;
     }
 
     buffer[num_read++] = c;
