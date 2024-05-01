@@ -62,9 +62,9 @@ int main()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "pthread_join where function is still running");
 
-    // rv = pj3();        //starting 2000 threads after each other and join them - takes forever
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "starting 2000 threads after each other and join them - takes forever");
+    rv = pj3();        //starting 2000 threads after each other and join them - takes forever
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "starting 2000 threads after each other and join them - takes forever");
 
     rv = pj4();          //try to join the same thread twice
     number_of_tests++;
@@ -86,9 +86,9 @@ int main()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "sanity checks");
 
-    rv = pj9();          //try to join myself
+    rv = pj9();         //Try to join thread with itself and try to join already joined thread
     number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "try to join myself");
+    check_return_value(number_of_tests, rv, &successful_tests, "try to join thread with itself and try to join already joined thread");
 
     rv = pd1();          //pthread detach if thread cannot be found, join after detach, try detach nonjoinable
     number_of_tests++; 
