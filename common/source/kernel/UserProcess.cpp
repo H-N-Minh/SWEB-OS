@@ -82,7 +82,19 @@ UserProcess::UserProcess(const UserProcess& other)
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
 
-//
+  for(auto &fd : other.localFileDescriptorTable.getLocalFileDescriptors())
+  {
+    auto* newLFD = new LocalFileDescriptor(*fd);
+    debug(FILEDESCRIPTOR, "UserProcess::ctor: Global FD = %u; RefCount = %d\n", newLFD->getGlobalFileDescriptor()->getFd(), newLFD->getGlobalFileDescriptor()->getRefCount());
+
+    int permissions = newLFD->getMode();
+    debug(FILEDESCRIPTOR, "Copy-ctor: Copied Local FD: %zu Permissions: %d\n", newLFD->getLocalFD(), permissions);
+    newLFD->getGlobalFileDescriptor()->incrementRefCount();
+    debug(Fabi, "UserProcess:: Global FD = %u; Local FD = %zu; RefCount = %d\n; Process ID = %u\n; Filename = %s", newLFD->getGlobalFileDescriptor()->getFd(), newLFD->getLocalFD(), newLFD->getGlobalFileDescriptor()->getRefCount(), pid_, filename_.c_str());
+
+    this->localFileDescriptorTable.addLocalFileDescriptor(newLFD);
+  }
+
 
   debug(USERPROCESS, "Copy-ctor: Done copying Thread, adding new thread id (%zu) to the Scheduler", child_thread->getTID());
   Scheduler::instance()->addNewThread(child_thread);

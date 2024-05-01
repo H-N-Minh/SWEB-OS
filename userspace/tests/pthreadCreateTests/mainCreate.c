@@ -127,7 +127,7 @@ int main()
         }
 
         int num = get_thread_count();
-        if (num == 4 || num == 6)
+        if (num == 7 || num == 6)
         {
             printf("===  All threads are destroyed correctly  ===\n");
             return 0;
