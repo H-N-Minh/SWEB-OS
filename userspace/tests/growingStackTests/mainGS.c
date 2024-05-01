@@ -22,9 +22,9 @@ extern int gs3();
 */
 
 // set to 1 to test, 0 to skip
-#define GS1 0     // basic test for growing stack
-#define GS2 0     // more advanced test for growing stack
-#define GS3 1     // test with multiple threads, each will grow its stack at the same time
+#define GS1 1     // basic test for growing stack
+#define GS2 1     // more advanced test for growing stack
+#define GS3 0     // test with multiple threads, each will grow its stack at the same time
 #define GS4 0     // test invalid growing stack (kill another thread then try to access it)
 
 int main()
@@ -77,12 +77,12 @@ int main()
     int num = get_thread_count();
     if (num == 4 || num == 6)
     {
-      printf("All threads are destroyed correctly\n");
+      printf("===  All threads are destroyed correctly\n   ===");
       return 0;
     }
     else
     {
-      printf("%d threads are still alive\n", num);
+      printf("===  %d threads are still alive\n   ===", num);
       return -1;
     }
     

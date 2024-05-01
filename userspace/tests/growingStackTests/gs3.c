@@ -1,100 +1,165 @@
 #include "stdio.h"
-#include "unistd.h"
-#include "assert.h"
+#include "stdlib.h"
 #include "pthread.h"
+#include "assert.h"
 
-#define PAGE_SIZE3 4096
-#define THREADS3 1
-#define STACK_SIZE2 (4 * 4096 - 6*sizeof(size_t)) // 4 pages - 6 bytes of metadata
+#define STACK_SIZE2 (4 * 4096 - 6) // 4 pages - 6 bytes of metadata
 
-pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond3 = PTHREAD_COND_INITIALIZER;
 
-size_t getTopOfThisStack3()
+void* growingFoward3()
 {
-  size_t stack_variable;
-  size_t top_stack = (size_t)&stack_variable - (size_t)(&stack_variable)%PAGE_SIZE3 + PAGE_SIZE3 - sizeof(size_t);
-  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-  return top_stack;
+  char stack_data[STACK_SIZE2];
+  for (int i = 0; i < STACK_SIZE2; i++)
+  {
+    stack_data[i] = 'A';
+  }
+
+  
+  for (size_t i = (STACK_SIZE2 - 1); i >= 0; i--)
+  {
+    if (stack_data[i] != 'A')
+    {
+      return (void*) -1;
+    }
+  }
+  return (void*) 0;
 }
 
-// Fucntion that grow to 4 pages
-void* growFunc3(void* arg)
+void* growingFoward3_2()
 {
-    printf("Thread waiting for broadcast signal before locking\n");
+  int x = 0;
+  size_t p = (size_t) &x;
 
-    // Wait for the broadcast signal from the main thread
-    pthread_mutex_lock(&mutex3);
-    printf("Thread waiting for broadcast signal\n");
-    pthread_cond_wait(&cond3, &mutex3);
-    printf("Thread received broadcast signal\n");
-    pthread_mutex_unlock(&mutex3);
-
-    printf("child Thread start growing\n");
-
-    size_t end_stack = getTopOfThisStack() - PAGE_SIZE3 * 4 + sizeof(size_t);
-    int x;
-    size_t p = (size_t) &x;
-    while (p >= end_stack)
+  for (int i = 0; i < STACK_SIZE2; i++)
+  {
+    *(int*) (p + i) = 'B';
+  }
+  
+  for (int i = 0; i < STACK_SIZE2; i++)
+  {
+    if (*(int*) (p + STACK_SIZE2 - 1 - i) != 'B')
     {
-        *(char*) p = 'D';
-        p -= 1;
+      return (void*) -1;
     }
-    
-    printf("child Thread finished growing\n");
-    p = end_stack;
-    while (p <= (size_t) &x)
-    {
-        if (*(char*) p != 'D')
-        {
-            printf(" p is (%zu) under x and (%zu) over end_stack\n", (((size_t) &x) - p), p - end_stack);
-            return (void*) -1;
-        }
-        p += 1;
-    }
-
-    printf("Thread finished\n");
-    return (void*) 69;
+  }
+  return (void*) 0;
 }
 
-// Test a very basic growing stack
+void* growingBackward3()
+{
+  char stack_data[STACK_SIZE2];
+  for (int i = (STACK_SIZE2 - 1); i >= 0; i--)
+  {
+    stack_data[i] = 'C';
+  }
+
+  
+  for (size_t i = 0; i < STACK_SIZE2; i++)
+  {
+    if (stack_data[i] != 'C')
+    {
+      return (void*) -1;
+    }
+  }
+  return (void*) 0;
+}
+
+void* growingBackward3_2()
+{
+  int x = 0;
+  size_t p = (size_t) &x;
+
+  for (int i = (STACK_SIZE2 - 1); i >= 0; i--)
+  {
+    *(int*) (p + i) = 'D';
+  }
+  
+  for (int i = 0; i < STACK_SIZE2; i++)
+  {
+    if (*(int*) (p + i) != 'D')
+    {
+      return (void*) -1;
+    }
+  }
+  return (void*) 0;
+}
+
+
+// 4 threads, 2 will grow from 1st page to last page (1 with array and 1 just manually byte by byte)
+//  the other 2 will grow from last page to 1st page (1 with array and 1 just manually byte by byte)
+// they all should success with return value 0
 int gs3()
 {
-    pthread_t threads[THREADS3];
+//   pthread_t thread1, thread2, thread3, thread4;
+  
+//   if (pthread_create(&thread1, NULL, growingFoward, NULL) != 0)
+//   {
+//     printf("Failed to create thread 1\n");
+//     return -1;
+//   }
+//   int retval1 = 0;
+//   if (pthread_join(thread1, (void**) &retval1) != 0)
+//   {
+//     printf("Failed to join thread 1\n");
+//     return -1;
+//   }
+//   if (retval1 != 0)
+//   {
+//     printf("growingFoward() failed\n");
+//     return -1;
+//   }
+//   /////////////////////////////////////////////////
+//   if (pthread_create(&thread2, NULL, growingFoward2, NULL) != 0)
+//   {
+//     printf("Failed to create thread 2\n");
+//     return -1;
+//   }
+//   int retval2 = 0;
+//   if (pthread_join(thread2, (void**) &retval2) != 0)
+//   {
+//     printf("Failed to join thread 2\n");
+//     return -1;
+//   }
+//   if (retval2 != 0)
+//   {
+//     printf("growingFoward2() failed\n");
+//     return -1;
+//   }
+//   /////////////////////////////////////////////////
+//   if (pthread_create(&thread3, NULL, growingBackward, NULL) != 0)
+//   {
+//     printf("Failed to create thread 3\n");
+//     return -1;
+//   }
+//   int retval3 = 0;
+//   if (pthread_join(thread3, (void**) &retval3) != 0)
+//   {
+//     printf("Failed to join thread 3\n");
+//     return -1;
+//   }
+//   if (retval3 != 0)
+//   {
+//     printf("growingBackward() failed\n");
+//     return -1;
+//   }
+//   /////////////////////////////////////////////////
+//   if (pthread_create(&thread4, NULL, growingBackward2, NULL) != 0)
+//   {
+//     printf("Failed to create thread 4\n");
+//     return -1;
+//   }
+//   int retval4 = 0;
+//   if (pthread_join(thread4, (void**) &retval4) != 0)
+//   {
+//     printf("Failed to join thread 4\n");
+//     return -1;
+//   }
+//   if (retval4 != 0)
+//   {
+//     printf("growingBackward2() failed\n");
+//     return -1;
+//   }
 
-    // Create threads and wait for broadcast signal
-    printf("Creating threads with func at %p\n", growFunc3);
-    for (int i = 0; i < THREADS3; i++) {
-        pthread_create(&threads[i], NULL, growFunc3, NULL);
-    }
-    printf("Threads created\n");
-    // // some delay so all threads can be initialized
-    for (size_t i = 0; i < 200000000; i++)
-    {
-        /* code */
-    }
 
-
-    // Broadcast signal to all threads
-    printf("Broadcasting signal before locking\n");
-    pthread_mutex_lock(&mutex3);
-    printf("Broadcasting signal\n");
-    pthread_cond_broadcast(&cond3);
-    printf("Broadcast signal sent\n");
-    pthread_mutex_unlock(&mutex3);
-
-    // Wait for all threads to finish
-    int retval[THREADS3];
-    for (int i = 0; i < THREADS3; i++) {
-        pthread_join(threads[i], (void**) (retval + i));
-    }
-    for (size_t i = 0; i < THREADS3; i++)
-    {
-        if (retval[i] != 69)
-        {
-            printf("Thread %zu failed\n", i);
-            return -1;
-        }
-    }
-    return 0;
+  return 0;
 }
