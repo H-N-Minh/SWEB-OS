@@ -320,11 +320,19 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   //allocate one (or two) physical pages for the arguments
   size_t page_for_args = PageManager::instance()->allocPPN();
+    if(page_for_args== 0)
+    {
+      assert(0 && "alloc ppn exec page for args\n");
+    }
   size_t next_page_for_args = NULL;
 
   if(exec_array_offset + (argc + 1) * POINTER_SIZE > PAGE_SIZE)
   {
     next_page_for_args = PageManager::instance()->allocPPN();
+    if(next_page_for_args== 0)
+    {
+      assert(0 && "alloc ppn exec next page for args\n");
+    }
   }
 
 

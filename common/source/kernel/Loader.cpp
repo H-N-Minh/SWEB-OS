@@ -72,6 +72,10 @@ void Loader::loadPage(pointer virtual_address)
     bool found_page_content = false;
     // get a new page for the mapping
     size_t ppn = PageManager::instance()->allocPPN();
+  if(ppn == 0)
+  {
+    assert(0 && "alloc failed load page\n");
+  }
 
     program_binary_lock_.acquire();
 
@@ -426,7 +430,11 @@ void Loader::copyPage(size_t virtual_addr)
 {
   PageTableEntry* entry = findPageTableEntry(virtual_addr);
 
-    size_t new_page_ppn = PageManager::instance()->allocPPN();
+  size_t new_page_ppn = PageManager::instance()->allocPPN();
+  if(new_page_ppn == 0)
+  {
+    assert(0 && "alloc failed copy page\n");
+  }
 
   PageManager::instance()->page_reference_counts_lock_.acquire();
     //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));

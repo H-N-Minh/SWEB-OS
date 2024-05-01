@@ -249,7 +249,8 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
   if (found == 0)
   {
-    assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
+    //assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
+    return 0;
   }
 
   const char* page_ident_addr = (const char*)ArchMemory::getIdentAddressOfPPN(found);

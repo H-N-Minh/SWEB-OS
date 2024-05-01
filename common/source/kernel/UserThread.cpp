@@ -23,6 +23,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
  
     page_for_stack_ = PageManager::instance()->allocPPN();
+    if(page_for_stack_ == 0)
+    {
+      assert(0 && "alloc ppn failed UserThread\n");
+    }
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
     loader_->arch_memory_.lock_.acquire();
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack_, 1);

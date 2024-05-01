@@ -17,6 +17,10 @@ ArchMemory::ArchMemory():lock_("archmemory_lock_")
 {
   lock_.acquire();
   page_map_level_4_ = PageManager::instance()->allocPPN();
+    if(page_map_level_4_== 0)
+              {
+              assert(0 && "alloc failed archmemory\n");
+                }
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
@@ -31,6 +35,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 
   debug(FORK, "ArchMemory::copy-constructor starts \n");
   page_map_level_4_ = PageManager::instance()->allocPPN();
+      if(page_map_level_4_== 0)
+              {
+              assert(0 && "alloc failed archmemory copy\n");
+                }
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
   memcpy((void*) CHILD_pml4, (void*) PARENT_pml4, PAGE_SIZE);
@@ -46,6 +54,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
     {
       // setup new page directory pointer table
       CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
+      if(PARENT_pml4[pml4i].present== 0)
+              {
+              assert(0 && "alloc failed archmemory copy\n");
+                }
 
       //CHILD_pml4[pml4i].page_ppn = PARENT_pml4[pml4i].page_ppn;
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
@@ -63,6 +75,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
         {
           // setup new page directory
           CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
+          if(CHILD_pdpt[pdpti].pd.page_ppn== 0)
+              {
+              assert(0 && "alloc failed archmemory copy\n");
+                }
 
           //CHILD_pdpt[pdpti].pd.page_ppn = PARENT_pdpt[pdpti].pd.page_ppn;
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
@@ -80,6 +96,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
             {
               // setup new page table
               CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
+                 if(CHILD_pd[pdi].pt.page_ppn== 0)
+              {
+              assert(0 && "alloc failed archmemory copy\n");
+                }
 
               //CHILD_pd[pdi].pt.page_ppn = PARENT_pd[pdi].pt.page_ppn;
               PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
@@ -296,18 +316,30 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   if (m.pdpt_ppn == 0)
   {
     m.pdpt_ppn = PageManager::instance()->allocPPN();
+    if(m.pdpt_ppn== 0)
+    {
+    assert(0 && "alloc failed mappage\n");
+    }
     insert<PageMapLevel4Entry>((pointer) m.pml4, m.pml4i, m.pdpt_ppn, 1, 0, 1, 1);
   }
 
   if (m.pd_ppn == 0)
   {
     m.pd_ppn = PageManager::instance()->allocPPN();
+    if(m.pd_ppn == 0)
+    {
+    assert(0 && "alloc failed  mappage\n");
+    }
     insert<PageDirPointerTablePageDirEntry>(getIdentAddressOfPPN(m.pdpt_ppn), m.pdpti, m.pd_ppn, 1, 0, 1, 1);
   }
 
   if (m.pt_ppn == 0)
   {
     m.pt_ppn = PageManager::instance()->allocPPN();
+    if(m.pt_ppn == 0)
+    {
+    assert(0 && "alloc failed mappage\n");
+    }
     insert<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi, m.pt_ppn, 1, 0, 1, 1);
   }
 
