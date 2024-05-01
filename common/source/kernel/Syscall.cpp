@@ -491,10 +491,10 @@ size_t Syscall::close(size_t fd)
 
     size_t global_fd = global_fd_obj->getFd();
     int result = 0;
-    if (global_fd_obj->getRefCount() == 1)
-    {
-      result = VfsSyscall::close(global_fd);
-    }
+    // if (global_fd_obj->getRefCount() == 1)
+    // {
+    //   result = VfsSyscall::close(global_fd);
+    // }
     if (result == 0)
     {
       current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
@@ -546,8 +546,9 @@ size_t Syscall::open(size_t path, size_t flags)
 
   debug(SYSCALL, "Syscall::open: Local file descriptor: %zu\n",
         localFileDescriptor->getLocalFD());
+  size_t local_file_descriptor = localFileDescriptor->getLocalFD();
   lfdTable.lfds_lock_.release();
-  return localFileDescriptor->getLocalFD();
+  return local_file_descriptor;
 }
 
 
@@ -663,11 +664,12 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
   }
   debug(SYSCALL, "Syscall::pthread_setcancelstate: thread (%zu) is setted cancel state to (%d)\n", currentThread->getTID(), state);
   currentUserThread.cancel_state_type_lock_.acquire();
-  *oldstate = (int) currentUserThread.cancel_state_;
+  int temp_oldstate = (int) currentUserThread.cancel_state_;
 
   currentUserThread.cancel_state_ = (CancelState)state;
 
   currentUserThread.cancel_state_type_lock_.release();
+  *oldstate = temp_oldstate;
   return 0;
 }
 
@@ -690,10 +692,11 @@ int Syscall::pthread_setcanceltype(int type, int *oldtype)
     currentUserThread.cancel_state_type_lock_.release();
     return -1;
   }
-  *oldtype = (int)previous_type;
+  int temp_oldtype = (int)previous_type;
   currentUserThread.cancel_type_ = (CancelType)type;
 
   currentUserThread.cancel_state_type_lock_.release();
+  *oldtype = temp_oldtype;
   return 0;
 }
 

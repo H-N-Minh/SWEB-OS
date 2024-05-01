@@ -1,6 +1,7 @@
 #include "LocalFileDescriptorTable.h"
 #include "debug.h"
 #include "UserThread.h"
+#include "File.h"
 
 LocalFileDescriptorTable* LocalFileDescriptorTable::instance_ = nullptr;
 
@@ -68,6 +69,7 @@ void LocalFileDescriptorTable::deleteGlobalFileDescriptor(FileDescriptor* global
   {
     debug(FILEDESCRIPTOR, "Failed to remove the global FD %d.\n", global_fd->getFd());
   }
+  global_fd->getFile()->closeFd(global_fd);
   delete global_fd;
   global_fd = nullptr;
 }
