@@ -8,7 +8,7 @@
 sem_t semaphore;
 int shared_counter = 0;
 
-void increment_counter()
+void increment_counter7()
 {
   for (int i = 0; i < ITERATIONS; ++i)
   {
@@ -18,7 +18,7 @@ void increment_counter()
   }
 }
 
-void decrement_counter()
+void decrement_counter7()
 {
   for (int i = 0; i < ITERATIONS; ++i)
   {
@@ -28,19 +28,20 @@ void decrement_counter()
   }
 }
 
-int main() {
+int sem7()
+{
   pthread_t threads[NUM_THREADS];
 
   sem_init(&semaphore, 0, 1);
 
   for (int i = 0; i < NUM_THREADS / 2; ++i)
   {
-    pthread_create(&threads[i], NULL, (void* (*)(void*))increment_counter, NULL);
+    pthread_create(&threads[i], NULL, (void* (*)(void*))increment_counter7, NULL);
   }
 
   for (int i = NUM_THREADS / 2; i < NUM_THREADS; ++i)
   {
-    pthread_create(&threads[i], NULL, (void* (*)(void*))decrement_counter, NULL);
+    pthread_create(&threads[i], NULL, (void* (*)(void*))decrement_counter7, NULL);
   }
 
   for (int i = 0; i < NUM_THREADS; ++i)
@@ -51,6 +52,8 @@ int main() {
   printf("Final value of shared_counter: %d\n", shared_counter);
 
   sem_destroy(&semaphore);
-
-  return 0;
+  if(shared_counter == 0)
+    return 0;
+  else
+    return -1;
 }
