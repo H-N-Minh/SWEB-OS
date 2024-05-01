@@ -150,11 +150,14 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
+  
+  current_process.localFileDescriptorTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
   if (localFileDescriptor == nullptr)
   {
     debug(SYSCALL, "Syscall::lseek - Invalid local file descriptor: %zu\n", fd);
+    current_process.localFileDescriptorTable.lfds_lock_.release();
     return -1;
   }
 
@@ -166,6 +169,7 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 
   l_off_t position = VfsSyscall::lseek(global_fd, offset, whence);
   //debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
+   current_process.localFileDescriptorTable.lfds_lock_.release();
   return position;
 }
 

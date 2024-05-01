@@ -9,7 +9,7 @@
 int main() {
   char buf[BUF_SIZE];
   int local_fd;
-  ssize_t bytesRead, bytesWritten;
+  size_t bytesRead, bytesWritten;
 
   printf("Opening file: %s\n", TEST_FILE);
   local_fd = open(TEST_FILE, O_RDWR);
@@ -46,11 +46,11 @@ int main() {
     printf("After lseek, before read\n");
     bytesRead = read(local_fd, buf, BUF_SIZE - 1);
     printf("After read\n");
-    if (bytesRead < 0) {
+    if (bytesRead < 0 || bytesRead > BUF_SIZE) {
       printf("Failed to read from file\n");
       return -1;
     }
-    buf[bytesRead] = '\0';
+    buf[BUF_SIZE] = '\0';
     printf("Read from file: %s\n", buf);
 
     printf("Closing file: %s\n", TEST_FILE);
@@ -75,9 +75,10 @@ int main() {
   printf("Writing to file: %s\n", TEST_FILE);
   char* writeData = ":/";
   printf("Before write operation in %s process, FD: %d\n", (pid == 0 ? "Child":"parent"), local_fd);
-  bytesWritten = write(local_fd, writeData, strlen(writeData));
+  bytesWritten = write(local_fd, writeData, strlen(writeData)+1);
+  printf("bytes written %ld\n\n", bytesWritten);
   printf("After write operation in %s process, returned: %zd\n", (pid == 0 ? "Child":"parent"), bytesWritten);
-  if (bytesWritten < 0) {
+  if (bytesWritten < 0 || bytesWritten > BUF_SIZE) {
     printf("Failed to write to file\n");
     return -1;
   }
@@ -85,7 +86,8 @@ int main() {
   printf("Reading from file: %s\n", TEST_FILE);
   lseek(local_fd, 0, SEEK_SET);
   bytesRead = read(local_fd, buf, BUF_SIZE - 1);
-  if (bytesRead < 0) {
+  printf("bytes read %ld\n\n", bytesRead);
+  if (bytesRead < 0 || bytesRead > BUF_SIZE) {
     printf("Failed to read from file\n");
     return -1;
   }

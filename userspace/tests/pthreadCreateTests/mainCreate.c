@@ -11,6 +11,7 @@ extern int pc5();
 extern int pc6();
 extern int pc7();
 extern int pc8();
+extern int threadSelfTest();
 
 extern int pclast();
 
@@ -41,6 +42,7 @@ void check_return_value(int testnumber, int rv, int* successful_tests, char* des
 
 int main()
 {
+    //If maxkernel heap is reached when testing all together comment out some tests
     int successful_tests = 0;
     int number_of_tests = 0;
     int rv;
@@ -57,23 +59,27 @@ int main()
     rv = pc3();  //starting 250 threads
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "starting 250 threads");
+    sleep(1);
 
     rv = pc4();  //check if to running threads have different id
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "check if to running threads have different id");
+    sleep(1);
 
     rv = pc5();  //pthread create with argument
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "pthread create with argument");
+    sleep(1);
 
     rv = pc6();  //running 250 simultaniously
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "running 250 simultaniously");
+    sleep(1);
 
     rv = pc7();  //calling pthread_create inside pthread_create inside pthread_create
     number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "rcalling pthread_create inside pthread_create inside pthread_create");
-
+    check_return_value(number_of_tests, rv, &successful_tests, "calling pthread_create inside pthread_create inside pthread_create");
+    sleep(1);
     
     rv = pc8(); //testing pthread_create attributes (detach):
     //pthread create with wrong attributes
@@ -89,6 +95,9 @@ int main()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "testing pthread_create attributes (detach)");
 
+    rv = threadSelfTest();  //test if thread pthread_self()
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "test if pthread_self() works");
 
 
     printf("-------------------------------------------------------------\n");

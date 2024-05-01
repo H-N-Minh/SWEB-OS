@@ -2,7 +2,7 @@
 #include "pthread.h"
 #include "assert.h"
 
-#define NUM_THREADS 298
+#define NUM_THREADS 250
 
 int count3 = 0;
 

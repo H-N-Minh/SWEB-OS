@@ -87,6 +87,7 @@ UserProcess::UserProcess(const UserProcess& other)
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
 
+  other.localFileDescriptorTable.lfds_lock_.acquire();
   for(auto &fd : other.localFileDescriptorTable.getLocalFileDescriptors())
   {
     auto* newLFD = new LocalFileDescriptor(*fd);
@@ -99,6 +100,7 @@ UserProcess::UserProcess(const UserProcess& other)
 
     this->localFileDescriptorTable.addLocalFileDescriptor(newLFD);
   }
+  other.localFileDescriptorTable.lfds_lock_.release();
 
   ProcessRegistry::instance()->processes_lock_.acquire();
   ProcessRegistry::instance()->processes_.push_back(this);
