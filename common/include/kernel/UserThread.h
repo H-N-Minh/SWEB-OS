@@ -40,7 +40,7 @@ class UserThread : public Thread
         int cancelThread(size_t thread_id);
         int joinThread(size_t thread_id, void**value_ptr);
         void exitThread(void* value_ptr);
-        int detachThread(size_t thread_id);
+        int detachThread(size_t thread_id);z
 
 
         UserProcess* process_;
