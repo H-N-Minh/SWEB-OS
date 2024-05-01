@@ -134,7 +134,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       // return_value = brkMemory(arg1);
       break;
     case sc_wait_pid:
-      return_value = wait_pid((int)arg1, (size_t)arg2, arg3);
+      return_value = wait_pid((int)arg1, (int*)arg2, arg3);
       break;
     default:
       return_value = -1;
