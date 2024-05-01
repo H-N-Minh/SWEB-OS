@@ -24,8 +24,8 @@ extern int gs3();
 // set to 1 to test, 0 to skip
 #define GS1 1     // basic test for growing stack
 #define GS2 1     // more advanced test for growing stack
-#define GS3 0     // test with multiple threads, each will grow its stack at the same time
-#define GS4 0     // test invalid growing stack (kill another thread then try to access it)
+#define GS3 0     // (not complete) test with multiple threads, each will grow its stack at the same time
+#define GS4 0     // (not complete) test invalid growing stack (kill another thread then try to access it)
 
 int main()
 {

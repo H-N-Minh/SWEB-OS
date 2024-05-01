@@ -64,20 +64,21 @@ void* growingFoward2()
 
 void* growingFoward2_2()
 {
-  // char stack_data[STACK_SIZE2];
-  // for (int i = 0; i < STACK_SIZE2; i++)
-  // {
-  //   stack_data[i] = 'A';
-  // }
-
+  printf("debuging: got heree 1\n");
+  char stack_data[STACK_SIZE2];
+  for (int i = 0; i < STACK_SIZE2; i++)
+  {
+    stack_data[i] = 'A';
+  }
+  printf("debuging: got heree 2\n");
   
-  // for (size_t i = (STACK_SIZE2 - 1); i >= 0; i--)
-  // {
-  //   if (stack_data[i] != 'A')
-  //   {
-  //     return (void*) -1;
-  //   }
-  // }
+  for (size_t i = (STACK_SIZE2 - 1); i >= 0; i--)
+  {
+    if (stack_data[i] != 'A')
+    {
+      return (void*) -1;
+    }
+  }
   return (void*) 0;
 }
 
