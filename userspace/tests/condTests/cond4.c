@@ -1,5 +1,11 @@
-// #include "stdio.h"
-// #include "pthread.h"
+/*
+--- # Test specification
+category: base
+description: "getThreadCount"
+
+expect_exit_codes: [0]
+disabled: false
+*/
 
 #include <stdio.h>
 #include <pthread.h>

@@ -11,11 +11,12 @@ extern int sem3();
 
 // set to 1 to test, 0 to skip
 #define SEM1 1                // simple test
-#define SEM2 1                // cond and sem together
-#define SEM3 1                // multiple threads waiting on same sem, also test exiting while threads still sleeping
+#define SEM2 2                // cond and sem together
+#define SEM3 3                // multiple threads waiting on same sem, also test exiting while threads still sleeping
 // #define COND4 1         // testing broadcast
 // #define COND5 1         // testing wrong para
 // #define COND6 0         // testing lost wake call. This should be tested alone, check the file for details
+
 
 int main()
 {

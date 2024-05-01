@@ -1,3 +1,12 @@
+/*
+--- # Test specification
+category: base
+description: "getThreadCount"
+
+expect_exit_codes: [0]
+disabled: false
+*/
+
 #include "pthread.h"
 #include "stdio.h"
 #include "assert.h"

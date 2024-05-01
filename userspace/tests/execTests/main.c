@@ -20,7 +20,7 @@ int main()
     exec6();  //Exec with multiple threads
     exec7();  //Exec with multiple threads
     exec8();  //Exec with two pages of arguments (Todo)
-    
+
     sleep(3);
     printf("\n\nExec testcases successful\n");
 
