@@ -23,7 +23,7 @@ int exec8()
 
     assert(0);
 
-    return 0;
+    return rv;
 
     //Todos: testprogram
 }

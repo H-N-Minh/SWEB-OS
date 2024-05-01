@@ -39,7 +39,7 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
     if (currentThread->loader_->isCOW(address))
     {
       debug(PAGEFAULT_TEST, "pagefault even though the address is mapped BUT ITS COW.\n");
-      return true;
+      return 3;
     }
     else
     {
@@ -92,29 +92,29 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   ArchThreads::printThreadRegisters(currentThread, false);
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
-  if (status == 1)
+  if (status == 1) // everything seems to be okay, no page fault
   {
-    if(writing) //bit of entry->writable = =1?
+    currentThread->loader_->loadPage(address);
+  }
+  else if (status == 3)
+  {
+    if(writing && currentThread->loader_->isCOW(address)) //bit of entry->writable = =1?
     {
-      if (currentThread->loader_->isCOW(address))
-      {
-        debug(PAGEFAULT_TEST, "is COW, copying Page\n");
-        currentThread->loader_->copyPage(address);
-      }
-      else
-      {
-        currentThread->loader_->loadPage(address);
-      }
+
+      debug(PAGEFAULT_TEST, "is COW, copying Page\n");
+      currentThread->loader_->copyPage(address);
     }
     else
+    {
       currentThread->loader_->loadPage(address);
+    }
   }
   else if (status == 69)
   {
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
-    int status = manager->increaseStackSize(address);
+    status = manager->increaseStackSize(address);
     if (status == -1)
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");

@@ -11,6 +11,8 @@ extern int mutex3();
 extern int mutex4();
 extern int mutex5();
 
+extern int mixLocking();
+
 
 
 int main()
@@ -25,6 +27,8 @@ int main()
     mutex3();     //syncronization with two mutexes
     mutex4();     //Testing more posix errorchecks details
     mutex5();     //Test multiple threads waiting on same lock, also test if they are killed when main exits. Check file for more detail
+
+    mixLocking(); ////Test many locking mechanism in 1 file
 
     printf("\n\nUserspace locking tests successful, press f12 to check if any threads are still running\n");
     return 0;
