@@ -479,7 +479,6 @@ size_t Syscall::close(size_t fd)
   UserProcess& current_process = *currentUserThread.process_;
 
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
-
   lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
@@ -489,19 +488,10 @@ size_t Syscall::close(size_t fd)
     FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
-    size_t global_fd = global_fd_obj->getFd();
-    int result = 0;
-    // if (global_fd_obj->getRefCount() == 1)
-    // {
-    //   result = VfsSyscall::close(global_fd);
-    // }
-    if (result == 0)
-    {
-      current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
-    }
-    debug(SYSCALL, "Syscall::close: Close result for global fd: %zu was %d\n", global_fd, result);
+    int rv = current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
+
     lfdTable.lfds_lock_.release();
-    return result;
+    return rv;
   }
   debug(SYSCALL, "Syscall::close: No valid local file descriptor found for fd: %zu\n", fd);
   lfdTable.lfds_lock_.release();

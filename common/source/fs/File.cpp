@@ -66,7 +66,7 @@ int File::closeFd(FileDescriptor* fd)
     assert(fd);
 
     f_fds_.remove(fd);
-    //delete fd;
+    delete fd;
 
     // Release on last fd removed
     if(f_fds_.empty())
