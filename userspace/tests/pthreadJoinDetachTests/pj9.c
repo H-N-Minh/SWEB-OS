@@ -7,7 +7,7 @@ void* thread_function(void* arg)
   return NULL;
 }
 
-int main() {
+int pj9() {
   pthread_t thread;
   pthread_create(&thread, NULL, thread_function, NULL);
 
