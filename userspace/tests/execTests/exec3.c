@@ -2,7 +2,7 @@
 #include "unistd.h"
 
 
-//Test: exec with to many arguments
+//Test: exec with many arguments
 int exec3_1()
 {
     const char * path = "usr/exec_testprogram.sweb";
@@ -46,6 +46,6 @@ int exec3()
   } 
   else //parent
   {
-    return pid;
+    return 0;
   }
 }

@@ -1,13 +1,42 @@
-#include "assert.h"
-#include "unistd.h"
 #include "stdio.h"
-#include "string.h"
+#include "stdlib.h"
+#include "wait.h"
+#include "unistd.h"
+#include "assert.h"
 
-
-int exec8_1()
+//Waitpid with exec
+int waitpid5()
 {
-    //more than one page of arguments
+  pid_t pid;
+  int status;
 
+  pid = fork();
+
+  assert(pid >= 0);
+
+  if (pid == 0) //Child
+  {
+    const char * path = "usr/exec_testprogram.sweb";
+    char *argv[] = { "4", "Alle meine Entchen schwimmen auf", "dem See", "schwimmen auf dem See.", (char *)0 };
+
+    execv(path, argv);
+    assert(0);    //this should never be reached
+
+  }
+  else //Parent
+  {
+    int rv = waitpid(pid, &status, 0);
+    assert(rv == pid);
+    assert(status == 0);
+
+  }
+
+  pid = fork();
+
+  assert(pid >= 0);
+
+  if (pid == 0) //Child
+  {
     const char * path = "usr/exec_testprogram.sweb";
     char* long_word = "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjjaaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjj"
                       "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjjaaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjj"
@@ -15,30 +44,19 @@ int exec8_1()
                       "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjjaaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjj"
                       "aaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjjaaaaaaaaaabbbbbbbbbbccccccccccddddddddddeeeeeeeeeeffffffffffgggggggggghhhhhhhhhhiiiiiiiiiijjjjjjjjjj";
     
-    assert(strlen(long_word) == 1000);
     char *argv[] = {"8", long_word, long_word, long_word, long_word, long_word, long_word, (char *)0 };
     execv(path, argv);
     assert(0);
 
-    return 0;
-}
-
-int exec8()
-{
-  pid_t pid = fork();
-
-  if (pid == -1)
-  {
-    return -1;
-  } 
-  else if (pid == 0) //Child
-  {
-    return 0;
-  } 
-  else //parent
-  {
-    exec8_1();
-    assert(0);
-    return 0;
   }
+  else //Parent
+  {
+    int rv = waitpid(pid, &status, 0);
+    assert(rv == pid);
+    assert(status == 0);
+
+  }
+
+  return 0;
 }
+

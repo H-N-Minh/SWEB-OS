@@ -178,7 +178,6 @@ extern int pthread_attr_destroy(pthread_attr_t *attr);
 extern int pthread_attr_setdetachstate(pthread_attr_t *attr, int detachstate);
 extern int pthread_attr_getdetachstate(const pthread_attr_t *attr, int *detachstate);
 
-extern int pthread_attr_setstacksize(pthread_attr_t *attr, size_t stacksize);
 
 #ifdef __cplusplus
 }

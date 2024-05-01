@@ -35,9 +35,8 @@ class UserProcess
 
         bool isThreadInVector(UserThread* test_thread);
 
+        bool isProcessInVectorById(int32 process_id);
 
-        
-         //bool isThreadInVector(UserThread* test_thread);
 
 
         /**
@@ -67,7 +66,7 @@ class UserProcess
         static int64 pid_counter_;
         int32 pid_;
 
-        int32 fd_;                                 //TODOs: figure out, what needs to be locked and locking order
+        int32 fd_; 
         FileSystemInfo* working_dir_;
         ustl::string filename_;
         uint32 terminal_number_;
@@ -77,14 +76,14 @@ class UserProcess
         //Threads
         static int64 tid_counter_;
         ustl::vector<UserThread*> threads_;
-        Mutex threads_lock_;                            //Locking order: x
+        Mutex threads_lock_;                            
 
         //Return value map (locked by threads lock)
         ustl::map<size_t, void*> thread_retval_map_;
 
         
         bool one_thread_left_{false};
-        Mutex one_thread_left_lock_;                                //Locking order: x
+        Mutex one_thread_left_lock_;                                
         Condition one_thread_left_condition_;
 
         uint64_t clock_{0};
@@ -95,5 +94,7 @@ class UserProcess
         ustl::string str() const;
 
         long int waitProcess(long int pid, int* status, int options);
+
+        bool process_creatation_failed_{false};
 };
 

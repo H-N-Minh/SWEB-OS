@@ -33,7 +33,6 @@ int pd3()
   assert(pthread_detach(tid_2) == 0);
   assert(pthread_join(tid_2, NULL) != 0);
 
-  printf("pd3 successful!\n");
   return 0;
 
 }

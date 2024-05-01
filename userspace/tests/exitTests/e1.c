@@ -1,21 +1,18 @@
+#include "pthread.h"
+#include "stdlib.h"
+#include "stdio.h"
 #include "assert.h"
-#include "unistd.h"
 
 
-//Test: Exec without arguments
-int exec5_1()
+
+void e1_1()     //exit in main
 {
-    const char * path = "usr/exec_testprogram.sweb";
-    char *argv[] = { (char *)0 };
-
-    execv(path, argv);
+    printf("e1 successful if no assertion gets raised!\n");
+    exit(EXIT_SUCCESS);
     assert(0);
-
-    return 0;
 }
 
-
-int exec5()
+int e1()
 {
   pid_t pid = fork();
 
@@ -25,7 +22,7 @@ int exec5()
   } 
   else if (pid == 0) //Child
   {
-    exec5_1();
+    e1_1();
     assert(0);    //this should never be reached
 
     return pid;

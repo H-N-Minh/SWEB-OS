@@ -194,7 +194,6 @@ bool UserThread::schedulable()
     
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     kernel_registers_->rdi     = (size_t)-1;
-    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
     switch_to_userspace_ = 0;
     return true;
   }
@@ -307,7 +306,7 @@ void UserThread::exitThread(void* value_ptr)
   }
 
   join_state_lock_.acquire();
-  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)  //Todos: cleanup one thread left
+  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)
   {
     debug(USERTHREAD, "UserThread::exitThread: saving return value in thread_retval_map_ in case the thread is joinable\n");
     process_->thread_retval_map_[getTID()] = value_ptr;

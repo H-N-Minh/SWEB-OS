@@ -33,6 +33,6 @@ int exec4()
   } 
   else //parent
   {
-    return pid;
+    return 0;
   }
 }

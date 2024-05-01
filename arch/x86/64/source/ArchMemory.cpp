@@ -12,7 +12,6 @@ PageDirPointerTableEntry kernel_page_directory_pointer_table[2 * PAGE_DIR_POINTE
 PageDirEntry kernel_page_directory[2 * PAGE_DIR_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 
-//TODOs: figure out what needs locking
 
 ArchMemory::ArchMemory():lock_("archmemory_lock_")
 {
@@ -188,7 +187,7 @@ ArchMemory::~ArchMemory()
   lock_.release();
 }
 
-pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)               //TODOs lock (but probably outside this function to gurantee valid)
+pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
 {
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, vaddress_to_check / PAGE_SIZE);
   if (m.page != 0)
@@ -220,7 +219,6 @@ bool ArchMemory::checkAndRemove(pointer map_ptr, uint64 index)
 
 bool ArchMemory::unmapPage(uint64 virtual_page)
 {
-  debug(FORK, "unmapPage \n");
   assert(lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
 

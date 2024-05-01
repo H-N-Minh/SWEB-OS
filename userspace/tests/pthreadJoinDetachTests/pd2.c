@@ -33,13 +33,9 @@ int pd2()
   sleep(1);
 
   assert(pthread_detach(tid) == 0);
-
   assert(pthread_cancel(tid) == 0);
-
   assert(pthread_join(tid, NULL) == -1);
-
   assert(pthread_join(tid_2, NULL) == 0);
-
   assert(pthread_join(tid, NULL) == -1);
 
   printf("pd2 successful!\n");

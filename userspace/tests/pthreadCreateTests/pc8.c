@@ -14,7 +14,7 @@ int function_psd1_2()
 }
 
 
-int psd1()
+int pc8()
 {
   //pthread create with wrong attributes fails (we only have check fo detach)
   pthread_t thread_id;
@@ -91,22 +91,17 @@ int psd1()
   rv = pthread_attr_getdetachstate(&attr_3, &detach_state);
   assert(rv != 0);
 
-
-
-  
-  
-  
-  //int pthread_attr_init(pthread_attr_t *attr);
-    // pthread_t thread_id;
-    // int pthread_create_rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function_psd1, NULL);
-    // assert(pthread_create_rv == 0);
-
-    // sleep(1);
-
-    // void* value_ptr;
-    // int pthread_join_rv = pthread_join(thread_id, &value_ptr);
-    // assert(pthread_join_rv == 0);
-    // assert((size_t)value_ptr == 6 && "value_ptr does not match the returnvalue of thread");
-
-    return 0;
+ return 0;
 }
+
+
+//pthread create with wrong attributes
+//using pthread attributes twice for different threads
+//destroying twice
+//using a destroyed attribute
+//destroy attribute with address not in userspace
+//init attribute with address not in userspace
+//detachstate after init should be joinable
+//setting pthread_attribute to detach
+//join and cancel if state is detached
+//set and get if attributes is not initalized

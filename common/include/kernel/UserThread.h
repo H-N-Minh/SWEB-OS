@@ -45,7 +45,7 @@ class UserThread : public Thread
 
         UserProcess* process_;
         size_t vpn_stack_;
-        size_t user_stack_ptr_;            //Todos: copy in fork
+        size_t user_stack_ptr_;
         size_t page_for_stack_;
 
         //exit
@@ -54,10 +54,10 @@ class UserThread : public Thread
         //exec
         bool last_thread_before_exec_{false};
 
-        //pthread join (join_threads_ are locked by threads_lock_)
+
         ustl::vector<UserThread*> join_threads_; 
         bool thread_killed{false};
-        Mutex thread_gets_killed_lock_;                                //Locking order: x
+        Mutex thread_gets_killed_lock_;                               
         Condition thread_gets_killed_;
 
         Mutex join_state_lock_;
@@ -66,13 +66,14 @@ class UserThread : public Thread
 
         //pthread_cancel
         bool wants_to_be_canceled_{false};
-        Mutex cancel_state_type_lock_;                                  //Locking order: x
+        Mutex cancel_state_type_lock_;                                 
         CancelState cancel_state_{CancelState::PTHREAD_CANCEL_ENABLE};
         CancelType cancel_type_{CancelType::PTHREAD_CANCEL_DEFERRED};
 
         //userspace locks
         size_t cond_flag_{NULL};         // pointer to boolean in user stack, indicate whether the thread is schedulable or not
         size_t mutex_flag_{NULL};
+        
         // the Meta data is ordered as follows:
                     // 1. Guard
                     // 2. Mutex flag

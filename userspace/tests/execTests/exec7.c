@@ -3,7 +3,7 @@
 #include "pthread.h"
 
 
-//Test: Exec without arguments
+//Test: Exec from pthreadcreate
 int exec7_1()
 {
     const char * path = "usr/exec_testprogram.sweb";

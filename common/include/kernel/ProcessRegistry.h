@@ -39,13 +39,13 @@ class ProcessRegistry : public Thread
     static ProcessRegistry* instance();
     void createProcess(const char* path);
 
-    //ustl::vector<UserProcess*> processes_;
-    //void addProcess(UserProcess* process);
-
     Condition process_exit_status_map_condition_;
 
     Mutex process_exit_status_map_lock_;
     ustl::map<size_t, size_t> process_exit_status_map_;
+
+    ustl::vector<UserProcess*> processes_;
+    Mutex processes_lock_;
 
 
   private:
