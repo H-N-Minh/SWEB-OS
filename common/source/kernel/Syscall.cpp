@@ -82,6 +82,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_threadcount:
       return_value = get_thread_count();
       break;
+    case sc_pthread_self:
+      return_value = pthreadSelf();
+      break;
     case sc_pthread_create:
       return_value = pthreadCreate((size_t*)arg1, (unsigned int*) arg2, (void*) arg3, (void*) arg4, (void*)arg5);
       break;
@@ -296,6 +299,12 @@ int Syscall::pthreadCreate(size_t* thread, unsigned int* attr, void* start_routi
   debug(SYSCALL, "Syscall::pthreadCreate pthreadCreated called\n");
   int rv = ((UserThread*) currentThread)->createThread(thread, start_routine, wrapper_address, arg, (pthread_attr_t*)attr);
   return rv;
+}
+
+size_t Syscall::pthreadSelf()
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  return currentUserThread.getTID();
 }
 
 int Syscall::pthreadCancel(size_t thread_id)

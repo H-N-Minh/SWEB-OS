@@ -27,7 +27,8 @@ public:
   static uint32 pipe(int file_descriptor_array[2]);
 
 
-  static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
+  static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address);
+  static size_t pthreadSelf();
   static void pthreadExit(void* value_ptr);
   static int pthreadJoin(size_t thread_id, void**value_ptr);
 

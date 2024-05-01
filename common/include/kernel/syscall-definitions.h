@@ -30,6 +30,7 @@
 #define sc_pthread_setcancelstate 305
 #define sc_pthread_testcancel 306
 #define sc_pthread_detach 307
+#define sc_pthread_self 308
 
 #define sc_execv 400
 

@@ -11,6 +11,11 @@
 // a flag for the 1st thread of the process to setup its metadata
 size_t __META_INITIALIZED__ = 0;
 
+size_t pthread_self()
+{
+  return __syscall(sc_pthread_self, 0x0, 0x0, 0x0, 0x0, 0x0);
+}
+
 
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr,
                    void *(*start_routine)(void *), void *arg)

@@ -79,7 +79,7 @@ enum CancelState {PTHREAD_CANCEL_ENABLE, PTHREAD_CANCEL_DISABLE};
 enum CancelType {PTHREAD_CANCEL_DEFERRED = 2, PTHREAD_CANCEL_ASYNCHRONOUS = 3};
 
 
-
+extern size_t pthread_self();
 
 extern int pthread_create(pthread_t *thread,
                           const pthread_attr_t *attr, void *(*start_routine)(void *),
