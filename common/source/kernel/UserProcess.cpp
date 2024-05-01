@@ -362,6 +362,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   //replace the loader of the current binary with the loader of the new binary
   loader_->replaceLoader(execv_fd);
   VfsSyscall::close(fd_);
+  localFileDescriptorTable.closeAllFileDescriptors();
   fd_ = execv_fd;
 
   //create fresh user registers for the thread (only leave the cr3 the same)

@@ -38,7 +38,6 @@ int pd2()
   assert(pthread_join(tid_2, NULL) == 0);
   assert(pthread_join(tid, NULL) == -1);
 
-  printf("pd2 successful!\n");
   return 0;
 
 }
