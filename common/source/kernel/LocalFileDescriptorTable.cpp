@@ -34,8 +34,10 @@ LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDes
 
 LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_fd_id) const
 {
+   debug(FILEDESCRIPTOR, "LocalFileDescriptorTable::getLocalFileDescriptor: Want local_fd %d\n", local_fd_id);
   for(auto &fd : local_fds_)
   {
+    debug(FILEDESCRIPTOR, "LocalFileDescriptorTable::getLocalFileDescriptor: Found %ld\n", fd->getLocalFD());
     if(fd->getLocalFD() == (size_t)local_fd_id)
     {
       debug(FILEDESCRIPTOR, "Getting local file descriptor with local FD ID: %d\n", local_fd_id);

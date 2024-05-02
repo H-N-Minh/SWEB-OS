@@ -33,7 +33,7 @@ char const *user_progs[] = {
                             //"/usr/notest.sweb",
                             //"/usr/shell.sweb",
 
-                            "/usr/forklfds3.sweb",
+                            "/usr/localFdTests.sweb",
                            
                           
                             // "/usr/pthreadCancelTests.sweb",

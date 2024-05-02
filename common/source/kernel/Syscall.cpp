@@ -389,19 +389,20 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
+  if (fd == fd_stdout)
+  {
+    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
+    kprintf("%.*s", (int)size, (char*) buffer);
+    return size;
+  }
+
   lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
   debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
 
-  if (fd == fd_stdout)
-  {
-    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
-    kprintf("%.*s", (int)size, (char*) buffer);
-    lfdTable.lfds_lock_.release();
-    return size;
-  }
-  else if (localFileDescriptor != nullptr) {
+
+  if (localFileDescriptor != nullptr) {
     FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
