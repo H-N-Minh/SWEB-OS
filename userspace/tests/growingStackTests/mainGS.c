@@ -10,16 +10,11 @@ extern int gs2();
 extern int gs3();
 extern int gs4();
 extern int gs5();
+extern int gs6();
 
-/** TODO: 
- * - test calling pthread first, check if guards setup correctly, then call growing stack, then check guards again
- * - test growing stack first, check if guards setup correctly, then call pthread, then check guards again
- * - test with multiple threads, each with its own growing stack
- * - test with multiple threads, but a thread is trying to access another thread's unmapped stack (use &variable -= PAGE_SIZE*5)
- *                     
+/** TODO:       
  * - test with fork ( fork then growing stack) and (growing stack then fork)
  * - test buffer over flow and underflow, program should exit with error code 
- * - test page is unmapped correctly when thread finish
 // todo: test if all pages are freed
 
 */
@@ -29,7 +24,8 @@ extern int gs5();
 #define GS2 0     // more advanced test for growing stack
 #define GS3 0     // 100 threads created and grow its stack at the same time
 #define GS4 0     // invalid growing 1: try to access outside stack limit
-#define GS5 1     // invalid growing 2: try to access another thread's stack after that thread died
+#define GS5 0     // invalid growing 2: try to access another thread's mapped page after that thread died
+#define GS6 1     // invalid growing 3: trying to access another thread's unmapped page even when that thread still alive
 
 int main()
 {
@@ -75,6 +71,14 @@ int main()
       retval = gs5();
       if (retval == 0)                      { printf("===> gs5 successful!\n"); }
       else                                  { printf("===> gs5 failed!\n");  return -1;}
+    }
+
+    if (GS6)
+    {
+      printf("\nTesting gs6: invalid growing 3: trying to access another thread's unmapped page even when that thread still alive...\n");
+      retval = gs6();
+      if (retval == 0)                      { printf("===> gs6 successful!\n"); }
+      else                                  { printf("===> gs6 failed!\n");  return -1;}
     }
 
     printf("\n\n===   All tests completed!   ===\n");
