@@ -75,5 +75,7 @@ int main()
         else                                  { printf("fork6 failed!\n"); return -1;}
     }
 
+    printf("\n\nAll fork testcases successfull!\n");
+
     return 0;
 }

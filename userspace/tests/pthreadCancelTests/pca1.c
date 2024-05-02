@@ -13,7 +13,7 @@ int function_pca1()
     return 4;
 }
 
-//Test: Cancel running function
+//Test: Cancel running thread
 int pca1()
 {
     pthread_t thread_id;

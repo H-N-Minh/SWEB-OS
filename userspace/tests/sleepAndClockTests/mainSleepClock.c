@@ -41,6 +41,14 @@ int main()
     int number_of_tests = 0;
     int rv;
 
+    rv = clock1();          
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "Clock with and without sleep");
+
+    rv = clock2();          
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "Clock with two processes");
+
     rv = sleep1();          
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "Simple sleep");
@@ -49,13 +57,6 @@ int main()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "Sleep in new thread");
 
-    rv = clock1();          
-    number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "Clock with and without sleep");
-
-    rv = clock2();          
-    number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "Clock with two processes");
 
 
     if(successful_tests == number_of_tests)

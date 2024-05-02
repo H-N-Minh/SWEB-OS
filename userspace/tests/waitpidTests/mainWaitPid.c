@@ -10,6 +10,7 @@ extern int waitpid4();
 extern int waitpid5();
 extern int waitpid6();
 extern int waitpid7();
+extern int waitpid8();
 
 
 void check_return_value(int testnumber, int rv, int* successful_tests, char* description)
@@ -112,6 +113,14 @@ int main()
     }
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "Waitpid with multiple threads and exec");
+
+    rv = waitpid8();  
+    if(rv == 5)
+    {
+        exit(0);
+    }
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "Waitpid with pthread exit and multiple threads");
 
 
     if(successful_tests == number_of_tests)
