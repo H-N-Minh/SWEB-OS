@@ -17,13 +17,20 @@ int sem_init(sem_t *sem, int pshared, unsigned value)
     return -1;    // Shared between processes, not implemented yet
   }
 
-  int rv = pthread_mutex_init(&sem->count_mutex_, 0);
+  int rv = pthread_mutex_init(&sem->count_mutex_, 0);   // mutex_init already has error handling when multiple threads try to init same mutex at same time
   assert(rv == 0 && "failed to init mutex in sem_init");
+
+  rv = pthread_mutex_lock(&sem->count_mutex_);
+  assert(rv == 0 && "failed to lock mutex in sem_wait");
+
   rv = pthread_cond_init(&sem->count_cond_, 0);
   assert(rv == 0 && "failed to init cond in sem_init");
 
   sem->count_ = value;
   sem->initialized_ = 1;
+
+  rv = pthread_mutex_unlock(&sem->count_mutex_);
+  assert(rv == 0 && "failed to unlock mutex in sem_wait");
 
   return 0;
 }

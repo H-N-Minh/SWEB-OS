@@ -24,11 +24,11 @@ char const *user_progs[] = {
                             // "/usr/pthreadCreateTests.sweb",
 // UserSpace Memory -------------------------------------------------
                             // "/usr/mallocTests.sweb",
-                            "/usr/growingStackTests.sweb",
+                            // "/usr/growingStackTests.sweb",
 
 // SEM & COND -------------------------------------------------
                             // "/usr/condTests.sweb",
-                            // "/usr/semTests.sweb",
+                            "/usr/semTests.sweb",
 
 // FORK-------------------------------------------------
                             // "/usr/forkTests.sweb",

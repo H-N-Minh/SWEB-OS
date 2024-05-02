@@ -258,7 +258,7 @@ int pthread_mutex_destroy(pthread_mutex_t *mutex)
  */
 int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
 {
-  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1) || mutex->initialized_ == MUTEX_INITALIZED)
+  if(!parameters_are_valid((size_t)mutex, 0) || !parameters_are_valid((size_t)attr, 1))
   {
     return -1;
   }
@@ -268,6 +268,13 @@ int pthread_mutex_init(pthread_mutex_t *mutex, const pthread_mutexattr_t *attr)
     return -1;
   }
   rv = pthread_spin_lock(&mutex->mutex_lock_);
+  if (mutex->initialized_ == MUTEX_INITALIZED)    // last error handling to make sure mutex cant be init twice
+  {
+    rv = pthread_spin_unlock(&mutex->mutex_lock_);
+    assert(rv == 0);
+    return -1;
+  }
+  
   assert(rv == 0);
   mutex->initialized_ = MUTEX_INITALIZED;
   mutex->locked_ = 0;
