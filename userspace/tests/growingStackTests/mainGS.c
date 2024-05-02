@@ -22,11 +22,11 @@ extern int gs3();
 */
 
 // set to 1 to test, 0 to skip
-#define GS1 1     // basic test for growing stack
+#define GS1 0     // basic test for growing stack
 #define GS2 1     // more advanced test for growing stack
 #define GS3 0     // (not complete) test with multiple threads, each will grow its stack at the same time
 #define GS4 0     // (not complete) test invalid growing stack (kill another thread then try to access it)
-
+// todo: test if all pages are freed, test 100 grows at the same time
 int main()
 {
   pid_t cid = fork();
@@ -57,7 +57,7 @@ int main()
       else                                  { printf("===> gs3 failed!\n");  return -1;}
     }
 
-    printf("\n\n---All tests completed!\n");
+    printf("\n\n===   All tests completed!   ===\n");
     return 0;
   }
   else
@@ -66,7 +66,7 @@ int main()
     waitpid(cid, &status, 0);
     if (status != 0)
     {
-      printf("Testing crashed with exit code %d\n", status);
+      printf("\n\nXXX   Testing crashed with exit code %d   XXX\n", status);
     }
     
     for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
@@ -77,12 +77,12 @@ int main()
     int num = get_thread_count();
     if (num == 7 || num == 6)
     {
-      printf("===  All threads are destroyed correctly\n   ===");
+      printf("===   All threads are destroyed correctly   ===\n");
       return 0;
     }
     else
     {
-      printf("===  %d threads are still alive\n   ===", num);
+      printf("===   %d threads are still alive   ===\n", num);
       return -1;
     }
     

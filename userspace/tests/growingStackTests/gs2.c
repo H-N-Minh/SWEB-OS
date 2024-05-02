@@ -2,94 +2,55 @@
 #include "stdlib.h"
 #include "pthread.h"
 #include "assert.h"
+#include "unistd.h"
+#include "wait.h"
 
-#define STACK_SIZE2 (4 * 4096 - 6*8) // 4 pages - 6*8 bytes of metadata
 #define PAGE_SIZE2 4096
-#define STACK_AMOUNT2 4
+#define STACK_AMOUNT2 5   // make sure this alligns with the define in UserSpaceMemoryManager.h
 
-size_t getTopOfStack2(size_t stack_variable)
-{
-  size_t top_stack = stack_variable - stack_variable%PAGE_SIZE2 + PAGE_SIZE2 - sizeof(size_t);
-  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-  printf("debug: top_stack is: %zu\n", top_stack);
-  return top_stack;
-}
 
 void* growingFoward2()
 {
-  size_t p;
-  p = (size_t) &p;
-
-  size_t top_stack = getTopOfStack2(p);
-  size_t bottom_stack = top_stack - PAGE_SIZE2*STACK_AMOUNT2 + sizeof(size_t) + 1;
-  printf("debuging: got here\n");
-  int debug_counter = 0;
-  while (p >= bottom_stack)
-  {
-    // debug_counter++;
-    // if (debug_counter > 16245)
-    // {
-    //   printf("debug is at %d, about %zu away\n", debug_counter, p - bottom_stack);
-    // }
-
-    p -= 1;
-    *(char*) p = 'F';
-  }
-  printf("debuging: got here 2\n");
-  debug_counter = 0;
-  while (p < (size_t) &p)
-  {
-    debug_counter++;
-    if (debug_counter > 15465)
-    {
-      printf("p is at %zu, about %zu away\n", p, top_stack - p);
-    }
-    if (*(char*) p != 'F')
-    {
-      return (void*) -1;
-    }
-    p += 1;
-  }
-  printf("debuging: got here 3\n");
-
-  if (*(size_t*) p != (size_t) &p)
-  {
-    return (void*) -1;
-  }
-
-  printf("debuging: got here 4\n");
-  
-  return (void*) 0;
-}
-
-void* growingFoward2_2()
-{
-  printf("debuging: got heree 1\n");
-  char stack_data[STACK_SIZE2];
-  for (int i = 0; i < STACK_SIZE2; i++)
+  size_t valid_array_size = (STACK_AMOUNT2 - 1) * PAGE_SIZE2;   // since array dont start right from top of page, 5 pages stack can only hold 4 pages long array
+  char stack_data[valid_array_size];
+  for (int i = 0; i < valid_array_size; i++)
   {
     stack_data[i] = 'A';
   }
-  printf("debuging: got heree 2\n");
   
-  for (size_t i = (STACK_SIZE2 - 1); i >= 0; i--)
+
+  for (int i = (valid_array_size - 1); i >= 0; i--)
   {
     if (stack_data[i] != 'A')
     {
+      // printf("debuging: failed at i = %d\n", i);
       return (void*) -1;
     }
   }
   return (void*) 0;
 }
 
+void* failingFoward2()
+{
+  size_t invalid_array_size = (STACK_AMOUNT2) * PAGE_SIZE2;   // since array dont start right from top of page, 5 pages stack can not hold 5 pages long array
+  char stack_data[invalid_array_size];
+  for (int i = 0; i < invalid_array_size; i++)
+  {
+    stack_data[i] = 'A';
+  }
+
+  return (void*) 0;
+}
 
 
-// 2 threads grow from 1st page to last page (1 with array and 1 just manually byte by byte)
-// they all should success with return value 0
+
+// An array of 4 pages should fit into stack size of 5 pages, but an array of 5 pages should not fit and crashes.
+// This is because array doesnt start right from the top of the page, so 4 pages long array are stored accross 5 pages
 int gs2()
 {
   pthread_t thread1, thread2;
   
+  // Testing valid array, this shouldnt crash
   if (pthread_create(&thread1, NULL, growingFoward2, NULL) != 0)
   {
     printf("Failed to create thread 1\n");
@@ -106,23 +67,40 @@ int gs2()
     printf("growingFoward2() failed\n");
     return -1;
   }
-  /////////////////////////////////////////////////
-  // if (pthread_create(&thread2, NULL, growingFoward2_2, NULL) != 0)
-  // {
-  //   printf("Failed to create thread 2\n");
-  //   return -1;
-  // }
-  // int retval2 = 0;
-  // if (pthread_join(thread2, (void**) &retval2) != 0)
-  // {
-  //   printf("Failed to join thread 2\n");
-  //   return -1;
-  // }
-  // if (retval2 != 0)
-  // {
-  //   printf("growingFoward2_2() failed\n");
-  //   return -1;
-  // }
 
-  return 0;
+  // Testing invalid array, this should crash
+  pid_t pid = fork();
+  if (pid == 0)
+  {
+    if (pthread_create(&thread2, NULL, failingFoward2, NULL) != 0)
+    {
+      printf("Failed to create thread 2\n");
+      return -1;
+    }
+    int retval2 = -1;
+    if (pthread_join(thread2, (void**) &retval2) != 0)
+    {
+      printf("Failed to join thread 2\n");
+      return -1;
+    }
+    
+    return 0;
+  }
+  else
+  {
+    int status;
+    waitpid(pid, &status, 0);
+    if (status == -1)
+    {
+      printf("Child process failed , but for the wrong reason\n");
+      return -1;
+    }    
+    else if (status != 0)
+    {
+      // printf("Child process crashed, which is expected \n");
+      return 0;
+    }
+  }
+  printf("Child process did not crash, which is unexpected\n");
+  return -1;  // this shouldnt be reached
 }
