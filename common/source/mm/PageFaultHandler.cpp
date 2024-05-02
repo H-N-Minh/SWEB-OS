@@ -96,8 +96,8 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == 1) // everything seems to be okay, no page fault
   {
-    currentThread->loader_->arch_memory_.lock_.release();
     currentThread->loader_->loadPage(address);
+    currentThread->loader_->arch_memory_.lock_.release();
   }
   else if (status == 3)
   {
