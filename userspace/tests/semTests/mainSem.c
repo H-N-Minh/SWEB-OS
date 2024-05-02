@@ -7,6 +7,7 @@ extern int sem2();
 extern int sem3();
 
 extern int sem7();
+extern int sem9();
 // extern int cond4();
 // extern int cond5();
 // extern int cond6();
@@ -17,7 +18,7 @@ extern int sem7();
 #define SEM3 3                // multiple threads waiting on same sem, also test exiting while threads still sleeping
 
 #define SEM7 7
-#define SEM8 8
+#define SEM9 9  //test with sem init > 1
 // #define COND4 1         // testing broadcast
 // #define COND5 1         // testing wrong para
 // #define COND6 0         // testing lost wake call. This should be tested alone, check the file for details
@@ -65,6 +66,14 @@ int main()
     retval = sem7();
     if (retval == 0)                      { printf("===> sem7 only successful when F12 shows no threads still remain!\n"); }
     else                                  { printf("===> sem7 failed!\n");  return -1;}
+  }
+
+  if (SEM9)
+  {
+    printf("\nTesting sem9...\n");
+    retval = sem9();
+    if (retval == 0)                      { printf("===> sem9 only successful when F12 shows no threads still remain!\n"); }
+    else                                  { printf("===> sem9 failed!\n");  return -1;}
   }
 
 

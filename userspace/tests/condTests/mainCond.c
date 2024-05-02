@@ -9,6 +9,7 @@ extern int cond4();
 extern int cond5();
 extern int cond6();
 extern int cond7();
+extern int cond8();
 
 // set to 1 to test, 0 to skip
 //TODO: add test to check overflow/underflow when header data of page is corrupted
@@ -19,7 +20,7 @@ extern int cond7();
 #define COND5 1         // testing wrong para
 #define COND6 1         // testing lost wake call. This should be tested alone, check the file for details
 #define COND7 1         // multiple threads waiting on same cond, also test if they are killed when main exits. Check file for more detail
-
+#define COND8  1
 
 int main()
 {
@@ -80,6 +81,14 @@ int main()
         if (retval == 0)                      { printf("===> cond7 is only successful when F12 shows that no threads are alive!\n"); } 
         else                                  { printf("===> cond7 failed!\n");  return -1;}
     }
+
+  if (COND8)
+  {
+    printf("\nTesting cond8: multiple threads waiting on each other to meet the condition...\n");
+    retval = cond8();
+    if (retval == 0)                      { printf("===> cond8 is only successful when F12 shows that no threads are alive!\n"); }
+    else                                  { printf("===> cond8 failed!\n");  return -1;}
+  }
     
     printf("\n\n---All tests completed! (press F12 to make sure all threads died correctly)---\n");
     return 0;
