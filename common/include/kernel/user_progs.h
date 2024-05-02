@@ -15,7 +15,7 @@ char const *user_progs[] = {
                             // "/usr/exitTests.sweb",
 
 //Fork/Exec -------------------------------------------------------------------
-                            // "/usr/waitpidTests.sweb",                //
+                            "/usr/waitpidTests.sweb",                //
                             // "/usr/forkTests.sweb",
                             // "/usr/execTests.sweb",                   //
                             // "/usr/forkExecTests.sweb",  
@@ -33,7 +33,9 @@ char const *user_progs[] = {
                             //"/usr/notest.sweb",
                             //"/usr/shell.sweb",
 
-                            "/usr/localFdTests.sweb",
+                            // "/usr/localFdTests.sweb",
+
+                            // "/usr/fork10.sweb",
                            
                           
                             // "/usr/pthreadCancelTests.sweb",

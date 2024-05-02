@@ -327,11 +327,6 @@ void Syscall::exit(size_t exit_code)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
-  ProcessRegistry::instance()->process_exit_status_map_[current_process.pid_] = exit_code;
-  ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
-  ProcessRegistry::instance()->process_exit_status_map_lock_.release();
-
   if (exit_code != 69)
   {
     debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete

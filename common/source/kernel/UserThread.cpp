@@ -12,6 +12,7 @@
 #include "Syscall.h"
 #include "ArchMemory.h"
 #include "UserSpaceMemoryManager.h"
+#include "ProcessRegistry.h"
 
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
@@ -303,6 +304,11 @@ void UserThread::exitThread(void* value_ptr)
     debug(USERTHREAD, "UserThread::exitThread: last thread alive\n");
     last_thread_alive_ = true;
     process_->thread_retval_map_.clear();
+
+    ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+    ProcessRegistry::instance()->process_exit_status_map_[process_->pid_] = (size_t)value_ptr;
+    ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
+    ProcessRegistry::instance()->process_exit_status_map_lock_.release();
   }
 
   join_state_lock_.acquire();
