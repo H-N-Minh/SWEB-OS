@@ -1,165 +1,89 @@
 #include "stdio.h"
-#include "stdlib.h"
 #include "pthread.h"
 #include "assert.h"
+#include "string.h"
+#include "sched.h"
 
-#define STACK_SIZE2 (4 * 4096 - 6) // 4 pages - 6 bytes of metadata
 
+#define THREADS3 100
+#define PAGE_SIZE3 4096
+#define STACK_AMOUNT3 5   // make sure this alligns with the define in UserSpaceMemoryManager.h
+#define SUCCESS3 69
 
-void* growingFoward3()
+int all_threads_created3 = 0;
+
+size_t functionpc3_1()
 {
-  char stack_data[STACK_SIZE2];
-  for (int i = 0; i < STACK_SIZE2; i++)
+  size_t valid_array_size = (STACK_AMOUNT3 - 1) * PAGE_SIZE3;   // since array dont start right from top of page, 5 pages stack can only hold 4 pages long array
+  char stack_data[valid_array_size];
+  for (int i = 0; i < valid_array_size; i++)
   {
     stack_data[i] = 'A';
   }
-
   
-  for (size_t i = (STACK_SIZE2 - 1); i >= 0; i--)
+
+  for (int i = (valid_array_size - 1); i >= 0; i--)
   {
     if (stack_data[i] != 'A')
     {
-      return (void*) -1;
+      // printf("debuging: failed at i = %d\n", i);
+      return (size_t) -1;
     }
   }
-  return (void*) 0;
+  return (size_t) SUCCESS3;
 }
 
-void* growingFoward3_2()
+
+size_t functionpc3()
 {
-  int x = 0;
-  size_t p = (size_t) &x;
+  while(!all_threads_created3){sched_yield();}
+  pthread_t thread_id;
+  int rv = pthread_create(&thread_id, NULL, (void * (*)(void *))functionpc3_1, NULL);
+  assert(rv == 0);
 
-  for (int i = 0; i < STACK_SIZE2; i++)
+  size_t retval;
+  rv = pthread_join(thread_id, (void**)&retval);
+  assert(rv == 0);
+  if (retval == (size_t) SUCCESS3)
   {
-    *(int*) (p + i) = 'B';
+    return SUCCESS3;
   }
-  
-  for (int i = 0; i < STACK_SIZE2; i++)
-  {
-    if (*(int*) (p + STACK_SIZE2 - 1 - i) != 'B')
-    {
-      return (void*) -1;
-    }
-  }
-  return (void*) 0;
-}
-
-void* growingBackward3()
-{
-  char stack_data[STACK_SIZE2];
-  for (int i = (STACK_SIZE2 - 1); i >= 0; i--)
-  {
-    stack_data[i] = 'C';
-  }
-
-  
-  for (size_t i = 0; i < STACK_SIZE2; i++)
-  {
-    if (stack_data[i] != 'C')
-    {
-      return (void*) -1;
-    }
-  }
-  return (void*) 0;
-}
-
-void* growingBackward3_2()
-{
-  int x = 0;
-  size_t p = (size_t) &x;
-
-  for (int i = (STACK_SIZE2 - 1); i >= 0; i--)
-  {
-    *(int*) (p + i) = 'D';
-  }
-  
-  for (int i = 0; i < STACK_SIZE2; i++)
-  {
-    if (*(int*) (p + i) != 'D')
-    {
-      return (void*) -1;
-    }
-  }
-  return (void*) 0;
+  return (size_t) -1;
 }
 
 
-// 4 threads, 2 will grow from 1st page to last page (1 with array and 1 just manually byte by byte)
-//  the other 2 will grow from last page to 1st page (1 with array and 1 just manually byte by byte)
-// they all should success with return value 0
+//Test: 100 threads are created at the same time and grow at the same time
 int gs3()
 {
-//   pthread_t thread1, thread2, thread3, thread4;
+  pthread_t thread_id[THREADS3];
   
-//   if (pthread_create(&thread1, NULL, growingFoward, NULL) != 0)
-//   {
-//     printf("Failed to create thread 1\n");
-//     return -1;
-//   }
-//   int retval1 = 0;
-//   if (pthread_join(thread1, (void**) &retval1) != 0)
-//   {
-//     printf("Failed to join thread 1\n");
-//     return -1;
-//   }
-//   if (retval1 != 0)
-//   {
-//     printf("growingFoward() failed\n");
-//     return -1;
-//   }
-//   /////////////////////////////////////////////////
-//   if (pthread_create(&thread2, NULL, growingFoward2, NULL) != 0)
-//   {
-//     printf("Failed to create thread 2\n");
-//     return -1;
-//   }
-//   int retval2 = 0;
-//   if (pthread_join(thread2, (void**) &retval2) != 0)
-//   {
-//     printf("Failed to join thread 2\n");
-//     return -1;
-//   }
-//   if (retval2 != 0)
-//   {
-//     printf("growingFoward2() failed\n");
-//     return -1;
-//   }
-//   /////////////////////////////////////////////////
-//   if (pthread_create(&thread3, NULL, growingBackward, NULL) != 0)
-//   {
-//     printf("Failed to create thread 3\n");
-//     return -1;
-//   }
-//   int retval3 = 0;
-//   if (pthread_join(thread3, (void**) &retval3) != 0)
-//   {
-//     printf("Failed to join thread 3\n");
-//     return -1;
-//   }
-//   if (retval3 != 0)
-//   {
-//     printf("growingBackward() failed\n");
-//     return -1;
-//   }
-//   /////////////////////////////////////////////////
-//   if (pthread_create(&thread4, NULL, growingBackward2, NULL) != 0)
-//   {
-//     printf("Failed to create thread 4\n");
-//     return -1;
-//   }
-//   int retval4 = 0;
-//   if (pthread_join(thread4, (void**) &retval4) != 0)
-//   {
-//     printf("Failed to join thread 4\n");
-//     return -1;
-//   }
-//   if (retval4 != 0)
-//   {
-//     printf("growingBackward2() failed\n");
-//     return -1;
-//   }
+  // create 100 threads
+  for(int i = 0; i < THREADS3; i++)
+  {
+      size_t rv = pthread_create(&thread_id[i], NULL, (void * (*)(void *))functionpc3, NULL);
+      assert(rv == 0);
+  }
 
+  for (size_t i = 0; i < 200000000; i++)  // wait a bit for all thread to be fully initialzied
+  {
+    /* code */
+  }
+  
+  all_threads_created3 = 1;
+  // all threads should now call pthread_create at the same time
+
+  // joining all threads and checking return value
+  for(int i = 0; i < THREADS3; i++)
+  {
+    size_t retval;
+    int rv = pthread_join(thread_id[i], (void**)&retval);
+    assert(rv == 0);
+    if ( retval != SUCCESS3)
+    {
+      return -1;
+    }
+  }
 
   return 0;
 }
+

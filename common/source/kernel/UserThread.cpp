@@ -312,6 +312,7 @@ void UserThread::exitThread(void* value_ptr)
   ustl::vector<UserThread*>::iterator exiting_thread_iterator = ustl::find(process_->threads_.begin(), process_->threads_.end(), this);
   process_->threads_.erase(exiting_thread_iterator);
 
+  // if this is last thread of process, clear the thread_retval_map_
   if(process_->threads_.size() == 0)  // last thread in process
   {
     debug(USERTHREAD, "UserThread::exitThread: last thread alive\n");
@@ -319,6 +320,7 @@ void UserThread::exitThread(void* value_ptr)
     process_->thread_retval_map_.clear();
   }
 
+  // if its not last thread alive, store the return value
   join_state_lock_.acquire();
   if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)  //Todos: cleanup one thread left
   {
@@ -327,9 +329,7 @@ void UserThread::exitThread(void* value_ptr)
   }
   join_state_lock_.release();
 
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
-  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
-
+  // for exec()
   if(process_->threads_.size() == 1)  // only one thread left
   {
     process_->one_thread_left_lock_.acquire();
@@ -337,8 +337,11 @@ void UserThread::exitThread(void* value_ptr)
     process_->one_thread_left_condition_.signal();
     process_->one_thread_left_lock_.release();
   }
-
   process_->threads_lock_.release();
+
+  // unmap its stack
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
   kill();
 
 }
@@ -366,13 +369,10 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
   {
     join_state = PTHREAD_CREATE_JOINABLE;
   }
-  
-  
 
-
-  process_->threads_lock_.acquire();
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
+  process_->threads_lock_.acquire();
   if(new_thread)
   {
     new_thread->join_state_ = join_state;

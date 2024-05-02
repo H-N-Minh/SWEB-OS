@@ -39,6 +39,15 @@ void* failingFoward2()
     stack_data[i] = 'A';
   }
 
+  for (int i = (invalid_array_size - 1); i >= 0; i--)
+  {
+    if (stack_data[i] != 'A')
+    {
+      // printf("debuging: failed at i = %d\n", i);
+      return (void*) -1;
+    }
+  }
+
   return (void*) 0;
 }
 
@@ -97,6 +106,7 @@ int gs2()
     }    
     else if (status != 0)
     {
+      // printf("Child process crashed with exit code %d\n", status);
       // printf("Child process crashed, which is expected \n");
       return 0;
     }

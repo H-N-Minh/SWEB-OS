@@ -18,15 +18,16 @@ extern int gs3();
  * - test with fork ( fork then growing stack) and (growing stack then fork)
  * - test buffer over flow and underflow, program should exit with error code 
  * - test page is unmapped correctly when thread finish
+// todo: test if all pages are freed
 
 */
 
 // set to 1 to test, 0 to skip
-#define GS1 0     // basic test for growing stack
+#define GS1 1     // basic test for growing stack
 #define GS2 1     // more advanced test for growing stack
-#define GS3 0     // (not complete) test with multiple threads, each will grow its stack at the same time
+#define GS3 1     // 100 threads created and grow its stack at the same time
 #define GS4 0     // (not complete) test invalid growing stack (kill another thread then try to access it)
-// todo: test if all pages are freed, test 100 grows at the same time
+
 int main()
 {
   pid_t cid = fork();
@@ -35,10 +36,10 @@ int main()
     int retval = 0;
     if (GS1)
     {
-        printf("\nTesting gs1: basic test...\n");
-        retval = gs1();
-        if (retval == 0)                      { printf("===> gs1 successful!\n"); } 
-        else                                  { printf("===> gs1 failed!\n");  return -1;}
+      printf("\nTesting gs1: basic test...\n");
+      retval = gs1();
+      if (retval == 0)                      { printf("===> gs1 successful!\n"); } 
+      else                                  { printf("===> gs1 failed!\n");  return -1;}
     }
 
     if (GS2)
@@ -51,7 +52,7 @@ int main()
 
     if (GS3)
     {
-      printf("\nTesting gs3: multiple threads growing at same time ...\n");
+      printf("\nTesting gs3: 100 threads growing at same time ...\n");
       retval = gs3();
       if (retval == 0)                      { printf("===> gs3 successful!\n"); }
       else                                  { printf("===> gs3 failed!\n");  return -1;}

@@ -5,7 +5,7 @@
 #include "sched.h"
 
 
-#define THREADS9 10
+#define THREADS9 100
 
 
 int all_threads_created9 = 0;
