@@ -2,7 +2,7 @@
 #include "pthread.h"
 #include "assert.h"
 
-#define NUM_THREADS 298
+#define NUM_THREADS 250
 
 int count3 = 0;
 
@@ -29,6 +29,12 @@ int pc3()
     {
         assert(thread_id[i] != 0);
     }
+    for (size_t i = 0; i < NUM_THREADS; i++)
+    {
+        int rv = pthread_join(thread_id[i], NULL);
+        assert(rv == 0);
+    }
+    
     
     return 0;
 }

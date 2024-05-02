@@ -16,6 +16,8 @@ extern int mutex3();
 extern int mutex4();
 extern int mutex5();
 
+extern int mixLocking();
+
 
 
 int main()
@@ -34,6 +36,8 @@ int main()
         mutex4();     //Testing more posix errorchecks details
         mutex5();     //Test multiple threads waiting on same lock, also test if they are killed when main exits. Check file for more detail
 
+        mixLocking(); ////Test many locking mechanism in 1 file
+
         printf("\n\nUserspace locking tests finished\n");
 
         return 0;
@@ -42,10 +46,7 @@ int main()
     {
         int status;
         waitpid(cid, &status, 0);
-        for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
-        {
-            /* code */
-        }
+        sleep(2);
         
         int num = get_thread_count();
         if (num == 7 || num == 6)

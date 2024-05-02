@@ -12,6 +12,7 @@
 #include "Syscall.h"
 #include "ArchMemory.h"
 #include "UserSpaceMemoryManager.h"
+#include "ProcessRegistry.h"
 
 
 UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::TYPE type, uint32 terminal_number,
@@ -208,7 +209,6 @@ bool UserThread::schedulable()
     
     kernel_registers_->rip     = (size_t)Syscall::pthreadExit;
     kernel_registers_->rdi     = (size_t)-1;
-    currentThreadRegisters = currentThread->kernel_registers_;   //TODOs ???
     switch_to_userspace_ = 0;
     return true;
   }
@@ -319,11 +319,16 @@ void UserThread::exitThread(void* value_ptr)
     debug(USERTHREAD, "UserThread::exitThread: last thread alive\n");
     last_thread_alive_ = true;
     process_->thread_retval_map_.clear();
+
+    ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+    ProcessRegistry::instance()->process_exit_status_map_[process_->pid_] = (size_t)value_ptr;
+    ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
+    ProcessRegistry::instance()->process_exit_status_map_lock_.release();
   }
 
   // if its not last thread alive, store the return value
   join_state_lock_.acquire();
-  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)  //Todos: cleanup one thread left
+  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)
   {
     debug(USERTHREAD, "UserThread::exitThread: saving return value in thread_retval_map_ in case the thread is joinable\n");
     process_->thread_retval_map_[getTID()] = value_ptr;

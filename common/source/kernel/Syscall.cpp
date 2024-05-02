@@ -1,4 +1,4 @@
-#include "offsets.h"
+#include "offsets.h" //
 #include "Syscall.h"
 #include "syscall-definitions.h"
 #include "Terminal.h"
@@ -82,6 +82,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_threadcount:
       return_value = get_thread_count();
       break;
+    case sc_pthread_self:
+      return_value = pthreadSelf();
+      break;
     case sc_pthread_create:
       return_value = pthreadCreate((size_t*)arg1, (unsigned int*) arg2, (void*) arg3, (void*) arg4, (void*)arg5);
       break;
@@ -131,7 +134,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       // return_value = brkMemory(arg1);
       break;
     case sc_wait_pid:
-      return_value = wait_pid((int)arg1, (size_t)arg2, arg3);
+      return_value = wait_pid((int)arg1, (int*)arg2, arg3);
       break;
     default:
       return_value = -1;
@@ -147,11 +150,14 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
+  
+  current_process.localFileDescriptorTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
   if (localFileDescriptor == nullptr)
   {
     debug(SYSCALL, "Syscall::lseek - Invalid local file descriptor: %zu\n", fd);
+    current_process.localFileDescriptorTable.lfds_lock_.release();
     return -1;
   }
 
@@ -163,6 +169,7 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 
   l_off_t position = VfsSyscall::lseek(global_fd, offset, whence);
   //debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
+   current_process.localFileDescriptorTable.lfds_lock_.release();
   return position;
 }
 
@@ -239,7 +246,6 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 */
 
 
-// TODOs: handle return value when fork fails, handle how process exits correctly after fork
 uint32 Syscall::forkProcess()
 {
   debug(FORK, "Syscall::forkProcess: start focking \n");
@@ -254,9 +260,6 @@ uint32 Syscall::forkProcess()
   else
   {
     debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
-    //ProcessRegistry* processRegistry = ProcessRegistry::instance();
-    //processRegistry->addProcess(child);
-
     return (uint32) currentThread->user_registers_->rax;
   }
 }
@@ -298,6 +301,12 @@ int Syscall::pthreadCreate(size_t* thread, unsigned int* attr, void* start_routi
   return rv;
 }
 
+size_t Syscall::pthreadSelf()
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  return currentUserThread.getTID();
+}
+
 int Syscall::pthreadCancel(size_t thread_id)
 {
   debug(SYSCALL, "Syscall::pthreadCancel: called with thread_id %ld.\n",thread_id);
@@ -314,14 +323,9 @@ int Syscall::pthreadCancel(size_t thread_id)
 
 void Syscall::exit(size_t exit_code)
 {
-  debug(SYSCALL, "-----------------Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
+  debug(SYSCALL, "Syscall::EXIT: Thread (%zu) called exit_code: %zd\n", currentThread->getTID(), exit_code);
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-
-  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
-  ProcessRegistry::instance()->process_exit_status_map_[current_process.pid_] = exit_code;
-  ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
-  ProcessRegistry::instance()->process_exit_status_map_lock_.release();
 
   if (exit_code != 69)
   {
@@ -380,19 +384,20 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
+  if (fd == fd_stdout)
+  {
+    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
+    kprintf("%.*s", (int)size, (char*) buffer);
+    return size;
+  }
+
   lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
   debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
 
-  if (fd == fd_stdout)
-  {
-    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
-    kprintf("%.*s", (int)size, (char*) buffer);
-    lfdTable.lfds_lock_.release();
-    return size;
-  }
-  else if (localFileDescriptor != nullptr) {
+
+  if (localFileDescriptor != nullptr) {
     FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
@@ -474,7 +479,6 @@ size_t Syscall::close(size_t fd)
   UserProcess& current_process = *currentUserThread.process_;
 
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
-
   lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
@@ -484,19 +488,10 @@ size_t Syscall::close(size_t fd)
     FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
-    size_t global_fd = global_fd_obj->getFd();
-    int result = 0;
-    if (global_fd_obj->getRefCount() == 1)
-    {
-      result = VfsSyscall::close(global_fd);
-    }
-    if (result == 0)
-    {
-      current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
-    }
-    debug(SYSCALL, "Syscall::close: Close result for global fd: %zu was %d\n", global_fd, result);
+    int rv = current_process.localFileDescriptorTable.removeLocalFileDescriptor(localFileDescriptor);
+
     lfdTable.lfds_lock_.release();
-    return result;
+    return rv;
   }
   debug(SYSCALL, "Syscall::close: No valid local file descriptor found for fd: %zu\n", fd);
   lfdTable.lfds_lock_.release();
@@ -541,8 +536,9 @@ size_t Syscall::open(size_t path, size_t flags)
 
   debug(SYSCALL, "Syscall::open: Local file descriptor: %zu\n",
         localFileDescriptor->getLocalFD());
+  size_t local_file_descriptor = localFileDescriptor->getLocalFD();
   lfdTable.lfds_lock_.release();
-  return localFileDescriptor->getLocalFD();
+  return local_file_descriptor;
 }
 
 
@@ -658,11 +654,12 @@ int Syscall::pthread_setcancelstate(int state, int *oldstate)
   }
   debug(SYSCALL, "Syscall::pthread_setcancelstate: thread (%zu) is setted cancel state to (%d)\n", currentThread->getTID(), state);
   currentUserThread.cancel_state_type_lock_.acquire();
-  *oldstate = (int) currentUserThread.cancel_state_;
+  int temp_oldstate = (int) currentUserThread.cancel_state_;
 
   currentUserThread.cancel_state_ = (CancelState)state;
 
   currentUserThread.cancel_state_type_lock_.release();
+  *oldstate = temp_oldstate;
   return 0;
 }
 
@@ -685,10 +682,11 @@ int Syscall::pthread_setcanceltype(int type, int *oldtype)
     currentUserThread.cancel_state_type_lock_.release();
     return -1;
   }
-  *oldtype = (int)previous_type;
+  int temp_oldtype = (int)previous_type;
   currentUserThread.cancel_type_ = (CancelType)type;
 
   currentUserThread.cancel_state_type_lock_.release();
+  *oldtype = temp_oldtype;
   return 0;
 }
 
@@ -698,15 +696,15 @@ unsigned int Syscall::clock(void)
   UserProcess& current_process = *currentUserThread.process_;
 
   uint64_t timestamp_fs = Scheduler::instance()->timestamp_fs_;
-
   uint64_t current_time_stamp = get_current_timestamp_64_bit();
-  uint64_t clock = current_process.clock_ + current_time_stamp - current_process.tsc_start_scheduling_;
+  uint64_t clock = current_process.clock_ + (current_time_stamp - current_process.tsc_start_scheduling_);
 
   uint64_t clock_in_femtoseconds = (uint64_t)clock * timestamp_fs;
 
   if(clock_in_femtoseconds / timestamp_fs != clock)
   {
     //overflow occured - which also means the number is to big to represent as unsigned int
+    debug(SYSCALL, "Syscall::clock - Number too big");
     return -1;
   }
 
@@ -714,6 +712,7 @@ unsigned int Syscall::clock(void)
 
   if(clock_in_microseconds > BIGGEST_UNSIGNED_INT)
   {
+    debug(SYSCALL, "Syscall::clock - Number too big");
     return -1;
   }
 
@@ -732,13 +731,13 @@ uint64_t Syscall::get_current_timestamp_64_bit()
   return ((uint64_t)edx<<32) + eax;
 }
 
-long int Syscall::wait_pid(long int pid, size_t status, size_t options)
+long int Syscall::wait_pid(long int pid, int* status, size_t options)
 {
-  if (pid < 0)
+  if (pid <= 0 || options != 0)
   {
     return -1;
   }
 
   UserProcess* current_process = ((UserThread*) currentThread)->process_;
-  return current_process->waitProcess(pid, (int*) status, options);
+  return current_process->waitProcess(pid, status, options);
 }

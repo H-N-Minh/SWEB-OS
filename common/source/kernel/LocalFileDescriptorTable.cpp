@@ -1,6 +1,7 @@
 #include "LocalFileDescriptorTable.h"
 #include "debug.h"
 #include "UserThread.h"
+#include "File.h"
 
 LocalFileDescriptorTable* LocalFileDescriptorTable::instance_ = nullptr;
 
@@ -33,8 +34,10 @@ LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDes
 
 LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_fd_id) const
 {
+   debug(FILEDESCRIPTOR, "LocalFileDescriptorTable::getLocalFileDescriptor: Want local_fd %d\n", local_fd_id);
   for(auto &fd : local_fds_)
   {
+    debug(FILEDESCRIPTOR, "LocalFileDescriptorTable::getLocalFileDescriptor: Found %ld\n", fd->getLocalFD());
     if(fd->getLocalFD() == (size_t)local_fd_id)
     {
       debug(FILEDESCRIPTOR, "Getting local file descriptor with local FD ID: %d\n", local_fd_id);
@@ -52,13 +55,9 @@ size_t LocalFileDescriptorTable::generateLocalFD()
 }
 void LocalFileDescriptorTable::closeAllFileDescriptors() {
   while (!local_fds_.empty()) {
-    removeLocalFileDescriptorUnlocked(local_fds_.back());
+    removeLocalFileDescriptor(local_fds_.back());
   }
   debug(FILEDESCRIPTOR, "Closed all local file descriptors.\n");
-}
-
-void LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* local_fd) {
-  removeLocalFileDescriptorUnlocked(local_fd);
 }
 
 void LocalFileDescriptorTable::deleteGlobalFileDescriptor(FileDescriptor* global_fd)
@@ -68,15 +67,18 @@ void LocalFileDescriptorTable::deleteGlobalFileDescriptor(FileDescriptor* global
   {
     debug(FILEDESCRIPTOR, "Failed to remove the global FD %d.\n", global_fd->getFd());
   }
-  delete global_fd;
-  global_fd = nullptr;
+  global_fd->getFile()->closeFd(global_fd);
 }
 
-void LocalFileDescriptorTable::removeLocalFileDescriptorUnlocked(LocalFileDescriptor* local_fd) {
+int LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* local_fd) {
   auto it = ustl::find(local_fds_.begin(), local_fds_.end(), local_fd);
   if (it != local_fds_.end()) {
     FileDescriptor* global_fd = local_fd->getGlobalFileDescriptor();
-    debug(FILEDESCRIPTOR, "Before decrement in removeLocalFileDescriptorUnlocked: Global FD: %d\n", global_fd->getFd());
+    if(!global_fd)
+    {
+      return -1;
+    }
+    debug(FILEDESCRIPTOR, "Before decrement in removeLocalFileDescriptor: Global FD: %d\n", global_fd->getFd());
     debug(FILEDESCRIPTOR, "Decrementing ref count for global FD %d\n", global_fd->getFd());
     global_fd->decrementRefCount();
 
@@ -87,6 +89,7 @@ void LocalFileDescriptorTable::removeLocalFileDescriptorUnlocked(LocalFileDescri
     local_fds_.erase(it);
     delete local_fd;
   }
+  return 0;
 }
 
 ustl::vector<LocalFileDescriptor*> LocalFileDescriptorTable::getLocalFileDescriptors() const

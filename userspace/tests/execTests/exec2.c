@@ -12,7 +12,6 @@ int exec2()
 
     int rv = execv(path, argv);
     assert(rv == -1 && "Exec should fail for invalid path");
-
     printf("Exec2 successful!\n");
     return 0;
 }

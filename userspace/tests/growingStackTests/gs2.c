@@ -84,13 +84,13 @@ int gs2()
     if (pthread_create(&thread2, NULL, failingFoward2, NULL) != 0)
     {
       printf("Failed to create thread 2\n");
-      exit(-1);
+      exit(-3);
     }
     int retval2 = -1;
     if (pthread_join(thread2, (void**) &retval2) != 0)
     {
       printf("Failed to join thread 2\n");
-      exit(-1);
+      exit(-3);
     }
     
     exit(0);
@@ -99,7 +99,7 @@ int gs2()
   {
     int status;
     waitpid(pid, &status, 0);
-    if (status == -1)
+    if (status == -3)
     {
       printf("Child process failed as expected, but for the wrong reason\n");
       return -1;

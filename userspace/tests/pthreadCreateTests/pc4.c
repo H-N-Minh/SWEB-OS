@@ -15,6 +15,7 @@ int function2pc4(void* simple_argument)
 
 int pc4()
 {
+    
     int rv;
 
     // Test: Check if two running threads has differnt IDs

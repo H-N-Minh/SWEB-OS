@@ -9,7 +9,7 @@ int function_pca2()
     return 4;
 }
 
-//Test: Cancel running function
+//Test: Cancel dead thread
 int pca2()
 {
     pthread_t thread_id;

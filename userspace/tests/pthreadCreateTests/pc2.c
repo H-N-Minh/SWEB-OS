@@ -18,6 +18,7 @@ int pc2()
     assert(rv == 0 && "Return value on succesful creation should be 0.");
     assert(thread_id != 424242 && "thread_id was not set");
     assert(thread_id != 0 && "UserThread has ID of KernelThread");
+    pthread_join(thread_id, NULL);
 
     return 0;
 }

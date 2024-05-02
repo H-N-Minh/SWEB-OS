@@ -86,7 +86,7 @@ int child_func5()
   pthread_join(thread2, &retval2);
   if ((size_t) retval2 == FAIL5)
   {
-    exit(-1);
+    exit(-3);
   }
   
   // signal thread 1 to continue
@@ -99,7 +99,7 @@ int child_func5()
   
   if ((size_t)retval1 == FAIL5)
   {
-    exit(-1);    // this shouldnt be reached
+    exit(-3);    // this shouldnt be reached
   }
 
   exit(0);   // this shouldnt be reached
@@ -115,13 +115,13 @@ int gs5()
   if (pid == 0)
   {
     child_func5();
-    exit(-1);
+    exit(-3);
   }
   else
   {
     int status;
     waitpid(pid, &status, 0);
-    if (status == -1)
+    if (status == -3)
     {
       printf("Child process failed as expected, but for the wrong reason\n");
       return -1;

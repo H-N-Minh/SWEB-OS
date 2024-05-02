@@ -27,7 +27,8 @@ public:
   static uint32 pipe(int file_descriptor_array[2]);
 
 
-  static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address) ;
+  static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address);
+  static size_t pthreadSelf();
   static void pthreadExit(void* value_ptr);
   static int pthreadJoin(size_t thread_id, void**value_ptr);
 
@@ -62,7 +63,7 @@ public:
 
   static uint64_t get_current_timestamp_64_bit();
 
-  static long int wait_pid(long int pid, size_t status, size_t options);
+  static long int wait_pid(long int pid, int* status, size_t options);
 
   // minhsbrk2
   // static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);
