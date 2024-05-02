@@ -11,12 +11,11 @@ extern int gs3();
 extern int gs4();
 extern int gs5();
 extern int gs6();
+extern int gs7();
 
 /** TODO:       
  * - test with fork ( fork then growing stack) and (growing stack then fork)
  * - test buffer over flow and underflow, program should exit with error code 
-// todo: test if all pages are freed
-
 */
 
 // set to 1 to test, 0 to skip
@@ -25,7 +24,8 @@ extern int gs6();
 #define GS3 0     // 100 threads created and grow its stack at the same time
 #define GS4 0     // invalid growing 1: try to access outside stack limit
 #define GS5 0     // invalid growing 2: try to access another thread's mapped page after that thread died
-#define GS6 1     // invalid growing 3: trying to access another thread's unmapped page even when that thread still alive
+#define GS6 0     // invalid growing 3: trying to access another thread's unmapped page even when that thread still alive
+#define GS7 1     // test if all pages are freed after thread dies
 
 int main()
 {
@@ -67,7 +67,7 @@ int main()
 
     if (GS5)
     {
-      printf("\nTesting gs5: invalid growing 2: try to access another thread's stack after that thread died...\n");
+      printf("\nTesting gs5: invalid growing 2: try to access another thread's stack after that thread died, also test if all pages are unmapped when thread dies...\n");
       retval = gs5();
       if (retval == 0)                      { printf("===> gs5 successful!\n"); }
       else                                  { printf("===> gs5 failed!\n");  return -1;}
@@ -79,6 +79,14 @@ int main()
       retval = gs6();
       if (retval == 0)                      { printf("===> gs6 successful!\n"); }
       else                                  { printf("===> gs6 failed!\n");  return -1;}
+    }
+
+    if (GS7)
+    {
+      printf("\nTesting gs7: test if all pages are freed after thread dies...\n");
+      retval = gs7();
+      if (retval == 0)                      { printf("===> gs7 successful!\n"); }
+      else                                  { printf("===> gs7 failed!\n");  return -1;}
     }
 
     printf("\n\n===   All tests completed!   ===\n");
