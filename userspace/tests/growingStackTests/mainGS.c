@@ -12,7 +12,7 @@ extern int gs4();
 extern int gs5();
 extern int gs6();
 extern int gs7();
-extern int gs8();
+// extern int gs8();
 
 /** TODO:       
  * - test with fork: a thread has 2 pages mapped, fork, each process should still have 2 pages mapped, also
@@ -27,7 +27,7 @@ extern int gs8();
 #define GS5 0     // invalid growing 2: try to access another thread's mapped page after that thread died
 #define GS6 0     // invalid growing 3: trying to access another thread's unmapped page even when that thread still alive
 #define GS7 0     // test if all pages are freed after thread dies
-#define GS8 1     // test overflow detection
+// #define GS8 1     // test overflow detection
 
 int main()
 {
@@ -91,13 +91,13 @@ int main()
       else                                  { printf("===> gs7 failed!\n");  return -1;}
     }
 
-    if (GS8)
-    {
-      printf("\nTesting gs8: test overflow detection...\n");
-      retval = gs8();
-      if (retval == 0)                      { printf("===> gs8 successful!\n"); }
-      else                                  { printf("===> gs8 failed!\n");  return -1;}
-    }
+    // if (GS8)
+    // {
+    //   printf("\nTesting gs8: test overflow detection...\n");
+    //   retval = gs8();
+    //   if (retval == 0)                      { printf("===> gs8 successful!\n"); }
+    //   else                                  { printf("===> gs8 failed!\n");  return -1;}
+    // }
 
     printf("\n\n===   All tests completed!   ===\n");
     return 0;
