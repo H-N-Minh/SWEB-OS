@@ -84,16 +84,16 @@ int gs2()
     if (pthread_create(&thread2, NULL, failingFoward2, NULL) != 0)
     {
       printf("Failed to create thread 2\n");
-      return -1;
+      exit(-1);
     }
     int retval2 = -1;
     if (pthread_join(thread2, (void**) &retval2) != 0)
     {
       printf("Failed to join thread 2\n");
-      return -1;
+      exit(-1);
     }
     
-    return 0;
+    exit(0);
   }
   else
   {

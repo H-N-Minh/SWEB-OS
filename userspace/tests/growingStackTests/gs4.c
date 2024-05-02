@@ -1,100 +1,81 @@
 #include "stdio.h"
-#include "unistd.h"
-#include "assert.h"
+#include "stdlib.h"
 #include "pthread.h"
+#include "assert.h"
+#include "unistd.h"
+#include "wait.h"
 
-#define PAGE_SIZE3 4096
-#define THREADS3 1
-#define STACK_SIZE2 (4 * 4096 - 6*sizeof(size_t)) // 4 pages - 6 bytes of metadata
+#define PAGE_SIZE4 4096
+#define STACK_AMOUNT4 5   // make sure this alligns with the define in UserSpaceMemoryManager.h
 
-pthread_mutex_t mutex3 = PTHREAD_MUTEX_INITIALIZER;
-pthread_cond_t cond3 = PTHREAD_COND_INITIALIZER;
 
-size_t getTopOfThisStack3()
+// accessing above stack range, which should crash
+void childFunc4_1()
 {
-  size_t stack_variable;
-  size_t top_stack = (size_t)&stack_variable - (size_t)(&stack_variable)%PAGE_SIZE3 + PAGE_SIZE3 - sizeof(size_t);
-  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-  return top_stack;
+    int i = 0;
+    // printf("top of this page is %p (%zu)\n", (void*) getTopOfThisPage((size_t) &i), getTopOfThisPage((size_t) &i));
+    int *p = &i;
+    // printf("gs1: p = %p (%zu) with value %d (should be 0)\n", p, (size_t) p, *p);
+
+    p =(int*) ((size_t)p + PAGE_SIZE4);
+    // printf("now accessing new p at %p (%zu) \n", p, (size_t) p);
+    *p = 11;
 }
 
-// Fucntion that grow to 4 pages
-void* growFunc3(void* arg)
+// accessing under stack range, which should crash
+void childFunc4_2()
 {
-    printf("Thread waiting for broadcast signal before locking\n");
+    int i = 0;
+    // printf("top of this page is %p (%zu)\n", (void*) getTopOfThisPage((size_t) &i), getTopOfThisPage((size_t) &i));
+    int *p = &i;
+    // printf("gs1: p = %p (%zu) with value %d (should be 0)\n", p, (size_t) p, *p);
 
-    // Wait for the broadcast signal from the main thread
-    pthread_mutex_lock(&mutex3);
-    printf("Thread waiting for broadcast signal\n");
-    pthread_cond_wait(&cond3, &mutex3);
-    printf("Thread received broadcast signal\n");
-    pthread_mutex_unlock(&mutex3);
-
-    printf("child Thread start growing\n");
-
-    size_t end_stack = getTopOfThisStack() - PAGE_SIZE3 * 4 + sizeof(size_t);
-    int x;
-    size_t p = (size_t) &x;
-    while (p >= end_stack)
-    {
-        *(char*) p = 'D';
-        p -= 1;
-    }
-    
-    printf("child Thread finished growing\n");
-    p = end_stack;
-    while (p <= (size_t) &x)
-    {
-        if (*(char*) p != 'D')
-        {
-            printf(" p is (%zu) under x and (%zu) over end_stack\n", (((size_t) &x) - p), p - end_stack);
-            return (void*) -1;
-        }
-        p += 1;
-    }
-
-    printf("Thread finished\n");
-    return (void*) 69;
+    p =(int*) ((size_t)p - PAGE_SIZE4 * STACK_AMOUNT4);
+    // printf("now accessing new p at %p (%zu) \n", p, (size_t) p);
+    *p = 11;
 }
 
-// Test a very basic growing stack
+
+
+// Testing gs4: invalid growing 1: try to access outside stack limit
 int gs4()
 {
-    pthread_t threads[THREADS3];
-
-    // Create threads and wait for broadcast signal
-    printf("Creating threads with func at %p\n", growFunc3);
-    for (int i = 0; i < THREADS3; i++) {
-        pthread_create(&threads[i], NULL, growFunc3, NULL);
-    }
-    printf("Threads created\n");
-    // // some delay so all threads can be initialized
-    for (size_t i = 0; i < 200000000; i++)
+  pid_t pid = fork();
+  if (pid == 0)
+  {
+    childFunc4_1();
+    exit(0);
+  }
+  else
+  {
+    int status;
+    waitpid(pid, &status, 0);
+    if (status == 0)
     {
-        /* code */
+      printf("Child process didnt crash as it should\n");
+      return -1;
     }
+    // printf("Child process crashed as expected with code %d\n", status);
+  }
 
-
-    // Broadcast signal to all threads
-    printf("Broadcasting signal before locking\n");
-    pthread_mutex_lock(&mutex3);
-    printf("Broadcasting signal\n");
-    pthread_cond_broadcast(&cond3);
-    printf("Broadcast signal sent\n");
-    pthread_mutex_unlock(&mutex3);
-
-    // Wait for all threads to finish
-    int retval[THREADS3];
-    for (int i = 0; i < THREADS3; i++) {
-        pthread_join(threads[i], (void**) (retval + i));
-    }
-    for (size_t i = 0; i < THREADS3; i++)
+  ///////////////////////////////////////////////////////////////
+  pid_t pid2 = fork();
+  if (pid2 == 0)
+  {
+    childFunc4_2();
+    exit(0);
+  }
+  else
+  {
+    int status2;
+    waitpid(pid2, &status2, 0);
+    if (status2 == 0)
     {
-        if (retval[i] != 69)
-        {
-            printf("Thread %zu failed\n", i);
-            return -1;
-        }
+      printf("Child process didnt crash as it should\n");
+      return -1;
     }
-    return 0;
+    // printf("Child process crashed as expected with code %d\n", status);
+  }
+  
+  return 0;
 }

@@ -155,6 +155,7 @@ void UserThread::kill()
 
 void UserThread::send_kill_notification()
 {
+  // wake joining threads up
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
@@ -342,6 +343,7 @@ void UserThread::exitThread(void* value_ptr)
   // unmap its stack
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
   process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+
   kill();
 
 }
