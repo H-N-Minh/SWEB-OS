@@ -65,7 +65,28 @@ void LocalFileDescriptorTable::deleteGlobalFileDescriptor(FileDescriptor* global
   {
     debug(FILEDESCRIPTOR, "Failed to remove the global FD %d.\n", global_fd->getFd());
   }
-  global_fd->getFile()->closeFd(global_fd);
+
+  if (global_fd != nullptr)
+  {
+    if (global_fd->getFile() != nullptr)
+    {
+      debug(FILEDESCRIPTOR, "1 Deleting global FD %d.\n", global_fd->getFd());
+      global_fd->getFile()->closeFd(global_fd);
+      debug(FILEDESCRIPTOR, "2 Deleted global FD %d.\n", global_fd->getFd());
+    }
+    else if (global_fd->getType() == FileDescriptor::FileType::PIPE)
+    {
+      debug(FILEDESCRIPTOR, "Pipe %d.\n", global_fd->getFd());
+    }
+    else
+    {
+      debug(FILEDESCRIPTOR, "global_fd->getFile() is null.\n");
+    }
+  }
+  else
+  {
+    debug(FILEDESCRIPTOR, "global_fd is null.\n");
+  }
 }
 
 int LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* local_fd) {

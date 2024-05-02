@@ -367,6 +367,9 @@ bool Loader::isCOW(size_t virtual_addr)
       return false;
 }
 
+
+// ! use resolve mapping
+
 PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
 {
   //  size_t offset = virtual_addr & 0xfff;

@@ -3,6 +3,8 @@
 #include "uvector.h"
 #include "LocalFileDescriptor.h"
 #include "FileType.h"
+#include "debug.h"
+#include "Pipe.h"
 
 class LocalFileDescriptorTable {
 public:

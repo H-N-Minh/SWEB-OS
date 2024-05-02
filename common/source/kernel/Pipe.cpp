@@ -1,5 +1,8 @@
 #include "Pipe.h"
+#include "FileSystemInfo.h"
 
+#define O_RDONLY    0x0001
+#define O_WRONLY    0x0002
 
 Pipe::Pipe(File *file, FileType type)
     : FileDescriptor(file, type), buffer_(256), closed_(false), mtx("Pipe Mutex"),
@@ -12,65 +15,74 @@ Pipe::~Pipe()
 {
   debug(PIPE, "Pipe::~Pipe called\n");
 }
+size_t Pipe::write(const char* buffer, size_t size) {
+  debug(PIPE, "Pipe::write called with buffer: %s\n", buffer);
+  mtx.acquire();
+
+  if (closed_)
+  {
+    debug(PIPE, "closed error\n");
+    return -1;
+  }
+
+  size_t count = 0;
+  while(count < size && !closed_)
+  {
+    if(!buffer_.isFull())
+    {
+      buffer_.put(buffer[count++]);
+    }
+    else
+    {
+      cond_full.wait();
+    }
+
+    if(count == size || buffer_.isFull())
+    {
+      cond_empty.signal();
+    }
+  }
+
+  mtx.release();
+
+  debug(PIPE, "Pipe::write: Wrote %zu bytes\n", count);
+  return count;
+}
+
 size_t Pipe::read(char* buffer, size_t count) {
   debug(PIPE, "Pipe::read called\n");
-
-  ScopeLock l(mtx);
-
   size_t num_read = 0;
   char c;
 
-  while (num_read < count && !closed_){
-    while (!closed_ && !buffer_.get(c)) {
+  mtx.acquire();
+
+  while (num_read < count)
+  {
+    if (!buffer_.get(c))
+    {
+      if(closed_)
+      {
+        break;
+      }
       cond_empty.wait();
     }
-
-    if (closed_ && !buffer_.get(c)) {
-      return num_read;
+    else
+    {
+      buffer[num_read++] = c;
+      cond_full.signal();
     }
-
-    buffer[num_read++] = c;
-
-    cond_full.signal();
   }
+
+  mtx.release();
 
   debug(PIPE, "Pipe::read: Read %zu bytes\n", num_read);
   return num_read;
 }
-size_t Pipe::write(const char* buffer, size_t size) {
-  debug(PIPE, "Pipe::write called with buffer: %s\n", buffer);
-
-  ScopeLock l(mtx);
-
-  size_t count = 0;
-
-  while (count < size && !closed_ && buffer_.isFull()) {
-    cond_full.wait();
-  }
-
-  while (count < size && !closed_) {
-    if (buffer_.isFull()) {
-      cond_full.wait();
-    } else {
-      buffer_.put(buffer[count++]);
-    }
-  }
-
-  if (closed_) {
-    return -1;
-  }
-
-  cond_empty.signal();
-
-  debug(PIPE, "Pipe::write: Wrote %zu bytes\n", count);
-
-  return count;
-}
-
-void Pipe::close() {
-  debug(PIPE, "Pipe::close called\n");
-  ScopeLock l(mtx);
+void Pipe::close()
+{
+  debug(PIPE, "Closing pipe\n");
   closed_ = true;
   cond_full.signal();
   cond_empty.signal();
 }
+
