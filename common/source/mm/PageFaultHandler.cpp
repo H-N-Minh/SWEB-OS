@@ -44,7 +44,6 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
     else
     {
       debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
-      return 4;
     }
   }
   else if(user && !present && 
@@ -106,21 +105,20 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
       currentThread->loader_->copyPage(address);
-      currentThread->loader_->arch_memory_.lock_.release();
     }
     else
     {
       currentThread->loader_->loadPage(address);
-      currentThread->loader_->arch_memory_.lock_.release();
     }
+    currentThread->loader_->arch_memory_.lock_.release();
   }
   else if (status == 69)
   {
-    currentThread->loader_->arch_memory_.lock_.release();
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
     status = manager->increaseStackSize(address);
+    currentThread->loader_->arch_memory_.lock_.release();
     if (status == -1)
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
@@ -133,10 +131,6 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
-  }
-  else if(status == 4)
-  {
-    currentThread->loader_->arch_memory_.lock_.release();
   }
   else
   {
