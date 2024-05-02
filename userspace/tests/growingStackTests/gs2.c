@@ -101,7 +101,7 @@ int gs2()
     waitpid(pid, &status, 0);
     if (status == -1)
     {
-      printf("Child process failed , but for the wrong reason\n");
+      printf("Child process failed as expected, but for the wrong reason\n");
       return -1;
     }    
     else if (status != 0)

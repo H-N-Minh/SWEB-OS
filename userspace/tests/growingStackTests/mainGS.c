@@ -9,6 +9,7 @@ extern int gs1();
 extern int gs2();
 extern int gs3();
 extern int gs4();
+extern int gs5();
 
 /** TODO: 
  * - test calling pthread first, check if guards setup correctly, then call growing stack, then check guards again
@@ -27,8 +28,8 @@ extern int gs4();
 #define GS1 0     // basic test for growing stack
 #define GS2 0     // more advanced test for growing stack
 #define GS3 0     // 100 threads created and grow its stack at the same time
-#define GS4 1     // invalid growing 1: try to access outside stack limit
-#define GS5 0     // invalid growing 2: try to access another thread's stack after that thread died
+#define GS4 0     // invalid growing 1: try to access outside stack limit
+#define GS5 1     // invalid growing 2: try to access another thread's stack after that thread died
 
 int main()
 {
@@ -66,6 +67,14 @@ int main()
       retval = gs4();
       if (retval == 0)                      { printf("===> gs4 successful!\n"); }
       else                                  { printf("===> gs4 failed!\n");  return -1;}
+    }
+
+    if (GS5)
+    {
+      printf("\nTesting gs5: invalid growing 2: try to access another thread's stack after that thread died...\n");
+      retval = gs5();
+      if (retval == 0)                      { printf("===> gs5 successful!\n"); }
+      else                                  { printf("===> gs5 failed!\n");  return -1;}
     }
 
     printf("\n\n===   All tests completed!   ===\n");
