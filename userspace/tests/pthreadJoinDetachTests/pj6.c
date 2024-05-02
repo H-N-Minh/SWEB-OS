@@ -41,6 +41,8 @@ int pj6()
 
     int rv_cancel = pthread_cancel(thread_id2);
     assert(rv_cancel == 0);
+
+    sleep(3);
     
     void* value_ptr;
     int rv_join = pthread_join(thread_id1, &value_ptr);
