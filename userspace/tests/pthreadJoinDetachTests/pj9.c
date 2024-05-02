@@ -21,7 +21,6 @@ int pj9() {
   pthread_join(thread, NULL);
   int rv = pthread_join(thread, NULL);
   assert(rv == -1);
-  printf("Test success...\n");
 
   return 0;
 }

@@ -6,8 +6,8 @@ char const *user_progs[] = {
                                "/usr/shell.sweb",
                           
 // Threads -------------------------------------------------------------------
-                            // "/usr/pthreadCreateTests.sweb",           //
-                            // "/usr/pthreadJoinDetachTests.sweb",       //
+                            // "/usr/pthreadCreateTests.sweb",
+                            // "/usr/pthreadJoinDetachTests.sweb", 
 
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
@@ -15,45 +15,28 @@ char const *user_progs[] = {
                             // "/usr/exitTests.sweb",
 
 //Fork/Exec -------------------------------------------------------------------
-                            // "/usr/waitpidTests.sweb",                //
+                            // "/usr/waitpidTests.sweb",                
                             // "/usr/forkTests.sweb",
-                            // "/usr/execTests.sweb",                   //
-                            // "/usr/forkExecTests.sweb",  
+
+                            // "/usr/fork7.sweb",
+                            // "/usr/fork8.sweb",
+                            // "/usr/fork9.sweb",
+
+                            // "/usr/execTests.sweb",                   
+                           
 
 // UserspaceLocks ------------------------------------------------------------
                             // "/usr/userspaceLocksTests.sweb",
                             // "/usr/condTests.sweb",
                             // "/usr/semTests.sweb",
 
-// FORK-------------------------------------------------
-                            // "/usr/forkTests.sweb",
-
-
-                        
-                            //"/usr/notest.sweb",
-                            //"/usr/shell.sweb",
-
-                            //"/usr/fdTest.sweb",
-                           
-                          
-                            // "/usr/pthreadCancelTests.sweb",
-                            // "/usr/pthreadExitTests.sweb",
-                            // "/usr/pthreadDetachTests.sweb",                                        
-
-                            //"/usr/execTests.sweb",
-
-
-                            //"/usr/forkExecTests.sweb",  
-
-                          //  "/usr/userspaceLocksTests.sweb",
-
-                            // "/usr/sleepAndClockTests.sweb",
 //Other tests -----------------------------------------------------------------
-                            // "/usr/sleepAndClockTests.sweb",          //
-                            //"/usr/growingStackTests.sweb",
+                            // "/usr/sleepAndClockTests.sweb",   
+                            // "/usr/localFdTests.sweb",       
                             // "/usr/no_test.sweb",
-                            // "/usr/topG.sweb",               // Test top of stack that is reserved for userspace locking 
-
-//Exit !!!!!!! ------------------------
+                            
+                                     
+                            //"/usr/growingStackTests.sweb",
+                            
                             0
                            };

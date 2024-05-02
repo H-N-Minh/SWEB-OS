@@ -327,11 +327,6 @@ void Syscall::exit(size_t exit_code)
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
 
-  ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
-  ProcessRegistry::instance()->process_exit_status_map_[current_process.pid_] = exit_code;
-  ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
-  ProcessRegistry::instance()->process_exit_status_map_lock_.release();
-
   if (exit_code != 69)
   {
     debug(SYSCALL, "Tortillas test system received exit code: %zd\n", exit_code); // dont delete
@@ -389,19 +384,20 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
+  if (fd == fd_stdout)
+  {
+    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
+    kprintf("%.*s", (int)size, (char*) buffer);
+    return size;
+  }
+
   lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
   debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
 
-  if (fd == fd_stdout)
-  {
-    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
-    kprintf("%.*s", (int)size, (char*) buffer);
-    lfdTable.lfds_lock_.release();
-    return size;
-  }
-  else if (localFileDescriptor != nullptr) {
+
+  if (localFileDescriptor != nullptr) {
     FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 

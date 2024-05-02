@@ -52,7 +52,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   ProcessRegistry::instance()->processes_lock_.release();
 
 
-  while(Scheduler::instance()->getTicks() < 6)
+  while(Scheduler::instance()->getTicks() < 10)
   {
     Scheduler::instance()->yield();
   }

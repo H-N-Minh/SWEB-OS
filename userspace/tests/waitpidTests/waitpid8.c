@@ -15,10 +15,9 @@ void child_process(void* arg)
 {
   sleep(1);
   pthread_exit((void*)4);
-  // exit(0);
 }
 
-int main() {
+int waitpid8() {
   pid_t pid;
   int child_ids[NUM_CHILDREN];
   for (int i = 0; i < NUM_CHILDREN; ++i)
@@ -43,10 +42,8 @@ int main() {
   for (int i = 0; i < NUM_CHILDREN; ++i)
   {
     int rv = waitpid(child_ids[i], &status, 0);
-    // assert(child_ids[i] == rv);
-    printf("status %d\n",status);
-    printf("rv %d\n",rv);
-    // assert(child_ids[i] == status);
+    assert(child_ids[i] == rv);
+    assert(4 == status);
   }
 
   return 0;

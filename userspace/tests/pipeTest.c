@@ -19,7 +19,7 @@ void *read_from_pipe(void *arg) {
     return NULL;
 }
 
-int pipeTest(void) {
+int main(void) {
   printf("test pipe1\n");
     int file_descriptor_array[2];
   printf("test pipe2\n");
