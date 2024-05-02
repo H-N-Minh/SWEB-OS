@@ -359,12 +359,19 @@ bool Loader::prepareHeaders()
 
 bool Loader::isCOW(size_t virtual_addr)
 {
+    ArchMemory* arch_memory = &currentThread->loader_->arch_memory_;
+    arch_memory->lock_.acquire();
     PageTableEntry* entry = findPageTableEntry(virtual_addr);
-
     if (entry && entry->cow)
+    {
+      arch_memory->lock_.release();
       return true;
+    }
     else
+    {
+      arch_memory->lock_.release();
       return false;
+    }
 }
 
 PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)

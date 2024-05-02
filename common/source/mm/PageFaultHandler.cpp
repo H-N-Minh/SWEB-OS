@@ -91,6 +91,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
+  ((UserThread*)currentThread)->process_->cow_lock_.acquire();
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == 1) // everything seems to be okay, no page fault
   {
@@ -111,6 +112,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else if (status == 69)
   {
+    ((UserThread*)currentThread)->process_->cow_lock_.release();
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
@@ -130,6 +132,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else
   {
+    ((UserThread*)currentThread)->process_->cow_lock_.release();
     // the page-fault seems to be faulty, print out the thread stack traces
     ArchThreads::printThreadRegisters(currentThread, true);
     currentThread->printBacktrace(true);
