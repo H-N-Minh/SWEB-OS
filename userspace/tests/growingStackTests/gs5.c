@@ -12,9 +12,11 @@ size_t SUCESS5 = 4251;
 size_t FAIL5 = 666;
 
 int flag5 = 0;
-char* local5_addr = 0;
+char* global_addr5 = 0;     // used to store local array of thread 2
 
-
+/**
+ * write a given array with a given character
+*/
 void growStack(char c, char* stack_data)
 {
   assert(stack_data != 0);
@@ -24,6 +26,10 @@ void growStack(char c, char* stack_data)
   }
 }
 
+/**
+ * check if the given array is filled with the given character
+ * return 1 if it is, 0 if it is not
+*/
 int checkStack(char c, char* stack_data)
 {
   assert(stack_data != 0);
@@ -31,6 +37,7 @@ int checkStack(char c, char* stack_data)
   {
     if (stack_data[i] != c)
     {
+      // printf("given letter is %c, but found %c\n", c, stack_data[i]);
       return 0;
     }
   }
@@ -40,9 +47,9 @@ int checkStack(char c, char* stack_data)
 void* thread_func5_1(void* arg)
 {
 
-  char array_adr[VALID_ARRAY_SIZE5];
-  growStack('A', array_adr);
-  assert(checkStack('A', array_adr));
+  char local_array[VALID_ARRAY_SIZE5];
+  growStack('A', local_array);
+  assert(checkStack('A', local_array));
   int local_var = 45;
   assert(local_var == 45);
 
@@ -53,11 +60,19 @@ void* thread_func5_1(void* arg)
     // step 2
     sched_yield();
   }
+  // printf("thread 1: step 1: thread 1 woke up, checking if the array of thread 2 is B\n");
   // step 5
-  assert(local5_addr != 0);
+  assert(global_addr5 != 0);
   
-  growStack('Z', local5_addr);
-  assert(checkStack('Z', local5_addr));
+  if (!checkStack('B', global_addr5))   // thread 1 should have changed our local array to Z
+  {
+    // printf("thread 1: step 2.1: array of thread 2 is not B as expected, exiting with error\n");
+    return (void*) FAIL5;
+  }
+  // printf("thread 1: step 2: array of t2 is all B, which is correct\n");
+  growStack('Z', global_addr5);
+  assert(checkStack('Z', global_addr5));
+  // printf("thread 1: step 3: changed array of t2 to all Z, then wake thread 2 up\n");
   flag5 = 0;
 
   while (flag5 == 0)
@@ -65,81 +80,79 @@ void* thread_func5_1(void* arg)
     // step 6
     sched_yield();
   }
-
+  // printf("thread 1: step 7: t1 just woke up, checking if its local array still A\n");
   // step 9
   assert(local_var == 45);
-  assert(checkStack('A', array_adr));
+  assert(checkStack('A', local_array));
+  // printf("thread 1: step 8: all local var still unchanged, correct!. checking array of thread 2, now process should crash\n");
+  assert(checkStack('Z', global_addr5));    // if this is commented out, process should not crash, so test case should shows failure
+  // printf("thread 1: step 9: local array t2 is still accesible = ERROR\n");
 
-  growStack('Z', local5_addr);  // this should crash because thread 2 died
-  assert(checkStack('Z', local5_addr));
 
-  return (void*) SUCESS5;
+  return (void*) SUCESS5;   // this should never reached
 }
 
 void* thread_func5_2(void* arg)
 {
-  char array_adr[VALID_ARRAY_SIZE5];
-  growStack('B', array_adr);
-  assert(checkStack('B', array_adr));
-  // step 3
+  char local_array[VALID_ARRAY_SIZE5];
+  growStack('B', local_array);
+  assert(checkStack('B', local_array));
 
-  local5_addr = array_adr;
+  global_addr5 = local_array;
+  // printf("thread 2: step 0: local array set to B, signalling thread 1 to wake up\n");
   flag5 = 1;
-  
   while (flag5 == 1)
   {
-    // step 4
     sched_yield();
   }
+  // printf("thread 2: step 4: thread 2 woke up, checking if array is changed to Z by thread 1 successfully\n");
   
-  // step 7
-  if (checkStack('Z', array_adr))   // thread 1 should have changed our local array to Z
+  if (checkStack('Z', local_array))   // thread 1 should have changed our local array to Z
   {
+    // printf("thread 2: step 5.1, array of t2 is  Z correctly, t2 dies with success\n");
     return (void*) SUCESS5;
   }
-  
+  // printf("thread 2: step 5, array is not Z as expected, thread 2 exits with failure\n");
   return (void*) FAIL5;
 }
 
-// 2 threads have different stack but they should still be able to access each other's stack
+// this is child process, it creates 2 threads. this process should crash
 int child_func5()
 {
   pthread_t thread1, thread2;
   int rv1, rv2;
-  
   rv1 = pthread_create(&thread1, NULL, thread_func5_1, NULL);
   assert(rv1 == 0);
-  
   rv2 = pthread_create(&thread2, NULL, thread_func5_2, NULL);
   assert(rv2 == 0);
   
-  // wait for thread 2 to successfully finish
+  // wait for thread 2 to successfully finish with return 0
   void* retval2;
   pthread_join(thread2, &retval2);
   if ((size_t) retval2 == FAIL5)
   {
     exit(-3);
   }
-  
+  // printf("child:    step 6: t2 died with success, wake up t1 now and join it \n");
   // signal thread 1 to continue
-  // step 8
   flag5 = 1;
 
   // wait for thread 1 to crash
   void* retval1;
   pthread_join(thread1, &retval1);
   
+  // this shoouldnt be reached
   if ((size_t)retval1 == FAIL5)
   {
-    exit(-3);    // this shouldnt be reached
+    exit(-3);  
   }
-
-  exit(0);   // this shouldnt be reached
+  exit(0); 
   return 0;
 }
 
 
-// both thread has its own big array, thread 1 should be able to access thread 2's array and rewrite it
+// both thread has its own big array, thread 1 array of 'A' and thread 2 array of 'B'
+// thread 1 should be able to access thread 2's array and rewrite it completely to array of 'Z'
 // then kill 2nd thread and thread 1 try to access the stack again, this should be invalid and crash
 int gs5()
 {
