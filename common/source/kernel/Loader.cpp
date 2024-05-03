@@ -359,14 +359,16 @@ bool Loader::prepareHeaders()
     return phdrs_.size() > 0;
 }
 
-bool Loader::isCOW(size_t virtual_addr)
+int Loader::isCOW(size_t virtual_addr)
 {
     PageTableEntry* entry = findPageTableEntry(virtual_addr);
 
-    if (entry && entry->cow)
-      return true;
+    if (entry && (entry->cow == 1))
+      return 1;
+    else if (entry && (entry->cow == 2))
+      return 2;
     else
-      return false;
+      return 0;
 }
 
 PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
@@ -455,7 +457,7 @@ void Loader::copyPage(size_t virtual_addr)
     //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
     entry->present = 1;
     entry->writeable = 1;
-    entry->cow = 0;
+    entry->cow = 2;
 
 
 }

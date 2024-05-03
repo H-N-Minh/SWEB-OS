@@ -106,11 +106,15 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else if (status == 3)
   {
-    if(writing && currentThread->loader_->isCOW(address)) //bit of entry->writable = =1?
+    if(writing && (currentThread->loader_->isCOW(address) == 1)) //bit of entry->writable = =1?
     {
 
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
       currentThread->loader_->copyPage(address);
+      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+    }
+    else if(writing && (currentThread->loader_->isCOW(address) == 2))
+    {
       if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
     }
     else
