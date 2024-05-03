@@ -62,9 +62,9 @@ int main()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "pthread_join where function is still running");
 
-    // rv = pj3();        //starting 2000 threads after each other and join them - takes forever
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "starting 2000 threads after each other and join them - takes forever");
+    rv = pj3();        //starting 2000 threads after each other and join them - takes forever
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "starting 2000 threads after each other and join them - takes forever");
 
     rv = pj4();          //try to join the same thread twice
     number_of_tests++;
