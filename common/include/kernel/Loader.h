@@ -42,7 +42,7 @@ class Loader
 
     ArchMemory arch_memory_;
 
-    int isCOW(size_t virtual_addr);
+    bool isCOW(size_t virtual_addr);
     PageTableEntry* findPageTableEntry(size_t virtual_addr);
     void copyPage(size_t virtual_addr);
 
