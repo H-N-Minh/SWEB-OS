@@ -3,10 +3,10 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                                "/usr/shell.sweb",
+                                // "/usr/shell.sweb",
                           
 // Threads -------------------------------------------------------------------
-                            // "/usr/pthreadCreateTests.sweb",
+                            "/usr/pthreadCreateTests.sweb",
                             // "/usr/pthreadJoinDetachTests.sweb", 
 
                             // "/usr/pthreadCancelTests.sweb",
@@ -60,9 +60,6 @@ char const *user_progs[] = {
                             // "/usr/pthreadDetachTests.sweb",                                        
 
                             //"/usr/execTests.sweb",
-
-
-                            //"/usr/forkExecTests.sweb",  
 
                             // "/usr/userspaceLocksTests.sweb",
 

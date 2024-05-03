@@ -91,6 +91,7 @@ void Loader::loadPage(pointer virtual_address)
           if(readFromBinary((char *)ArchMemory::getIdentAddressOfPPN(ppn) + virt_offs_on_page, bin_start_addr, bytes_to_load))
           {
             program_binary_lock_.release();
+            arch_memory_.lock_.release();
             PageManager::instance()->freePPN(ppn);
             debug(LOADER, "ERROR! Some parts of the content could not be loaded from the binary.\n");
             Syscall::exit(999);
@@ -108,12 +109,13 @@ void Loader::loadPage(pointer virtual_address)
     if(!found_page_content)
     {
       PageManager::instance()->freePPN(ppn);
+      arch_memory_.lock_.release();
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
       Syscall::exit(666);
     }
-    arch_memory_.lock_.acquire();
+    // arch_memory_.lock_.acquire();
     bool page_mapped = arch_memory_.mapPage(virt_page_start_addr / PAGE_SIZE, ppn, true);
-    arch_memory_.lock_.release();
+    // arch_memory_.lock_.release();
     if (!page_mapped)
     {
       debug(LOADER, "Loader::loadPage: The page has been mapped by someone else.\n");
@@ -357,14 +359,16 @@ bool Loader::prepareHeaders()
     return phdrs_.size() > 0;
 }
 
-bool Loader::isCOW(size_t virtual_addr)
+int Loader::isCOW(size_t virtual_addr)
 {
     PageTableEntry* entry = findPageTableEntry(virtual_addr);
 
-    if (entry && entry->cow)
-      return true;
+    if (entry && (entry->cow == 1))
+      return 1;
+    else if (entry && (entry->cow == 2))
+      return 2;
     else
-      return false;
+      return 0;
 }
 
 PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
@@ -453,7 +457,7 @@ void Loader::copyPage(size_t virtual_addr)
     //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
     entry->present = 1;
     entry->writeable = 1;
-    entry->cow = 0;
+    entry->cow = 2;
 
 
 }

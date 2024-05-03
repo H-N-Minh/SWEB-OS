@@ -240,11 +240,11 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  arch_memory->lock_.acquire();
+  // arch_memory->lock_.acquire();
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
   uint32 new_ppn = PageManager::instance()->allocPPN();
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true);
-  arch_memory->lock_.release();
+  // arch_memory->lock_.release();
   if (!page_mapped)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: could not map new page\n");
@@ -281,7 +281,7 @@ size_t UserSpaceMemoryManager::checkGuardValid()
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards current thread is intact\n");
 
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  arch_memory->lock_.acquire();
+  // arch_memory->lock_.acquire();
   if (arch_memory->checkAddressValid(guard3))
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: Theres another thread below us, checking its guards\n");
@@ -291,7 +291,7 @@ size_t UserSpaceMemoryManager::checkGuardValid()
       return 11;
     }
   }
-  arch_memory->lock_.release();
+  // arch_memory->lock_.release();
 
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: All guards are still intact\n");
   return guard1;
