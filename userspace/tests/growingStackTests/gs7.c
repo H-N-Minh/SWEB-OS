@@ -63,6 +63,7 @@ void* thread_func7_2(void* tid)
   return (void*) 0;
 }
 
+// test if all pages are freed after thread dies
 int gs7()
 {
   pthread_t threads[STACK_AMOUNT7 + 1];

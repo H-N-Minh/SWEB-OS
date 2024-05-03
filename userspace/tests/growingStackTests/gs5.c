@@ -5,20 +5,48 @@
 #include "wait.h"
 #include "sched.h"
 
-
+#define PAGE_SIZE5 4096
+#define STACK_AMOUNT5 5   // make sure this alligns with the define in UserSpaceMemoryManager.h
+#define VALID_ARRAY_SIZE5 (STACK_AMOUNT5 - 1) * PAGE_SIZE5    // 4 pages array should fit in 5 pages stack
 size_t SUCESS5 = 4251;
 size_t FAIL5 = 666;
 
 int flag5 = 0;
-int* local5_addr = 0;
+char* local5_addr = 0;
 
 
+void growStack(char c, char* stack_data)
+{
+  assert(stack_data != 0);
+  for (int i = 0; i < VALID_ARRAY_SIZE5; i++)
+  {
+    stack_data[i] = c; 
+  }
+}
+
+int checkStack(char c, char* stack_data)
+{
+  assert(stack_data != 0);
+  for (int i = 0; i < VALID_ARRAY_SIZE5; i++)
+  {
+    if (stack_data[i] != c)
+    {
+      return 0;
+    }
+  }
+  return 1;
+}
 
 void* thread_func5_1(void* arg)
 {
-  // step 1
+
+  char array_adr[VALID_ARRAY_SIZE5];
+  growStack('A', array_adr);
+  assert(checkStack('A', array_adr));
   int local_var = 45;
   assert(local_var == 45);
+
+  // step 1
 
   while (flag5 == 0)
   {
@@ -28,7 +56,8 @@ void* thread_func5_1(void* arg)
   // step 5
   assert(local5_addr != 0);
   
-  *local5_addr = (*local5_addr) * 10;
+  growStack('Z', local5_addr);
+  assert(checkStack('Z', local5_addr));
   flag5 = 0;
 
   while (flag5 == 0)
@@ -39,19 +68,22 @@ void* thread_func5_1(void* arg)
 
   // step 9
   assert(local_var == 45);
+  assert(checkStack('A', array_adr));
 
-  *local5_addr = (*local5_addr) * 10;  // this should crash
+  growStack('Z', local5_addr);  // this should crash because thread 2 died
+  assert(checkStack('Z', local5_addr));
 
   return (void*) SUCESS5;
 }
 
 void* thread_func5_2(void* arg)
 {
+  char array_adr[VALID_ARRAY_SIZE5];
+  growStack('B', array_adr);
+  assert(checkStack('B', array_adr));
   // step 3
-  int local_var = 56;
-  assert(local_var == 56 );
 
-  local5_addr = &local_var;
+  local5_addr = array_adr;
   flag5 = 1;
   
   while (flag5 == 1)
@@ -61,7 +93,7 @@ void* thread_func5_2(void* arg)
   }
   
   // step 7
-  if (local_var == 560)
+  if (checkStack('Z', array_adr))   // thread 1 should have changed our local array to Z
   {
     return (void*) SUCESS5;
   }
@@ -107,8 +139,8 @@ int child_func5()
 }
 
 
-// first make sure 2 threads can access each other stack. this should be valid
-// then kill 1 thread and try to access its stack again, this should be invalid and crash
+// both thread has its own big array, thread 1 should be able to access thread 2's array and rewrite it
+// then kill 2nd thread and thread 1 try to access the stack again, this should be invalid and crash
 int gs5()
 {
   pid_t pid = fork();

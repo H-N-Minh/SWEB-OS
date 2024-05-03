@@ -18,6 +18,7 @@ extern int pc9();
 extern int pc10();
 extern int pc11();
 extern int pc12();
+extern int pc13();
 
 
 void check_return_value(int testnumber, int rv, int* successful_tests, char* description)
@@ -114,7 +115,10 @@ int childMain()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "test if pthread_self() works");
 
-    
+    rv = pc13();  //test thousands of threads
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "create and destroy 6000 threads");
+
     if(successful_tests == number_of_tests)
     {
         printf("\n\n===  All pthreadCreate() testcases successful  ===\n");
@@ -142,7 +146,11 @@ int main()
         waitpid(pid, &status, 0);
         if (status == -3)
         {
-            printf("Testing crashed\n");
+            printf("Some test(s) failed\n");
+        }
+        else if (status != 0 && status != -1)
+        {
+            printf("process crashed with error code %d\n", status);
         }
         
         for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
