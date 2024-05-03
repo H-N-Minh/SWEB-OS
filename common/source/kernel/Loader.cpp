@@ -109,6 +109,7 @@ void Loader::loadPage(pointer virtual_address)
     if(!found_page_content)
     {
       PageManager::instance()->freePPN(ppn);
+      arch_memory_.lock_.release();
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
       Syscall::exit(666);
     }
