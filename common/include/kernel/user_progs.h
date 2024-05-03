@@ -6,13 +6,13 @@ char const *user_progs[] = {
                             //    "/usr/shell.sweb",
                           
 // Threads -------------------------------------------------------------------
-                            "/usr/pthreadCreateTests.sweb",
+                            // "/usr/pthreadCreateTests.sweb",
                             // "/usr/pthreadJoinDetachTests.sweb", 
 
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
 
-                            // "/usr/exitTests.sweb",
+                            "/usr/exitTests.sweb",
 
 //Fork/Exec -------------------------------------------------------------------
                             // "/usr/waitpidTests.sweb",                
