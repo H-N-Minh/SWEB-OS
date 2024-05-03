@@ -203,12 +203,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
 
   uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
-  
-  bool is_arch_lock_held_by_currentThread = arch_memory->lock_.isHeldBy(currentThread);
-  if (!is_arch_lock_held_by_currentThread)
-  {
-    arch_memory->lock_.acquire();
-  }
+  arch_memory->lock_.acquire();
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
     if (arch_memory->checkAddressValid(top_stack))
