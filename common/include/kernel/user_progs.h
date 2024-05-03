@@ -44,7 +44,8 @@ char const *user_progs[] = {
                             // "/usr/fdsPipe2.sweb", 
                             // "/usr/fdsPipe3.sweb",
                             // "/usr/fdsPipe4.sweb",
-                            // "/usr/largePipe.sweb", 
+                            // "/usr/largePipe.sweb",
+                            "/usr/dupTest.sweb",
                             // "/usr/no_test.sweb",
   
 

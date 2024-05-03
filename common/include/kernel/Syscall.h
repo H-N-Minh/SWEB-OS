@@ -25,6 +25,8 @@ public:
 
   static l_off_t lseek(size_t fd, l_off_t offset, uint8 whence);
   static uint32 pipe(int file_descriptor_array[2]);
+  static size_t dup(int file_descriptor);
+
 
 
   static int pthreadCreate(size_t* thread, unsigned int* attr, void* start_routine, void* arg, void* wrapper_address);
