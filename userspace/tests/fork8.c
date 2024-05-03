@@ -70,6 +70,5 @@ int main() {
       assert(value == 5);
     }
   }
-
   return 0;
 }
