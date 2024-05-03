@@ -348,15 +348,26 @@ int Syscall::execv(const char *path, char *const argv[])
 uint32 Syscall::pipe(int file_descriptor_array[2]) {
   debug(PIPE, "Syscall::pipe called\n");
 
-  Pipe* new_pipe = new Pipe(nullptr, FileDescriptor::FileType::REGULAR);
-  assert(new_pipe != nullptr && "Syscall::pipe: Pipe creation failed\n");
+  Pipe* new_pipe = new Pipe(nullptr, FileDescriptor::FileType::PIPE);
+  int res = global_fd_list.add(reinterpret_cast<FileDescriptor *>(new_pipe));
+  if (res == 0) {
+    debug(PIPE, "Successfully added new_pipe to fd list\n");
+  }
 
-  size_t read_fd = LocalFileDescriptorTable::instance()->createLocalFileDescriptor(
+  debug(PIPE, "Syscall::pipe: new_pipe = %p\n", new_pipe);
+
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+
+
+  size_t read_fd = lfdTable.createLocalFileDescriptor(
       reinterpret_cast<FileDescriptor *>(new_pipe), O_RDONLY, 0, ::FileType::PIPE)->getLocalFD();
 
   debug(PIPE, "Syscall::pipe: read_fd = %zu\n", read_fd);
 
-  size_t write_fd = LocalFileDescriptorTable:: instance()->createLocalFileDescriptor(
+  size_t write_fd = lfdTable.createLocalFileDescriptor(
       reinterpret_cast<FileDescriptor *>(new_pipe), O_WRONLY, 0, ::FileType::PIPE)->getLocalFD();
 
   debug(PIPE, "Syscall::pipe: write_fd = %zu\n", write_fd);
@@ -384,30 +395,41 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
-  if (fd == fd_stdout)
-  {
-    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
-    kprintf("%.*s", (int)size, (char*) buffer);
-    return size;
-  }
+  debug(SYSCALL, "Syscall::write: Current Process: %s\n", current_process.str().c_str());
 
   lfdTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
   debug(SYSCALL, "Syscall::write: localFileDescriptor for fd %zu: %p\n", fd, (void*)localFileDescriptor);
 
-
-  if (localFileDescriptor != nullptr) {
+  if (fd == fd_stdout)
+  {
+    debug(SYSCALL, "Syscall::write: Writing to stdout\n");
+    kprintf("%.*s", (int)size, (char*) buffer);
+    lfdTable.lfds_lock_.release();
+    return size;
+  }
+  else if (localFileDescriptor != nullptr) {
     FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
+    debug(SYSCALL, "Syscall::write: Global FD = %u; RefCount = %d\n", global_fd_obj->getFd(), global_fd_obj->getRefCount());
+
     if (global_fd_obj->getType() == FileDescriptor::FileType::PIPE){
+      debug(PIPE, "Syscall::write: Attempting to write to pipe: %p\n", (void*)global_fd_obj);
       Pipe* pipeObj = static_cast<Pipe*>(global_fd_obj);
+      lfdTable.lfds_lock_.release();
       size_t num_written = pipeObj->write((char*)buffer, size);
-      debug(SYSCALL, "Syscall::write: Wrote %zu bytes to pipe: %p\n", num_written, (void*)pipeObj);
+      lfdTable.lfds_lock_.acquire();
+      debug(PIPE, "Syscall::write: Wrote %zu bytes to pipe: %p\n", num_written, (void*)pipeObj);
+      char* buffer2 = new char[size+1];
+      strncpy(buffer2, (char*)buffer, size);
+      buffer2[size] = '\0';
+      debug(PIPE, "Syscall::write: Wrote %zu bytes to pipe: %s %p\n", num_written, buffer2, (void*)pipeObj);
+
+      delete [] buffer2;
       lfdTable.lfds_lock_.release();
       return num_written;
-
 
     } else {
       size_t global_fd = global_fd_obj->getFd();
@@ -433,11 +455,9 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
   lfdTable.lfds_lock_.acquire();
-
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
 
   if (fd == fd_stdin)
@@ -452,9 +472,14 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
     FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
 
+    debug(SYSCALL, "Syscall::read: Global FD = %u; RefCount = %d\n", global_fd_obj->getFd(), global_fd_obj->getRefCount());
+
     if (global_fd_obj->getType() == FileDescriptor::FileType::PIPE){
+      debug(PIPE, "Syscall::read: Attempting to read from pipe: %p\n", (void*)global_fd_obj);
       Pipe* pipeObj = static_cast<Pipe*>(global_fd_obj);
+      lfdTable.lfds_lock_.release();
       bool success = pipeObj->read((char*)buffer, count);
+      lfdTable.lfds_lock_.acquire();
       debug(SYSCALL, "Syscall::read: Read %zu bytes from pipe: %p\n", success? count : 0, (void*)pipeObj);
       lfdTable.lfds_lock_.release();
       return success? count : 0;

@@ -34,10 +34,8 @@ LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDes
 
 LocalFileDescriptor* LocalFileDescriptorTable::getLocalFileDescriptor(int local_fd_id) const
 {
-   debug(FILEDESCRIPTOR, "LocalFileDescriptorTable::getLocalFileDescriptor: Want local_fd %d\n", local_fd_id);
   for(auto &fd : local_fds_)
   {
-    debug(FILEDESCRIPTOR, "LocalFileDescriptorTable::getLocalFileDescriptor: Found %ld\n", fd->getLocalFD());
     if(fd->getLocalFD() == (size_t)local_fd_id)
     {
       debug(FILEDESCRIPTOR, "Getting local file descriptor with local FD ID: %d\n", local_fd_id);
@@ -67,7 +65,28 @@ void LocalFileDescriptorTable::deleteGlobalFileDescriptor(FileDescriptor* global
   {
     debug(FILEDESCRIPTOR, "Failed to remove the global FD %d.\n", global_fd->getFd());
   }
-  global_fd->getFile()->closeFd(global_fd);
+
+  if (global_fd != nullptr)
+  {
+    if (global_fd->getFile() != nullptr)
+    {
+      debug(FILEDESCRIPTOR, "1 Deleting global FD %d.\n", global_fd->getFd());
+      global_fd->getFile()->closeFd(global_fd);
+      debug(FILEDESCRIPTOR, "2 Deleted global FD %d.\n", global_fd->getFd());
+    }
+    else if (global_fd->getType() == FileDescriptor::FileType::PIPE)
+    {
+      debug(FILEDESCRIPTOR, "Pipe %d.\n", global_fd->getFd());
+    }
+    else
+    {
+      debug(FILEDESCRIPTOR, "global_fd->getFile() is null.\n");
+    }
+  }
+  else
+  {
+    debug(FILEDESCRIPTOR, "global_fd is null.\n");
+  }
 }
 
 int LocalFileDescriptorTable::removeLocalFileDescriptor(LocalFileDescriptor* local_fd) {
