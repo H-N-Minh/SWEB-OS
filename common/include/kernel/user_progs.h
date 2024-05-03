@@ -12,11 +12,11 @@ char const *user_progs[] = {
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
 
-                            "/usr/exitTests.sweb",
+                            // "/usr/exitTests.sweb",
 
 //Fork/Exec -------------------------------------------------------------------
                             // "/usr/waitpidTests.sweb",                
-                            // "/usr/forkTests.sweb",
+                            "/usr/forkTests.sweb",
 
                             // "/usr/fork7.sweb",
                             // "/usr/fork8.sweb",

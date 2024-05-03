@@ -375,7 +375,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
   
   //map the argument page(s)
-  //loader_->arch_memory_.lock_.acquire();
+  loader_->arch_memory_.lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1);
   assert(vpn_mapped &&  "Virtual page already mapped.");
   if(next_page_for_args)
@@ -384,7 +384,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     assert(vpn_mapped && "Virtual page already mapped.");
 
   }
-  //loader_->arch_memory_.lock_.release();
+  loader_->arch_memory_.lock_.release();
   return 0;
 }
 
