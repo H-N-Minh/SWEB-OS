@@ -41,10 +41,6 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
       debug(PAGEFAULT_TEST, "pagefault even though the address is mapped BUT ITS COW.\n");
       return 3;
     }
-    else
-    {
-      debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
-    }
   }
   else if(user && !present && 
           address > null_reference_check_border_ && address < USER_BREAK)
