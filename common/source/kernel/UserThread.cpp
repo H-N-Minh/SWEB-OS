@@ -196,7 +196,7 @@ bool UserThread::schedulable()
   }
 
   if(wants_to_be_canceled_ 
-      && (switch_to_userspace_ || waiting_for_lock)
+      && (switch_to_userspace_ || waiting_for_lock || wakeup_timestamp_)
       && (cancel_type_ == PTHREAD_CANCEL_EXIT || (cancel_type_ == PTHREAD_CANCEL_ASYNCHRONOUS && cancel_state_ == PTHREAD_CANCEL_ENABLE))) 
   {
     debug(SCHEDULER, "Scheduler::schedule: Thread %s wants to be canceled, and is allowed to be canceled\n", getName());

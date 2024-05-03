@@ -6,13 +6,15 @@ char const *user_progs[] = {
                                 // "/usr/shell.sweb",
                           
 // Threads -------------------------------------------------------------------
-                            "/usr/pthreadCreateTests.sweb",
+                            // "/usr/pthreadCreateTests.sweb",
                             // "/usr/pthreadJoinDetachTests.sweb", 
 
                             // "/usr/pthreadCancelTests.sweb",
                             // "/usr/pthreadExitTests.sweb",
 
                             // "/usr/exitTests.sweb",
+
+                            // "/usr/exitSleep.sweb",
 
 //Fork/Exec -------------------------------------------------------------------
                             // "/usr/waitpidTests.sweb",                
@@ -47,7 +49,7 @@ char const *user_progs[] = {
                             // "/usr/semTests.sweb",
 
 //Other tests -----------------------------------------------------------------
-                            // "/usr/sleepAndClockTests.sweb",   
+                            "/usr/sleepAndClockTests.sweb",   
                             // "/usr/localFdTests.sweb",       
                             // "/usr/no_test.sweb",
                             
