@@ -19,26 +19,27 @@ void *read_from_pipe(void *arg) {
     return NULL;
 }
 
-int main(void) {
-  printf("test pipe1\n");
+//int pipeTest(void) {
+  int main(){
+    printf("test pipe1\n");
     int file_descriptor_array[2];
-  printf("test pipe2\n");
+    printf("test pipe2\n");
     pipe(file_descriptor_array);
-  printf("test pip3e\n");
+    printf("test pip3e\n");
     int read_fd = file_descriptor_array[0];
-  printf("test pipe4\n");
+    printf("test pipe4\n");
     int write_fd = file_descriptor_array[1];
-  printf("test pipe5\n");
+    printf("test pipe5\n");
     pthread_t writer, reader;
     pthread_create(&writer, NULL, write_to_pipe, &write_fd);
-  printf("test pipe6\n");
+    printf("test pipe6\n");
     pthread_create(&reader, NULL, read_from_pipe, &read_fd);
-  printf("test pipe7\n");
+    printf("test pipe7\n");
 
     pthread_join(writer, NULL);
-  printf("test pipe8\n");
+    printf("test pipe8\n");
     pthread_join(reader, NULL);
-  printf("test ende\n");
+    printf("test ende\n");
     return 0;
 }
 

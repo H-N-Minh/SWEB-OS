@@ -42,7 +42,7 @@ void check_return_value(int testnumber, int rv, int* successful_tests, char* des
             printf("PthreadChreate:Test %d fail!\n", testnumber);
             printf("Description: %s\n", description);
             printf("_____________________________________________________________\n\n");
-            // assert(0);
+            exit(-3);
         }
     }
 }
@@ -121,13 +121,11 @@ int childMain()
     }
     else
     {
-        // printf("\n\n===  %d/%d pthreadCreate() testcases successful  ===\n", successful_tests, number_of_tests);
         printf("\n\n===  pthreadCreate() testcases fail  ===\n");
-        printf("return is -1\n");
-        return -1;
+        exit(-3);
     }
-    sleep(2);
-    printf("return is 0\n");
+
+    exit(0);
     return 0;
 }
 
@@ -142,11 +140,10 @@ int main()
     {
         int status;
         waitpid(pid, &status, 0);
-        printf("status is %d\n", status);
-        // if (status != 0)
-        // {
-        //     printf("Testing crashed with exit code %d\n", status);
-        // }
+        if (status == -3)
+        {
+            printf("Testing crashed\n");
+        }
         
         for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
         {
