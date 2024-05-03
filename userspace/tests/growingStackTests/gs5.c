@@ -5,17 +5,41 @@
 #include "wait.h"
 #include "sched.h"
 
-
+#define PAGE_SIZE5 4096
+#define STACK_AMOUNT5 5   // make sure this alligns with the define in UserSpaceMemoryManager.h
+#define VALID_ARRAY_SIZE5 (STACK_AMOUNT5 - 1) * PAGE_SIZE5    // 4 pages array should fit in 5 pages stack
 size_t SUCESS5 = 4251;
 size_t FAIL5 = 666;
 
 int flag5 = 0;
-int* local5_addr = 0;
+char* local5_addr = 0;
 
+
+int growStack(char c, char* stack_data)
+{
+
+  for (int i = 0; i < VALID_ARRAY_SIZE5; i++)
+  {
+    stack_data[i] = c; 
+  }
+  
+
+  for (int i = (VALID_ARRAY_SIZE5 - 1); i >= 0; i--)
+  {
+    if (stack_data[i] != c)
+    {
+      // printf("debuging: failed at i = %d\n", i);
+      return  -1;
+    }
+  }
+  return 0;
+}
 
 
 void* thread_func5_1(void* arg)
 {
+  char array_adr[VALID_ARRAY_SIZE5];
+  growStack('A', array_adr);
   // step 1
   int local_var = 45;
   assert(local_var == 45);
@@ -28,7 +52,7 @@ void* thread_func5_1(void* arg)
   // step 5
   assert(local5_addr != 0);
   
-  *local5_addr = (*local5_addr) * 10;
+  ((char*) local5_addr)[0] = 'c';
   flag5 = 0;
 
   while (flag5 == 0)
@@ -40,18 +64,19 @@ void* thread_func5_1(void* arg)
   // step 9
   assert(local_var == 45);
 
-  *local5_addr = (*local5_addr) * 10;  // this should crash
+  ((char*) local5_addr)[0] = 'c';  // this should crash because thread 2 died
 
   return (void*) SUCESS5;
 }
 
 void* thread_func5_2(void* arg)
 {
+  char array_adr[VALID_ARRAY_SIZE5];
+  growStack('B', array_adr);
   // step 3
-  int local_var = 56;
-  assert(local_var == 56 );
+  assert(array_adr != 0 );
 
-  local5_addr = &local_var;
+  local5_addr = array_adr;
   flag5 = 1;
   
   while (flag5 == 1)
@@ -61,7 +86,7 @@ void* thread_func5_2(void* arg)
   }
   
   // step 7
-  if (local_var == 560)
+  if ( ((char*) array_adr)[0] == 'c')
   {
     return (void*) SUCESS5;
   }
