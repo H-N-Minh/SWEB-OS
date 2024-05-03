@@ -359,12 +359,31 @@ bool Loader::prepareHeaders()
 
 bool Loader::isCOW(size_t virtual_addr)
 {
+    ArchMemory* arch_memory = &currentThread->loader_->arch_memory_;
+    bool is_arch_locked_by_currentThread = arch_memory->lock_.isHeldBy(currentThread);
+    if (!is_arch_locked_by_currentThread)
+    {
+      arch_memory->lock_.acquire();
+    }
+    
     PageTableEntry* entry = findPageTableEntry(virtual_addr);
 
     if (entry && entry->cow)
+    {
+      if (!is_arch_locked_by_currentThread)
+      {
+        arch_memory->lock_.release();
+      }
       return true;
+    }
     else
+    {
+      if (!is_arch_locked_by_currentThread)
+      {
+        arch_memory->lock_.release();
+      }
       return false;
+    }
 }
 
 PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)

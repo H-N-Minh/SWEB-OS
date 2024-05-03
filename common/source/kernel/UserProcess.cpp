@@ -206,15 +206,26 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   arch_memory->lock_.acquire();
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
+    assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
     if (arch_memory->checkAddressValid(top_stack))
     {
+      // assert(0);
       size_t* guard1 = (size_t*) top_stack;
       size_t* guard2 = (size_t*) (top_stack - sizeof(size_t) * (META_SIZE - 1) );
+      assert(guard1 && "Error: guard1 is NULL in unmapThreadStack\n");
+      assert(guard2 && "Error: guard2 is NULL in unmapThreadStack\n");
       *guard1 = 0;
       *guard2 = 0;
+
+      // DEBUGMINH
+      assert(top_stack && "Error: top_stack is NULL in unmapThreadStack\n");
+      assert(top_vpn && "Error: top_vpn is NULL in unmapThreadStack\n");
+      assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
       arch_memory->unmapPage(top_vpn);
       top_vpn--;
       top_stack -= PAGE_SIZE;
+      assert(top_stack && "Error: top_stack is NULL in unmapThreadStack\n");
+      assert(top_vpn && "Error: top_vpn is NULL in unmapThreadStack\n");
     }
     else
     {
