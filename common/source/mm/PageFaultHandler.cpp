@@ -44,6 +44,7 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
     else
     {
       debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+      return 4;
     }
   }
   else if(user && !present && 
@@ -146,6 +147,10 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
       if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
+  }
+  else if (status == 4)
+  {
+    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
   }
   else
   {
