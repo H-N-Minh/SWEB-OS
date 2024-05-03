@@ -20,14 +20,14 @@ extern int gs8();
 */
 
 // set to 1 to test, 0 to skip
-#define GS1 1     // basic test for growing stack
-#define GS2 1     // more advanced test for growing stack
-#define GS3 1     // 100 threads created and grow its stack at the same time
-#define GS4 1     // invalid growing 1: try to access outside stack limit
-#define GS5 1     // invalid growing 2: try to access another thread's mapped page after that thread died
-#define GS6 1     // invalid growing 3: trying to access another thread's unmapped page even when that thread still alive
-#define GS7 1     // test if all pages are freed after thread dies
-#define GS8 0     // test overflow detection
+#define GS1 0     // basic test for growing stack
+#define GS2 0     // more advanced test for growing stack
+#define GS3 0     // 100 threads created and grow its stack at the same time
+#define GS4 0     // invalid growing 1: try to access outside stack limit
+#define GS5 0     // invalid growing 2: try to access another thread's mapped page after that thread died
+#define GS6 0     // invalid growing 3: trying to access another thread's unmapped page even when that thread still alive
+#define GS7 0     // test if all pages are freed after thread dies
+#define GS8 1     // test overflow detection
 
 int main()
 {

@@ -20,22 +20,23 @@ void* thread_func8_1()  // thread 1
   }
   printf("thread 1 (step 1): waken up, creating a big array\n");
 
-  size_t invalid_array_size = STACK_AMOUNT8 * PAGE_SIZE8;   // since array dont start right from top of page, 5 pages stack can not hold 5 pages long array => overflow to next thread
+  size_t invalid_array_size = (STACK_AMOUNT8 + 1) * PAGE_SIZE8;   // since array dont start right from top of page, 5 pages stack can not hold 5 pages long array => overflow to next thread
   char stack_data[invalid_array_size];
   for (int i = 0; i < invalid_array_size; i++)
   {
     stack_data[i] = 'A';
   }
   
-
+  printf("thread 1 (step 2): array created, checking array\n");
   for (int i = (invalid_array_size - 1); i >= 0; i--)
   {
     if (stack_data[i] != 'A')
     {
-      // printf("debuging: failed at i = %d\n", i);
+      printf("thread 1 (step 3.1): array corrupted at i = %d, exiting -1\n", i);
       return (void*) -1;
     }
   }
+  printf("thread 1 (step 3): array looks good, waking t2 and exit with 0\n");
   // even tho the array size is invalid, thread 1 should not crash and exit with success
   thread_2_done_flag = 0;  // signal thread 2 that thread 1 finished overflowing
   return (void*) 0;
@@ -43,12 +44,13 @@ void* thread_func8_1()  // thread 1
 
 void* thread_func8_2()    // thread 2
 {
+  printf("Thraed 2 (step 0): t2 created, signaling t1 to start\n");
   thread_2_done_flag = 1;
   while (thread_2_done_flag == 1)
   {
     sched_yield();
   }
-
+  printf("Thraed 2 (step 4): t2 waken up, creating a big array, processs should crash now\n");
   size_t valid_array_size = (STACK_AMOUNT8 - 1) * PAGE_SIZE8;   // 4 pages array should fit in 5 pages stack
   char stack_data[valid_array_size];
 
@@ -57,7 +59,7 @@ void* thread_func8_2()    // thread 2
     stack_data[i] = 'B';  // this should crash at some point
   }
   
-
+  printf("Thraed 2 (step 5): weird, process didnt crash\n");
   for (int i = (valid_array_size - 1); i >= 0; i--)
   {
     if (stack_data[i] != 'B')
