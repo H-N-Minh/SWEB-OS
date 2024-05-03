@@ -47,6 +47,7 @@ int waitpid6()
     assert(thread_id[i] != 0);
     void* retval;
     int rv = pthread_join(thread_id[i], &retval);
+    assert(rv == 0);
     assert(retval == (void*)7);
   }
     
