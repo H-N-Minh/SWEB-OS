@@ -130,23 +130,26 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
     status = manager->increaseStackSize(address);
-    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
     if (status == -1)
     {
+      currentThread->loader_->arch_memory_.lock_.release();
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
       if (currentThread->loader_)
+      {
         Syscall::exit(9999);
+      }
       else
         currentThread->kill();
       }
     else
     {
+      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
   }
   else
   {
-    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+    currentThread->loader_->arch_memory_.lock_.release();
     // the page-fault seems to be faulty, print out the thread stack traces
     ArchThreads::printThreadRegisters(currentThread, true);
     currentThread->printBacktrace(true);

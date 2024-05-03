@@ -91,6 +91,7 @@ void Loader::loadPage(pointer virtual_address)
           if(readFromBinary((char *)ArchMemory::getIdentAddressOfPPN(ppn) + virt_offs_on_page, bin_start_addr, bytes_to_load))
           {
             program_binary_lock_.release();
+            arch_memory_.lock_.release();
             PageManager::instance()->freePPN(ppn);
             debug(LOADER, "ERROR! Some parts of the content could not be loaded from the binary.\n");
             Syscall::exit(999);
