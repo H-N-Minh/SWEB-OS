@@ -170,6 +170,11 @@ int UserSpaceMemoryManager::sanityCheck(size_t address)
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is out of range\n");
     return 0;
   }
+  if (address <= MAX_HEAP_SIZE)
+  {
+    return 0;
+  }
+  
   // UserThread* current_thread = (UserThread*) currentThread;
   // if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE + sizeof(size_t)))
   // {
@@ -283,12 +288,15 @@ size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address)
 size_t UserSpaceMemoryManager::getTopOfThisStack(size_t address)
 {
   size_t top_current_stack = getTopOfThisPage(address);
-
+  ArchMemory arch_memory = ((UserThread*) currentThread)->process_->loader_->arch_memory_;
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
-    if (top_current_stack && top_current_stack < USER_BREAK && *(size_t*) top_current_stack == GUARD_MARKER)
+    if (top_current_stack && top_current_stack < USER_BREAK)
     {
-      return top_current_stack;
+      if (arch_memory.checkAddressValid(top_current_stack) && *(size_t*) top_current_stack == GUARD_MARKER)
+      {
+        return top_current_stack;
+      }
     }
     top_current_stack += PAGE_SIZE;
   }
