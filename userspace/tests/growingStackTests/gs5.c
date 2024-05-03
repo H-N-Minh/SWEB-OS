@@ -15,34 +15,38 @@ int flag5 = 0;
 char* local5_addr = 0;
 
 
-int growStack(char c, char* stack_data)
+void growStack(char c, char* stack_data)
 {
-
+  assert(stack_data != 0);
   for (int i = 0; i < VALID_ARRAY_SIZE5; i++)
   {
     stack_data[i] = c; 
   }
-  
+}
 
-  for (int i = (VALID_ARRAY_SIZE5 - 1); i >= 0; i--)
+int checkStack(char c, char* stack_data)
+{
+  assert(stack_data != 0);
+  for (int i = 0; i < VALID_ARRAY_SIZE5; i++)
   {
     if (stack_data[i] != c)
     {
-      // printf("debuging: failed at i = %d\n", i);
-      return  -1;
+      return 0;
     }
   }
-  return 0;
+  return 1;
 }
-
 
 void* thread_func5_1(void* arg)
 {
+
   char array_adr[VALID_ARRAY_SIZE5];
   growStack('A', array_adr);
-  // step 1
+  assert(checkStack('A', array_adr));
   int local_var = 45;
   assert(local_var == 45);
+
+  // step 1
 
   while (flag5 == 0)
   {
@@ -52,7 +56,8 @@ void* thread_func5_1(void* arg)
   // step 5
   assert(local5_addr != 0);
   
-  ((char*) local5_addr)[0] = 'c';
+  growStack('Z', local5_addr);
+  assert(checkStack('Z', local5_addr));
   flag5 = 0;
 
   while (flag5 == 0)
@@ -63,8 +68,10 @@ void* thread_func5_1(void* arg)
 
   // step 9
   assert(local_var == 45);
+  assert(checkStack('A', array_adr));
 
-  ((char*) local5_addr)[0] = 'c';  // this should crash because thread 2 died
+  growStack('Z', local5_addr);  // this should crash because thread 2 died
+  assert(checkStack('Z', local5_addr));
 
   return (void*) SUCESS5;
 }
@@ -73,8 +80,8 @@ void* thread_func5_2(void* arg)
 {
   char array_adr[VALID_ARRAY_SIZE5];
   growStack('B', array_adr);
+  assert(checkStack('B', array_adr));
   // step 3
-  assert(array_adr != 0 );
 
   local5_addr = array_adr;
   flag5 = 1;
@@ -86,7 +93,7 @@ void* thread_func5_2(void* arg)
   }
   
   // step 7
-  if ( ((char*) array_adr)[0] == 'c')
+  if (checkStack('Z', array_adr))   // thread 1 should have changed our local array to Z
   {
     return (void*) SUCESS5;
   }
@@ -132,8 +139,8 @@ int child_func5()
 }
 
 
-// first make sure 2 threads can access each other stack. this should be valid
-// then kill 1 thread and try to access its stack again, this should be invalid and crash
+// both thread has its own big array, thread 1 should be able to access thread 2's array and rewrite it
+// then kill 2nd thread and thread 1 try to access the stack again, this should be invalid and crash
 int gs5()
 {
   pid_t pid = fork();
