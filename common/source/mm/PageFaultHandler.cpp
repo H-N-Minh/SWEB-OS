@@ -95,10 +95,18 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
+  int flag = false;
+  if(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread)
+  {
+    flag = true;
+    currentThread->loader_->arch_memory_.lock_.acquire();
+  }
+  
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
-  if (status == 1) // everything seems to be okay, no page fault
+  if (status == 1)
   {
     currentThread->loader_->loadPage(address);
+    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
   }
   else if (status == 3)
   {
@@ -107,18 +115,22 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
       currentThread->loader_->copyPage(address);
+      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
     }
     else
     {
       currentThread->loader_->loadPage(address);
+      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
     }
   }
   else if (status == 69)
   {
+    
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
     status = manager->increaseStackSize(address);
+    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
     if (status == -1)
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
@@ -134,6 +146,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else
   {
+    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
     // the page-fault seems to be faulty, print out the thread stack traces
     ArchThreads::printThreadRegisters(currentThread, true);
     currentThread->printBacktrace(true);
