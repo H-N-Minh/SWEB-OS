@@ -170,12 +170,12 @@ int UserSpaceMemoryManager::sanityCheck(size_t address)
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is out of range\n");
     return 0;
   }
-  UserThread* current_thread = (UserThread*) currentThread;
-  if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE + sizeof(size_t)))
-  {
-    debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is not in range of growing stack\n");
-    return 0;
-  }
+  // UserThread* current_thread = (UserThread*) currentThread;
+  // if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE + sizeof(size_t)))
+  // {
+  //   debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is not in range of growing stack\n");
+  //   return 0;
+  // }
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
   if (arch_memory->checkAddressValid(address))
   {
@@ -198,10 +198,18 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
 
   // get to top of stack where the meta data is stored 
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: checking for overflow/underflow corruption\n");
-  size_t top_current_stack = checkGuardValid();
-  if (top_current_stack == 11)
+  size_t top_current_stack = getTopOfThisStack(address);
+  if (top_current_stack == 0)
   {
-    debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted. Segfault!!\n");
+    debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted or not found. Segfault!!\n");
+    return 0;
+  }
+
+  // check if the guards are intact. this also checks overflow underflow
+  int is_guard_valid = checkGuardValid(top_current_stack);
+  if (is_guard_valid == 0)
+  {
+    debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted or not found. Segfault!!\n");
     return 11;
   }
 
@@ -215,7 +223,7 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
 void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current_stack)
 {
   assert(top_current_stack && "top_current_stack pointer of the current stack is NULL");
-  assert(top_current_stack == ((UserThread*) currentThread)->top_stack_ && "this is not our stack");
+  // assert(top_current_stack == ((UserThread*) currentThread)->top_stack_ && "this is not our stack");
 
   assert(address < top_current_stack && "address is not within range of growing stack");
   assert(address > top_current_stack - PAGE_SIZE*MAX_STACK_AMOUNT && "address is not within range of growing stack");
@@ -233,8 +241,8 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   
   // Quick check to see if the address is (somewhat) valid
   size_t top_this_page = getTopOfThisPage(address);
-  size_t top_this_stack = checkGuardValid();
-  assert(top_this_stack != 11 && "UserSpaceMemoryManager::increaseStackSize: guards are corrupted. Segfault!!");
+  size_t top_this_stack = getTopOfThisStack(address);
+  assert(top_this_stack != 0 && "UserSpaceMemoryManager::increaseStackSize: guards are corrupted. Segfault!!");
   finalSanityCheck(address, top_this_stack);
 
   // Set up new page
@@ -272,10 +280,25 @@ size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address)
   return top_stack;
 }
 
-size_t UserSpaceMemoryManager::checkGuardValid()
+size_t UserSpaceMemoryManager::getTopOfThisStack(size_t address)
+{
+  size_t top_current_stack = getTopOfThisPage(address);
+
+  for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
+  {
+    if (top_current_stack && top_current_stack < USER_BREAK && *(size_t*) top_current_stack == GUARD_MARKER)
+    {
+      return top_current_stack;
+    }
+    top_current_stack += PAGE_SIZE;
+  }
+  return 0;
+}
+
+int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
 {
   // guards of this thread
-  size_t guard1 = ((UserThread*) currentThread)->top_stack_;
+  size_t guard1 = top_current_stack;
   assert(guard1 && "top_stack_ is uninitialized");
   size_t guard2 = guard1 - sizeof(size_t)*(META_SIZE - 1);
   // guards of the thread beneath
@@ -286,7 +309,7 @@ size_t UserSpaceMemoryManager::checkGuardValid()
   if (*(size_t*) guard1 != GUARD_MARKER || *(size_t*) guard2 != GUARD_MARKER)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: guards of current thread are corrupted\n");
-    return 11;
+    return 0;
   }
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards current thread is intact\n");
 
@@ -303,7 +326,7 @@ size_t UserSpaceMemoryManager::checkGuardValid()
     if (*(size_t*) guard3 != GUARD_MARKER || *(size_t*) guard4 != GUARD_MARKER)
     {
       debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards of the thread below is corrupted\n");
-      return 11;
+      return 0;
     }
   }
   // if (!is_arch_lock_held_by_currentThread)
@@ -312,5 +335,5 @@ size_t UserSpaceMemoryManager::checkGuardValid()
   // }
 
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: All guards are still intact\n");
-  return guard1;
+  return 1;
 }

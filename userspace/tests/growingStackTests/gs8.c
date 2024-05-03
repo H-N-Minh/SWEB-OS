@@ -12,12 +12,13 @@
 int thread_2_done_flag = 0;
 
 
-void* thread_func8_1()
+void* thread_func8_1()  // thread 1
 {
   while (thread_2_done_flag == 0)
   {
     sched_yield();
   }
+  printf("thread 1 (step 1): waken up, creating a big array\n");
 
   size_t invalid_array_size = STACK_AMOUNT8 * PAGE_SIZE8;   // since array dont start right from top of page, 5 pages stack can not hold 5 pages long array => overflow to next thread
   char stack_data[invalid_array_size];
@@ -40,7 +41,7 @@ void* thread_func8_1()
   return (void*) 0;
 }
 
-void* thread_func8_2()
+void* thread_func8_2()    // thread 2
 {
   thread_2_done_flag = 1;
   while (thread_2_done_flag == 1)

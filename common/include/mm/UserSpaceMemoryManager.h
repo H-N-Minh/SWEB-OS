@@ -63,9 +63,9 @@ class UserSpaceMemoryManager
     size_t getTopOfThisPage(size_t address) ;
 
     /** check for overflow/underflow corruption. If Guards are still intact, then return the top of the stack
-     * @return ptr to top of stack if valid, 11 if guard is corrupted
+     * @return 0 if guard is corrupted or not found, 1 if guard is still intact
     */
-    size_t checkGuardValid();
+    int checkGuardValid(size_t top_current_stack);
 
     /**
      * Final check to make sure growing stack is valid
@@ -77,5 +77,11 @@ class UserSpaceMemoryManager
      * @return 1 if the address seems valid, 0 if address seems not related to growing stack
     */
     int sanityCheck(size_t address);
+
+    /**
+     * get the top of the stack of the given address
+     * @return the top of the stack, 0 if not found
+    */
+    size_t getTopOfThisStack(size_t address);
 
 };
