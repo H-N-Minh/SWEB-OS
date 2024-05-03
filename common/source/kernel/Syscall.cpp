@@ -120,6 +120,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_pipe:
       return_value = pipe((int*) arg1);
       break;
+    case sc_dup:
+      return_value = dup((int) arg1);
+      break;
     case sc_clock:
       return_value = clock();
       break;
@@ -344,6 +347,31 @@ int Syscall::execv(const char *path, char *const argv[])
   return current_process.execvProcess(path, argv);
 }
 
+
+size_t Syscall::dup(int file_descriptor) {
+  debug(SYSCALL, "Syscall::dup called to duplicate fd %d\n", file_descriptor);
+
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+
+  LocalFileDescriptor* originalLFD = lfdTable.getLocalFileDescriptor(file_descriptor);
+  if(originalLFD == nullptr) {
+    debug(SYSCALL, "Syscall::dup: original file descriptor not found\n");
+    return -1;
+  }
+
+  int newDescriptor = lfdTable.createLocalFileDescriptor(
+      originalLFD->getGlobalFileDescriptor(),
+      originalLFD->getMode(),
+      originalLFD->getOffset(),
+      originalLFD->getType()
+  )->getLocalFD();
+
+  debug(SYSCALL, "Syscall::dup: returning the duplicated fd %d\n", newDescriptor);
+  return newDescriptor;
+}
 
 uint32 Syscall::pipe(int file_descriptor_array[2]) {
   debug(PIPE, "Syscall::pipe called\n");

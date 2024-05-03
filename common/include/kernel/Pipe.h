@@ -18,8 +18,6 @@ public:
 
   size_t write(const char* buffer, size_t size);
 
-  size_t processBuffer(const char *buffer, size_t size);
-
   void close();
 
 private:

@@ -47,3 +47,4 @@
 #define sc_tortillas_finished 1338
 
 #define sc_pipe 111
+#define sc_dup 112

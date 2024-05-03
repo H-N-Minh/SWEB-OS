@@ -143,7 +143,7 @@ int pipe(int file_descriptor_array[2])
  */
 int dup(int file_descriptor)
 {
-  return -1;
+  return __syscall(sc_dup, file_descriptor, 0x00, 0x00, 0x00, 0x00);
 }
 
 
