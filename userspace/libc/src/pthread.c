@@ -627,6 +627,7 @@ void print_waiting_list(size_t* waiting_list, int before)
 void wakeUpThread(size_t* request_to_sleep)
 {
   size_t old_val = 0;
+  // edge case: lost wake up call
   do
   {
     asm("xchg %0,%1"

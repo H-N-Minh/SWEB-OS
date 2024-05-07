@@ -184,7 +184,6 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
  * pointer to child stack's top_stack as well. Calculation to get top of stack is in pthread.c in userspace
 
 // minhsbrk1 commented out for a1
-
 size_t Syscall::brkMemory(size_t new_brk_addr)
 {
   debug(SBRK, "Syscall::brkMemory: brk called with address %p. Checking if addr is valid \n", (void*) new_brk_addr);
@@ -210,7 +209,6 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
     return -1;
   }
 }
-
 size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 {
   debug(SBRK, "Syscall::sbrkMemory: sbrk called\n");
@@ -245,7 +243,6 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
     return 0;
   }
 }
-
 */
 
 

@@ -93,9 +93,8 @@ size_t UserThread::setupMetaHeader()
 
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_), user_stack_ptr_(other.user_stack_ptr_),
-             page_for_stack_(other.page_for_stack_),
+            page_for_stack_(other.page_for_stack_),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
-
             join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"),
             cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_),
             cond_flag_(other.cond_flag_), mutex_flag_(other.mutex_flag_), top_stack_(other.top_stack_)
@@ -121,7 +120,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process)
 UserThread::~UserThread()
 {
   debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
-
+  
   assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread");
 
     if(last_thread_alive_)
@@ -320,6 +319,7 @@ void UserThread::exitThread(void* value_ptr)
     last_thread_alive_ = true;
     process_->thread_retval_map_.clear();
 
+    // for waitpid: if its the last thread of process then process dying, wake the waiting processes
     ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
     ProcessRegistry::instance()->process_exit_status_map_[process_->pid_] = (size_t)value_ptr;
     ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
@@ -336,7 +336,7 @@ void UserThread::exitThread(void* value_ptr)
   join_state_lock_.release();
 
   // for exec()
-  if(process_->threads_.size() == 1)  // only one thread left
+  if(process_->threads_.size() == 1)  // only one thread left, which is the exec thread waiting for the signal
   {
     process_->one_thread_left_lock_.acquire();
     process_->one_thread_left_ = true;

@@ -303,6 +303,7 @@ size_t UserSpaceMemoryManager::getTopOfThisStack(size_t address)
   return 0;
 }
 
+
 int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
 {
   // guards of this thread

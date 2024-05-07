@@ -34,11 +34,9 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
   memcpy((void*) CHILD_pml4, (void*) PARENT_pml4, PAGE_SIZE);
-  //memset(CHILD_pml4, 0, PAGE_SIZE / 2); // should be zero already, this is just for safety, also only clear lower half (User half)
+  // memset(CHILD_pml4, 0, PAGE_SIZE / 2); // should be zero already, this is just for safety, also only clear lower half (User half)
 
-  //set ref count = 2 (1 for parent and one for child)
-  //(dont need +1 for process, then +1 again when calling fork, because it doesnt make sense to use cow when there is one parent process)
-  debug(A_MEMORY, "copy-ctor start copying all pages\n");
+  debug(FORK, "copy-ctor start copying all pages\n");
   // Loop through the pml4 to get each pdpt
   for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // copy only lower half (userspace)
   {
@@ -108,7 +106,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
 
                   debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
-                  PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
+                                                                                               PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
                   PageManager::instance()->page_reference_counts_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");

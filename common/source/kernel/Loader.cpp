@@ -427,36 +427,32 @@ PageTableEntry* Loader::findPageTableEntry(size_t virtual_addr)
 void Loader::copyPage(size_t virtual_addr)
 {
   PageTableEntry* entry = findPageTableEntry(virtual_addr);
+  size_t new_page_ppn = PageManager::instance()->allocPPN();
 
-    size_t new_page_ppn = PageManager::instance()->allocPPN();
 
   PageManager::instance()->page_reference_counts_lock_.acquire();
-    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+  //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
 
-    PageManager::instance()->getReferenceCount(entry->page_ppn);
+  pointer original_page = ArchMemory::getIdentAddressOfPPN(entry->page_ppn);
+  pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+  memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
-    pointer original_page = ArchMemory::getIdentAddressOfPPN(entry->page_ppn);
-    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
-    memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+  PageManager::instance()->decrementReferenceCount(entry->page_ppn);
 
-    PageManager::instance()->decrementReferenceCount(entry->page_ppn);
+  if(PageManager::instance()->getReferenceCount(entry->page_ppn) == 0)
+  {
+    PageManager::instance()->freePPN(entry->page_ppn);
+  }
+  //update the page table entry to point to the new physical page
+  entry->page_ppn = new_page_ppn;
 
-    if(PageManager::instance()->getReferenceCount(entry->page_ppn) == 0)
-    {
-      PageManager::instance()->freePPN(entry->page_ppn);
-    }
-    //update the page table entry to point to the new physical page
-    entry->page_ppn = new_page_ppn;
-
-    PageManager::instance()->incrementReferenceCount(entry->page_ppn);
+  PageManager::instance()->incrementReferenceCount(entry->page_ppn);
 
   PageManager::instance()->page_reference_counts_lock_.release();
 
-    //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
-    entry->present = 1;
-    entry->writeable = 1;
-    entry->cow = 0;
-
-
+  //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
+  entry->present = 1;
+  entry->writeable = 1;
+  entry->cow = 0;
 }
 

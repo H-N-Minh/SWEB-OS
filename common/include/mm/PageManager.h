@@ -58,7 +58,7 @@ class PageManager
 //    struct PageInfo{
 //        uint32 reference_count;
 //    };
-
+    // <ppn, count>
     ustl::map<uint32, uint32> page_reference_counts_;
     Mutex page_reference_counts_lock_;
 

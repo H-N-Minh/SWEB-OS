@@ -95,7 +95,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  int flag = false;
+  int flag = false; // flag for locking archmemory 
   if(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread)
   {
     flag = true;
@@ -119,6 +119,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     }
     else
     {
+      assert(0 && "This should never be reached.");
       currentThread->loader_->loadPage(address);
       if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
     }
@@ -143,7 +144,8 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
       }
     else
     {
-      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+      if(flag) 
+      {currentThread->loader_->arch_memory_.lock_.release();}
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
   }
