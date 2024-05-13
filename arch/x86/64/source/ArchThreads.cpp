@@ -99,37 +99,9 @@ void ArchThreads::createUserRegisters(ArchThreadRegisters *&info, void* start_fu
 void ArchThreads::copyUserRegisters(const ArchThreadRegisters* source, ArchThreadRegisters* &destination, void* kernel_stack, ArchMemory* arch_memory)
 {
   destination = new ArchThreadRegisters{};
+  *destination = *source;
 
-  destination->rip = source->rip;
-  destination->cs = source->cs;
-  destination->rflags = source->rflags;
-
-  destination->rcx = source->rcx;
-  destination->rdx = source->rdx;
-  destination->rbx = source->rbx;
-  destination->rsp = source->rsp;
-  destination->rbp = source->rbp;
-  destination->rsi = source->rsi;
-  destination->rdi = source->rdi;
-  destination->r8 = source->r8;
-  destination->r9 = source->r9;
-  destination->r10 = source->r10;
-  destination->r11 = source->r11;
-  destination->r12 = source->r12;
-  destination->r13 = source->r13;
-  destination->r14 = source->r14;
-  destination->r15 = source->r15;
-  destination->ds = source->ds;
-  destination->es = source->es;
-  destination->fs = source->fs;
-  destination->gs = source->gs;
-  destination->ss = source->ss;
-
-  for(int i = 0; i < 28; i++)
-  {
-    destination->fpu[i] = source->fpu[i];
-  }
-
+  // a few exception where registers shouldnt be copied
   destination->rax = 0;
   destination->cr3 = arch_memory->page_map_level_4_;
   destination->rsp0 = (size_t)kernel_stack;

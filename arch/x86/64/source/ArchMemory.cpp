@@ -5,6 +5,8 @@
 #include "kstring.h"
 #include "ArchThreads.h"
 #include "Thread.h"
+#include "UserThread.h"
+#include "UserProcess.h"
 #include "assert.h"
 
 PageMapLevel4Entry kernel_page_map_level_4[PAGE_MAP_LEVEL_4_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
@@ -26,6 +28,7 @@ ArchMemory::ArchMemory():lock_("archmemory_lock_")
 // COPY CONSTRUCTOR
 ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 {
+  assert(((UserThread*) currentThread)->process_->loader_->arch_memory_.lock_.isHeldBy((Thread*) currentThread) && "The parent's archmem is not locked");
   lock_.acquire();
   assert(PageManager::instance()->heldBy() != currentThread);
 
@@ -104,6 +107,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 
                   PageManager::instance()->page_reference_counts_lock_.acquire();
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
+                  assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
 
                   debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
                                                                                                PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
@@ -327,6 +331,7 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
 const ArchMemoryMapping ArchMemory::resolveMapping(uint64 vpage)
 {
+  assert(lock_.heldBy() == currentThread && "Try to resolve mapping without holding archmemory lock");
   return resolveMapping(page_map_level_4_, vpage);
 }
 
@@ -532,3 +537,47 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 }
 
 
+bool ArchMemory::isCOW(size_t virtual_addr)
+{
+  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
+
+  if (pml1_entry && pml1_entry->cow)
+    return true;
+  else
+    return false;
+}
+
+
+void ArchMemory::copyPage(size_t virtual_addr)
+{
+  PageManager* pm = PageManager::instance();
+
+  debug(FORK, "ArchMemory::copyPage Resolving mapping \n");
+  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
+  assert(pml1_entry && pml1_entry->cow && "Page is not COW");
+
+  debug(FORK, "ArchMemory::copyPage If the process is not the last process to own the page, then copy to new page\n");
+  pm->page_reference_counts_lock_.acquire();
+  assert(pm->getReferenceCount(pml1_entry->page_ppn) > 0 && "Reference count is 0");
+  if (pm->getReferenceCount(pml1_entry->page_ppn) > 1)
+  {
+    debug(FORK, "ArchMemory::copyPage Copying to a new page\n");
+    size_t new_page_ppn = pm->allocPPN();
+    pointer original_page = ArchMemory::getIdentAddressOfPPN(pml1_entry->page_ppn);
+    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+    memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+
+    debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
+    pm->decrementReferenceCount(pml1_entry->page_ppn);
+    pml1_entry->page_ppn = new_page_ppn;
+    pm->incrementReferenceCount(pml1_entry->page_ppn);
+  }
+  pm->page_reference_counts_lock_.release();
+
+  debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
+  pml1_entry->present = 1;
+  pml1_entry->writeable = 1;
+  pml1_entry->cow = 0;
+}

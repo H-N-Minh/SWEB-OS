@@ -106,6 +106,10 @@ class ArchMemory
     
     void deleteEverythingExecpt(size_t virtual_page);
 
+    bool isCOW(size_t virtual_addr);
+
+    void copyPage(size_t virtual_addr);
+
   private:
     /**
      * Adds a PML4Entry, PDPTEntry, PDEntry or PTEntry to the given PML4, PDPT, PD or PT respectively.

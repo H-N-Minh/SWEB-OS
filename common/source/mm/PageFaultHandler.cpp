@@ -36,7 +36,7 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   }
   else if(present)
   {
-    if (currentThread->loader_->isCOW(address))
+    if (currentThread->loader_->arch_memory_.isCOW(address))
     {
       debug(PAGEFAULT_TEST, "pagefault even though the address is mapped BUT ITS COW.\n");
       return 3;
@@ -110,11 +110,11 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else if (status == 3)
   {
-    if(writing && currentThread->loader_->isCOW(address)) //bit of entry->writable = =1?
+    if(writing && currentThread->loader_->arch_memory_.isCOW(address)) //bit of entry->writable = =1?
     {
 
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
-      currentThread->loader_->copyPage(address);
+      currentThread->loader_->arch_memory_.copyPage(address);
       if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
     }
     else

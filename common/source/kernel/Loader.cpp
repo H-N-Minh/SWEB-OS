@@ -359,52 +359,5 @@ bool Loader::prepareHeaders()
     return phdrs_.size() > 0;
 }
 
-bool Loader::isCOW(size_t virtual_addr)
-{
-  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(arch_memory_.page_map_level_4_, virtual_addr/PAGE_SIZE);
-  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
 
-    if (pml1_entry && pml1_entry->cow)
-      return true;
-    else
-      return false;
-}
-
-
-void Loader::copyPage(size_t virtual_addr)
-{
-  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(arch_memory_.page_map_level_4_, virtual_addr/PAGE_SIZE);
-  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
-
-  size_t new_page_ppn = PageManager::instance()->allocPPN();
-
-  PageManager::instance()->page_reference_counts_lock_.acquire();
-  //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
-
-  PageManager::instance()->getReferenceCount(pml1_entry->page_ppn);
-
-  pointer original_page = ArchMemory::getIdentAddressOfPPN(pml1_entry->page_ppn);
-  pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
-  memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
-
-  PageManager::instance()->decrementReferenceCount(pml1_entry->page_ppn);
-
-  if(PageManager::instance()->getReferenceCount(pml1_entry->page_ppn) == 0)
-  {
-    PageManager::instance()->freePPN(pml1_entry->page_ppn);
-  }
-  //update the page table entry to point to the new physical page
-  pml1_entry->page_ppn = new_page_ppn;
-
-  PageManager::instance()->incrementReferenceCount(pml1_entry->page_ppn);
-
-  PageManager::instance()->page_reference_counts_lock_.release();
-
-  //debug(PAGEFAULT_TEST, "getReferenceCount in copyPage  %d \n", PageManager::instance()->getReferenceCount(entry->page_ppn));
-  pml1_entry->present = 1;
-  pml1_entry->writeable = 1;
-  pml1_entry->cow = 0;
-
-
-}
 
