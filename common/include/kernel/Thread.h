@@ -119,13 +119,8 @@ class Thread
 
         unsigned long wakeup_timestamp_{0};
 
-
-
     private:
         volatile ThreadState state_;
-
-
-
 
     protected:
         size_t tid_;

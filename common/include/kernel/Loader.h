@@ -43,14 +43,6 @@ class Loader
     ArchMemory arch_memory_;
 
     bool isCOW(size_t virtual_addr);
-
-    /**
-     * @param virtual_addr the virtual address that caused the page fault
-     * @return PageTableEntry*  
-    */
-    PageTableEntry* findPageTableEntry(size_t virtual_addr);
-
-    
     void copyPage(size_t virtual_addr);
 
   private:
