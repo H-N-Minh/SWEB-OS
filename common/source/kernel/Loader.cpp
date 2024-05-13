@@ -370,6 +370,7 @@ bool Loader::isCOW(size_t virtual_addr)
       return false;
 }
 
+
 void Loader::copyPage(size_t virtual_addr)
 {
   ArchMemoryMapping pml1 = ArchMemory::resolveMapping(arch_memory_.page_map_level_4_, virtual_addr/PAGE_SIZE);
