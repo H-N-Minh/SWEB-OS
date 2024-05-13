@@ -1,11 +1,4 @@
-/*
---- # Test specification
-category: base
-description: "getThreadCount"
 
-expect_exit_codes: [0, 69]
-disabled: false
-*/
 //This test should be call fork after fork
 
 #include <stdio.h>

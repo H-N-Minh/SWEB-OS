@@ -29,10 +29,10 @@ char const *user_progs[] = {
                            
 
 // UserSpace Memory -------------------------------------------------
-                            "/usr/growingStackTests.sweb",
+                            // "/usr/growingStackTests.sweb",
 
 // SEM & COND -------------------------------------------------
-                            // "/usr/condTests.sweb",
+                            "/usr/condTests.sweb",
                             // "/usr/semTests.sweb",
                             // "/usr/userspaceLocksTests.sweb",
 

@@ -20,7 +20,7 @@ extern int cond8();
 #define COND5 1         // testing wrong para
 #define COND6 1         // testing lost wake call. This should be tested alone, check the file for details
 #define COND7 1         // multiple threads waiting on same cond, also test if they are killed when main exits. Check file for more detail
-#define COND8  1
+#define COND8 1
 
 int main()
 {

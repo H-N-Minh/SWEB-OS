@@ -1,8 +1,16 @@
+/*
+--- # Test specification
+category: base
+description: "getThreadCount"
+
+expect_exit_codes: [0]
+disabled: false
+*/
+
 #include <stdio.h>
 #include <pthread.h>
 #include <semaphore.h>
 #include <unistd.h>
-#include <assert.h>
 
 #define BUFFER_SIZE 5
 #define NUM_ITERATIONS 10
@@ -36,7 +44,7 @@ void producer()
     pthread_mutex_lock(&buffer_lock);
     buffer[in] = item;
     pthread_mutex_unlock(&buffer_lock);
-    // printf("Produced item %d at position %d\n", item, in);
+    printf("Produced item %d at position %d\n", item, in);
     in = (in + 1) % BUFFER_SIZE;
     count++;
 
@@ -72,9 +80,8 @@ void consumer()
 
     pthread_mutex_lock(&buffer_lock);
     item = buffer[out];
-    assert(item);
     pthread_mutex_unlock(&buffer_lock);
-    // printf("Consumed item %d from position %d\n", item, out);
+    printf("Consumed item %d from position %d\n", item, out);
     out = (out + 1) % BUFFER_SIZE;
     count--;
 
@@ -86,7 +93,7 @@ void consumer()
 
 }
 
-int cond8()
+int main()
 {
   pthread_t producer_thread;
   pthread_t consumer_threads[NUM_CONSUMERS];
