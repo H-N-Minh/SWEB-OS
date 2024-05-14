@@ -131,10 +131,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_tortillas_finished:   // needed for test system Tortillas
       break;
     case sc_sbrk:
-      // return_value = sbrkMemory(arg1, arg2);
+      return_value = sbrkMemory(arg1, arg2);
       break;
     case sc_brk:
-      // return_value = brkMemory(arg1);
+      return_value = brkMemory(arg1);
       break;
     case sc_wait_pid:
       return_value = wait_pid((int)arg1, (int*)arg2, arg3);
@@ -177,13 +177,6 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 }
 
 
-
-/** TODO: This TODO is only relevant when implementing reserving more stacks for thread. Dont delete
- * this regards to stack reservation for userspace lock mechanism. if the top of stack is 0,
- * this means this is the first stack request. Make the top_stack to point to itself and give this
- * pointer to child stack's top_stack as well. Calculation to get top of stack is in pthread.c in userspace
-
-// minhsbrk1 commented out for a1
 size_t Syscall::brkMemory(size_t new_brk_addr)
 {
   debug(SBRK, "Syscall::brkMemory: brk called with address %p. Checking if addr is valid \n", (void*) new_brk_addr);
@@ -209,6 +202,7 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
     return -1;
   }
 }
+
 size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 {
   debug(SBRK, "Syscall::sbrkMemory: sbrk called\n");
@@ -243,7 +237,6 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
     return 0;
   }
 }
-*/
 
 
 uint32 Syscall::forkProcess()
