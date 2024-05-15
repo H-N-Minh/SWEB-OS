@@ -195,7 +195,7 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
   if (!sanityCheck(address))
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: address failed sanity check\n");
-    return 0;
+    return NOT_RELATED_TO_GROWING_STACK;
   }
 
   // get to top of stack where the meta data is stored 
@@ -204,7 +204,7 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
   if (top_current_stack == 0)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted or not found. Segfault!!\n");
-    return 0;
+    return NOT_RELATED_TO_GROWING_STACK;
   }
 
   // check if the guards are intact. this also checks overflow underflow
@@ -212,13 +212,13 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
   if (is_guard_valid == 0)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted or not found. Segfault!!\n");
-    return 11;
+    return GROWING_STACK_FAILED;
   }
 
   finalSanityCheck(address, top_current_stack);
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: growing stack request is valid\n");
 
-  return 1;
+  return GROWING_STACK_VALID;
 }
 
 
@@ -269,10 +269,10 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: could not map new page\n");
     PageManager::instance()->freePPN(new_ppn);
-    return -1;
+    return GROWING_STACK_FAILED;
   }
 
-  return 0;
+  return GROWING_STACK_VALID;
 }
 
 size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address) 

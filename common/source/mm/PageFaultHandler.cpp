@@ -11,9 +11,7 @@
 #include "UserThread.h"
 #include "UserProcess.h"
 
-#define PRESENT 3
-#define INVALID 0
-#define VALID 1
+
 
 extern "C" void arch_contextSwitch();
 
@@ -48,22 +46,7 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   }
   else if(user)
   {
-    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
-    UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
-    assert(manager && "UserSpaceMemoryManager is not initialized.");
-    int retval = manager->checkValidGrowingStack(address);
-        
-    if(retval == 11)  // corruption detected
-    {
-      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. Exiting with error 11\n");
-      return INVALID;
-    }
-    else if(retval == 1)  // valid growing stack
-    {
-      return 69;
-    }
-    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
-    return 1;
+    return USER;
   }
   else
   {
@@ -94,7 +77,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   currentThread->loader_->arch_memory_.lock_.acquire();
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
-  if (status == 1)
+  if (status == VALID)
   {
     currentThread->loader_->loadPage(address);
     currentThread->loader_->arch_memory_.lock_.release();
@@ -105,43 +88,31 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     currentThread->loader_->arch_memory_.copyPage(address);
     currentThread->loader_->arch_memory_.lock_.release();
   }
-  else if (status == 69)
+  else if (status == USER)
   {
-    
-    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
-    UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
-    assert(manager && "UserSpaceMemoryManager is not initialized.");
-    status = manager->increaseStackSize(address);
-    currentThread->loader_->arch_memory_.lock_.release();
-    if (status == -1)
+    int retval = checkGrowingStack(address);
+    if (retval == GROWING_STACK_FAILED)
     {
+      currentThread->loader_->arch_memory_.lock_.release();
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
-      if (currentThread->loader_)
-      {
-        Syscall::exit(9999);
-      }
-      else
-        currentThread->kill();
-      }
+      errorInPageFaultKillProcess();
+    }
+    else if(retval == NOT_RELATED_TO_GROWING_STACK)
+    {
+      currentThread->loader_->loadPage(address);
+      currentThread->loader_->arch_memory_.lock_.release();
+    }
     else
     {
+      currentThread->loader_->arch_memory_.lock_.release();
+      assert(retval == GROWING_STACK_VALID);
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
   }
   else  //status INVALID
   {
     currentThread->loader_->arch_memory_.lock_.release();
-    // the page-fault seems to be faulty, print out the thread stack traces
-    ArchThreads::printThreadRegisters(currentThread, true);
-    currentThread->printBacktrace(true);
-    if (currentThread->loader_)
-    {
-       Syscall::exit(9999);
-    }
-    else
-    {
-      currentThread->kill();
-    }   
+    errorInPageFaultKillProcess();
   }
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
@@ -165,3 +136,43 @@ void PageFaultHandler::enterPageFault(size_t address, bool user,
   if (currentThread->switch_to_userspace_)
     currentThreadRegisters = currentThread->user_registers_;
 }
+
+
+
+int PageFaultHandler::checkGrowingStack(size_t address)
+{
+    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
+    UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+    assert(manager && "UserSpaceMemoryManager is not initialized.");
+
+    int status = manager->checkValidGrowingStack(address);
+        
+    if(status != GROWING_STACK_VALID)
+    {
+      return status;
+    }
+
+    status = manager->increaseStackSize(address);
+    return status;
+}
+
+void PageFaultHandler::errorInPageFaultKillProcess()
+{
+    // the page-fault seems to be faulty, print out the thread stack traces
+    ArchThreads::printThreadRegisters(currentThread, true);
+    currentThread->printBacktrace(true);
+    if (currentThread->loader_)
+    {
+       Syscall::exit(9999);
+    }
+    else
+    {
+      currentThread->kill();
+    }   
+}
+
+
+    // debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
+    // return 1;
+
+// debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. Exiting with error 11\n");

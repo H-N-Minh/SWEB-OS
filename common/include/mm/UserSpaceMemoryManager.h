@@ -7,6 +7,7 @@
 #include "Loader.h"
 #include "SpinLock.h"
 #include "UserThread.h"
+#include "PageFaultHandler.h"
 
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
