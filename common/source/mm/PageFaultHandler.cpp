@@ -11,6 +11,10 @@
 #include "UserThread.h"
 #include "UserProcess.h"
 
+#define PRESENT 3
+#define INVALID 0
+#define VALID 1
+
 extern "C" void arch_contextSwitch();
 
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
@@ -25,43 +29,34 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   if(address < null_reference_check_border_)
   {
     debug(PAGEFAULT, "Maybe you are dereferencing a null-pointer.\n");
+    return INVALID;
   }
   else if(!user && address >= USER_BREAK)
   {
     debug(PAGEFAULT, "You are accessing an invalid kernel address.\n");
+    return INVALID;
   }
   else if(user && address >= USER_BREAK)
   {
     debug(PAGEFAULT, "You are accessing a kernel address in user-mode.\n");
+    return INVALID;
   }
   else if(present)
   {
-    if (currentThread->loader_->arch_memory_.isCOW(address))
-    {
-      debug(PAGEFAULT_TEST, "pagefault even though the address is mapped BUT ITS COW.\n");
-      return 3;
-    }
-    else
-    {
-      debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
-    }
+    debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+    return PRESENT;
   }
-  else if(user && !present && 
-          address > null_reference_check_border_ && address < USER_BREAK)
+  else if(user)
   {
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
     int retval = manager->checkValidGrowingStack(address);
-    
-    // DEBUGMINH  TODO: remove this
-    debug(MINH, "address: (%p)[%zu] , retval: %d\n", (int*) address, address,  retval);
-    
-    
+        
     if(retval == 11)  // corruption detected
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. Exiting with error 11\n");
-      return 0;
+      return INVALID;
     }
     else if(retval == 1)  // valid growing stack
     {
@@ -73,9 +68,9 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   else
   {
     // everything seems to be okay
-    return 1;
+    return VALID;
   }
-  return 0;
+  return INVALID;
 }
 
 inline void PageFaultHandler::handlePageFault(size_t address, bool user,
@@ -95,34 +90,20 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  int flag = false; // flag for locking archmemory 
-  if(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread)
-  {
-    flag = true;
-    currentThread->loader_->arch_memory_.lock_.acquire();
-  }
-  
+  assert(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread);
+
+  currentThread->loader_->arch_memory_.lock_.acquire();
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == 1)
   {
     currentThread->loader_->loadPage(address);
-    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+    currentThread->loader_->arch_memory_.lock_.release();
   }
-  else if (status == 3)
+  else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
   {
-    if(writing && currentThread->loader_->arch_memory_.isCOW(address)) //bit of entry->writable = =1?
-    {
-
-      debug(PAGEFAULT_TEST, "is COW, copying Page\n");
-      currentThread->loader_->arch_memory_.copyPage(address);
-      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
-    }
-    else
-    {
-      assert(0 && "This should never be reached.");
-      currentThread->loader_->loadPage(address);
-      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
-    }
+    debug(PAGEFAULT_TEST, "is COW, copying Page\n");
+    currentThread->loader_->arch_memory_.copyPage(address);
+    currentThread->loader_->arch_memory_.lock_.release();
   }
   else if (status == 69)
   {
@@ -131,9 +112,9 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
     status = manager->increaseStackSize(address);
+    currentThread->loader_->arch_memory_.lock_.release();
     if (status == -1)
     {
-      currentThread->loader_->arch_memory_.lock_.release();
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
       if (currentThread->loader_)
       {
@@ -144,21 +125,23 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
       }
     else
     {
-      if(flag) 
-      {currentThread->loader_->arch_memory_.lock_.release();}
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
   }
-  else
+  else  //status INVALID
   {
     currentThread->loader_->arch_memory_.lock_.release();
     // the page-fault seems to be faulty, print out the thread stack traces
     ArchThreads::printThreadRegisters(currentThread, true);
     currentThread->printBacktrace(true);
     if (currentThread->loader_)
-      Syscall::exit(9999);
+    {
+       Syscall::exit(9999);
+    }
     else
+    {
       currentThread->kill();
+    }   
   }
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }

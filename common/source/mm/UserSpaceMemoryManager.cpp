@@ -207,7 +207,7 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
   if (top_current_stack == 0)
   {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted or not found. Segfault!!\n");
-    return 0;
+    return 11;
   }
 
   // check if the guards are intact. this also checks overflow underflow
