@@ -567,6 +567,11 @@ void ArchMemory::copyPage(size_t virtual_addr)
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
   assert(pml1_entry && pml1_entry->cow && "Page is not COW");
 
+  if(pml1_entry->writeable == 1)
+  {
+    return;
+  }
+
   debug(FORK, "ArchMemory::copyPage If the process is not the last process to own the page, then copy to new page\n");
   pm->page_reference_counts_lock_.acquire();
   assert(pm->getReferenceCount(pml1_entry->page_ppn) > 0 && "Reference count is 0");
@@ -588,5 +593,5 @@ void ArchMemory::copyPage(size_t virtual_addr)
   debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
   // pml1_entry->present = 1;  //i think this should be the same as parent
   pml1_entry->writeable = 1;
-  pml1_entry->cow = 0;
+  // pml1_entry->cow = 0;
 }

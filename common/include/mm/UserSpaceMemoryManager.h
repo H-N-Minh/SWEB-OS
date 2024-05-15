@@ -23,7 +23,7 @@ class UserSpaceMemoryManager
     size_t heap_start_;
     Loader* loader_;
 
-    SpinLock lock_;   // used to protect current_break_
+    SpinLock current_break_lock_;   // used to protect current_break_
 
     size_t totalUsedHeap();
 
