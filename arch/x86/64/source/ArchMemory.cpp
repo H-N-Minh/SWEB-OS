@@ -15,21 +15,21 @@ PageDirEntry kernel_page_directory[2 * PAGE_DIR_ENTRIES] __attribute__((aligned(
 PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 
 
-ArchMemory::ArchMemory():lock_("archmemory_lock_")
+ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 {
-  lock_.acquire();
+  archmemory_lock_.acquire();
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
-  lock_.release();
+  archmemory_lock_.release();
 }
 
 // COPY CONSTRUCTOR
-ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
+ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_")
 {
-  assert(((UserThread*) currentThread)->process_->loader_->arch_memory_.lock_.isHeldBy((Thread*) currentThread) && "The parent's archmem is not locked");
-  lock_.acquire();
+  assert(((UserThread*) currentThread)->process_->loader_->arch_memory_.archmemory_lock_.isHeldBy((Thread*) currentThread) && "The parent's archmem is not locked");
+  archmemory_lock_.acquire();
   assert(PageManager::instance()->heldBy() != currentThread);
 
   debug(FORK, "ArchMemory::copy-constructor starts \n");
@@ -123,14 +123,14 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
     }
   }
   debug(FORK, "ArchMemory::copy-constructor finished \n");
-  lock_.release();
+  archmemory_lock_.release();
 }
 
 
 ArchMemory::~ArchMemory()
 {
   debug(FORK, "~ArchMemory \n");
-  lock_.acquire();
+  archmemory_lock_.acquire();
   assert(currentThread->kernel_registers_->cr3 != page_map_level_4_ * PAGE_SIZE && "thread deletes its own arch memory");
 
   PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
@@ -186,7 +186,7 @@ ArchMemory::~ArchMemory()
     }
   }
   PageManager::instance()->freePPN(page_map_level_4_);
-  lock_.release();
+  archmemory_lock_.release();
 }
 
 pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
@@ -221,7 +221,7 @@ bool ArchMemory::checkAndRemove(pointer map_ptr, uint64 index)
 
 bool ArchMemory::unmapPage(uint64 virtual_page)
 {
-  assert(lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
+  assert(archmemory_lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
 
   assert(m.page_ppn != 0);
@@ -290,7 +290,7 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
 bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
 {
   assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
-  assert(lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
+  assert(archmemory_lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
 
   assert((m.page_size == 0) || (m.page_size == PAGE_SIZE));
@@ -331,7 +331,7 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
 const ArchMemoryMapping ArchMemory::resolveMapping(uint64 vpage)
 {
-  assert(lock_.heldBy() == currentThread && "Try to resolve mapping without holding archmemory lock");
+  assert(archmemory_lock_.heldBy() == currentThread && "Try to resolve mapping without holding archmemory lock");
   return resolveMapping(page_map_level_4_, vpage);
 }
 
@@ -464,7 +464,7 @@ PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()
 
 void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 {
-  lock_.acquire();
+  archmemory_lock_.acquire();
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
 
   PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
@@ -533,14 +533,14 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
       }
     }
   }
-  lock_.release();
+  archmemory_lock_.release();
 }
 
 
 bool ArchMemory::isCOW(size_t virtual_addr)
 {
-  assert(lock_.heldBy() != currentThread);
-  lock_.acquire();
+  assert(archmemory_lock_.heldBy() != currentThread);
+  archmemory_lock_.acquire();
   ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
 
@@ -550,7 +550,7 @@ bool ArchMemory::isCOW(size_t virtual_addr)
   }
   else
   {
-    lock_.release();
+    archmemory_lock_.release();
     return false;
   }
 
@@ -559,7 +559,7 @@ bool ArchMemory::isCOW(size_t virtual_addr)
 
 void ArchMemory::copyPage(size_t virtual_addr)
 {
-  assert(lock_.heldBy() == currentThread);
+  assert(archmemory_lock_.heldBy() == currentThread);
   PageManager* pm = PageManager::instance();
 
   debug(FORK, "ArchMemory::copyPage Resolving mapping \n");
@@ -586,7 +586,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
   pm->page_reference_counts_lock_.release();
 
   debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
-  pml1_entry->present = 1;
+  // pml1_entry->present = 1;  //i think this should be the same as parent
   pml1_entry->writeable = 1;
   pml1_entry->cow = 0;
 }

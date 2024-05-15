@@ -27,7 +27,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
 
   if (!already_locked) {
     lock_.acquire();
-    loader_->arch_memory_.lock_.acquire();
+    loader_->arch_memory_.archmemory_lock_.acquire();
   }
 
   assert(current_break_ + size <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: trying to allocate more than MAX_HEAP_SIZE");
@@ -61,7 +61,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           current_break_ = old_break;
           if (!already_locked)
           {
-            loader_->arch_memory_.lock_.release();
+            loader_->arch_memory_.archmemory_lock_.release();
             lock_.release();
           }
           return 0;
@@ -77,7 +77,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           current_break_ = old_break;
           if (!already_locked)
           {
-            loader_->arch_memory_.lock_.release();
+            loader_->arch_memory_.archmemory_lock_.release();
             lock_.release();
           }
           return 0;
@@ -96,7 +96,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           current_break_ = old_break;
           if (!already_locked)
           {
-            loader_->arch_memory_.lock_.release();
+            loader_->arch_memory_.archmemory_lock_.release();
             lock_.release();
           }
           return 0;
@@ -107,7 +107,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
     debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successful, new break value is %zx\n", current_break_);
     if (!already_locked)
     {
-      loader_->arch_memory_.lock_.release();
+      loader_->arch_memory_.archmemory_lock_.release();
       lock_.release();
     }
     assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
@@ -120,7 +120,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
     pointer old_break = (pointer) current_break_;
     if (!already_locked)
     {
-      loader_->arch_memory_.lock_.release();
+      loader_->arch_memory_.archmemory_lock_.release();
       lock_.release();
     }
     return old_break;
@@ -135,20 +135,20 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
 
   lock_.acquire();
-  loader_->arch_memory_.lock_.acquire();
+  loader_->arch_memory_.archmemory_lock_.acquire();
   ssize_t size = new_break_addr - current_break_;
   pointer resevered_space = sbrk(size, 1);
   if (resevered_space == 0)
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: FATAL ERROR, could not set new break at address (%zx)\n", new_break_addr);
-    loader_->arch_memory_.lock_.release();
+    loader_->arch_memory_.archmemory_lock_.release();
     lock_.release();
     return -1;
   } 
   else
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: new break is set successful at address (%zx)\n", current_break_);
-    loader_->arch_memory_.lock_.release();
+    loader_->arch_memory_.archmemory_lock_.release();
     lock_.release();
     return 0;
   }
@@ -250,10 +250,10 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  // bool is_arch_lock_held_by_currentThread = arch_memory->lock_.isHeldBy(currentThread);
+  // bool is_arch_lock_held_by_currentThread = arch_memory->archmemory_lock_.isHeldBy(currentThread);
   // if (!is_arch_lock_held_by_currentThread)
   // {
-  //   arch_memory->lock_.acquire();
+  //   arch_memory->archmemory_lock_.acquire();
   // }
 
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
@@ -262,7 +262,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
 
   // if (!is_arch_lock_held_by_currentThread)
   // {
-  //   arch_memory->lock_.release();
+  //   arch_memory->archmemory_lock_.release();
   // }
 
   if (!page_mapped)
@@ -320,10 +320,10 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards current thread is intact\n");
 
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  // bool is_arch_lock_held_by_currentThread = arch_memory->lock_.isHeldBy(currentThread);
+  // bool is_arch_lock_held_by_currentThread = arch_memory->archmemory_lock_.isHeldBy(currentThread);
   // if (!is_arch_lock_held_by_currentThread)
   // {
-  //   arch_memory->lock_.acquire();
+  //   arch_memory->archmemory_lock_.acquire();
   // }
   
   if (arch_memory->checkAddressValid(guard3))
@@ -337,7 +337,7 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
   }
   // if (!is_arch_lock_held_by_currentThread)
   // {
-  //   arch_memory->lock_.release();
+  //   arch_memory->archmemory_lock_.release();
   // }
 
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: All guards are still intact\n");

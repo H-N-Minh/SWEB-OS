@@ -76,9 +76,9 @@ UserProcess::UserProcess(const UserProcess& other)
 
   assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
-  other.loader_->arch_memory_.lock_.acquire();
+  other.loader_->arch_memory_.archmemory_lock_.acquire();
   loader_ = new Loader(*other.loader_, fd_);
-  other.loader_->arch_memory_.lock_.release();
+  other.loader_->arch_memory_.archmemory_lock_.release();
   if (!loader_){assert(0 && "No loader in fork");}
 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
@@ -202,7 +202,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
 
   uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
-  arch_memory->lock_.acquire();
+  arch_memory->archmemory_lock_.acquire();
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
     if (arch_memory->checkAddressValid(top_stack))
@@ -216,7 +216,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
       continue;
     }
   }
-  arch_memory->lock_.release();
+  arch_memory->archmemory_lock_.release();
 
   debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
 }
@@ -370,7 +370,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
   
   //map the argument page(s)
-  loader_->arch_memory_.lock_.acquire();
+  loader_->arch_memory_.archmemory_lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1);
   assert(vpn_mapped &&  "Virtual page already mapped.");
   if(next_page_for_args)
@@ -379,7 +379,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     assert(vpn_mapped && "Virtual page already mapped.");
 
   }
-  loader_->arch_memory_.lock_.release();
+  loader_->arch_memory_.archmemory_lock_.release();
   return 0;
 }
 

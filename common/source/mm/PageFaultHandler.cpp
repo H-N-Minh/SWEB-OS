@@ -73,7 +73,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  assert(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread);
+  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() != currentThread);
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
@@ -84,13 +84,13 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   {
     debug(PAGEFAULT_TEST, "is COW, copying Page\n");
     currentThread->loader_->arch_memory_.copyPage(address);
-    currentThread->loader_->arch_memory_.lock_.release();
+    currentThread->loader_->arch_memory_.archmemory_lock_.release();
   }
   else if (status == USER)
   {
-    currentThread->loader_->arch_memory_.lock_.acquire();
+    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
     int retval = checkGrowingStack(address);
-    currentThread->loader_->arch_memory_.lock_.release();
+    currentThread->loader_->arch_memory_.archmemory_lock_.release();
     if (retval == GROWING_STACK_FAILED)
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
