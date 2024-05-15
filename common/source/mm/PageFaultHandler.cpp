@@ -75,12 +75,10 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   assert(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread);
 
-  currentThread->loader_->arch_memory_.lock_.acquire();
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
     currentThread->loader_->loadPage(address);
-    currentThread->loader_->arch_memory_.lock_.release();
   }
   else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
   {
@@ -90,28 +88,27 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else if (status == USER)
   {
+    currentThread->loader_->arch_memory_.lock_.acquire();
     int retval = checkGrowingStack(address);
+    currentThread->loader_->arch_memory_.lock_.release();
     if (retval == GROWING_STACK_FAILED)
     {
-      currentThread->loader_->arch_memory_.lock_.release();
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
       errorInPageFaultKillProcess();
     }
     else if(retval == NOT_RELATED_TO_GROWING_STACK)
     {
+      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
       currentThread->loader_->loadPage(address);
-      currentThread->loader_->arch_memory_.lock_.release();
     }
     else
     {
-      currentThread->loader_->arch_memory_.lock_.release();
       assert(retval == GROWING_STACK_VALID);
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
   }
   else  //status INVALID
   {
-    currentThread->loader_->arch_memory_.lock_.release();
     errorInPageFaultKillProcess();
   }
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
@@ -171,8 +168,3 @@ void PageFaultHandler::errorInPageFaultKillProcess()
     }   
 }
 
-
-    // debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
-    // return 1;
-
-// debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. Exiting with error 11\n");

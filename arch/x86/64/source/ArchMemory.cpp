@@ -539,18 +539,27 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 
 bool ArchMemory::isCOW(size_t virtual_addr)
 {
+  assert(lock_.heldBy() != currentThread);
+  lock_.acquire();
   ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
 
   if (pml1_entry && pml1_entry->cow)
+  {
     return true;
+  }
   else
+  {
+    lock_.release();
     return false;
+  }
+
 }
 
 
 void ArchMemory::copyPage(size_t virtual_addr)
 {
+  assert(lock_.heldBy() == currentThread);
   PageManager* pm = PageManager::instance();
 
   debug(FORK, "ArchMemory::copyPage Resolving mapping \n");
