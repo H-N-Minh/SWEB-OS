@@ -239,6 +239,8 @@ void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current
 
 int UserSpaceMemoryManager::increaseStackSize(size_t address)
 {
+  ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
+  assert(arch_memory->archmemory_lock_.heldBy() == currentThread);
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize called with address (%zx)\n", address);
   
   // Quick check to see if the address is (somewhat) valid
@@ -249,21 +251,11 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
 
   // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
-  ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  // bool is_arch_lock_held_by_currentThread = arch_memory->archmemory_lock_.isHeldBy(currentThread);
-  // if (!is_arch_lock_held_by_currentThread)
-  // {
-  //   arch_memory->archmemory_lock_.acquire();
-  // }
-
+  
+  
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
   uint32 new_ppn = PageManager::instance()->allocPPN();
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true);
-
-  // if (!is_arch_lock_held_by_currentThread)
-  // {
-  //   arch_memory->archmemory_lock_.release();
-  // }
 
   if (!page_mapped)
   {
@@ -320,11 +312,7 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards current thread is intact\n");
 
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  // bool is_arch_lock_held_by_currentThread = arch_memory->archmemory_lock_.isHeldBy(currentThread);
-  // if (!is_arch_lock_held_by_currentThread)
-  // {
-  //   arch_memory->archmemory_lock_.acquire();
-  // }
+
   
   if (arch_memory->checkAddressValid(guard3))
   {
@@ -335,10 +323,6 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
       return 0;
     }
   }
-  // if (!is_arch_lock_held_by_currentThread)
-  // {
-  //   arch_memory->archmemory_lock_.release();
-  // }
 
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: All guards are still intact\n");
   return 1;

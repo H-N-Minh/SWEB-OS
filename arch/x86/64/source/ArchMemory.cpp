@@ -15,7 +15,7 @@ PageDirEntry kernel_page_directory[2 * PAGE_DIR_ENTRIES] __attribute__((aligned(
 PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 
 
-ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_") //
+ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 {
   archmemory_lock_.acquire();
   page_map_level_4_ = PageManager::instance()->allocPPN();
@@ -553,7 +553,6 @@ bool ArchMemory::isCOW(size_t virtual_addr)
     archmemory_lock_.release();
     return false;
   }
-
 }
 
 
@@ -594,4 +593,22 @@ void ArchMemory::copyPage(size_t virtual_addr)
   // pml1_entry->present = 1;  //i think this should be the same as parent
   pml1_entry->writeable = 1;
   // pml1_entry->cow = 0;
+}
+
+bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn)
+{
+  //TODOs //assert that the PTI is locked
+  assert(archmemory_lock_.heldBy() != currentThread);
+  archmemory_lock_.acquire();
+  ArchMemoryMapping mapping = resolveMapping(vpn);
+  
+  PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+  assert(pt_entry && "No pagetable entry");
+
+  pt_entry->present = 0;
+  pt_entry->swapped_out = 1;
+
+  //todos: location on disk (maybe also somewhere else)
+  archmemory_lock_.release(); //TODOS: probably unlock later
+  return true;
 }

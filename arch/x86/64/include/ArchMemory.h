@@ -134,4 +134,6 @@ class ArchMemory
      * @return True if the table map_ptr is full of zeroes and thus able to be freed.
      */
     template<typename T> static bool checkAndRemove(pointer map_ptr, uint64 index);
+
+    bool updatePageTableEntryForSwapOut(size_t vpn);
 };

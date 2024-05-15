@@ -9,6 +9,7 @@
 #include "UserSpaceMemoryManager.h"
 #include "LocalFileDescriptorTable.h"
 
+//TODOs: USE
 enum PROCESS_STATE {EXIT, EXECV, NORMAL};
 
 class UserProcess
