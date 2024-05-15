@@ -27,20 +27,19 @@ class UserSpaceMemoryManager
     size_t totalUsedHeap();
 
 
-    //minhsbrk4
     /**
      * adjust the brk by size amount 
      * @param size the amount to adjust the brk by (can be positive or negative)
      * @param already_locked if the lock for break is already held
      * @return pointer to the reserved space, else return 0 on failure
     */
-    // pointer sbrk(ssize_t size, size_t already_locked);
+    pointer sbrk(ssize_t size, size_t already_locked);
 
     /**
      * set the address of brk to a fixed address
      * @return 0 on success, else return -1
     */
-    // int brk(size_t new_break_addr);
+    int brk(size_t new_break_addr);
 
     /**
      * check if the address is a valid growing stack address

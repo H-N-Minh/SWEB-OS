@@ -67,8 +67,7 @@ public:
 
   static long int wait_pid(long int pid, int* status, size_t options);
 
-  // minhsbrk2
-  // static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);
-  // static size_t brkMemory(size_t new_brk_addr);
+  static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);
+  static size_t brkMemory(size_t new_brk_addr);
 };
 
