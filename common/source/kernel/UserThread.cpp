@@ -335,6 +335,10 @@ void UserThread::exitThread(void* value_ptr)
   }
   join_state_lock_.release();
 
+  // unmap its stack
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+
   // for exec()
   if(process_->threads_.size() == 1)  // only one thread left, which is the exec thread waiting for the signal
   {
@@ -345,9 +349,7 @@ void UserThread::exitThread(void* value_ptr)
   }
   process_->threads_lock_.release();
 
-  // unmap its stack
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
-  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+
 
   kill();
 
@@ -356,8 +358,7 @@ void UserThread::exitThread(void* value_ptr)
 int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, pthread_attr_t* attr)
 {
   if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true)
-  || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true)
-  || !Syscall::check_parameter((size_t)wrapper))
+  || !Syscall::check_parameter((size_t)start_routine)  || !Syscall::check_parameter((size_t)wrapper))
   {
     return -1;
   }
