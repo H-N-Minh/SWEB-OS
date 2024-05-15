@@ -15,7 +15,7 @@ PageDirEntry kernel_page_directory[2 * PAGE_DIR_ENTRIES] __attribute__((aligned(
 PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 
 
-ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
+ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_") //
 {
   archmemory_lock_.acquire();
   page_map_level_4_ = PageManager::instance()->allocPPN();
