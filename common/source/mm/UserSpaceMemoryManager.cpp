@@ -320,11 +320,7 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards current thread is intact\n");
 
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  // bool is_arch_lock_held_by_currentThread = arch_memory->lock_.isHeldBy(currentThread);
-  // if (!is_arch_lock_held_by_currentThread)
-  // {
-  //   arch_memory->lock_.acquire();
-  // }
+
   
   if (arch_memory->checkAddressValid(guard3))
   {
@@ -335,10 +331,6 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
       return 0;
     }
   }
-  // if (!is_arch_lock_held_by_currentThread)
-  // {
-  //   arch_memory->lock_.release();
-  // }
 
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: All guards are still intact\n");
   return 1;

@@ -563,7 +563,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
   assert(pm->getReferenceCount(pml1_entry->page_ppn) > 0 && "Reference count is 0");
   if (pm->getReferenceCount(pml1_entry->page_ppn) > 1)
   {
-    debug(FORK, "ArchMemory::copyPage Copying to a new page\n");
+    debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
     size_t new_page_ppn = pm->allocPPN();
     pointer original_page = ArchMemory::getIdentAddressOfPPN(pml1_entry->page_ppn);
     pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
