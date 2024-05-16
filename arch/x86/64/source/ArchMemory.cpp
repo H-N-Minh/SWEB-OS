@@ -1,3 +1,4 @@
+#include "InvertedPageTable.h"
 #include "ArchMemory.h"
 #include "ArchInterrupts.h"
 #include "kprintf.h"
@@ -8,6 +9,8 @@
 #include "UserThread.h"
 #include "UserProcess.h"
 #include "assert.h"
+#include "SwappingManager.h"
+
 
 PageMapLevel4Entry kernel_page_map_level_4[PAGE_MAP_LEVEL_4_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
 PageDirPointerTableEntry kernel_page_directory_pointer_table[2 * PAGE_DIR_POINTER_TABLE_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
@@ -597,7 +600,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
 
 bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn)
 {
-  //TODOs //assert that the PTI is locked
+  // assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread); //TODOS
   assert(archmemory_lock_.heldBy() != currentThread);
   archmemory_lock_.acquire();
   ArchMemoryMapping mapping = resolveMapping(vpn);
@@ -609,6 +612,29 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn)
   pt_entry->swapped_out = 1;
 
   //todos: location on disk (maybe also somewhere else)
+  archmemory_lock_.release(); //TODOS: probably unlock later
+  return true;
+}
+
+size_t ArchMemory::getDiskLocation(size_t vpn)
+{
+  // assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread); //TODOS
+  assert(archmemory_lock_.heldBy() != currentThread);
+
+  archmemory_lock_.acquire();
+  ArchMemoryMapping mapping = resolveMapping(vpn);
+  
+  PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+  assert(pt_entry && "No pagetable entry");
+
+  if(!pt_entry->swapped_out || pt_entry->present)
+  {
+    return NULL;
+  }
+  else
+  {
+    return pt_entry->page_ppn; //ppn is used to store disk location
+  }
   archmemory_lock_.release(); //TODOS: probably unlock later
   return true;
 }

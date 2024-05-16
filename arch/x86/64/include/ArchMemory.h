@@ -1,5 +1,6 @@
 #pragma once
 
+#include "InvertedPageTable.h"
 #include "types.h"
 #include "offsets.h"
 #include "paging-definitions.h"
@@ -110,6 +111,9 @@ class ArchMemory
 
     void copyPage(size_t virtual_addr);
 
+    bool updatePageTableEntryForSwapOut(size_t vpn);
+    size_t getDiskLocation(size_t vpn);
+
   private:
     /**
      * Adds a PML4Entry, PDPTEntry, PDEntry or PTEntry to the given PML4, PDPT, PD or PT respectively.
@@ -135,5 +139,4 @@ class ArchMemory
      */
     template<typename T> static bool checkAndRemove(pointer map_ptr, uint64 index);
 
-    bool updatePageTableEntryForSwapOut(size_t vpn);
 };
