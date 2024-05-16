@@ -1,5 +1,6 @@
 #include "SwappingManager.h"
 #include "InvertedPageTable.h"
+#include "InvertedPageTable2.h"
 #include "UserProcess.h"
 #include "UserThread.h"
 #include "PageManager.h"
@@ -8,7 +9,8 @@ SwappingManager::SwappingManager()
 {
   assert(!instance_);
   instance_ = this;
-  ipt_ = new InvertedPageTable();
+  ipt_ = new InvertedPageTable();           //TODOs needs to be deleted at some point
+  ipt2_ = new InvertedPageTable2();         //TODOs needs to be deleted at some point
 }
 
 SwappingManager* SwappingManager::instance()
@@ -43,6 +45,8 @@ void SwappingManager::swapOutPage(size_t ppn)
   //write to disk
 
   //unlock disk
+
+  //add values to inverted swapping pages map
  
   for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
   {

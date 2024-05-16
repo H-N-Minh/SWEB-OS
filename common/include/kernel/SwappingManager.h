@@ -21,4 +21,5 @@ class SwappingManager
   private:
     static SwappingManager* instance_;
     InvertedPageTable* ipt_;
+    InvertedPageTable2* ipt2_;
 };
