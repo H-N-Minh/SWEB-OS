@@ -24,10 +24,12 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
  
     page_for_stack_ = PageManager::instance()->allocPPN();
+    // TODOAG: putting this into a separate function might make it easier to combine with growing stack in PFHandler etc
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
     loader_->arch_memory_.lock_.acquire();
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack_, 1);
     loader_->arch_memory_.lock_.release();
+    // TODOAG: check/compare with fork!
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
     user_stack_ptr_ = setupMetaHeader();
@@ -81,13 +83,16 @@ size_t UserThread::setupMetaHeader()
 
   size_t user_stack_ptr = (size_t) (USER_BREAK - MAX_STACK_AMOUNT * PAGE_SIZE * tid_ - (META_SIZE + 1) * sizeof(pointer));
   debug(USERTHREAD, "Userthread ctor: Reserving space for meta data at beginning of stack. (2 for Goards and 4 for locking)\n");
-  top_stack_ = user_stack_ptr + 6 * sizeof(pointer);       // 1. Guard
+  top_stack_ = user_stack_ptr + 6 * sizeof(pointer);       // 1. Guard 1
   mutex_flag_ = user_stack_ptr + 5 * sizeof(pointer);      // 2. Mutex flag
   //                                                          3. Mutex waiter list
   cond_flag_ = user_stack_ptr + 3 * sizeof(pointer);       // 4. Cond flag
   //                                                          5. Cond waiter list
-  //                                                          6. Guard
+  //                                                          6. Guard 2
   //                                                          7. user_stack_ptr
+  // NOTE: if adding more items to this list then also update the META_SIZE in UserThread.h
+  //       Also add the new item where guard 2 is, while guard 2 is moved down. Calculation for guard 2 should then 
+  //       be adjusted in UserSpaceMemoryManager.
   return user_stack_ptr;
 }
 
@@ -121,16 +126,14 @@ UserThread::~UserThread()
 {
   debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
   
-  assert(join_threads_.size() == 0 && "There are still waiting threads to get joined, but this is last thread");
-
-    if(last_thread_alive_)
-    {
-        assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
-        assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
-        debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
-        delete process_;
-        process_ = 0;
-    }
+  if(last_thread_alive_)
+  {
+    assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
+    assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
+    debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
+    delete process_;
+    process_ = 0;
+  }
 }
 
 
@@ -245,12 +248,6 @@ int UserThread::joinThread(size_t thread_id, void**value_ptr)
 {
   debug(USERTHREAD, "UserThread:joinThread: called, thread_id: %zu and %p\n", thread_id, value_ptr);
 
-  if(!Syscall::check_parameter((size_t)value_ptr, true) || (currentThread->getTID() == thread_id))
-  {
-    debug(USERTHREAD, "UserThread:pthreadJoin: Thread tries to join itself or invalid value_ptr.\n");
-    return -1;
-  }
-
   process_->threads_lock_.acquire();
   //check if thread is running
   UserThread* thread_to_be_joined = process_->getUserThread(thread_id);
@@ -348,6 +345,7 @@ void UserThread::exitThread(void* value_ptr)
   // unmap its stack
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
   process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+  user_stack_ptr_ = 0;
 
   kill();
 
@@ -386,8 +384,9 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
     debug(USERPROCESS, "UserThread::createThread: Adding new thread to scheduler\n");
     process_->threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
+    size_t new_ID = new_thread->getTID();
     process_->threads_lock_.release();  
-    *thread = new_thread->getTID();
+    *thread = new_ID;
     return 0;
   }
   else

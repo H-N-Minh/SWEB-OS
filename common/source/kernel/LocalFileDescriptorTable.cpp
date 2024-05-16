@@ -20,6 +20,9 @@ LocalFileDescriptorTable::~LocalFileDescriptorTable()
 }
 
 LocalFileDescriptor* LocalFileDescriptorTable::createLocalFileDescriptor(FileDescriptor* global_fd, uint32_t mode, size_t offset, FileType type){
+  // TODO FABI
+   // TODOAG: no locking? (e.g. when creating pipe...)
+   // use asserts to make sure you are holding locks
   size_t local_fd_id = generateLocalFD();
   auto* local_fd = new LocalFileDescriptor(global_fd, mode, offset, local_fd_id, type);
   local_fds_.push_back(local_fd);

@@ -250,20 +250,10 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  // bool is_arch_lock_held_by_currentThread = arch_memory->lock_.isHeldBy(currentThread);
-  // if (!is_arch_lock_held_by_currentThread)
-  // {
-  //   arch_memory->lock_.acquire();
-  // }
 
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
   uint32 new_ppn = PageManager::instance()->allocPPN();
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true);
-
-  // if (!is_arch_lock_held_by_currentThread)
-  // {
-  //   arch_memory->lock_.release();
-  // }
 
   if (!page_mapped)
   {

@@ -577,7 +577,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
   pm->page_reference_counts_lock_.release();
 
   debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
-  pml1_entry->present = 1;
+  // pml1_entry->present = 1;   // this should already be 1
   pml1_entry->writeable = 1;
-  pml1_entry->cow = 0;
+  pml1_entry->cow = 0;  
 }

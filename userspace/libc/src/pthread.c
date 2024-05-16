@@ -100,7 +100,7 @@ int pthread_mutex_lock(pthread_mutex_t *mutex)
     return -1;
   }
   // int counter1 = 0;
-  while (mutex->locked_)
+  if (mutex->locked_)
   {
     // counter1++;
 

@@ -153,7 +153,7 @@ l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-  
+  // TODOAG: scopeLocks would fit nicely here TODOFABI
   current_process.localFileDescriptorTable.lfds_lock_.acquire();
 
   LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
@@ -271,6 +271,12 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
 {
   debug(SYSCALL, "Syscall:pthreadJoin: called, thread_id: %zu and %p\n", thread_id, value_ptr);
 
+  if(!check_parameter((size_t)value_ptr, true) || (currentThread->getTID() == thread_id))
+  {
+    debug(USERTHREAD, "UserThread:pthreadJoin: Thread tries to join itself or invalid value_ptr.\n");
+    return -1;
+  }
+  
   return ((UserThread*)currentThread)->joinThread(thread_id, value_ptr);
 }
 
@@ -364,11 +370,13 @@ size_t Syscall::dup(int file_descriptor) {
 }
 
 uint32 Syscall::pipe(int file_descriptor_array[2]) {
+  // TODOAG: no paramcheck for array TODOFABI
   debug(PIPE, "Syscall::pipe called\n");
 
   Pipe* new_pipe = new Pipe(nullptr, FileDescriptor::FileType::PIPE);
   int res = global_fd_list.add(reinterpret_cast<FileDescriptor *>(new_pipe));
   if (res == 0) {
+    // TODOAG: no check in case of an error? TODOFABI
     debug(PIPE, "Successfully added new_pipe to fd list\n");
   }
 
@@ -440,6 +448,7 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
       size_t num_written = pipeObj->write((char*)buffer, size);
       lfdTable.lfds_lock_.acquire();
       debug(PIPE, "Syscall::write: Wrote %zu bytes to pipe: %p\n", num_written, (void*)pipeObj);
+      // TODOAG: why the buffer? Does our kernel-printf not support limited string length? TODOFABI
       char* buffer2 = new char[size+1];
       strncpy(buffer2, (char*)buffer, size);
       buffer2[size] = '\0';

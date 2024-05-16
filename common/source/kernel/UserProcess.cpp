@@ -19,6 +19,7 @@
 
 #define POINTER_SIZE 8
 
+// TODOAG: unique tid, check with userspace locks
 int64 UserProcess::tid_counter_ = 2;
 int64 UserProcess::pid_counter_ = 1;
 
@@ -311,6 +312,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   argc = 0;
   exec_array_offset = 0;
+  // TODOAG: why not check the return value here? TODOSTEFI
   check_parameters_for_exec(argv, argc, exec_array_offset);
 
 
@@ -362,6 +364,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   fd_ = execv_fd;
 
   //create fresh user registers for the thread (only leave the cr3 the same)
+  // TODOAG: memleak, this overwrites the existing user registers (calls new again)  TODOSTEFI
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
   currentThread->user_registers_->cr3 = old_cr3;
 
@@ -459,6 +462,7 @@ void UserProcess::cancelAllOtherThreads()
   UserThread& currentUserThread = *((UserThread*)currentThread);
   assert(threads_lock_.heldBy() == currentThread);
 
+  // TODOAG: what if a thread is currently in pthread_create? The new thread is not killed TODOSTEFI
   for (auto& thread : threads_)
   {
     if(thread != &currentUserThread)
