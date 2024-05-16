@@ -34,7 +34,7 @@ bool InvertedPageTable2::PPNisInMap(size_t ppn)
 }
 
 
-void InvertedPageTable2::addPage(size_t ppn, size_t vpn, ArchMemory* archmemory)
+void InvertedPageTable2::addVirtualPageInfo(size_t ppn, size_t vpn, ArchMemory* archmemory)
 {  
   assert(ipt2_lock_.heldBy() == currentThread);
   VirtualPageInfo* new_info = new VirtualPageInfo{vpn, archmemory};
@@ -55,5 +55,12 @@ ustl::vector<VirtualPageInfo*> InvertedPageTable2::getAndRemoveVirtualPageInfos(
   {
     assert(0 && "PPN not found in the map!");
   }
+}
+
+void InvertedPageTable2::addVirtualPageInfos(size_t ppn, ustl::vector<VirtualPageInfo*> page_infos)
+{
+  assert(ipt2_lock_.heldBy() == currentThread);
+  assert(!PPNisInMap(ppn) && "page is already in map");
+  ipt2_[ppn] = page_infos;
 }
 

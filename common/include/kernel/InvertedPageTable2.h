@@ -21,7 +21,8 @@ class InvertedPageTable2
     Mutex ipt2_lock_;
 
     bool PPNisInMap(size_t ppn);
-    void addPage(size_t ppn, size_t vpn, ArchMemory* archmemory);
+    void addVirtualPageInfo(size_t ppn, size_t vpn, ArchMemory* archmemory);
+    void addVirtualPageInfos(size_t ppn, ustl::vector<VirtualPageInfo*> page_infos);
     ustl::vector<VirtualPageInfo*> getAndRemoveVirtualPageInfos(size_t ppn);
 
   private:

@@ -23,6 +23,7 @@ SwappingManager* SwappingManager::instance()
 void SwappingManager::swapOutPage(size_t ppn)
 {
   ipt_->ipt_lock_.acquire();
+  ipt2_->ipt2_lock_.acquire();
   
   if(!ipt_->PPNisInMap(ppn))
   {
@@ -42,11 +43,11 @@ void SwappingManager::swapOutPage(size_t ppn)
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
   }
 
+  ipt2_->addVirtualPageInfos(ppn, virtual_page_infos);
+
   //write to disk
 
   //unlock disk
-
-  //add values to inverted swapping pages map
  
   for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
   {
@@ -57,6 +58,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   PageManager::instance()->freePPN(ppn);
 
   ipt_->ipt_lock_.release();
+  ipt2_->ipt2_lock_.release();
 }
 
 
