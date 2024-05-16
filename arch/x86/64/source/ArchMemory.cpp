@@ -598,11 +598,11 @@ void ArchMemory::copyPage(size_t virtual_addr)
   // pml1_entry->cow = 0;
 }
 
-bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn)
+bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 {
   // assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread); //TODOS
-  assert(archmemory_lock_.heldBy() != currentThread);
-  archmemory_lock_.acquire();
+  assert(archmemory_lock_.heldBy() == currentThread);
+
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
@@ -611,17 +611,16 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn)
   pt_entry->present = 0;
   pt_entry->swapped_out = 1;
 
-  //todos: location on disk (maybe also somewhere else)
-  archmemory_lock_.release(); //TODOS: probably unlock later
+  pt_entry->page_ppn = disk_offset;
+
   return true;
 }
 
 size_t ArchMemory::getDiskLocation(size_t vpn)
 {
   // assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread); //TODOS
-  assert(archmemory_lock_.heldBy() != currentThread);
+  assert(archmemory_lock_.heldBy() == currentThread);
 
-  archmemory_lock_.acquire();
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
@@ -635,6 +634,6 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
   {
     return pt_entry->page_ppn; //ppn is used to store disk location
   }
-  archmemory_lock_.release(); //TODOS: probably unlock later
+
   return true;
 }

@@ -31,15 +31,29 @@ bool InvertedPageTable::PPNisInMap(size_t ppn)
   {
     return false;
   }
-
 }
 
 
-void InvertedPageTable::addPage(uint64 ppn, uint64 vpn, ArchMemory* archmemory)
+void InvertedPageTable::addPage(size_t ppn, size_t vpn, ArchMemory* archmemory)
 {  
   assert(ipt_lock_.heldBy() == currentThread);
   VirtualPageInfo* new_info = new VirtualPageInfo{vpn, archmemory};
   ipt_[ppn].push_back(new_info);
 }
 
+ustl::vector<VirtualPageInfo*> InvertedPageTable::getAndRemoveVirtualPageInfos(size_t ppn)
+{
+  assert(ipt_lock_.heldBy() == currentThread);
+  ustl::map<size_t, ustl::vector<VirtualPageInfo*>>::iterator iterator = ipt_.find(ppn);                                                   
+  if(iterator != ipt_.end())
+  {
+    ustl::vector<VirtualPageInfo*> virtual_page_infos = ipt_[ppn];
+    ipt_.erase(iterator);
+    return virtual_page_infos;
+  }
+  else
+  {
+    assert(0 && "PPN not found in the map!");
+  }
+}
 

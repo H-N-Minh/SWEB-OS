@@ -111,7 +111,7 @@ class ArchMemory
 
     void copyPage(size_t virtual_addr);
 
-    bool updatePageTableEntryForSwapOut(size_t vpn);
+    bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     size_t getDiskLocation(size_t vpn);
 
   private:

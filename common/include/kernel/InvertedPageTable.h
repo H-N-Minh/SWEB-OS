@@ -9,7 +9,7 @@ class ArchMemory;
 
 struct VirtualPageInfo
 {
-  uint64 vpn_;
+  size_t vpn_;
   ArchMemory* arch_memory_;
 };
 
@@ -25,10 +25,11 @@ class InvertedPageTable
     Mutex ipt_lock_;
 
     bool PPNisInMap(size_t ppn);
-    void addPage(uint64 ppn, uint64 vpn, ArchMemory* archmemory);
+    void addPage(size_t ppn, size_t vpn, ArchMemory* archmemory);
+    ustl::vector<VirtualPageInfo*> getAndRemoveVirtualPageInfos(size_t ppn);
 
   private:
     static InvertedPageTable* instance_;
-    ustl::map<uint64, ustl::vector<VirtualPageInfo*>> ipt_; //ppn - pageInfos(vpn...)
+    ustl::map<size_t, ustl::vector<VirtualPageInfo*>> ipt_; //ppn - pageInfos(vpn...)
 
 };
