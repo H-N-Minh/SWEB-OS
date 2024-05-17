@@ -371,14 +371,16 @@ size_t Syscall::dup(int file_descriptor) {
 }
 
 uint32 Syscall::pipe(int file_descriptor_array[2]) {
-  // TODOAG: no paramcheck for array TODOFABI
+  assert(file_descriptor_array != nullptr && "file_descriptor_array is null");  // Parameter check
+
   debug(PIPE, "Syscall::pipe called\n");
 
   Pipe* new_pipe = new Pipe(nullptr, FileDescriptor::FileType::PIPE);
   int res = global_fd_list.add(reinterpret_cast<FileDescriptor *>(new_pipe));
-  if (res == 0) {
-    // TODOAG: no check in case of an error? TODOFABI
-    debug(PIPE, "Successfully added new_pipe to fd list\n");
+  if (res != 0) {
+    debug(PIPE, "Failed to add new_pipe to fd list\n");
+    delete new_pipe;
+    return -1;
   }
 
   debug(PIPE, "Syscall::pipe: new_pipe = %p\n", new_pipe);
@@ -387,7 +389,6 @@ uint32 Syscall::pipe(int file_descriptor_array[2]) {
   UserProcess& current_process = *currentUserThread.process_;
 
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
-
 
   size_t read_fd = lfdTable.createLocalFileDescriptor(
       reinterpret_cast<FileDescriptor *>(new_pipe), O_RDONLY, 0, ::FileType::PIPE)->getLocalFD();
@@ -399,12 +400,13 @@ uint32 Syscall::pipe(int file_descriptor_array[2]) {
 
   debug(PIPE, "Syscall::pipe: write_fd = %zu\n", write_fd);
 
-  file_descriptor_array[0] = read_fd;
-  file_descriptor_array[1] = write_fd;
+  file_descriptor_array[0] = static_cast<int>(read_fd);
+  file_descriptor_array[1] = static_cast<int>(write_fd);
 
   debug(PIPE, "Syscall::pipe: returning %zu, %zu\n", read_fd, write_fd);
   return 0;
 }
+
 
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
