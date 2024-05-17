@@ -4,7 +4,7 @@
 #include "paging-definitions.h"
 #include "SpinLock.h"
 #include "Mutex.h"
-
+#include "IPTEntry.h"
 #include "umap.h"
 
 #define DYNAMIC_KMM (0) // Please note that this means that the KMM depends on the page manager
@@ -65,14 +65,14 @@ class PageManager
 
     // Inverted Page Table
     Mutex inverted_page_table_lock_;
-    // ustl::map<uint64, ustl::vector<PageTableEntry*>> inverted_page_table_;  // <ppn, vector<pte>>
+    ustl::map<uint64, IPTEntry*> inverted_page_table_;  // <ppn, vector<pte>>
 
-    // void insertInvertedPageTable(uint64 ppn, PageTableEntry* pte);
-    // void removeFromInvertedPageTable(uint64 ppn, PageTableEntry* pte);
+    void insertInvertedPageTable(uint64 ppn, PageTableEntry* pte, Mutex* archmem_lock);
+    void removeFromInvertedPageTable(uint64 ppn, PageTableEntry* pte);
 
-    // // this is modified during swapping, which requires inverted_page_table_ to also be locked, so no need for another lock here
-    // ustl::map<uint64, ustl::vector<PageTableEntry*>> swapped_page_map_;  // <offset in disk, vector<pte>>
-    // void swapInvertedPageTable(uint64 ppn, uint64 disk_offset);
+    // this is modified during swapping, which requires inverted_page_table_ to also be locked, so no need for another lock here
+    ustl::map<uint64, IPTEntry*> swapped_page_map_;  // <offset in disk, vector<pte>>
+    void swapInvertedPageTable(uint64 ppn, uint64 disk_offset);
     
 
  

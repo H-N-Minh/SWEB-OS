@@ -371,31 +371,41 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
 }
 
 
-// void PageManager::insertInvertedPageTable(uint64 ppn, PageTableEntry* pte)
-// {
-//   debug(SWAPPING, "PageManager::insertInvertedPageTable: ppn: %zx, pte: %zx\n", ppn, pte);
-//   inverted_page_table_lock_.acquire();
-//   inverted_page_table_[ppn].push_back(pte);
-//   inverted_page_table_lock_.release();
-// }
+void PageManager::insertInvertedPageTable(uint64 ppn, PageTableEntry* pte, Mutex* archmem_lock)
+{
+  debug(SWAPPING, "PageManager::insertInvertedPageTable: inserting ppn: %zu, pte: %zu, lock: %zu\n", ppn, pte, archmem_lock);
+  assert(pte && archmem_lock && "PageManager::insertInvertedPageTable: pte or archmem_lock is nullptr");
 
-// void PageManager::removeFromInvertedPageTable(uint64 ppn, PageTableEntry* pte)
-// {
-//   debug(SWAPPING, "PageManager::removeFromInvertedPageTable: ppn: %zx, pte: %zx\n", ppn, pte);
-//   inverted_page_table_lock_.acquire();
-//   auto it = inverted_page_table_.find(ppn);
-//   if (it != inverted_page_table_.end())
-//   {
-//     auto& vec = it->second;
-//     auto vec_it = ustl::find(vec.begin(), vec.end(), pte);
-//     if (vec_it != vec.end())
-//     {
-//       vec.erase(vec_it);
-//     }
-//     if (vec.empty())
-//     {
-//       inverted_page_table_.erase(it);
-//     }
-//   }
-//   inverted_page_table_lock_.release();
-// }
+  inverted_page_table_lock_.acquire();
+  if (inverted_page_table_.find(ppn) == inverted_page_table_.end())
+  {
+    inverted_page_table_[ppn] = new IPTEntry();
+  }
+  inverted_page_table_[ppn]->addEntry(pte, archmem_lock);
+  
+  inverted_page_table_lock_.release();
+  debug(SWAPPING, "PageManager::insertIPT: successfully inserted to IPT\n");
+}
+
+void PageManager::removeFromInvertedPageTable(uint64 ppn, PageTableEntry* pte)
+{
+  debug(SWAPPING, "PageManager::removeFromInvertedPageTable: removing ppn: %zx, pte: %zx\n", ppn, pte);
+  inverted_page_table_lock_.acquire();
+
+  if (inverted_page_table_.find(ppn) == inverted_page_table_.end())
+  {
+    debug(SWAPPING, "PageManager::removeIPT ppn %zu not found in the IPT map %zu\n", ppn, &inverted_page_table_);
+    assert(0 && "PageManager::removeFromInvertedPageTable: ppn doesnt exist in IPT\n");
+  }
+
+  inverted_page_table_[ppn]->removeEntry(pte);
+
+  if (inverted_page_table_[ppn]->isEmpty())
+  {
+    delete inverted_page_table_[ppn];
+    inverted_page_table_.erase(ppn);
+  }
+  
+  inverted_page_table_lock_.release();
+  debug(SWAPPING, "PageManager::removeIPT: successfully removed from IPT\n");
+}
