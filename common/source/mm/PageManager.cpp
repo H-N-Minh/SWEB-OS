@@ -39,7 +39,9 @@ PageManager* PageManager::instance()
  * The lock is created in the constructor and is passed a name to uniquely identify it.
  * This allows for easier debugging and tracking of locks.
  */
-PageManager::PageManager() : page_reference_counts_lock_("page_reference_counts_lock_"), page_manager_lock_("PageManager::page_manager_lock_")
+PageManager::PageManager() 
+    : page_reference_counts_lock_("PageManager::page_reference_counts_lock_"),
+      inverted_page_table_lock_("PageManager::inverted_page_table_lock_"), page_manager_lock_("PageManager::page_manager_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -367,3 +369,33 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
     return 0;
   }
 }
+
+
+// void PageManager::insertInvertedPageTable(uint64 ppn, PageTableEntry* pte)
+// {
+//   debug(SWAPPING, "PageManager::insertInvertedPageTable: ppn: %zx, pte: %zx\n", ppn, pte);
+//   inverted_page_table_lock_.acquire();
+//   inverted_page_table_[ppn].push_back(pte);
+//   inverted_page_table_lock_.release();
+// }
+
+// void PageManager::removeFromInvertedPageTable(uint64 ppn, PageTableEntry* pte)
+// {
+//   debug(SWAPPING, "PageManager::removeFromInvertedPageTable: ppn: %zx, pte: %zx\n", ppn, pte);
+//   inverted_page_table_lock_.acquire();
+//   auto it = inverted_page_table_.find(ppn);
+//   if (it != inverted_page_table_.end())
+//   {
+//     auto& vec = it->second;
+//     auto vec_it = ustl::find(vec.begin(), vec.end(), pte);
+//     if (vec_it != vec.end())
+//     {
+//       vec.erase(vec_it);
+//     }
+//     if (vec.empty())
+//     {
+//       inverted_page_table_.erase(it);
+//     }
+//   }
+//   inverted_page_table_lock_.release();
+// }

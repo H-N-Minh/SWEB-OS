@@ -55,18 +55,27 @@ class PageManager
 
     uint32 getNumPagesForUser() const;
 
-//    struct PageInfo{
-//        uint32 reference_count;
-//    };
-    // <ppn, count>
+    // COW
     ustl::map<uint32, uint32> page_reference_counts_;
     Mutex page_reference_counts_lock_;
 
     void incrementReferenceCount(uint64 page_number);
     void decrementReferenceCount(uint64 page_number);
-
     uint32 getReferenceCount(uint64 page_number);
 
+    // Inverted Page Table
+    Mutex inverted_page_table_lock_;
+    // ustl::map<uint64, ustl::vector<PageTableEntry*>> inverted_page_table_;  // <ppn, vector<pte>>
+
+    // void insertInvertedPageTable(uint64 ppn, PageTableEntry* pte);
+    // void removeFromInvertedPageTable(uint64 ppn, PageTableEntry* pte);
+
+    // // this is modified during swapping, which requires inverted_page_table_ to also be locked, so no need for another lock here
+    // ustl::map<uint64, ustl::vector<PageTableEntry*>> swapped_page_map_;  // <offset in disk, vector<pte>>
+    // void swapInvertedPageTable(uint64 ppn, uint64 disk_offset);
+    
+
+ 
   private:
     bool reservePages(uint32 ppn, uint32 num = 1);
 

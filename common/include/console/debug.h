@@ -104,3 +104,4 @@ const size_t Fabi                     = Ansi_Red;
 
 const size_t USERSPACE_LOCKS         = Ansi_Red     | OUTPUT_ENABLED;
 const size_t WAIT_PID               = Ansi_Red;
+const size_t SWAPPING               = Ansi_Magenta     | OUTPUT_ENABLED;

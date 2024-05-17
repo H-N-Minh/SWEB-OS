@@ -1,9 +1,9 @@
 #pragma once
 
+#include "Mutex.h"
 #include "types.h"
 #include "offsets.h"
 #include "paging-definitions.h"
-#include "Mutex.h"
 
 struct ArchMemoryMapping
 {

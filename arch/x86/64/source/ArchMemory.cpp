@@ -316,10 +316,10 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   if (m.page_ppn == 0)
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
-    uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
+    // uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
     PageManager::instance()->page_reference_counts_lock_.acquire();
-    PageManager::instance()->incrementReferenceCount(page_ppn);
-    debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
+    PageManager::instance()->incrementReferenceCount(physical_page);
+    debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(physical_page), (physical_page));
     PageManager::instance()->page_reference_counts_lock_.release();
     return true;
   }
