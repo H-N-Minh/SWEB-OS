@@ -1,3 +1,4 @@
+
 #include "PageFaultHandler.h"
 #include "kprintf.h"
 #include "Thread.h"
@@ -16,9 +17,9 @@ extern "C" void arch_contextSwitch();
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
 
 inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
-                                                    bool present, bool switch_to_us)
+                                                   bool present, bool switch_to_us)
 {
-  assert((user == switch_to_us) && "Thread is in user mode even though is should not be.");
+  assert((user == switch_to_us) && "Thread is in user mode even though it should not be.");
   assert(!(address < USER_BREAK && currentThread->loader_ == 0) && "Thread accesses the user space, but has no loader.");
   assert(!(user && currentThread->user_registers_ == 0) && "Thread is in user mode, but has no valid registers.");
 
@@ -46,18 +47,14 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
       debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
     }
   }
-  else if(user && !present && 
+  else if(user && !present &&
           address > null_reference_check_border_ && address < USER_BREAK)
   {
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
     int retval = manager->checkValidGrowingStack(address);
-    
-    // DEBUGMINH  TODO: remove this
-    debug(MINH, "address: (%p)[%zu] , retval: %d\n", (int*) address, address,  retval);
-    
-    
+
     if(retval == 11)  // corruption detected
     {
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. Exiting with error 11\n");
@@ -79,8 +76,8 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
 }
 
 inline void PageFaultHandler::handlePageFault(size_t address, bool user,
-                                          bool present, bool writing,
-                                          bool fetch, bool switch_to_us)
+                                              bool present, bool writing,
+                                              bool fetch, bool switch_to_us)
 {
   if (PAGEFAULT & OUTPUT_ENABLED)
     kprintfd("\n");
@@ -101,7 +98,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     flag = true;
     currentThread->loader_->arch_memory_.lock_.acquire();
   }
-  
+
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == 1)
   {
@@ -110,7 +107,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else if (status == 3)
   {
-    if(writing && currentThread->loader_->arch_memory_.isCOW(address)) //bit of entry->writable = =1?
+    if(writing && currentThread->loader_->arch_memory_.isCOW(address))
     {
 
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
@@ -126,7 +123,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else if (status == 69)
   {
-    
+
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
@@ -141,10 +138,10 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
       }
       else
         currentThread->kill();
-      }
+    }
     else
     {
-      if(flag) 
+      if(flag)
       {currentThread->loader_->arch_memory_.lock_.release();}
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }

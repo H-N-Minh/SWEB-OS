@@ -7,6 +7,10 @@
 #include "Loader.h"
 #include "SpinLock.h"
 #include "UserThread.h"
+#include "Scheduler.h"
+#include "IPTEntry.h"
+#include "umap.h"
+#include "umemory.h"
 
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
@@ -25,6 +29,19 @@ class UserSpaceMemoryManager
     SpinLock lock_;   // used to protect current_break_
 
     size_t totalUsedHeap();
+
+    // IPT maps
+    ustl::map<int, ustl::shared_ptr<IPTEntry>> ramMap;
+    ustl::map<int, ustl::shared_ptr<IPTEntry>> diskMap;
+
+    // IPT methods
+    void addEntryToRAM(int ppn, int vpn, int pid);
+    void addEntryToDisk(int diskOffset, int vpn, int pid);
+    ustl::shared_ptr<IPTEntry> lookupEntryInRAM(int ppn);
+    ustl::shared_ptr<IPTEntry> lookupEntryInDisk(int diskOffset);
+    void swapOutPage(int ppn, int diskOffset);
+    void swapInPage(int diskOffset, int ppn);
+
 
 
     /**
