@@ -4,7 +4,8 @@
 #include "ArchMemory.h"
 #include "Loader.h"
 #include "UserProcess.h"
-#include "ArchMemory.h"
+#include "Scheduler.h"
+#include "UserThread.h"
 
 
 size_t UserSpaceMemoryManager::totalUsedHeap()
@@ -13,16 +14,13 @@ size_t UserSpaceMemoryManager::totalUsedHeap()
 }
 
 UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
-    : lock_("UserSpaceMemoryManager::lock_")
-{
+    : iptManager(), lock_("UserSpaceMemoryManager::lock_") {
   heap_start_ = (size_t) loader->getBrkStart();
   current_break_ = heap_start_;
   loader_ = loader;
 }
 
-
-pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
-{
+pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked) {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd)\n", size);
 
   if (!already_locked) {
@@ -33,8 +31,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
   assert(current_break_ + size <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: trying to allocate more than MAX_HEAP_SIZE");
   assert(current_break_ + size >= heap_start_ && "UserSpaceMemoryManager::sbrk: trying to deallocate below heap start");
 
-  if(size != 0)
-  {
+  if (size != 0) {
     debug(SBRK, "UserSpaceMemoryManager::sbrk: changing break value\n");
     size_t old_break = current_break_;
     current_break_ = current_break_ + size;
@@ -46,21 +43,17 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
     if ((current_break_ % PAGE_SIZE) == 0)
       new_top_vpn--;
 
-    if(size > 0)
-    {
+    if (size > 0) {
       debug(SBRK, "old break is on page %zx <= new break is on page %zx\n", old_top_vpn, new_top_vpn);
-      while(old_top_vpn != new_top_vpn)
-      {
+      while (old_top_vpn != new_top_vpn) {
         debug(SBRK, "%zx != %zx\n", old_top_vpn, new_top_vpn);
         old_top_vpn++;
 
         size_t new_page = PageManager::instance()->allocPPN();
-        if(unlikely(new_page == 0))
-        {
+        if (unlikely(new_page == 0)) {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, no more physical memory\n");
           current_break_ = old_break;
-          if (!already_locked)
-          {
+          if (!already_locked) {
             loader_->arch_memory_.lock_.release();
             lock_.release();
           }
@@ -69,57 +62,53 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
 
         debug(SBRK, "kbsrk: map %zx -> %zx\n", old_top_vpn, new_page);
         void* new_page_ptr = (void*) ArchMemory::getIdentAddressOfPPN(new_page);
-        memset(new_page_ptr, 0 , PAGE_SIZE);
-        bool successly_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1);
-        if(unlikely(!successly_mapped))
-        {
+        memset(new_page_ptr, 0, PAGE_SIZE);
+        bool successfully_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1);
+        if (unlikely(!successfully_mapped)) {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not map page\n");
           current_break_ = old_break;
-          if (!already_locked)
-          {
+          if (!already_locked) {
             loader_->arch_memory_.lock_.release();
             lock_.release();
           }
           return 0;
         }
+
+        UserThread* current_thread = static_cast<UserThread*>(currentThread);
+        iptManager.addEntryToRAM(new_page, old_top_vpn, &current_thread->process_->loader_->arch_memory_);
       }
-    }
-    else    // size < 0
-    {
-      debug(SBRK, "old break is on page %zx >= new break is on page %zx\n", old_top_vpn, new_top_vpn);
-      while(old_top_vpn != new_top_vpn)
-      {
-        bool successly_unmapped = loader_->arch_memory_.unmapPage(old_top_vpn);
-        if(unlikely(!successly_unmapped))
-        {
+    } else {
+      // Handle shrinking the heap
+      while (old_top_vpn != new_top_vpn) {
+        bool successfully_unmapped = loader_->arch_memory_.unmapPage(old_top_vpn);
+        if (unlikely(!successfully_unmapped)) {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not unmap page\n");
           current_break_ = old_break;
-          if (!already_locked)
-          {
+          if (!already_locked) {
             loader_->arch_memory_.lock_.release();
             lock_.release();
           }
           return 0;
         }
+
+        UserThread* current_thread = static_cast<UserThread*>(currentThread);
+        iptManager.removeEntryFromRAM(old_top_vpn, old_top_vpn, &current_thread->process_->loader_->arch_memory_);
+
         old_top_vpn--;
       }
     }
-    debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successful, new break value is %zx\n", current_break_);
-    if (!already_locked)
-    {
+    debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successfully, new break value is %zx\n", current_break_);
+    if (!already_locked) {
       loader_->arch_memory_.lock_.release();
       lock_.release();
     }
     assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
     assert(current_break_ <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: current break is above heap limit");
     return (pointer) old_break;
-  }
-  else
-  {
+  } else {
     debug(SBRK, "UserSpaceMemoryManager::sbrk: returning current break value without changing it %zx\n", current_break_);
     pointer old_break = (pointer) current_break_;
-    if (!already_locked)
-    {
+    if (!already_locked) {
       loader_->arch_memory_.lock_.release();
       lock_.release();
     }
@@ -127,9 +116,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
   }
 }
 
-
-int UserSpaceMemoryManager::brk(size_t new_break_addr)
-{
+int UserSpaceMemoryManager::brk(size_t new_break_addr) {
   debug(SBRK, "UserSpaceMemoryManager::brk called with new break address (%zx)\n", new_break_addr);
   assert(new_break_addr >= heap_start_ && "UserSpaceMemoryManager::brk: new break is below heap start");
   assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
@@ -137,17 +124,14 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   lock_.acquire();
   loader_->arch_memory_.lock_.acquire();
   ssize_t size = new_break_addr - current_break_;
-  pointer resevered_space = sbrk(size, 1);
-  if (resevered_space == 0)
-  {
+  pointer reserved_space = sbrk(size, 1);
+  if (reserved_space == 0) {
     debug(SBRK, "UserSpaceMemoryManager::brk: FATAL ERROR, could not set new break at address (%zx)\n", new_break_addr);
     loader_->arch_memory_.lock_.release();
     lock_.release();
     return -1;
-  }
-  else
-  {
-    debug(SBRK, "UserSpaceMemoryManager::brk: new break is set successful at address (%zx)\n", current_break_);
+  } else {
+    debug(SBRK, "UserSpaceMemoryManager::brk: new break is set successfully at address (%zx)\n", current_break_);
     loader_->arch_memory_.lock_.release();
     lock_.release();
     return 0;
@@ -198,19 +182,15 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
     return 0;
   }
 
-  // get to top of stack where the meta data is stored
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: checking for overflow/underflow corruption\n");
   size_t top_current_stack = getTopOfThisStack(address);
-  if (top_current_stack == 0)
-  {
+  if (top_current_stack == 0) {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted or not found. Segfault!!\n");
     return 0;
   }
 
-  // check if the guards are intact. this also checks overflow underflow
   int is_guard_valid = checkGuardValid(top_current_stack);
-  if (is_guard_valid == 0)
-  {
+  if (is_guard_valid == 0) {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted or not found. Segfault!!\n");
     return 11;
   }
@@ -228,10 +208,10 @@ void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current
   // assert(top_current_stack == ((UserThread*) currentThread)->top_stack_ && "this is not our stack");
 
   assert(address < top_current_stack && "address is not within range of growing stack");
-  assert(address > top_current_stack - PAGE_SIZE*MAX_STACK_AMOUNT && "address is not within range of growing stack");
+  assert(address > top_current_stack - PAGE_SIZE * MAX_STACK_AMOUNT && "address is not within range of growing stack");
 
   size_t* guard1 = (size_t*) top_current_stack;
-  size_t* guard2 = (size_t*) (top_current_stack - sizeof(size_t)* (META_SIZE - 1));
+  size_t* guard2 = (size_t*) (top_current_stack - sizeof(size_t) * (META_SIZE - 1));
   assert(guard1 && "guard1 is corrupted");
   assert(guard2 && "guard2 is corrupted");
 }
@@ -261,6 +241,8 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
     PageManager::instance()->freePPN(new_ppn);
     return -1;
   }
+
+  iptManager.addEntryToRAM(new_ppn, new_vpn, arch_memory);
 
   return 0;
 }

@@ -1,4 +1,3 @@
-
 #include "PageFaultHandler.h"
 #include "kprintf.h"
 #include "Thread.h"
@@ -19,7 +18,7 @@ const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
 inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
                                                    bool present, bool switch_to_us)
 {
-  assert((user == switch_to_us) && "Thread is in user mode even though it should not be.");
+  assert((user == switch_to_us) && "Thread is in user mode even though is should not be.");
   assert(!(address < USER_BREAK && currentThread->loader_ == 0) && "Thread accesses the user space, but has no loader.");
   assert(!(user && currentThread->user_registers_ == 0) && "Thread is in user mode, but has no valid registers.");
 
@@ -54,6 +53,10 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
     assert(manager && "UserSpaceMemoryManager is not initialized.");
     int retval = manager->checkValidGrowingStack(address);
+
+    // DEBUGMINH  TODO: remove this
+    debug(MINH, "address: (%p)[%zu] , retval: %d\n", (int*) address, address,  retval);
+
 
     if(retval == 11)  // corruption detected
     {
@@ -107,7 +110,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   }
   else if (status == 3)
   {
-    if(writing && currentThread->loader_->arch_memory_.isCOW(address))
+    if(writing && currentThread->loader_->arch_memory_.isCOW(address)) //bit of entry->writable = =1?
     {
 
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
