@@ -5,6 +5,7 @@
 #include "nonstd.h"
 
 
+//Checks if ipt is set and not bigger than 1 for any page
 int ipt1()
 {
 

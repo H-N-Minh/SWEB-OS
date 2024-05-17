@@ -403,6 +403,27 @@ uint32 Syscall::pipe(int file_descriptor_array[2]) {
 
 size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 {
+  //WARNING: this might fail if Kernel PageFaults are not handled
+  if ((buffer >= USER_BREAK) || (buffer + size > USER_BREAK))
+  {
+    return -1U;
+  }
+
+  size_t num_written = 0;
+
+  if (fd == fd_stdout) //stdout
+  {
+    debug(SYSCALL, "Syscall::write: %.*s\n", (int)size, (char*) buffer);
+    kprintf("%.*s", (int)size, (char*) buffer);
+    num_written = size;
+  }
+  else
+  {
+    num_written = VfsSyscall::write(fd, (char*) buffer, size);
+  }
+  return num_written;
+
+
   debug(SYSCALL, "Syscall::write: Writing to fd: %zu with buffer size: %zu\n", fd, size);
   //WARNING: this might fail if Kernel PageFaults are not handled
   if ((buffer >= USER_BREAK) || (buffer + size > USER_BREAK))
