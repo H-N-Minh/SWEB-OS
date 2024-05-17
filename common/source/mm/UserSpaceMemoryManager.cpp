@@ -113,11 +113,10 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked) {
           return 0;
         }
 
-        // Add IPT entry
         UserThread* current_thread = static_cast<UserThread*>(currentThread);
         addEntryToRAM(new_page, old_top_vpn, current_thread->process_->pid_);
       }
-    } else { // size < 0
+    } else {
       debug(SBRK, "old break is on page %zx >= new break is on page %zx\n", old_top_vpn, new_top_vpn);
       while (old_top_vpn != new_top_vpn) {
         bool successfully_unmapped = loader_->arch_memory_.unmapPage(old_top_vpn);
@@ -131,7 +130,6 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked) {
           return 0;
         }
 
-        // Remove IPT entry
         auto entry = lookupEntryInRAM(old_top_vpn);
         if (entry) {
           ramMap.erase(old_top_vpn);
