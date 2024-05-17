@@ -30,7 +30,7 @@ char const *user_progs[] = {
 
 // UserSpace Memory -------------------------------------------------
                             // "/usr/growingStackTests.sweb",
-                            "/usr/mallocTests.sweb",
+//                            "/usr/mallocTests.sweb",
 
 // Userspace Locking -------------------------------------------------
                             // "/usr/condTests.sweb",
@@ -39,9 +39,9 @@ char const *user_progs[] = {
 
 //Other tests -----------------------------------------------------------------
                             // "/usr/sleepAndClockTests.sweb",   
-                            // "/usr/localFdTests.sweb",
+                            "/usr/localFdTests.sweb",
                             // "/usr/pipeTest.sweb",  
-                            // "/usr/fdsPipe.sweb",     
+                            "/usr/fdsPipe.sweb",
                             // "/usr/fdsPipe2.sweb", 
                             // "/usr/fdsPipe3.sweb",
                             // "/usr/fdsPipe4.sweb",

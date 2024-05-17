@@ -18,6 +18,7 @@
 #include "ArchThreads.h"
 #include "UserSpaceMemoryManager.h"
 #include "ProcessRegistry.h"
+#include "ScopeLock.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -146,35 +147,35 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
-
-l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence)
-{
-  //debug(SYSCALL, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
+l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence) {
+  debug(Fabi, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
 
   UserThread& currentUserThread = *((UserThread*)currentThread);
   UserProcess& current_process = *currentUserThread.process_;
-  // TODOAG: scopeLocks would fit nicely here TODOFABI
-  current_process.localFileDescriptorTable.lfds_lock_.acquire();
 
-  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
-  if (localFileDescriptor == nullptr)
+  l_off_t position = -1;
+
   {
-    debug(SYSCALL, "Syscall::lseek - Invalid local file descriptor: %zu\n", fd);
-    current_process.localFileDescriptorTable.lfds_lock_.release();
-    return -1;
+    ScopeLock lock(current_process.localFileDescriptorTable.lfds_lock_);
+
+    LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+    if (localFileDescriptor == nullptr) {
+      debug(SYSCALL, "Syscall::lseek - Invalid local file descriptor: %zu\n", fd);
+      return -1;
+    }
+
+    size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
+    FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(global_fd);
+    assert(file_descriptor != nullptr && "File descriptor pointer is null");
+    debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %u; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount());
+
+    position = VfsSyscall::lseek(global_fd, offset, whence);
+    debug(Fabi, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
   }
 
-  size_t global_fd = localFileDescriptor->getGlobalFileDescriptor()->getFd();
-
-  FileDescriptor* file_descriptor = VfsSyscall::getFileDescriptor(global_fd);
-  assert(file_descriptor != nullptr && "File descriptor pointer is null");
-  debug(FILEDESCRIPTOR, "Syscall::lseek: Global FD = %u; RefCount = %d\n", file_descriptor->getFd(), file_descriptor->getRefCount());
-
-  l_off_t position = VfsSyscall::lseek(global_fd, offset, whence);
-  //debug(SYSCALL, "Syscall::lseek: Positioned at: %zd for global fd: %zu\n", position, global_fd);
-   current_process.localFileDescriptorTable.lfds_lock_.release();
   return position;
 }
+
 
 
 size_t Syscall::brkMemory(size_t new_brk_addr)
