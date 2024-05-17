@@ -1,13 +1,6 @@
 #pragma once
 
-#include "InvertedPageTable.h" 
 #include "InvertedPageTable2.h"
-#include "Mutex.h"
-#include "uvector.h"
-#include "umap.h"
-#include "ArchMemory.h"
-
-
 
 class SwappingManager
 {

@@ -1,9 +1,9 @@
 #pragma once
 
 #include "UserProcess.h"
+#include "UserThread.h"
 #include "Thread.h"
-#include "Mutex.h"
-#include "Condition.h"
+#include "SwappingManager.h"
 
 class ProcessRegistry : public Thread
 {
@@ -46,6 +46,8 @@ class ProcessRegistry : public Thread
 
     ustl::vector<UserProcess*> processes_;
     Mutex processes_lock_;
+
+    SwappingManager* swapping_manager_;
 
 
   private:

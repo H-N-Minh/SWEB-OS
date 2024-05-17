@@ -7,6 +7,8 @@
 #include "VirtualFileSystem.h"
 #include "PageManager.h"
 #include "Mutex.h"
+#include "SwappingManager.h"
+
 
 ProcessRegistry* ProcessRegistry::instance_ = 0;
 
@@ -48,6 +50,8 @@ void ProcessRegistry::Run()
 
 
     KernelMemoryManager::instance()->startTracing();
+
+    swapping_manager_ = new SwappingManager();         //TODOs not sure if this is the right place and needs to be deleted
 
     for (uint32 i = 0; progs_[i]; i++)
     {

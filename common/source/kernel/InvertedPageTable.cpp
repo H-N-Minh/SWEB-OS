@@ -5,6 +5,7 @@
 #include "UserProcess.h"
 #include "UserThread.h"
 
+InvertedPageTable* InvertedPageTable::instance_ = nullptr;
 
 InvertedPageTable::InvertedPageTable():ipt_lock_("ipt_lock_")
 {

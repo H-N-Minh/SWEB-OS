@@ -112,9 +112,11 @@ void Loader::loadPage(pointer virtual_address)
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
       Syscall::exit(666);
     }
+    InvertedPageTable::instance()->ipt_lock_.acquire();
     arch_memory_.archmemory_lock_.acquire();
     bool page_mapped = arch_memory_.mapPage(virt_page_start_addr / PAGE_SIZE, ppn, true);
     arch_memory_.archmemory_lock_.release();
+    InvertedPageTable::instance()->ipt_lock_.release();
     if (!page_mapped)
     {
       debug(LOADER, "Loader::loadPage: The page has been mapped by someone else.\n");

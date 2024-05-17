@@ -1,9 +1,9 @@
-#include "SwappingManager.h"
-#include "InvertedPageTable.h"
-#include "InvertedPageTable2.h"
-#include "UserProcess.h"
+#include "Loader.h"
 #include "UserThread.h"
 #include "PageManager.h"
+#include "SwappingManager.h"
+
+SwappingManager* SwappingManager::instance_ = nullptr;
 
 SwappingManager::SwappingManager()
 {

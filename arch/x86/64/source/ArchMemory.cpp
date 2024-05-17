@@ -31,7 +31,7 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 // COPY CONSTRUCTOR
 ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_")
 {
-  assert(((UserThread*) currentThread)->process_->loader_->arch_memory_.archmemory_lock_.isHeldBy((Thread*) currentThread) && "The parent's archmem is not locked");
+  assert(((UserThread*) currentThread)->process_->loader_->arch_memory_.archmemory_lock_.isHeldBy((Thread*) currentThread) && "The parent's archmem is not locked"); //TODOs
   archmemory_lock_.acquire();
   assert(PageManager::instance()->heldBy() != currentThread);
 
@@ -51,13 +51,11 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
       // setup new page directory pointer table
       CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
 
-      //CHILD_pml4[pml4i].page_ppn = PARENT_pml4[pml4i].page_ppn;
+
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* PARENT_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(PARENT_pml4[pml4i].page_ppn);
       memcpy((void*) CHILD_pdpt, (void*) PARENT_pdpt, PAGE_SIZE);
 
-      // debug(FORK, "PARENT_pml4[pml4i].present: %ld\n",PARENT_pml4[pml4i].present);
-      // debug(FORK, "CHILD_pml4[pml4i].present: %ld\n",CHILD_pml4[pml4i].present);
       assert(CHILD_pml4[pml4i].present == 1 && "The page map level 4 entries should be both be present in child and parent");
 
       // loop through pdpt to get each pd
@@ -112,8 +110,8 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
                   assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
 
-                  debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
-                                                                                               PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
+                  // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
+                  //                                                                              PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
                   PageManager::instance()->page_reference_counts_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
@@ -292,8 +290,11 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
 
 bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
 {
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread && "IPT need to be alredy  locked.");
   assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
   assert(archmemory_lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
+
+
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
 
   assert((m.page_size == 0) || (m.page_size == PAGE_SIZE));
@@ -324,6 +325,8 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
     PageManager::instance()->incrementReferenceCount(page_ppn);
     debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
     PageManager::instance()->page_reference_counts_lock_.release();
+
+    InvertedPageTable::instance()->addVirtualPageInfo(physical_page, virtual_page, this);
     return true;
   }
   return false;
@@ -593,14 +596,14 @@ void ArchMemory::copyPage(size_t virtual_addr)
   pm->page_reference_counts_lock_.release();
 
   debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
-  // pml1_entry->present = 1;  //i think this should be the same as parent
   pml1_entry->writeable = 1;
-  // pml1_entry->cow = 0;
+  // pml1_entry->cow = 0; //not nessessary i think
 }
 
 bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 {
-  // assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread); //TODOS
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable2::instance()->ipt2_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);
@@ -618,7 +621,8 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 
 size_t ArchMemory::getDiskLocation(size_t vpn)
 {
-  // assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread); //TODOS
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable2::instance()->ipt2_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);

@@ -44,7 +44,6 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
 
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
-  debug(WAIT_PID, "-----------------------pid_ in constructor %d \n", pid_);
 
   ProcessRegistry::instance()->processes_lock_.acquire();
   ProcessRegistry::instance()->processes_.push_back(this);
@@ -202,6 +201,8 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
 
   uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
+
+  InvertedPageTable::instance()->ipt_lock_.acquire();
   arch_memory->archmemory_lock_.acquire();
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
@@ -217,6 +218,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
     }
   }
   arch_memory->archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
 
   debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
 }
@@ -370,6 +372,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
   
   //map the argument page(s)
+  InvertedPageTable::instance()->ipt_lock_.acquire();
   loader_->arch_memory_.archmemory_lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1);
   assert(vpn_mapped &&  "Virtual page already mapped.");
@@ -380,6 +383,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   }
   loader_->arch_memory_.archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
   return 0;
 }
 

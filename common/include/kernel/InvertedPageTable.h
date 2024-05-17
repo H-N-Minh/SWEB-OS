@@ -3,7 +3,6 @@
 #include "Mutex.h"
 #include "uvector.h"
 #include "umap.h"
-#include "ArchMemory.h"
 
 class ArchMemory;
 

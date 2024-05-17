@@ -27,6 +27,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
 
   if (!already_locked) {
     current_break_lock_.acquire();
+    InvertedPageTable::instance()->ipt_lock_.acquire();
     loader_->arch_memory_.archmemory_lock_.acquire();
   }
 
@@ -62,6 +63,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           if (!already_locked)
           {
             loader_->arch_memory_.archmemory_lock_.release();
+            InvertedPageTable::instance()->ipt_lock_.release();
             current_break_lock_.release();
           }
           return 0;
@@ -79,6 +81,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           {
             loader_->arch_memory_.archmemory_lock_.release();
             current_break_lock_.release();
+            InvertedPageTable::instance()->ipt_lock_.release();
           }
           return 0;
         }
@@ -96,6 +99,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           current_break_ = old_break;
           if (!already_locked)
           {
+            InvertedPageTable::instance()->ipt_lock_.release();
             loader_->arch_memory_.archmemory_lock_.release();
             current_break_lock_.release();
           }
@@ -107,6 +111,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
     debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successful, new break value is %zx\n", current_break_);
     if (!already_locked)
     {
+      InvertedPageTable::instance()->ipt_lock_.release();
       loader_->arch_memory_.archmemory_lock_.release();
       current_break_lock_.release();
     }
@@ -120,6 +125,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
     pointer old_break = (pointer) current_break_;
     if (!already_locked)
     {
+      InvertedPageTable::instance()->ipt_lock_.release();
       loader_->arch_memory_.archmemory_lock_.release();
       current_break_lock_.release();
     }
@@ -241,6 +247,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
 {
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
   assert(arch_memory->archmemory_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize called with address (%zx)\n", address);
   
   // Quick check to see if the address is (somewhat) valid
