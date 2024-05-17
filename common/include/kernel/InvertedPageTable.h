@@ -28,6 +28,8 @@ class InvertedPageTable
     void addVirtualPageInfos(size_t ppn, ustl::vector<VirtualPageInfo*> page_infos);
     ustl::vector<VirtualPageInfo*> getAndRemoveVirtualPageInfos(size_t ppn);
 
+    ustl::vector<VirtualPageInfo*> getPageInfosForPPN(size_t ppn);
+
   private:
     static InvertedPageTable* instance_;
     ustl::map<size_t, ustl::vector<VirtualPageInfo*>> ipt_; //ppn - pageInfos(vpn...)

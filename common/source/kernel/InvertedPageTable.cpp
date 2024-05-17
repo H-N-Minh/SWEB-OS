@@ -65,3 +65,20 @@ void InvertedPageTable::addVirtualPageInfos(size_t ppn, ustl::vector<VirtualPage
   ipt_[ppn] = page_infos;
 }
 
+
+ustl::vector<VirtualPageInfo*> InvertedPageTable::getPageInfosForPPN(size_t ppn)
+{
+  assert(ipt_lock_.heldBy() == currentThread);
+  ustl::map<size_t, ustl::vector<VirtualPageInfo*>>::iterator iterator = ipt_.find(ppn);                                                   
+  if(iterator != ipt_.end())
+  {
+    ustl::vector<VirtualPageInfo*> virtual_page_infos = ipt_[ppn];
+    return virtual_page_infos;
+  }
+  else
+  {
+    ustl::vector<VirtualPageInfo*> empty;
+    return empty;
+  }
+}
+

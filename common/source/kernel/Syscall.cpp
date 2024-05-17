@@ -139,6 +139,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_wait_pid:
       return_value = wait_pid((int)arg1, (int*)arg2, arg3);
       break;
+    case sc_getIPTInfos:
+      return_value = getIPTInfos((size_t)arg1);
+      break; 
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -783,4 +786,12 @@ long int Syscall::wait_pid(long int pid, int* status, size_t options)
 
   UserProcess* current_process = ((UserThread*) currentThread)->process_;
   return current_process->waitProcess(pid, status, options);
+}
+
+int Syscall::getIPTInfos(size_t ppn)
+{
+  InvertedPageTable::instance()->ipt_lock_.acquire();
+  ustl::vector<VirtualPageInfo*> page_infos = InvertedPageTable::instance()->getPageInfosForPPN(ppn);
+  InvertedPageTable::instance()->ipt_lock_.release();
+  return page_infos.size();
 }

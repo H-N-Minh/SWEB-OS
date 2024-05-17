@@ -48,3 +48,5 @@
 
 #define sc_pipe 111
 #define sc_dup 112
+
+#define sc_getIPTInfos 401

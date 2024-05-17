@@ -14,3 +14,9 @@ void _start()
 {
   exit(main());
 }
+
+
+int getIPTInfos(size_t ppn)
+{
+  return __syscall(sc_getIPTInfos, ppn, 0x00, 0x00, 0x00, 0x00);
+}
