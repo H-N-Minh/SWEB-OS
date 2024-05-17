@@ -444,23 +444,14 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
     debug(SYSCALL, "Syscall::write: Global FD = %u; RefCount = %d\n", global_fd_obj->getFd(), global_fd_obj->getRefCount());
 
-    if (global_fd_obj->getType() == FileDescriptor::FileType::PIPE){
+    if (global_fd_obj->getType() == FileDescriptor::FileType::PIPE)
+    {
       debug(PIPE, "Syscall::write: Attempting to write to pipe: %p\n", (void*)global_fd_obj);
       Pipe* pipeObj = static_cast<Pipe*>(global_fd_obj);
       lfdTable.lfds_lock_.release();
       size_t num_written = pipeObj->write((char*)buffer, size);
-      lfdTable.lfds_lock_.acquire();
       debug(PIPE, "Syscall::write: Wrote %zu bytes to pipe: %p\n", num_written, (void*)pipeObj);
-      // TODOAG: why the buffer? Does our kernel-printf not support limited string length? TODOFABI
-      char* buffer2 = new char[size+1];
-      strncpy(buffer2, (char*)buffer, size);
-      buffer2[size] = '\0';
-      debug(PIPE, "Syscall::write: Wrote %zu bytes to pipe: %s %p\n", num_written, buffer2, (void*)pipeObj);
-
-      delete [] buffer2;
-      lfdTable.lfds_lock_.release();
       return num_written;
-
     } else {
       size_t global_fd = global_fd_obj->getFd();
       size_t num_written = VfsSyscall::write(global_fd, (char *) buffer, size);
