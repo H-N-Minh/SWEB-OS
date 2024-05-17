@@ -31,16 +31,16 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 // COPY CONSTRUCTOR
 ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_")
 {
-  assert(((UserThread*) currentThread)->process_->loader_->arch_memory_.archmemory_lock_.isHeldBy((Thread*) currentThread) && "The parent's archmem is not locked"); //TODOs
-  archmemory_lock_.acquire();
+  assert(src.archmemory_lock_.heldBy() == currentThread);
   assert(PageManager::instance()->heldBy() != currentThread);
-
+  archmemory_lock_.acquire();
+  
   debug(FORK, "ArchMemory::copy-constructor starts \n");
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
   memcpy((void*) CHILD_pml4, (void*) PARENT_pml4, PAGE_SIZE);
-  // memset(CHILD_pml4, 0, PAGE_SIZE / 2); // should be zero already, this is just for safety, also only clear lower half (User half)
+
 
   debug(FORK, "copy-ctor start copying all pages\n");
   // Loop through the pml4 to get each pdpt
@@ -70,9 +70,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
           memcpy((void*) CHILD_pd, (void*) PARENT_pd, PAGE_SIZE);
-
-          // debug(FORK, "PARENT_pdpt[pdpti].pd.present: %ld\n",PARENT_pdpt[pdpti].pd.present);
-          // debug(FORK, "CHILD_pdpt[pdpti].pd.present: %ld\n",CHILD_pdpt[pdpti].pd.present);
+;
           assert(CHILD_pdpt[pdpti].pd.present == 1 && "The page directory pointer table entries should be both be present in child and parent");
 
           // loop through pd to get each pt
@@ -87,9 +85,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
               PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
               PageTableEntry* PARENT_pt = (PageTableEntry*) getIdentAddressOfPPN(PARENT_pd[pdi].pt.page_ppn);
               memcpy((void*) CHILD_pt, (void*) PARENT_pt, PAGE_SIZE);
-
-              // debug(FORK, "PARENT_pd[pdi].pt.present: %ld\n",PARENT_pd[pdi].pt.present);
-              // debug(FORK, "CHILD_pd[pdi].pt.present: %ld\n",CHILD_pd[pdi].pt.present);
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
 
               // loop through pt to get each pageT
@@ -97,9 +92,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
               {
                 if (PARENT_pt[pti].present)
                 {
-                  //CHILD_pt[pti].page_ppn = PageManager::instance()->allocPPN();
-                  //CHILD_pt[pti].page_ppn = PARENT_pt[pti].page_ppn;
-
                   PARENT_pt[pti].writeable = 0; //read only
                   PARENT_pt[pti].cow = 1;
 
@@ -113,6 +105,16 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
                   // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
                   //                                                                              PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
                   PageManager::instance()->page_reference_counts_lock_.release();
+
+                  VirtualAddress virtual_address;
+                  virtual_address.offset = 0;
+                  virtual_address.pti = pti;
+                  virtual_address.pdi = pdi;
+                  virtual_address.pdpti = pdpti;
+                  virtual_address.pml4i = pml4i;
+                  virtual_address.ignored = 0;
+
+                  InvertedPageTable::instance()->addVirtualPageInfo(PARENT_pt[pti].page_ppn, virtual_address.packed/PAGE_SIZE, this);
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }

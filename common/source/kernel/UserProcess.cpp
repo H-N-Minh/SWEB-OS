@@ -71,13 +71,15 @@ UserProcess::UserProcess(const UserProcess& other)
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
-  debug(WAIT_PID, "-----------------------pid_ in cpy constructor %d \n", pid_);
 
   assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
+
+  InvertedPageTable::instance()->ipt_lock_.acquire();
   other.loader_->arch_memory_.archmemory_lock_.acquire();
   loader_ = new Loader(*other.loader_, fd_);
   other.loader_->arch_memory_.archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
   if (!loader_){assert(0 && "No loader in fork");}
 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
