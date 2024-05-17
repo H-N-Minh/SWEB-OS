@@ -7,9 +7,7 @@
 #include "Scheduler.h"
 #include "UserThread.h"
 
-
-size_t UserSpaceMemoryManager::totalUsedHeap()
-{
+size_t UserSpaceMemoryManager::totalUsedHeap() {
   return current_break_ - heap_start_;
 }
 
@@ -49,7 +47,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked) {
         debug(SBRK, "%zx != %zx\n", old_top_vpn, new_top_vpn);
         old_top_vpn++;
 
-        size_t new_page = PageManager::instance()->allocPPN();
+        ppn_t new_page = PageManager::instance()->allocPPN();
         if (unlikely(new_page == 0)) {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, no more physical memory\n");
           current_break_ = old_break;
@@ -144,27 +142,17 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr) {
  * @param address the address to check
  * @return 1 if the address is valid, else 0
 */
-int UserSpaceMemoryManager::sanityCheck(size_t address)
-{
-  if (address < PAGE_SIZE || address > USER_BREAK)
-  {
+int UserSpaceMemoryManager::sanityCheck(size_t address) {
+  if (address < PAGE_SIZE || address > USER_BREAK) {
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is out of range\n");
     return 0;
   }
-  if (address <= MAX_HEAP_SIZE)
-  {
+  if (address <= MAX_HEAP_SIZE) {
     return 0;
   }
 
-  // UserThread* current_thread = (UserThread*) currentThread;
-  // if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE + sizeof(size_t)))
-  // {
-  //   debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is not in range of growing stack\n");
-  //   return 0;
-  // }
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  if (arch_memory->checkAddressValid(address))
-  {
+  if (arch_memory->checkAddressValid(address)) {
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is already mapped\n");
     return 0;
   }
@@ -172,12 +160,9 @@ int UserSpaceMemoryManager::sanityCheck(size_t address)
   return 1;
 }
 
-
-int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
-{
+int UserSpaceMemoryManager::checkValidGrowingStack(size_t address) {
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack called with address (%zx)\n", address);
-  if (!sanityCheck(address))
-  {
+  if (!sanityCheck(address)) {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: address failed sanity check\n");
     return 0;
   }
@@ -201,11 +186,8 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
   return 1;
 }
 
-
-void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current_stack)
-{
+void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current_stack) {
   assert(top_current_stack && "top_current_stack pointer of the current stack is NULL");
-  // assert(top_current_stack == ((UserThread*) currentThread)->top_stack_ && "this is not our stack");
 
   assert(address < top_current_stack && "address is not within range of growing stack");
   assert(address > top_current_stack - PAGE_SIZE * MAX_STACK_AMOUNT && "address is not within range of growing stack");
@@ -216,27 +198,22 @@ void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current
   assert(guard2 && "guard2 is corrupted");
 }
 
-
-int UserSpaceMemoryManager::increaseStackSize(size_t address)
-{
+int UserSpaceMemoryManager::increaseStackSize(size_t address) {
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize called with address (%zx)\n", address);
 
-  // Quick check to see if the address is (somewhat) valid
   size_t top_this_page = getTopOfThisPage(address);
   size_t top_this_stack = getTopOfThisStack(address);
   assert(top_this_stack != 0 && "UserSpaceMemoryManager::increaseStackSize: guards are corrupted. Segfault!!");
   finalSanityCheck(address, top_this_stack);
 
-  // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
 
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
-  uint32 new_ppn = PageManager::instance()->allocPPN();
+  ppn_t new_ppn = PageManager::instance()->allocPPN();
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true);
 
-  if (!page_mapped)
-  {
+  if (!page_mapped) {
     debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: could not map new page\n");
     PageManager::instance()->freePPN(new_ppn);
     return -1;
@@ -247,23 +224,18 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   return 0;
 }
 
-size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address)
-{
-  size_t top_stack = address - address%PAGE_SIZE + PAGE_SIZE - sizeof(size_t);
+size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address) {
+  size_t top_stack = address - address % PAGE_SIZE + PAGE_SIZE - sizeof(size_t);
   assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
   return top_stack;
 }
 
-size_t UserSpaceMemoryManager::getTopOfThisStack(size_t address)
-{
+size_t UserSpaceMemoryManager::getTopOfThisStack(size_t address) {
   size_t top_current_stack = getTopOfThisPage(address);
   ArchMemory arch_memory = ((UserThread*) currentThread)->process_->loader_->arch_memory_;
-  for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
-  {
-    if (top_current_stack && top_current_stack < USER_BREAK)
-    {
-      if (arch_memory.checkAddressValid(top_current_stack) && *(size_t*) top_current_stack == GUARD_MARKER)
-      {
+  for (size_t i = 0; i < MAX_STACK_AMOUNT; i++) {
+    if (top_current_stack && top_current_stack < USER_BREAK) {
+      if (arch_memory.checkAddressValid(top_current_stack) && *(size_t*) top_current_stack == GUARD_MARKER) {
         return top_current_stack;
       }
     }
@@ -272,33 +244,24 @@ size_t UserSpaceMemoryManager::getTopOfThisStack(size_t address)
   return 0;
 }
 
-
-int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
-{
-  // guards of this thread
+int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack) {
   size_t guard1 = top_current_stack;
   assert(guard1 && "top_stack_ is uninitialized");
-  size_t guard2 = guard1 - sizeof(size_t)*(META_SIZE - 1);
-  // guards of the thread beneath
+  size_t guard2 = guard1 - sizeof(size_t) * (META_SIZE - 1);
   size_t guard3 = guard1 - PAGE_SIZE * MAX_STACK_AMOUNT;
-  size_t guard4 = guard3 - sizeof(size_t)*(META_SIZE - 1);
+  size_t guard4 = guard3 - sizeof(size_t) * (META_SIZE - 1);
 
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: checking guards of current thread\n");
-  if (*(size_t*) guard1 != GUARD_MARKER || *(size_t*) guard2 != GUARD_MARKER)
-  {
+  if (*(size_t*) guard1 != GUARD_MARKER || *(size_t*) guard2 != GUARD_MARKER) {
     debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: guards of current thread are corrupted\n");
     return 0;
   }
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards current thread is intact\n");
 
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
-
-
-  if (arch_memory->checkAddressValid(guard3))
-  {
+  if (arch_memory->checkAddressValid(guard3)) {
     debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: Theres another thread below us, checking its guards\n");
-    if (*(size_t*) guard3 != GUARD_MARKER || *(size_t*) guard4 != GUARD_MARKER)
-    {
+    if (*(size_t*) guard3 != GUARD_MARKER || *(size_t*) guard4 != GUARD_MARKER) {
       debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: Guards of the thread below is corrupted\n");
       return 0;
     }

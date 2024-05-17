@@ -6,17 +6,17 @@
 #include "umultimap.h"
 #include "ArchMemory.h"
 
+typedef int ppn_t;
+typedef int diskoffset_t;
+
 class IPTEntry {
 public:
-  int ppn;
+  ppn_t ppn;
   size_t vpn;
   ArchMemory* archmem;
 
-  IPTEntry(int ppn, size_t vpn, ArchMemory* archmem) : ppn(ppn), vpn(vpn), archmem(archmem) {}
+  IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem) : ppn(ppn), vpn(vpn), archmem(archmem) {}
 };
-
-typedef int ppn_t;
-typedef int diskoffset_t;
 
 class IPTManager {
 public:
