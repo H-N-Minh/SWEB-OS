@@ -5,6 +5,8 @@
 #include "paging-definitions.h"
 #include "Mutex.h"
 
+#include "InvertedPageTable.h"
+
 struct ArchMemoryMapping
 {
   PageMapLevel4Entry* pml4;
@@ -109,6 +111,8 @@ class ArchMemory
     bool isCOW(size_t virtual_addr);
 
     void copyPage(size_t virtual_addr);
+
+    InvertedPageTable invertedPageTable_;
 
   private:
     /**
