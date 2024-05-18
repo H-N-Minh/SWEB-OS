@@ -21,4 +21,9 @@ public:
     void removeEntry(PageTableEntry* pte);
 
     bool isEmpty();
+
+    /**
+     * check if the archmem of the specified PTE is locked by currentThread or not
+    */
+    bool isLocked(PageTableEntry* pte);
 };

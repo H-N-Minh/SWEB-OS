@@ -105,13 +105,13 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   CHILD_pt[pti].writeable = 0; //read only
                   CHILD_pt[pti].cow = 1;
 
-                  PageManager::instance()->page_reference_counts_lock_.acquire();
+                  PageManager::instance()->ref_count_lock_.acquire();
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
                   assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
 
                   debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
                                                                                                PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
-                  PageManager::instance()->page_reference_counts_lock_.release();
+                  PageManager::instance()->ref_count_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
@@ -155,7 +155,7 @@ ArchMemory::~ArchMemory()
               {
                 if (pt[pti].present)
                 {
-                  PageManager::instance()->page_reference_counts_lock_.acquire();
+                  PageManager::instance()->ref_count_lock_.acquire();
                   if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
                   {
                     debug(FORK, "free page and set present in destructor  \n");
@@ -170,7 +170,7 @@ ArchMemory::~ArchMemory()
                     PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
                     debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   }
-                  PageManager::instance()->page_reference_counts_lock_.release();
+                  PageManager::instance()->ref_count_lock_.release();
                 }
               }
               pd[pdi].pt.present = 0;
@@ -229,19 +229,19 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
 
-  PageManager::instance()->page_reference_counts_lock_.acquire();
+  PageManager::instance()->ref_count_lock_.acquire();
   if(PageManager::instance()->getReferenceCount(m.page_ppn) == 1)
   {
     PageManager::instance()->decrementReferenceCount(m.page_ppn);
     debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (free)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
     PageManager::instance()->freePPN(m.page_ppn);
-    PageManager::instance()->page_reference_counts_lock_.release();
+    PageManager::instance()->ref_count_lock_.release();
   }
   else
   {
     PageManager::instance()->decrementReferenceCount(m.page_ppn);
     debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (decrease)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
-    PageManager::instance()->page_reference_counts_lock_.release();
+    PageManager::instance()->ref_count_lock_.release();
     return true;
   }
 
@@ -317,10 +317,10 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     // uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
-    PageManager::instance()->page_reference_counts_lock_.acquire();
+    PageManager::instance()->ref_count_lock_.acquire();
     PageManager::instance()->incrementReferenceCount(physical_page);
     debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(physical_page), (physical_page));
-    PageManager::instance()->page_reference_counts_lock_.release();
+    PageManager::instance()->ref_count_lock_.release();
     return true;
   }
   return false;
@@ -491,7 +491,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                 {
                   if(m.page_ppn != pt[pti].page_ppn)
                   {
-                    PageManager::instance()->page_reference_counts_lock_.acquire();
+                    PageManager::instance()->ref_count_lock_.acquire();
                     if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
                     {
                       PageManager::instance()->freePPN(pt[pti].page_ppn);
@@ -505,7 +505,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                       debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                       ((uint64*)pt)[pti] = 0;
                     }
-                    PageManager::instance()->page_reference_counts_lock_.release();
+                    PageManager::instance()->ref_count_lock_.release();
                   }
                 }
               }
@@ -559,7 +559,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
   assert(pml1_entry && pml1_entry->cow && "Page is not COW");
 
   debug(FORK, "ArchMemory::copyPage If the process is not the last process to own the page, then copy to new page\n");
-  pm->page_reference_counts_lock_.acquire();
+  pm->ref_count_lock_.acquire();
   assert(pm->getReferenceCount(pml1_entry->page_ppn) > 0 && "Reference count is 0");
   if (pm->getReferenceCount(pml1_entry->page_ppn) > 1)
   {
@@ -574,7 +574,12 @@ void ArchMemory::copyPage(size_t virtual_addr)
     pml1_entry->page_ppn = new_page_ppn;
     pm->incrementReferenceCount(pml1_entry->page_ppn);
   }
-  pm->page_reference_counts_lock_.release();
+  else if (pm->getReferenceCount(pml1_entry->page_ppn) != 1 || pml1_entry->cow == 0)
+  {
+    debug(FORK, "ArchMemory::copyPage: Error! Refcount is %d, write bit: %d, cow bit: %d\n", pm->getReferenceCount(pml1_entry->page_ppn), pml1_entry->writeable, pml1_entry->cow);
+    assert(0 && "ArchMemory::copyPage: More processes own this page than expected, because this page is being copied even tho its no longer COW\n ");
+  }
+  pm->ref_count_lock_.release();
 
   debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
   // pml1_entry->present = 1;   // this should already be 1
