@@ -55,7 +55,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
         debug(SBRK, "%zx != %zx\n", old_top_vpn, new_top_vpn);
         old_top_vpn++;
         
-        size_t new_page = PageManager::instance()->allocPPN();
+        size_t new_page = PageManager::instance()->allocPPN(); 
         if(unlikely(new_page == 0))
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, no more physical memory\n");
@@ -261,7 +261,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   
   
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
-  uint32 new_ppn = PageManager::instance()->allocPPN();
+  uint32 new_ppn = PageManager::instance()->allocPPN(); //TODOs: lock ipt before arch memory
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true);
 
   if (!page_mapped)

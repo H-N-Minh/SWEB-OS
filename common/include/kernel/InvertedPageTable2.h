@@ -17,8 +17,6 @@ class InvertedPageTable2
     InvertedPageTable2(const InvertedPageTable2&) = delete;
 
     static InvertedPageTable2 *instance();
-    
-    Mutex ipt2_lock_;
 
     bool PPNisInMap(size_t ppn);
     void addVirtualPageInfo(size_t ppn, size_t vpn, ArchMemory* archmemory);

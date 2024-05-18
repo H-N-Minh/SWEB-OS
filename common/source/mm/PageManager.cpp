@@ -10,6 +10,7 @@
 #include "assert.h"
 #include "Bitmap.h"
 #include "ArchThreads.h"
+#include "SwappingManager.h"
 
 PageManager pm;
 
@@ -229,6 +230,7 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
  */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
   uint32 p;
   uint32 found = 0;
   assert((page_size % PAGE_SIZE) == 0);
@@ -249,7 +251,12 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
   if (found == 0)
   {
-    assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
+    //size_t ppn = findPageToSwapOut(); //TODOs
+    size_t ppn = 1050; //TODOs !!!!!!!!!!!!!!!!!!
+    SwappingManager::instance()->swapOutPage(ppn);
+    found = ppn;
+    memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0xFF, page_size);
+    // assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
   }
 
   const char* page_ident_addr = (const char*)ArchMemory::getIdentAddressOfPPN(found);

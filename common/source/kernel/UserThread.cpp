@@ -22,12 +22,14 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
               cancel_state_type_lock_("cancel_state_type_lock_")
 {
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
- 
+
+    InvertedPageTable::instance()->ipt_lock_.acquire();
+    loader->arch_memory_.archmemory_lock_.acquire();
     page_for_stack_ = PageManager::instance()->allocPPN();
+
     debug(USERTHREAD, "Page for stack is %lu\n", page_for_stack_);
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
-    InvertedPageTable::instance()->ipt_lock_.acquire();
-    loader_->arch_memory_.archmemory_lock_.acquire();
+
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack_, 1);
     loader_->arch_memory_.archmemory_lock_.release();
     InvertedPageTable::instance()->ipt_lock_.release();

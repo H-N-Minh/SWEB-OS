@@ -72,7 +72,11 @@ void Loader::loadPage(pointer virtual_address)
     const pointer virt_page_end_addr = virt_page_start_addr + PAGE_SIZE;
     bool found_page_content = false;
     // get a new page for the mapping
+    InvertedPageTable::instance()->ipt_lock_.acquire();
+    arch_memory_.archmemory_lock_.acquire();
     size_t ppn = PageManager::instance()->allocPPN();
+    arch_memory_.archmemory_lock_.release();
+    InvertedPageTable::instance()->ipt_lock_.release();
 
     program_binary_lock_.acquire();
 

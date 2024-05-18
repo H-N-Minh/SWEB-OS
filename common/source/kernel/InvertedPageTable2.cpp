@@ -7,7 +7,7 @@
 
 InvertedPageTable2* InvertedPageTable2::instance_ = nullptr;
 
-InvertedPageTable2::InvertedPageTable2():ipt2_lock_("ipt2_lock_")
+InvertedPageTable2::InvertedPageTable2()
 {
   assert(!instance_);
   instance_ = this;
@@ -22,7 +22,7 @@ InvertedPageTable2* InvertedPageTable2::instance()
 
 bool InvertedPageTable2::PPNisInMap(size_t ppn)
 {
-  assert(ipt2_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);;
   ustl::map<uint64, ustl::vector<VirtualPageInfo*>>::iterator iterator = ipt2_.find(ppn);                                                   
   if(iterator != ipt2_.end())
   {
@@ -37,14 +37,14 @@ bool InvertedPageTable2::PPNisInMap(size_t ppn)
 
 void InvertedPageTable2::addVirtualPageInfo(size_t ppn, size_t vpn, ArchMemory* archmemory)
 {  
-  assert(ipt2_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
   VirtualPageInfo* new_info = new VirtualPageInfo{vpn, archmemory};
   ipt2_[ppn].push_back(new_info);
 }
 
 ustl::vector<VirtualPageInfo*> InvertedPageTable2::getAndRemoveVirtualPageInfos(size_t ppn)
 {
-  assert(ipt2_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
   ustl::map<size_t, ustl::vector<VirtualPageInfo*>>::iterator iterator = ipt2_.find(ppn);                                                   
   if(iterator != ipt2_.end())
   {
@@ -60,7 +60,7 @@ ustl::vector<VirtualPageInfo*> InvertedPageTable2::getAndRemoveVirtualPageInfos(
 
 void InvertedPageTable2::addVirtualPageInfos(size_t ppn, ustl::vector<VirtualPageInfo*> page_infos)
 {
-  assert(ipt2_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
   assert(!PPNisInMap(ppn) && "page is already in map");
   ipt2_[ppn] = page_infos;
 }

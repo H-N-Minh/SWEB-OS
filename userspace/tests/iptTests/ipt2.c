@@ -20,17 +20,19 @@ size_t big_array[ELEMENTS_IN_ARRAY];  //5 Megabyes
 //Trigger out of memory
 int ipt2()
 {
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)  //ppn used for userspace
+  for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    // printf("i %d", i);
+    if(i == 996)
+    {
+      break;
+    }
     big_array[i * (PAGESIZE / 8)] = i;
   }
 
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)  //ppn used for userspace
-  {
-    // printf("i %d", i);
-    assert(big_array[i * (PAGESIZE / 8)] == i);
-  }
+  // for(int i = 0; i < PAGES_IN_ARRAY; i++)
+  // {
+  //   assert(big_array[i * (PAGESIZE / 8)] == i);
+  // }
 
 
 

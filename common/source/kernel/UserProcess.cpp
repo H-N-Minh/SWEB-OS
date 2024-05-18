@@ -319,6 +319,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
 
   //allocate one (or two) physical pages for the arguments
+  InvertedPageTable::instance()->ipt_lock_.acquire();
+  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
   size_t page_for_args = PageManager::instance()->allocPPN();
   size_t next_page_for_args = NULL;
 
@@ -326,6 +328,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     next_page_for_args = PageManager::instance()->allocPPN();
   }
+  currentThread->loader_->arch_memory_.archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
 
 
   size_t offset = 0;

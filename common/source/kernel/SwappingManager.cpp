@@ -22,8 +22,10 @@ SwappingManager* SwappingManager::instance()
 
 void SwappingManager::swapOutPage(size_t ppn)
 {
-  ipt_->ipt_lock_.acquire();
-  ipt2_->ipt2_lock_.acquire();
+  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld.\n", ppn);
+  assert(ipt_->ipt_lock_.heldBy() == currentThread);
+  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread);
+
   
   if(!ipt_->PPNisInMap(ppn))
   {
@@ -39,7 +41,10 @@ void SwappingManager::swapOutPage(size_t ppn)
   {
     ArchMemory* archmemory = virtual_page_info->arch_memory_;
     size_t vpn = virtual_page_info->vpn_;
-    archmemory->archmemory_lock_.acquire();
+    if(archmemory != &currentThread->loader_->arch_memory_)
+    {
+      archmemory->archmemory_lock_.acquire();
+    }
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
   }
 
@@ -52,14 +57,17 @@ void SwappingManager::swapOutPage(size_t ppn)
   for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->arch_memory_;
-    archmemory->archmemory_lock_.release();
+    if(archmemory != &currentThread->loader_->arch_memory_)
+    {
+      archmemory->archmemory_lock_.release();
+    }
   }
 
-  PageManager::instance()->freePPN(ppn);
+  // PageManager::instance()->freePPN(ppn);
 
-  ipt_->ipt_lock_.release();
-  ipt2_->ipt2_lock_.release();
-}
+
+  
+  }
 
 
 int SwappingManager::swapInPage(size_t vpn)

@@ -20,12 +20,14 @@ PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(
 
 ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 {
+  InvertedPageTable::instance()->ipt_lock_.acquire();
   archmemory_lock_.acquire();
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
   archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
 }
 
 // COPY CONSTRUCTOR
@@ -548,6 +550,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 bool ArchMemory::isCOW(size_t virtual_addr)
 {
   assert(archmemory_lock_.heldBy() != currentThread);
+  InvertedPageTable::instance()->ipt_lock_.acquire();
   archmemory_lock_.acquire();
   ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
@@ -558,6 +561,7 @@ bool ArchMemory::isCOW(size_t virtual_addr)
   }
   else
   {
+    InvertedPageTable::instance()->ipt_lock_.release();
     archmemory_lock_.release();
     return false;
   }
@@ -605,7 +609,6 @@ void ArchMemory::copyPage(size_t virtual_addr)
 bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 {
   assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
-  assert(InvertedPageTable2::instance()->ipt2_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);
@@ -624,7 +627,6 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 size_t ArchMemory::getDiskLocation(size_t vpn)
 {
   assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
-  assert(InvertedPageTable2::instance()->ipt2_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);
