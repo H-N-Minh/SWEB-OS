@@ -661,3 +661,21 @@ bool ArchMemory::isSwapped(size_t virtual_addr)
     return false;
   }
 }
+
+bool ArchMemory::updatePageTableEntryForSwapIn(size_t vpn, size_t ppn)
+{
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(archmemory_lock_.heldBy() == currentThread);
+
+  ArchMemoryMapping mapping = resolveMapping(vpn);
+  
+  PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+  assert(pt_entry && "No pagetable entry");
+
+  pt_entry->present = 1;
+  pt_entry->swapped_out = 0;
+
+  pt_entry->page_ppn = ppn;
+
+  return true;
+}

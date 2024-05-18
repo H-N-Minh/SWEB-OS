@@ -5,7 +5,7 @@
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
 
-
+int SwappingManager::disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
 
 SwappingManager::SwappingManager()
@@ -14,6 +14,7 @@ SwappingManager::SwappingManager()
   instance_ = this;
   ipt_ = new InvertedPageTable();           //TODOs needs to be deleted at some point
   ipt2_ = new InvertedPageTable2();         //TODOs needs to be deleted at some point
+  bd_device_ = BDManager::getInstance()->getDeviceByNumber(3);
 }
 
 SwappingManager* SwappingManager::instance()
@@ -38,8 +39,12 @@ void SwappingManager::swapOutPage(size_t ppn)
   
   ustl::vector<VirtualPageInfo*> virtual_page_infos = ipt_->getAndRemoveVirtualPageInfos(ppn);
 
+  size_t vpn_of_current_thread = 0;
   //lock disk
-  size_t disk_offset = 1; //TODOs (find disk offset)
+
+  size_t disk_offset = disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing; //TODOs (find free disk offset)
+  debug(SWAPPING, "SwappingManager::swapOutPage: disk_offset is %ld.\n", disk_offset);
+  disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing++;
 
   for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
   {
@@ -49,18 +54,20 @@ void SwappingManager::swapOutPage(size_t ppn)
     {
       archmemory->archmemory_lock_.acquire();
     }
+    else
+    {
+      vpn_of_current_thread = vpn;
+    }
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
   }
-
+  assert(vpn_of_current_thread && "This only works if current thread wants to swap out");
   ipt2_->addVirtualPageInfos(ppn, virtual_page_infos);
 
   //write to disk
-   ArchMemoryMapping m = ArchMemory::resolveMapping(currentThread->loader_->arch_memory_.page_map_level_4_, vpn);
-  // (Page*)getIdentAddressOfPPN(m.pt[m.pti].pt.page_ppn);
-  // size_t block = NULL;       //target_block_number
-  // char* page_data = NULL; //pointer_to_source_data;
-  // BDVirtualDevice* bd_device = BDManager::getInstance()->getDeviceByNumber(3);
-  // bd_device->writeData(block * bd_device->getBlockSize(), PAGE_SIZE, page_data);
+  ArchMemoryMapping m = ArchMemory::resolveMapping(currentThread->loader_->arch_memory_.page_map_level_4_, vpn_of_current_thread);
+  char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
+  int32 rv = bd_device_->writeData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
+  assert(rv != -1);
   // unlock disk
  
   for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
@@ -72,10 +79,9 @@ void SwappingManager::swapOutPage(size_t ppn)
     }
   }
 
-  // PageManager::instance()->freePPN(ppn);
 
+    // PageManager::instance()->freePPN(ppn);
 
-  
   }
 
 //Only works if the page i want to swap in is in the archmemory of current thread
@@ -87,13 +93,16 @@ int SwappingManager::swapInPage(size_t vpn)
   assert(archmemory.archmemory_lock_.heldBy() == currentThread);
  
 
-  size_t location_on_disk = archmemory.getDiskLocation(vpn);  //TODOs: at the moment this returns the outdated ppn //and from the current thread arch memory 
-  if(!location_on_disk)  //todo: does not really make sense
-  {
-    assert(0 && "Swapped out page not found");
-  }
+  size_t disk_offset = archmemory.getDiskLocation(vpn);  //TODOs: at the moment this returns the outdated ppn //and from the current thread arch memory 
+  debug(SWAPPING, "SwappingManager::swapInPage: disk_offset is %ld.\n", disk_offset);
 
-  //check if there is a free ppn else swap out page and use this ppn
+  size_t ppn = PageManager::instance()->allocPPN(PAGE_SIZE);
+
+  char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(ppn);
+  bd_device_->readData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
+  
+  archmemory.updatePageTableEntryForSwapIn(vpn, ppn); //should be done for all arch_memories
+
 
   //read the page from disk
 

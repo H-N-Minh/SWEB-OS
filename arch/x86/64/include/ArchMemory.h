@@ -114,6 +114,7 @@ class ArchMemory
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     size_t getDiskLocation(size_t vpn);
+    bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
 
   private:
     /**

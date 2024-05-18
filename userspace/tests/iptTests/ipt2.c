@@ -22,7 +22,7 @@ int ipt2()
 {
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    if(i == 996)
+    if(i == 997)
     {
       break;
     }
@@ -34,7 +34,7 @@ int ipt2()
   //   assert(big_array[i * (PAGESIZE / 8)] == i);
   // }
 
-  for(int i = 0; i < 10; i++)
+  for(int i = 0; i < 35; i++)
   {
     printf("%ld\n", big_array[i * (PAGESIZE / 8)]);
   }
