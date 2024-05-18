@@ -2,6 +2,9 @@
 #include "UserThread.h"
 #include "PageManager.h"
 #include "SwappingManager.h"
+#include "BDVirtualDevice.h"
+#include "BDManager.h"
+
 
 SwappingManager* SwappingManager::instance_ = nullptr;
 
@@ -20,6 +23,7 @@ SwappingManager* SwappingManager::instance()
 }
 
 
+//does only work if the page to swap out is also in the archmemory of the current thread
 void SwappingManager::swapOutPage(size_t ppn)
 {
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld.\n", ppn);
@@ -35,7 +39,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   ustl::vector<VirtualPageInfo*> virtual_page_infos = ipt_->getAndRemoveVirtualPageInfos(ppn);
 
   //lock disk
-  size_t disk_offset = 0; //TODOs (find disk offset)
+  size_t disk_offset = 1; //TODOs (find disk offset)
 
   for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
   {
@@ -51,8 +55,13 @@ void SwappingManager::swapOutPage(size_t ppn)
   ipt2_->addVirtualPageInfos(ppn, virtual_page_infos);
 
   //write to disk
-
-  //unlock disk
+   ArchMemoryMapping m = ArchMemory::resolveMapping(currentThread->loader_->arch_memory_.page_map_level_4_, vpn);
+  // (Page*)getIdentAddressOfPPN(m.pt[m.pti].pt.page_ppn);
+  // size_t block = NULL;       //target_block_number
+  // char* page_data = NULL; //pointer_to_source_data;
+  // BDVirtualDevice* bd_device = BDManager::getInstance()->getDeviceByNumber(3);
+  // bd_device->writeData(block * bd_device->getBlockSize(), PAGE_SIZE, page_data);
+  // unlock disk
  
   for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
   {
@@ -69,19 +78,18 @@ void SwappingManager::swapOutPage(size_t ppn)
   
   }
 
-
+//Only works if the page i want to swap in is in the archmemory of current thread
 int SwappingManager::swapInPage(size_t vpn)
 {
+  debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with vpn %ld.\n", vpn);
   ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
-  
-  ipt_->ipt_lock_.acquire();
-  archmemory.archmemory_lock_.acquire();
+  assert(ipt_->ipt_lock_.heldBy() == currentThread);
+  assert(archmemory.archmemory_lock_.heldBy() == currentThread);
+ 
 
   size_t location_on_disk = archmemory.getDiskLocation(vpn);  //TODOs: at the moment this returns the outdated ppn //and from the current thread arch memory 
-  if(!location_on_disk)
+  if(!location_on_disk)  //todo: does not really make sense
   {
-    ipt_->ipt_lock_.release();
-    archmemory.archmemory_lock_.release();
     assert(0 && "Swapped out page not found");
   }
 
@@ -93,8 +101,5 @@ int SwappingManager::swapInPage(size_t vpn)
 
   //add to ipt map
 
-  
-  archmemory.archmemory_lock_.release();
-  ipt_->ipt_lock_.release();
   return 0;
 }

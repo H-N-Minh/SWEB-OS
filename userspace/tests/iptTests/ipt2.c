@@ -34,6 +34,11 @@ int ipt2()
   //   assert(big_array[i * (PAGESIZE / 8)] == i);
   // }
 
+  for(int i = 0; i < 10; i++)
+  {
+    printf("%ld\n", big_array[i * (PAGESIZE / 8)]);
+  }
+
 
 
 

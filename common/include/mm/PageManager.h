@@ -82,4 +82,6 @@ class PageManager
     static PageManager* instance_;
 
     size_t HEAP_PAGES;
+
+    inline static int delete_later_counter = 1025;
 };

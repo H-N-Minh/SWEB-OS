@@ -66,17 +66,13 @@ void* Loader::getBrkStart()
 
 void Loader::loadPage(pointer virtual_address)
 {
-    assert(arch_memory_.archmemory_lock_.heldBy() != currentThread && "load page need to hold archmemory lock");
+    assert(arch_memory_.archmemory_lock_.heldBy() == currentThread && "load page need to hold archmemory lock");
     debug(LOADER, "Loader:loadPage: Request to load the page for address %p.\n", (void*)virtual_address);
     const pointer virt_page_start_addr = virtual_address & ~(PAGE_SIZE - 1);
     const pointer virt_page_end_addr = virt_page_start_addr + PAGE_SIZE;
     bool found_page_content = false;
     // get a new page for the mapping
-    InvertedPageTable::instance()->ipt_lock_.acquire();
-    arch_memory_.archmemory_lock_.acquire();
     size_t ppn = PageManager::instance()->allocPPN();
-    arch_memory_.archmemory_lock_.release();
-    InvertedPageTable::instance()->ipt_lock_.release();
 
     program_binary_lock_.acquire();
 
@@ -116,11 +112,9 @@ void Loader::loadPage(pointer virtual_address)
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
       Syscall::exit(666);
     }
-    InvertedPageTable::instance()->ipt_lock_.acquire();
-    arch_memory_.archmemory_lock_.acquire();
+
     bool page_mapped = arch_memory_.mapPage(virt_page_start_addr / PAGE_SIZE, ppn, true);
-    arch_memory_.archmemory_lock_.release();
-    InvertedPageTable::instance()->ipt_lock_.release();
+
     if (!page_mapped)
     {
       debug(LOADER, "Loader::loadPage: The page has been mapped by someone else.\n");

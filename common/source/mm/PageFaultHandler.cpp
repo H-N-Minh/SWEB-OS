@@ -10,7 +10,7 @@
 #include "UserSpaceMemoryManager.h"
 #include "UserThread.h"
 #include "UserProcess.h"
-
+#include "SwappingManager.h"
 
 
 extern "C" void arch_contextSwitch();
@@ -44,10 +44,10 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
     debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
     return PRESENT;
   }
-  else if(user)
-  {
-    return USER;
-  }
+  // else if(user)            //TODOs: disable for now - when adding again make sure that it works in combination with swapping
+  // {
+  //   return USER;
+  // }
   else
   {
     // everything seems to be okay
@@ -78,7 +78,21 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
-    currentThread->loader_->loadPage(address);
+    InvertedPageTable::instance()->ipt_lock_.acquire();
+    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    if(currentThread->loader_->arch_memory_.isSwapped(address))
+    {
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE);
+      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+      InvertedPageTable::instance()->ipt_lock_.release();
+    }
+    else
+    {
+      currentThread->loader_->loadPage(address);
+      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+      InvertedPageTable::instance()->ipt_lock_.release();
+    }
+
   }
   else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
   {
@@ -87,29 +101,29 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     currentThread->loader_->arch_memory_.archmemory_lock_.release();
     InvertedPageTable::instance()->ipt_lock_.release();
   }
-  else if (status == USER)
-  {
-    InvertedPageTable::instance()->ipt_lock_.acquire();
-    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
-    int retval = checkGrowingStack(address);
-    currentThread->loader_->arch_memory_.archmemory_lock_.release();
-     InvertedPageTable::instance()->ipt_lock_.release();
-    if (retval == GROWING_STACK_FAILED)
-    {
-      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
-      errorInPageFaultKillProcess();
-    }
-    else if(retval == NOT_RELATED_TO_GROWING_STACK)
-    {
-      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
-      currentThread->loader_->loadPage(address);
-    }
-    else
-    {
-      assert(retval == GROWING_STACK_VALID);
-      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
-    }
-  }
+  // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
+  // {
+    // InvertedPageTable::instance()->ipt_lock_.acquire();
+    // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    // int retval = checkGrowingStack(address);
+    // currentThread->loader_->arch_memory_.archmemory_lock_.release();
+    //  InvertedPageTable::instance()->ipt_lock_.release();
+    // if (retval == GROWING_STACK_FAILED)
+    // {
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
+    //   errorInPageFaultKillProcess();
+    // }
+    // else if(retval == NOT_RELATED_TO_GROWING_STACK)
+    // {
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
+    //   currentThread->loader_->loadPage(address);
+    // }
+    // else
+    // {
+    //   assert(retval == GROWING_STACK_VALID);
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
+    // }
+  // }
   else  //status INVALID
   {
     errorInPageFaultKillProcess();

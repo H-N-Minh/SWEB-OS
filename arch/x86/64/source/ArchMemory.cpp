@@ -72,7 +72,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
           memcpy((void*) CHILD_pd, (void*) PARENT_pd, PAGE_SIZE);
-;
           assert(CHILD_pdpt[pdpti].pd.present == 1 && "The page directory pointer table entries should be both be present in child and parent");
 
           // loop through pd to get each pt
@@ -644,4 +643,21 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
   }
 
   return true;
+}
+
+
+bool ArchMemory::isSwapped(size_t virtual_addr)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);;
+  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
+
+  if (pml1_entry && pml1_entry->swapped_out)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }

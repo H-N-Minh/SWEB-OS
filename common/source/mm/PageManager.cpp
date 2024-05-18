@@ -252,7 +252,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
   if (found == 0)
   {
     //size_t ppn = findPageToSwapOut(); //TODOs
-    size_t ppn = 1050; //TODOs !!!!!!!!!!!!!!!!!!
+    size_t ppn = delete_later_counter++; //TODOs !!!!!!!!!!!!!!!!!!
     SwappingManager::instance()->swapOutPage(ppn);
     found = ppn;
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0xFF, page_size);
