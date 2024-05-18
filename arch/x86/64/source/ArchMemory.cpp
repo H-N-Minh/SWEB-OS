@@ -113,6 +113,8 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                                                                                                PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
                   PageManager::instance()->page_reference_counts_lock_.release();
 
+                  //TODO : maybe copy IPT here?
+
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
               }
@@ -232,12 +234,12 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   PageManager::instance()->page_reference_counts_lock_.acquire();
   if(PageManager::instance()->getReferenceCount(m.page_ppn) == 1)
   {
+    invertedPageTable_.removeEntry(m.page_ppn);
+
     PageManager::instance()->decrementReferenceCount(m.page_ppn);
     debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (free)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
     PageManager::instance()->freePPN(m.page_ppn);
     PageManager::instance()->page_reference_counts_lock_.release();
-
-    invertedPageTable_.removeEntry(m.page_ppn);
   }
   else
   {
@@ -324,7 +326,9 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
     debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
     PageManager::instance()->page_reference_counts_lock_.release();
 
-    invertedPageTable_.addEntry(page_ppn, virtual_page, 1);
+    debug(IPT, "-----------------Process ID %d \n", ((UserThread*) currentThread)->process_->pid_);
+
+    invertedPageTable_.addEntry(page_ppn, virtual_page, ((UserThread*) currentThread)->process_->pid_);
 
     return true;
   }
