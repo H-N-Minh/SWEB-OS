@@ -1,6 +1,5 @@
 #pragma once
 
-#include "InvertedPageTable2.h"
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
 
@@ -14,10 +13,12 @@ class SwappingManager
     void swapOutPage(size_t ppn);
     int swapInPage(size_t vpn);
 
+    void lock_archmemories_in_right_order(ustl::vector<VirtualPageInfo*> virtual_page_infos);
+    void unlock_archmemories(ustl::vector<VirtualPageInfo*> virtual_page_infos);
+
   private:
     static SwappingManager* instance_;
     InvertedPageTable* ipt_;
-    InvertedPageTable2* ipt2_;
 
     BDVirtualDevice* bd_device_;
 
