@@ -77,7 +77,6 @@ ustl::vector<VirtualPageInfo*> InvertedPageTable::moveToOtherMap(size_t old_key,
   {
     virtual_page_infos = (*source_ipt_map)[old_key];
     source_ipt_map->erase(iterator);
-    // return virtual_page_infos;
   }
   else
   {

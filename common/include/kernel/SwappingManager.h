@@ -16,6 +16,8 @@ class SwappingManager
     void lock_archmemories_in_right_order(ustl::vector<VirtualPageInfo*> virtual_page_infos);
     void unlock_archmemories(ustl::vector<VirtualPageInfo*> virtual_page_infos);
 
+    Mutex disk_lock_;
+
   private:
     static SwappingManager* instance_;
     InvertedPageTable* ipt_;

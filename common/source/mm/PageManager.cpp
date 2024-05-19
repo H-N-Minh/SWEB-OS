@@ -246,16 +246,15 @@ uint32 PageManager::allocPPN(uint32 page_size)
   }
   while ((lowest_unreserved_page_ < number_of_pages_) && page_usage_table_->getBit(lowest_unreserved_page_))
     ++lowest_unreserved_page_;
-
+  
   page_manager_lock_.release();
 
   if (found == 0)
   {
-    //size_t ppn = findPageToSwapOut(); //TODOs
-    size_t ppn = delete_later_counter++; //TODOs !!!!!!!!!!!!!!!!!!
+    size_t ppn = findPageToSwapOut(); //TODOs!!!!!!!!!
     SwappingManager::instance()->swapOutPage(ppn);
-    found = ppn;
-    memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0xFF, page_size);
+    memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
+    return ppn;
     // assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
   }
 
@@ -373,4 +372,18 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
   {
     return 0;
   }
+}
+
+
+//TODO: At the moment it does nonesens
+size_t PageManager::findPageToSwapOut()
+{
+  delete_later_counter++;
+
+  if(delete_later_counter > 2006)
+  {
+    delete_later_counter = 1009;
+  }
+
+  return delete_later_counter;
 }

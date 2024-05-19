@@ -635,7 +635,7 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
 
   if(!pt_entry->swapped_out || pt_entry->present)
   {
-    return NULL;
+    assert(0 && "Page needs to be swapped out and not present");
   }
   else
   {

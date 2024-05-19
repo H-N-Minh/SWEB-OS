@@ -83,5 +83,7 @@ class PageManager
 
     size_t HEAP_PAGES;
 
-    inline static int delete_later_counter = 1040;
+    inline static int delete_later_counter = 1025;
+
+    size_t findPageToSwapOut();
 };
