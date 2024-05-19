@@ -12,11 +12,13 @@ size_t UserSpaceMemoryManager::totalUsedHeap() {
 }
 
 UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
-    : iptManager(), lock_("UserSpaceMemoryManager::lock_") {
+    :  lock_("UserSpaceMemoryManager::lock_") {
   heap_start_ = (size_t) loader->getBrkStart();
   current_break_ = heap_start_;
   loader_ = loader;
 }
+
+IPTManager UserSpaceMemoryManager::iptManager;
 
 pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked) {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd)\n", size);

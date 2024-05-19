@@ -23,7 +23,7 @@ class UserSpaceMemoryManager
     size_t current_break_;
     size_t heap_start_;
     Loader* loader_;
-    IPTManager iptManager;
+    static IPTManager iptManager;
     SpinLock lock_;   // used to protect current_break_
 
     size_t totalUsedHeap();

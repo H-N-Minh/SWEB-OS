@@ -24,6 +24,8 @@ ustl::shared_ptr<IPTEntry> IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, A
   return ustl::shared_ptr<IPTEntry>();
 }
 
+
+
 ustl::shared_ptr<IPTEntry> IPTManager::lookupEntryInDisk(diskoffset_t diskOffset) {
   debug(IPT, "IPTManager::lookupEntryInDisk: Looking up entry in Disk: diskOffset=%d\n", diskOffset);
   auto it = diskMap.find(diskOffset);
