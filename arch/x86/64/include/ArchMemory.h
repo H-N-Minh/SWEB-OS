@@ -110,6 +110,12 @@ class ArchMemory
 
     void copyPage(size_t virtual_addr);
 
+    /**
+     * Locks the archmems in the order of lowest to highest address of the Mutex
+    */
+    template<typename... Args>
+    static void lockArchmemInOrder(Args... args);
+
   private:
     /**
      * Adds a PML4Entry, PDPTEntry, PDEntry or PTEntry to the given PML4, PDPT, PD or PT respectively.

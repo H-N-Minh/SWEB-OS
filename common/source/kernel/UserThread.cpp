@@ -26,9 +26,11 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     page_for_stack_ = PageManager::instance()->allocPPN();
     // TODOAG: putting this into a separate function might make it easier to combine with growing stack in PFHandler etc
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
+    PageManager::instance()->IPT_lock_.acquire();
     loader_->arch_memory_.lock_.acquire();
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack_, 1);
     loader_->arch_memory_.lock_.release();
+    PageManager::instance()->IPT_lock_.release();
     // TODOAG: check/compare with fork!
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 

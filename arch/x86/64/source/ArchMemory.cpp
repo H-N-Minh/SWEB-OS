@@ -130,6 +130,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
 ArchMemory::~ArchMemory()
 {
   debug(FORK, "~ArchMemory \n");
+  PageManager::IPT_lock_.acquire();
   lock_.acquire();
   assert(currentThread->kernel_registers_->cr3 != page_map_level_4_ * PAGE_SIZE && "thread deletes its own arch memory");
 
@@ -187,6 +188,7 @@ ArchMemory::~ArchMemory()
   }
   PageManager::instance()->freePPN(page_map_level_4_);
   lock_.release();
+  PageManager::IPT_lock_.release();
 }
 
 pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
@@ -464,6 +466,7 @@ PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()
 
 void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 {
+  PageManager::IPT_lock_.acquire();
   lock_.acquire();
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
 
@@ -534,6 +537,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
     }
   }
   lock_.release();
+  PageManager::IPT_lock_.release();
 }
 
 
@@ -585,4 +589,18 @@ void ArchMemory::copyPage(size_t virtual_addr)
   // pml1_entry->present = 1;   // this should already be 1
   pml1_entry->writeable = 1;
   pml1_entry->cow = 0;  
+}
+
+
+template<typename... Args>
+void ArchMemory::lockArchmemInOrder(Args... args)
+{
+    ustl::vector<Mutex*> vec = { args... };
+    ustl::sort(vec.begin(), vec.end());
+
+    // Lock the mutexes in order
+    for(auto& m : vec) {
+      assert(m && "Mutex for archmem is null");
+      m->acquire();
+    }
 }

@@ -10,6 +10,7 @@
 #include "UserSpaceMemoryManager.h"
 #include "UserThread.h"
 #include "UserProcess.h"
+#include "PageManager.h"
 
 extern "C" void arch_contextSwitch();
 
@@ -99,6 +100,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   if(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread)
   {
     flag = true;
+    PageManager::instance()->IPT_lock_.acquire();
     currentThread->loader_->arch_memory_.lock_.acquire();
   }
   
@@ -106,7 +108,11 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   if (status == 1)
   {
     currentThread->loader_->loadPage(address);
-    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+    if(flag) 
+    {
+      currentThread->loader_->arch_memory_.lock_.release();
+      PageManager::instance()->IPT_lock_.release();
+    }
   }
   else if (status == 3)
   {
@@ -115,13 +121,21 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
       currentThread->loader_->arch_memory_.copyPage(address);
-      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+      if(flag) 
+      {
+        currentThread->loader_->arch_memory_.lock_.release();
+        PageManager::instance()->IPT_lock_.release();
+      }
     }
     else
     {
       assert(0 && "This should never be reached.");
       currentThread->loader_->loadPage(address);
-      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+      if(flag) 
+      {
+        currentThread->loader_->arch_memory_.lock_.release();
+        PageManager::instance()->IPT_lock_.release();
+      }
     }
   }
   else if (status == 69)
@@ -134,6 +148,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     if (status == -1)
     {
       currentThread->loader_->arch_memory_.lock_.release();
+      PageManager::instance()->IPT_lock_.release();
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
       if (currentThread->loader_)
       {
@@ -145,13 +160,17 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
     else
     {
       if(flag) 
-      {currentThread->loader_->arch_memory_.lock_.release();}
+      {
+        currentThread->loader_->arch_memory_.lock_.release();
+        PageManager::instance()->IPT_lock_.release();
+      }
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
   }
   else
   {
     currentThread->loader_->arch_memory_.lock_.release();
+    PageManager::instance()->IPT_lock_.release();
     // the page-fault seems to be faulty, print out the thread stack traces
     ArchThreads::printThreadRegisters(currentThread, true);
     currentThread->printBacktrace(true);

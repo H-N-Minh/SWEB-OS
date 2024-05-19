@@ -434,7 +434,6 @@ void PageManager::moveEntry(IPTMapType source, uint64 ppn_source, uint64 ppn_des
   else
   {
     entry = (*source_map)[ppn_source];
-    assert(!entry && "PageManager::moveEntry: IPTEntry* is nullptr\n");
     source_map->erase(ppn_source);
   }
   
@@ -445,6 +444,7 @@ void PageManager::moveEntry(IPTMapType source, uint64 ppn_source, uint64 ppn_des
   }
   else
   {
+    assert(!entry && "PageManager::moveEntry: IPTEntry* is nullptr\n");
     (*destination_map)[ppn_destination] = entry;
     debug(SWAPPING, "PageManager::moveEntry: successfully moved entry\n");
   }
