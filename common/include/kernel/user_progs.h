@@ -29,8 +29,8 @@ char const *user_progs[] = {
                            
 
 // UserSpace Memory -------------------------------------------------
-                            // "/usr/growingStackTests.sweb",
-                            "/usr/mallocTests.sweb",
+                            "/usr/growingStackTests.sweb",
+                            // "/usr/mallocTests.sweb",
 
 // Userspace Locking -------------------------------------------------
                             // "/usr/condTests.sweb",

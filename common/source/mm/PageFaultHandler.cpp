@@ -96,23 +96,15 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  int flag = false; // flag for locking archmemory 
-  if(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread)
-  {
-    flag = true;
-    PageManager::instance()->IPT_lock_.acquire();
-    currentThread->loader_->arch_memory_.lock_.acquire();
-  }
+  PageManager::instance()->IPT_lock_.acquire();
+  currentThread->loader_->arch_memory_.lock_.acquire();
   
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == 1)
   {
     currentThread->loader_->loadPage(address);
-    if(flag) 
-    {
-      currentThread->loader_->arch_memory_.lock_.release();
-      PageManager::instance()->IPT_lock_.release();
-    }
+    currentThread->loader_->arch_memory_.lock_.release();
+    PageManager::instance()->IPT_lock_.release();
   }
   else if (status == 3)
   {
@@ -121,21 +113,15 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
 
       debug(PAGEFAULT_TEST, "is COW, copying Page\n");
       currentThread->loader_->arch_memory_.copyPage(address);
-      if(flag) 
-      {
-        currentThread->loader_->arch_memory_.lock_.release();
-        PageManager::instance()->IPT_lock_.release();
-      }
+      currentThread->loader_->arch_memory_.lock_.release();
+      PageManager::instance()->IPT_lock_.release();
     }
     else
     {
       assert(0 && "This should never be reached.");
       currentThread->loader_->loadPage(address);
-      if(flag) 
-      {
-        currentThread->loader_->arch_memory_.lock_.release();
-        PageManager::instance()->IPT_lock_.release();
-      }
+      currentThread->loader_->arch_memory_.lock_.release();
+      PageManager::instance()->IPT_lock_.release();
     }
   }
   else if (status == 69)
@@ -159,11 +145,8 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
       }
     else
     {
-      if(flag) 
-      {
-        currentThread->loader_->arch_memory_.lock_.release();
-        PageManager::instance()->IPT_lock_.release();
-      }
+      currentThread->loader_->arch_memory_.lock_.release();
+      PageManager::instance()->IPT_lock_.release();
       debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
     }
   }
