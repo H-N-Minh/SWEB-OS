@@ -1,14 +1,18 @@
 #include "IPTManager.h"
 #include "debug.h"
 
+ustl::shared_ptr<IPTEntry> IPTManager::createIPTEntry(int ppn, size_t vpn, ArchMemory* archmem) {
+  return ustl::make_shared<IPTEntry>(ppn, vpn, archmem);
+}
+
 void IPTManager::addEntryToRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem) {
   debug(IPT, "IPTManager::addEntryToRAM: Adding entry to RAM: ppn=%d, vpn=%zu\n", ppn, vpn);
-  ramMap.insert({ppn, ustl::make_shared<IPTEntry>(ppn, vpn, archmem)});
+  ramMap.insert({ppn, createIPTEntry(ppn, vpn, archmem)});
 }
 
 void IPTManager::addEntryToDisk(diskoffset_t diskOffset, size_t vpn, ArchMemory* archmem) {
   debug(IPT, "IPTManager::addEntryToDisk: Adding entry to Disk: diskOffset=%d, vpn=%zu\n", diskOffset, vpn);
-  diskMap[diskOffset] = ustl::make_shared<IPTEntry>(-1, vpn, archmem);
+  diskMap[diskOffset] = createIPTEntry(-1, vpn, archmem);
 }
 
 ustl::shared_ptr<IPTEntry> IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem) {
@@ -23,8 +27,6 @@ ustl::shared_ptr<IPTEntry> IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, A
   debug(IPT, "IPTManager::lookupEntryInRAM: Entry not found in RAM: ppn=%d, vpn=%zu\n", ppn, vpn);
   return ustl::shared_ptr<IPTEntry>();
 }
-
-
 
 ustl::shared_ptr<IPTEntry> IPTManager::lookupEntryInDisk(diskoffset_t diskOffset) {
   debug(IPT, "IPTManager::lookupEntryInDisk: Looking up entry in Disk: diskOffset=%d\n", diskOffset);

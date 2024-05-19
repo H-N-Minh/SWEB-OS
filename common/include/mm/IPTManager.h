@@ -23,6 +23,8 @@ public:
   ustl::multimap<ppn_t, ustl::shared_ptr<IPTEntry>> ramMap;
   ustl::map<diskoffset_t, ustl::shared_ptr<IPTEntry>> diskMap;
 
+
+  ustl::shared_ptr<IPTEntry> createIPTEntry(int ppn, size_t vpn, ArchMemory *archmem);
   void addEntryToRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
   void addEntryToDisk(diskoffset_t diskOffset, size_t vpn, ArchMemory* archmem);
   ustl::shared_ptr<IPTEntry> lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
