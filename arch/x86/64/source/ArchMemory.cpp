@@ -588,7 +588,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
   assert(pm->getReferenceCount(pml1_entry->page_ppn) > 0 && "Reference count is 0");
   if (pm->getReferenceCount(pml1_entry->page_ppn) > 1)
   {
-    debug(FORK, "ArchMemory::copyPage Copying to a new page\n");
+    debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
     size_t new_page_ppn = pm->allocPPN();
     pointer original_page = ArchMemory::getIdentAddressOfPPN(pml1_entry->page_ppn);
     pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
@@ -652,21 +652,19 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
 
 bool ArchMemory::isSwapped(size_t virtual_addr)
 {
-  debug(A_MEMORY, "ArchMemory::isSwapped with virtual address %p.\n", (void*)virtual_addr);
+  debug(A_MEMORY, "ArchMemory::isSwapped: with virtual address %p.\n", (void*)virtual_addr);
   assert(archmemory_lock_.heldBy() == currentThread);
-  // if(0 == checkAddressValid(virtual_addr))
-  // {
-  //   return false;
-  // }
   ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
   if (m.pt && pt_entry && pt_entry->swapped_out)
   {
+    debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p is swapped out\n", (void*)virtual_addr);
     return true;
   }
   else
   {
+    debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p is not swapped out\n", (void*)virtual_addr);
     return false;
   }
 }
