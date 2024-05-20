@@ -100,18 +100,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
                   CHILD_pt[pti].cow = 1;
 
 
-                  VirtualAddress virtual_address;
-                  virtual_address.offset = 0;
-                  virtual_address.pti = pti;
-                  virtual_address.pdi = pdi;
-                  virtual_address.pdpti = pdpti;
-                  virtual_address.pml4i = pml4i;
-                  virtual_address.ignored = 0;
-
+                  size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   //TODOs MAPTYPE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
-
                   PageManager::instance()->page_reference_counts_lock_.acquire();
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, virtual_address.packed/PAGE_SIZE, this, MAPTYPE::IPT_RAM);
+                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, MAPTYPE::IPT_RAM);
                   assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
 
                   // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
@@ -134,7 +126,8 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
 
 ArchMemory::~ArchMemory()
 {
-  debug(FORK, "~ArchMemory \n");
+  debug(FORK, "ArchMemory::~ArchMemory\n");
+  InvertedPageTable::instance()->ipt_lock_.acquire();
   archmemory_lock_.acquire();
   assert(currentThread->kernel_registers_->cr3 != page_map_level_4_ * PAGE_SIZE && "thread deletes its own arch memory");
 
@@ -161,20 +154,11 @@ ArchMemory::~ArchMemory()
                 if (pt[pti].present)
                 {
                   PageManager::instance()->page_reference_counts_lock_.acquire();
-                  if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
-                  {
-                    debug(FORK, "free page and set present in destructor  \n");
-                    pt[pti].present = 0;
-                    PageManager::instance()->freePPN(pt[pti].page_ppn);
-                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
-                    debug(FORK, "getReferenceCount in destructor (free) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
-                  }
-                  else
-                  {
-                    pt[pti].present = 0;
-                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
-                    debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
-                  }
+                  pt[pti].present = 0;
+
+                  size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
+                  PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, MAPTYPE::IPT_RAM);  //TODOs: Maptype
+                  debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   PageManager::instance()->page_reference_counts_lock_.release();
                 }
               }
@@ -192,6 +176,7 @@ ArchMemory::~ArchMemory()
   }
   PageManager::instance()->freePPN(page_map_level_4_);
   archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
 }
 
 pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
@@ -235,20 +220,17 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   m.pt[m.pti].present = 0;
 
   PageManager::instance()->page_reference_counts_lock_.acquire();
-  if(PageManager::instance()->getReferenceCount(m.page_ppn) == 1)
+  PageManager::instance()->decrementReferenceCount(m.page_ppn, virtual_page, this, MAPTYPE::IPT_RAM);  //TODOs: Maptype
+  debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+  
+  if(PageManager::instance()->getReferenceCount(m.page_ppn) > 0)
   {
-    PageManager::instance()->decrementReferenceCount(m.page_ppn);
-    debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (free)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
-    PageManager::instance()->freePPN(m.page_ppn);
-    PageManager::instance()->page_reference_counts_lock_.release();
-  }
-  else
-  {
-    PageManager::instance()->decrementReferenceCount(m.page_ppn);
-    debug(FORK, "getReferenceCount in unmapPage %d Page:%ld (decrease)\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
     PageManager::instance()->page_reference_counts_lock_.release();
     return true;
   }
+
+  PageManager::instance()->page_reference_counts_lock_.release();
+
 
 
   ((uint64*)m.pt)[m.pti] = 0; // for easier debugging
@@ -474,6 +456,7 @@ PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()
 
 void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 {
+  InvertedPageTable::instance()->ipt_lock_.acquire();
   archmemory_lock_.acquire();
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
 
@@ -502,19 +485,12 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                   if(m.page_ppn != pt[pti].page_ppn)
                   {
                     PageManager::instance()->page_reference_counts_lock_.acquire();
-                    if(PageManager::instance()->getReferenceCount(pt[pti].page_ppn) == 1)
-                    {
-                      PageManager::instance()->freePPN(pt[pti].page_ppn);
-                      PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
-                      debug(FORK, "getReferenceCount in exec_destructor (free) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
-                      ((uint64*)pt)[pti] = 0;
-                    }
-                    else
-                    {
-                      PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn);
-                      debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
-                      ((uint64*)pt)[pti] = 0;
-                    }
+
+                    size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
+                    //TODOs: Maptype
+                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, MAPTYPE::IPT_RAM);
+                    debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                    ((uint64*)pt)[pti] = 0;
                     PageManager::instance()->page_reference_counts_lock_.release();
                   }
                 }
@@ -544,6 +520,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
     }
   }
   archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
 }
 
 
@@ -598,7 +575,8 @@ void ArchMemory::copyPage(size_t virtual_addr)
     memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
     debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
-    pm->decrementReferenceCount(pml1_entry->page_ppn);
+    //TODOs: Maptype
+    pm->decrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, MAPTYPE::IPT_RAM);
     pml1_entry->page_ppn = new_page_ppn;
 
     //TODOs: Maptype and check if everything is correct
@@ -688,4 +666,18 @@ bool ArchMemory::updatePageTableEntryForSwapIn(size_t vpn, size_t ppn)
   pt_entry->page_ppn = ppn;
 
   return true;
+}
+
+
+size_t ArchMemory::construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i)
+{
+  VirtualAddress virtual_address;
+  virtual_address.offset = 0;
+  virtual_address.pti = pti;
+  virtual_address.pdi = pdi;
+  virtual_address.pdpti = pdpti;
+  virtual_address.pml4i = pml4i;
+  virtual_address.ignored = 0;
+
+  return virtual_address.packed/PAGE_SIZE;
 }

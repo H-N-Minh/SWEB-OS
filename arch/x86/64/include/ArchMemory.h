@@ -116,6 +116,8 @@ class ArchMemory
     size_t getDiskLocation(size_t vpn);
     bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
 
+    size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
+
   private:
     /**
      * Adds a PML4Entry, PDPTEntry, PDEntry or PTEntry to the given PML4, PDPT, PD or PT respectively.

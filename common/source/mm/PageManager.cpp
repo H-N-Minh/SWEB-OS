@@ -351,20 +351,30 @@ void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 
 }
 
-void PageManager::decrementReferenceCount(uint64 page_number)
+void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
 {
+  debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(page_reference_counts_lock_.heldBy() == currentThread);
+
+  InvertedPageTable::instance()->removeVirtualPageInfo(offset, vpn, archmemory, maptype);
+
+  if(maptype == MAPTYPE::IPT_DISK)
+  {
+    return;
+  }
+
   //check if the page number is in the map
-  auto it = page_reference_counts_.find(page_number);
+  auto it = page_reference_counts_.find(offset);
   if (it != page_reference_counts_.end())
   {
     //decrement the reference count
-    page_reference_counts_[page_number]--;
+    page_reference_counts_[offset]--;
 
     //if reference count reaches zero, erase the entry from the map
-    if (it->second == 0)
+    if (page_reference_counts_[offset] == 0)
     {
       page_reference_counts_.erase(it);
+      PageManager::instance()->freePPN(offset);
     }
   }
 }

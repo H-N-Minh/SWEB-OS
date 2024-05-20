@@ -62,7 +62,7 @@ class PageManager
     Mutex page_reference_counts_lock_;
 
     void incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype);
-    void decrementReferenceCount(uint64 page_number); //TODO
+    void decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype);
     void setReferenceCount(uint64 page_number, uint32 reference_count);
 
     uint32 getReferenceCount(uint64 page_number);
