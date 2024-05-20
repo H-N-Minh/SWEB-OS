@@ -549,6 +549,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 
 bool ArchMemory::isCOW(size_t virtual_addr)
 {
+  debug(A_MEMORY, "ArchMemory::isCow: with virtual address %p.\n", (void*)virtual_addr);
   assert(archmemory_lock_.heldBy() != currentThread);
   InvertedPageTable::instance()->ipt_lock_.acquire();
   archmemory_lock_.acquire();
@@ -557,10 +558,12 @@ bool ArchMemory::isCOW(size_t virtual_addr)
 
   if (pml1_entry && pml1_entry->cow)
   {
+    debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is cow\n", (void*)virtual_addr);
     return true;
   }
   else
   {
+    debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
     InvertedPageTable::instance()->ipt_lock_.release();
     archmemory_lock_.release();
     return false;

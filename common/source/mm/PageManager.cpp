@@ -326,6 +326,7 @@ uint32 PageManager::getNumPagesForUser() const
 
 void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
 {
+  debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(page_reference_counts_lock_.heldBy() == currentThread);
 
   InvertedPageTable::instance()->addVirtualPageInfo(offset, vpn, archmemory, maptype);

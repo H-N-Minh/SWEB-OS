@@ -22,11 +22,10 @@ int function13()
     return i;
 }
 
+pthread_t thread_id[NUM_THREADS13];
 //starting 6000 threads in total, 600 at a time for 10 times
 int main()
 {
-    pthread_t thread_id[NUM_THREADS13];
-
     for (size_t i = 0; i < ITERATIONS13; i++)
     {
         for(int i = 0; i < NUM_THREADS13; i++)

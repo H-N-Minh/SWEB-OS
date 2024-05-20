@@ -56,65 +56,65 @@ int childMain()
     int rv;
     
 
-    // rv = pc1();  //sanity checks: wrong para
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "sanity checks");
+    rv = pc1();  //sanity checks: wrong para
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "sanity checks");
 
-    // rv = pc2();  //simple pthread_create and check if thread id gets set
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "simple pthread_create and check if thread id gets set");
+    rv = pc2();  //simple pthread_create and check if thread id gets set
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "simple pthread_create and check if thread id gets set");
 
-    // rv = pc3();  //starting 250 threads
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "starting 250 threads");
+    rv = pc3();  //starting 250 threads
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "starting 250 threads");
 
-    // rv = pc4();  //check if two running threads have different id
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "check if two running threads have different id");
+    rv = pc4();  //check if two running threads have different id
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "check if two running threads have different id");
 
-    // rv = pc5();  //pthread create with argument
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "pthread create with argument");
+    rv = pc5();  //pthread create with argument
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "pthread create with argument");
 
-    // rv = pc6();  //running 250 simultaniously
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "running 250 simultaniously");
+    rv = pc6();  //running 250 simultaniously
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "running 250 simultaniously");
 
-    // rv = pc7();  //calling pthread_create inside pthread_create inside pthread_create
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "calling pthread_create inside pthread_create inside pthread_create");
+    rv = pc7();  //calling pthread_create inside pthread_create inside pthread_create
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "calling pthread_create inside pthread_create inside pthread_create");
 
-    // rv = pc8();  //invalid userspace addresss as thread_id
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "invalid userspace addresss as thread_id");
+    rv = pc8();  //invalid userspace addresss as thread_id
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "invalid userspace addresss as thread_id");
 
-    // rv = pc9();  // 100 threads calling 100 pcreate at the same time, and the parameters and return value should be unique
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, 
-    //         "100 threads calling 100 pcreate at the same time, Also test the parameters and return value of all threads shouldnt get mixed up");
+    rv = pc9();  // 100 threads calling 100 pcreate at the same time, and the parameters and return value should be unique
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, 
+            "100 threads calling 100 pcreate at the same time, Also test the parameters and return value of all threads shouldnt get mixed up");
 
-    // // rv = pc10();  // each thread has its own stack but they can still access each other's stack
-    // // number_of_tests++;
-    // // check_return_value(number_of_tests, rv, &successful_tests, "each thread has its own stack but they can still access each other's stack");
-
-    // rv = pc11();  //testing pthread_create attributes (detach):
-    // //pthread create with wrong attributes
-    // //using pthread attributes twice for different threads
-    // //destroying twice
-    // //using a destroyed attribute
-    // //destroy attribute with address not in userspace
-    // //init attribute with address not in userspace
-    // //detachstate after init should be joinable
-    // //setting pthread_attribute to detach
-    // //join and cancel if state is detached
-    // //set and get if attributes is not initalized  
+    // rv = pc10();  // each thread has its own stack but they can still access each other's stack
     // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "testing pthread_create attributes (detach):");
+    // check_return_value(number_of_tests, rv, &successful_tests, "each thread has its own stack but they can still access each other's stack");
 
-    // rv = pc12();  //test if thread pthread_self()
-    // number_of_tests++;
-    // check_return_value(number_of_tests, rv, &successful_tests, "test if pthread_self() works");
-    printf("hey\n");
+    rv = pc11();  //testing pthread_create attributes (detach):
+    //pthread create with wrong attributes
+    //using pthread attributes twice for different threads
+    //destroying twice
+    //using a destroyed attribute
+    //destroy attribute with address not in userspace
+    //init attribute with address not in userspace
+    //detachstate after init should be joinable
+    //setting pthread_attribute to detach
+    //join and cancel if state is detached
+    //set and get if attributes is not initalized  
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "testing pthread_create attributes (detach):");
+
+    rv = pc12();  //test if thread pthread_self()
+    number_of_tests++;
+    check_return_value(number_of_tests, rv, &successful_tests, "test if pthread_self() works");
+    
     rv = pc13();  //test thousands of threads
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "create and destroy 6000 threads");
