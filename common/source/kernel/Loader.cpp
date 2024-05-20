@@ -110,6 +110,8 @@ void Loader::loadPage(pointer virtual_address)
     {
       PageManager::instance()->freePPN(ppn);
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
+      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+      InvertedPageTable::instance()->ipt_lock_.release();
       Syscall::exit(666);
     }
 

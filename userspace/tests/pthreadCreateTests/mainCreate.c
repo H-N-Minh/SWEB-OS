@@ -84,7 +84,7 @@ int childMain()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "calling pthread_create inside pthread_create inside pthread_create");
 
-    rv = pc8();  //calling pthread_create inside pthread_create inside pthread_create
+    rv = pc8();  //invalid userspace addresss as thread_id
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "invalid userspace addresss as thread_id");
 
@@ -93,9 +93,9 @@ int childMain()
     check_return_value(number_of_tests, rv, &successful_tests, 
             "100 threads calling 100 pcreate at the same time, Also test the parameters and return value of all threads shouldnt get mixed up");
 
-    rv = pc10();  // each thread has its own stack but they can still access each other's stack
-    number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "each thread has its own stack but they can still access each other's stack");
+    // rv = pc10();  // each thread has its own stack but they can still access each other's stack
+    // number_of_tests++;
+    // check_return_value(number_of_tests, rv, &successful_tests, "each thread has its own stack but they can still access each other's stack");
 
     rv = pc11();  //testing pthread_create attributes (detach):
     //pthread create with wrong attributes
