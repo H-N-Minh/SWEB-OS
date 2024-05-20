@@ -324,21 +324,30 @@ uint32 PageManager::getNumPagesForUser() const
   return num_pages_for_user_;
 }
 
-void PageManager::incrementReferenceCount(uint64 page_number)
+void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
 {
   assert(page_reference_counts_lock_.heldBy() == currentThread);
+
+  InvertedPageTable::instance()->addVirtualPageInfo(offset, vpn, archmemory, maptype);
+
+  if(maptype == MAPTYPE::IPT_DISK)
+  {
+    return;
+  }
+
   //check if the page number is already in the map
-  auto it = page_reference_counts_.find(page_number);
+  auto it = page_reference_counts_.find(offset);
   if (it != page_reference_counts_.end())
   {
     //page number found, increment
-    page_reference_counts_[page_number]++;
+    page_reference_counts_[offset]++;
   }
   else
   {
     //page number not found, initialize reference count to 1
-    page_reference_counts_[page_number] = 1;
+    page_reference_counts_[offset] = 1;
   }
+
 }
 
 void PageManager::decrementReferenceCount(uint64 page_number)
@@ -357,6 +366,12 @@ void PageManager::decrementReferenceCount(uint64 page_number)
       page_reference_counts_.erase(it);
     }
   }
+}
+
+void PageManager::setReferenceCount(uint64 page_number, uint32 reference_count)
+{
+  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  page_reference_counts_[page_number] = reference_count;
 }
 
 uint32 PageManager::getReferenceCount(uint64 page_number)

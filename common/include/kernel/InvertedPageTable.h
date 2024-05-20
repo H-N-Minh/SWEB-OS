@@ -25,7 +25,9 @@ class InvertedPageTable
     Mutex ipt_lock_;
 
     bool KeyisInMap(size_t ppn, MAPTYPE map_type);
-    void addVirtualPageInfo(size_t ppn, size_t vpn, ArchMemory* archmemory);
+
+    void addVirtualPageInfo(size_t offset, size_t vpn, ArchMemory* archmemory, MAPTYPE map_type);
+    void removeVirtualPageInfo(size_t offset, size_t vpn, ArchMemory* archmemory, MAPTYPE map_type);
 
     ustl::vector<VirtualPageInfo*> getPageInfosForPPN(size_t ppn);
 

@@ -99,13 +99,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
                   CHILD_pt[pti].writeable = 0; //read only
                   CHILD_pt[pti].cow = 1;
 
-                  PageManager::instance()->page_reference_counts_lock_.acquire();
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn);
-                  assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
-
-                  // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
-                  //                                                                              PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
-                  PageManager::instance()->page_reference_counts_lock_.release();
 
                   VirtualAddress virtual_address;
                   virtual_address.offset = 0;
@@ -115,7 +108,15 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
                   virtual_address.pml4i = pml4i;
                   virtual_address.ignored = 0;
 
-                  InvertedPageTable::instance()->addVirtualPageInfo(PARENT_pt[pti].page_ppn, virtual_address.packed/PAGE_SIZE, this);
+                  //TODOs MAPTYPE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+                  PageManager::instance()->page_reference_counts_lock_.acquire();
+                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, virtual_address.packed/PAGE_SIZE, this, MAPTYPE::IPT_RAM);
+                  assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
+
+                  // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
+                  //                                                                              PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
+                  PageManager::instance()->page_reference_counts_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
@@ -325,11 +326,11 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
     PageManager::instance()->page_reference_counts_lock_.acquire();
-    PageManager::instance()->incrementReferenceCount(page_ppn);
+    PageManager::instance()->incrementReferenceCount(page_ppn, virtual_page, this, MAPTYPE::IPT_RAM);
+
     debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
     PageManager::instance()->page_reference_counts_lock_.release();
 
-    InvertedPageTable::instance()->addVirtualPageInfo(physical_page, virtual_page, this);
     return true;
   }
   return false;
@@ -596,7 +597,10 @@ void ArchMemory::copyPage(size_t virtual_addr)
     debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
     pm->decrementReferenceCount(pml1_entry->page_ppn);
     pml1_entry->page_ppn = new_page_ppn;
-    pm->incrementReferenceCount(pml1_entry->page_ppn);
+
+    //TODOs: Maptype and check if everything is correct
+    pm->incrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, MAPTYPE::IPT_RAM);
+    
   }
   pm->page_reference_counts_lock_.release();
 

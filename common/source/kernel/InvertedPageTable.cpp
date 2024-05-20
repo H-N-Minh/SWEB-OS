@@ -55,11 +55,33 @@ bool InvertedPageTable::KeyisInMap(size_t key, MAPTYPE map_type) //key ppn or di
 }
 
 
-void InvertedPageTable::addVirtualPageInfo(size_t ppn, size_t vpn, ArchMemory* archmemory)
+void InvertedPageTable::addVirtualPageInfo(size_t offset, size_t vpn, ArchMemory* archmemory, MAPTYPE map_type)
 { 
   assert(ipt_lock_.heldBy() == currentThread);
+  ustl::map<size_t, ustl::vector<VirtualPageInfo*>>* ipt_map = selectMap(map_type);
+
   VirtualPageInfo* new_info = new VirtualPageInfo{vpn, archmemory};
-  ipt_ram_[ppn].push_back(new_info);  //TODOs: test
+  (*ipt_map)[offset].push_back(new_info);
+}
+
+void InvertedPageTable::removeVirtualPageInfo(size_t offset, size_t vpn, ArchMemory* archmemory, MAPTYPE map_type)
+{
+  assert(ipt_lock_.heldBy() == currentThread);
+  ustl::map<size_t, ustl::vector<VirtualPageInfo*>>* ipt_map = selectMap(map_type);
+  assert(KeyisInMap(offset, map_type) && "No value at given offset in this map.\n");
+
+  VirtualPageInfo* compare_info = new VirtualPageInfo{vpn, archmemory};
+
+  ustl::vector<VirtualPageInfo*>::iterator iterator = ustl::find((*ipt_map)[offset].begin(), (*ipt_map)[offset].end(), compare_info);                                                 
+  if(iterator != (*ipt_map)[offset].end())
+  {
+    (*ipt_map)[offset].erase(iterator);
+  }
+  else
+  {
+    assert(0 && "Key not found in the map!");
+  }
+
 }
 
 
@@ -93,9 +115,6 @@ ustl::vector<VirtualPageInfo*> InvertedPageTable::moveToOtherMap(size_t old_key,
 
 
 
-
-
-//---------DEBUG_METHODS------------------------------------------------------------------------------------
 ustl::vector<VirtualPageInfo*> InvertedPageTable::getPageInfosForPPN(size_t ppn)
 {
   assert(ipt_lock_.heldBy() == currentThread);
@@ -112,3 +131,14 @@ ustl::vector<VirtualPageInfo*> InvertedPageTable::getPageInfosForPPN(size_t ppn)
   }
 }
 
+bool operator==(VirtualPageInfo& lhs, VirtualPageInfo& rhs)
+{
+  if(lhs.vpn_ == rhs.vpn_ || lhs.arch_memory_ == rhs.arch_memory_)
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
+}

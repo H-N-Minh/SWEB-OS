@@ -44,7 +44,7 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
     debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
     return PRESENT;
   }
-  // else if(user)            //TODOs: disable for now - when adding again make sure that it works in combination with swapping
+  // else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
   // {
   //   return USER;
   // }
@@ -56,20 +56,13 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   return INVALID;
 }
 
-inline void PageFaultHandler::handlePageFault(size_t address, bool user,
-                                          bool present, bool writing,
-                                          bool fetch, bool switch_to_us)
+inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool present, bool writing, bool fetch, bool switch_to_us)
 {
   if (PAGEFAULT & OUTPUT_ENABLED)
     kprintfd("\n");
-  debug(PAGEFAULT, "Address: %18zx - Thread %zu: %s (%p)\n",
-        address, currentThread->getTID(), currentThread->getName(), currentThread);
-  debug(PAGEFAULT, "Flags: %spresent, %s-mode, %s, %s-fetch, switch to userspace: %1d\n",
-        present ? "    " : "not ",
-        user ? "  user" : "kernel",
-        writing ? "writing" : "reading",
-        fetch ? "instruction" : "    operand",
-        switch_to_us);
+  debug(PAGEFAULT, "Address: %18zx - Thread %zu: %s (%p)\n", address, currentThread->getTID(), currentThread->getName(), currentThread);
+  debug(PAGEFAULT, "Flags: %spresent, %s-mode, %s, %s-fetch, switch to userspace: %1d\n", present ? "    " : "not ",
+        user ? "  user" : "kernel", writing ? "writing" : "reading",  fetch ? "instruction" : "    operand", switch_to_us);
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
@@ -131,9 +124,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user,
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 
-void PageFaultHandler::enterPageFault(size_t address, bool user,
-                                      bool present, bool writing,
-                                      bool fetch)
+void PageFaultHandler::enterPageFault(size_t address, bool user, bool present, bool writing, bool fetch)
 {
   assert(currentThread && "You have a pagefault, but no current thread");
   //save previous state on stack of currentThread

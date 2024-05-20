@@ -66,6 +66,9 @@ void SwappingManager::swapOutPage(size_t ppn)
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
   }
 
+  PageManager::instance()->page_reference_counts_lock_.acquire();  //??
+  PageManager::instance()->setReferenceCount(ppn, 0);
+  PageManager::instance()->page_reference_counts_lock_.release();
 
   unlock_archmemories(virtual_page_infos);
 
@@ -98,6 +101,11 @@ int SwappingManager::swapInPage(size_t vpn)
     size_t vpn = virtual_page_info->vpn_;
     archmemory->updatePageTableEntryForSwapIn(vpn, ppn);
   }
+
+  PageManager::instance()->page_reference_counts_lock_.acquire();  //??
+  PageManager::instance()->setReferenceCount(ppn, virtual_page_infos.size());
+  PageManager::instance()->page_reference_counts_lock_.release();
+
 
   disk_lock_.acquire();
   // read the page from disk
@@ -138,3 +146,6 @@ void SwappingManager::unlock_archmemories(ustl::vector<VirtualPageInfo*> virtual
     }
   }
 }
+
+
+

@@ -2,6 +2,7 @@
 
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
+#include "InvertedPageTable.h"
 
 class SwappingManager
 {
