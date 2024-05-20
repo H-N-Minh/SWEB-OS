@@ -66,7 +66,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() != currentThread);
+  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)

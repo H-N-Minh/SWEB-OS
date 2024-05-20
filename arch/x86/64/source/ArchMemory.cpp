@@ -652,11 +652,16 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
 
 bool ArchMemory::isSwapped(size_t virtual_addr)
 {
-  assert(archmemory_lock_.heldBy() == currentThread);;
-  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
-  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
+  debug(A_MEMORY, "ArchMemory::isSwapped with virtual address %p.\n", (void*)virtual_addr);
+  assert(archmemory_lock_.heldBy() == currentThread);
+  // if(0 == checkAddressValid(virtual_addr))
+  // {
+  //   return false;
+  // }
+  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
 
-  if (pml1_entry && pml1_entry->swapped_out)
+  if (m.pt && pt_entry && pt_entry->swapped_out)
   {
     return true;
   }

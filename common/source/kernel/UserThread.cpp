@@ -25,12 +25,10 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 
     InvertedPageTable::instance()->ipt_lock_.acquire();
     loader->arch_memory_.archmemory_lock_.acquire();
-    page_for_stack_ = PageManager::instance()->allocPPN();
-
-    debug(USERTHREAD, "Page for stack is %lu\n", page_for_stack_);
+    ppn_stack = PageManager::instance()->allocPPN();
+    debug(USERTHREAD, "Page for stack is %lu\n", ppn_stack);
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
-
-    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack_, 1);
+    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, ppn_stack, 1);
     loader_->arch_memory_.archmemory_lock_.release();
     InvertedPageTable::instance()->ipt_lock_.release();
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
@@ -74,7 +72,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 size_t UserThread::setupMetaHeader()
 {
   debug(USERTHREAD, "UserThread ctor: Setting up meta data at beginning of stack\n");
-  pointer iden_top_stack = ArchMemory::getIdentAddressOfPPN(page_for_stack_);
+  pointer iden_top_stack = ArchMemory::getIdentAddressOfPPN(ppn_stack);
   iden_top_stack += PAGE_SIZE - sizeof(pointer);
   *(pointer*) iden_top_stack = GUARD_MARKER;
   for (size_t i = 0; i < (META_SIZE - 1); i++)
@@ -98,7 +96,7 @@ size_t UserThread::setupMetaHeader()
 
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_), user_stack_ptr_(other.user_stack_ptr_),
-            page_for_stack_(other.page_for_stack_),
+            ppn_stack(other.ppn_stack),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
             join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"),
             cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_),
