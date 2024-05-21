@@ -114,9 +114,10 @@ class ArchMemory
 
     InvertedPageTable invertedPageTable_;
 
+    size_t zero_page_ppn_;
     pointer zero_page_;
-    bool isZeroFilledPage(void* page);
-    pointer getZeroFilledPagePPN();
+    bool isZeroPage(pointer page);
+    pointer getZeroFilledPagePPN(size_t zero_page_ppn);
 
   private:
     /**

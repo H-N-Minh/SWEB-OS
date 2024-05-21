@@ -23,7 +23,7 @@ ArchMemory::ArchMemory():lock_("archmemory_lock_")
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
 
-  zero_page_ = getZeroFilledPagePPN();
+  zero_page_ = getZeroFilledPagePPN(zero_page_ppn_);
 
   lock_.release();
 }
@@ -576,20 +576,28 @@ void ArchMemory::copyPage(size_t virtual_addr)
     debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
     pointer original_page = getIdentAddressOfPPN(pml1_entry->page_ppn);
 
-    //    if(isZeroFilledPage(original_page))
-//    {
-//      pointer new_page = zero_page_ppn_;
-//    }
+    if(isZeroPage(original_page))
+    {
+      //pointer new_page = zero_page_;
+      debug(FORK, "ArchMemory::copyPage zero page case\n");
+      pm->decrementReferenceCount(pml1_entry->page_ppn);
+      pml1_entry->page_ppn = zero_page_ppn_;
+      pm->incrementReferenceCount(pml1_entry->page_ppn);
+    }
+    else
+    {
+      size_t new_page_ppn = pm->allocPPN();
+      pointer new_page = getIdentAddressOfPPN(new_page_ppn);
+      memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+
+      debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
+      pm->decrementReferenceCount(pml1_entry->page_ppn);
+      pml1_entry->page_ppn = new_page_ppn;
+      pm->incrementReferenceCount(pml1_entry->page_ppn);
+    }
 
 
-    size_t new_page_ppn = pm->allocPPN();
-    pointer new_page = getIdentAddressOfPPN(new_page_ppn);
-    memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
-    debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
-    pm->decrementReferenceCount(pml1_entry->page_ppn);
-    pml1_entry->page_ppn = new_page_ppn;
-    pm->incrementReferenceCount(pml1_entry->page_ppn);
   }
   pm->page_reference_counts_lock_.release();
 
@@ -599,20 +607,19 @@ void ArchMemory::copyPage(size_t virtual_addr)
   pml1_entry->cow = 0;  
 }
 
-bool ArchMemory::isZeroFilledPage(void* page)
+bool ArchMemory::isZeroPage(pointer page)
 {
-  for (size_t i = 0; i < PAGE_SIZE; ++i) {
-    if (*((char*)page + i) != 0) {
-      return false; //page is not zero-filled
-    }
+  for (size_t i = 0; i < PAGE_SIZE; ++i)
+  {
+    if (((uint64_t*)page)[i] != 0)
+      return false;
   }
-  return true; //page is zero-filled
+  return true;
 }
 
-pointer ArchMemory::getZeroFilledPagePPN()
+pointer ArchMemory::getZeroFilledPagePPN(size_t zero_page_ppn)
 {
   PageManager* pm = PageManager::instance();
-  size_t zero_page_ppn;
   zero_page_ppn = pm->allocPPN();
   pointer zero_page = getIdentAddressOfPPN(zero_page_ppn);
   memset((void*)zero_page, 0, PAGE_SIZE);
