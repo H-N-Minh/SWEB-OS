@@ -15,6 +15,8 @@ SwappingManager::SwappingManager() : disk_lock_("disk_lock_")
    //TODOs needs to be deleted at some point
   ipt_ = new InvertedPageTable();          
   bd_device_ = BDManager::getInstance()->getDeviceByNumber(3);
+  bd_device_->setBlockSize(PAGE_SIZE);
+  debug(SWAPPING, "Blocksize %d.\n", bd_device_->getBlockSize());
 }
 
 SwappingManager* SwappingManager::instance()

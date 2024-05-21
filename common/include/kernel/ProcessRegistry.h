@@ -47,8 +47,6 @@ class ProcessRegistry : public Thread
     ustl::vector<UserProcess*> processes_;
     Mutex processes_lock_;
 
-    SwappingManager* swapping_manager_;
-
 
   private:
 

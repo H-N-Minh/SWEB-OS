@@ -412,7 +412,7 @@ size_t PageManager::findPageToSwapOut()
     possible_ppn_++;    
     if(possible_ppn_ > 2016)
     {
-      possible_ppn_ = 1020;
+      possible_ppn_ = 1009;
     }
     key_in_ipt = InvertedPageTable::instance()->KeyisInMap(possible_ppn_, MAPTYPE::IPT_RAM);
   }

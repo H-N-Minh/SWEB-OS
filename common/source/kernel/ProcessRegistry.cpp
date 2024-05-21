@@ -51,7 +51,7 @@ void ProcessRegistry::Run()
 
     KernelMemoryManager::instance()->startTracing();
 
-    swapping_manager_ = new SwappingManager();         //TODOs not sure if this is the right place and needs to be deleted
+    SwappingManager* swapping_manager = new SwappingManager();
 
     for (uint32 i = 0; progs_[i]; i++)
     {
@@ -64,6 +64,8 @@ void ProcessRegistry::Run()
         all_processes_killed_.wait();
 
     counter_lock_.release();
+
+    delete swapping_manager;
 
     debug(PROCESS_REG, "unmounting userprog-partition because all processes terminated \n");
 
