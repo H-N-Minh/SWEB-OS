@@ -22,22 +22,22 @@ int ipt2()
 {
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    if(i == 1000)
-    {
-      break;
-    }
+    // if(i == 1000)
+    // {
+    //   break;
+    // }
     big_array[i * (PAGESIZE / 8)] = (size_t)i;
+  }
+
+  for(int i = 0; i < PAGES_IN_ARRAY; i++)
+  {
+    assert(big_array[i * (PAGESIZE / 8)] == i);
   }
 
   // for(int i = 0; i < PAGES_IN_ARRAY; i++)
   // {
-  //   assert(big_array[i * (PAGESIZE / 8)] == i);
+  //   printf("%ld\n", (size_t)big_array[i * (PAGESIZE / 8)]);
   // }
-
-  for(int i = 0; i < 30; i++)
-  {
-    printf("%ld\n", (size_t)big_array[i * (PAGESIZE / 8)]);
-  }
 
 
 

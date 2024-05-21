@@ -27,7 +27,7 @@ SwappingManager* SwappingManager::instance()
 //does only work if the page to swap out is also in the archmemory of the current thread
 void SwappingManager::swapOutPage(size_t ppn)
 {
-  assert(0 && "Tried swapping out - not working correctly yet");
+  // assert(0 && "Tried swapping out - not working correctly yet");
   assert(ipt_->ipt_lock_.heldBy() == currentThread);
   assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread);
 
@@ -80,7 +80,7 @@ void SwappingManager::swapOutPage(size_t ppn)
 //Only works if the page i want to swap in is in the archmemory of current thread
 int SwappingManager::swapInPage(size_t vpn)
 {
-   assert(0 && "Tried swapping in - not working correctly yet");
+  //  assert(0 && "Tried swapping in - not working correctly yet");
   // debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with vpn %ld.\n", vpn);
   ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
   

@@ -117,6 +117,7 @@ class ArchMemory
     bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
 
     size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
+    MAPTYPE getMapType(PageTableEntry& pt_entry);
 
   private:
     /**

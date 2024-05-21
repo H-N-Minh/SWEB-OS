@@ -101,9 +101,9 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
 
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  //TODOs MAPTYPE !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                  MAPTYPE maptype = getMapType(PARENT_pt[pti]);
                   PageManager::instance()->page_reference_counts_lock_.acquire();
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, MAPTYPE::IPT_RAM);
+                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
                   assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
 
                   // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
@@ -157,7 +157,9 @@ ArchMemory::~ArchMemory()
                   pt[pti].present = 0;
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, MAPTYPE::IPT_RAM);  //TODOs: Maptype
+                  MAPTYPE maptype = getMapType(pt[pti]);
+
+                  PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
                   debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   PageManager::instance()->page_reference_counts_lock_.release();
                 }
@@ -219,8 +221,10 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(m.pt[m.pti].present);
   m.pt[m.pti].present = 0;
 
+  MAPTYPE maptype = getMapType((m.pt[m.pti]));
+
   PageManager::instance()->page_reference_counts_lock_.acquire();
-  PageManager::instance()->decrementReferenceCount(m.page_ppn, virtual_page, this, MAPTYPE::IPT_RAM);  //TODOs: Maptype
+  PageManager::instance()->decrementReferenceCount(m.page_ppn, virtual_page, this, maptype);
   debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
   
   if(PageManager::instance()->getReferenceCount(m.page_ppn) > 0)
@@ -308,7 +312,9 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
     PageManager::instance()->page_reference_counts_lock_.acquire();
-    PageManager::instance()->incrementReferenceCount(page_ppn, virtual_page, this, MAPTYPE::IPT_RAM);
+
+    MAPTYPE maptype = getMapType(((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti]);
+    PageManager::instance()->incrementReferenceCount(page_ppn, virtual_page, this, maptype);
 
     debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
     PageManager::instance()->page_reference_counts_lock_.release();
@@ -487,8 +493,8 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                     PageManager::instance()->page_reference_counts_lock_.acquire();
 
                     size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                    //TODOs: Maptype
-                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, MAPTYPE::IPT_RAM);
+                    MAPTYPE maptype = getMapType(pt[pti]);
+                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
                     debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                     ((uint64*)pt)[pti] = 0;
                     PageManager::instance()->page_reference_counts_lock_.release();
@@ -575,12 +581,14 @@ void ArchMemory::copyPage(size_t virtual_addr)
     memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
     debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
-    //TODOs: Maptype
-    pm->decrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, MAPTYPE::IPT_RAM);
+
+    MAPTYPE maptype_old = getMapType(*pml1_entry);
+    pm->decrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, maptype_old);
     pml1_entry->page_ppn = new_page_ppn;
 
-    //TODOs: Maptype and check if everything is correct
-    pm->incrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, MAPTYPE::IPT_RAM);
+    //TODOs: check if everything is correct
+    MAPTYPE maptype_new = getMapType(*pml1_entry);
+    pm->incrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, maptype_new);
     
   }
   pm->page_reference_counts_lock_.release();
@@ -680,4 +688,20 @@ size_t ArchMemory::construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pm
   virtual_address.ignored = 0;
 
   return virtual_address.packed/PAGE_SIZE;
+}
+
+
+MAPTYPE ArchMemory::getMapType(PageTableEntry& pt_entry)
+{
+  debug(A_MEMORY, "ArchMemory::getMapType called with %p\n.", &pt_entry);
+  if(pt_entry.swapped_out)
+  {
+    debug(A_MEMORY, "ArchMemory::getMapType called returns IPT_DISK.\n");
+    return MAPTYPE::IPT_DISK;
+  }
+  else
+  {
+    debug(A_MEMORY, "ArchMemory::getMapType called returns IPT_RAM.\n");
+    return MAPTYPE::IPT_RAM;
+  }
 }

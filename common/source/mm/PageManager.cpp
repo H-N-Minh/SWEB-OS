@@ -254,6 +254,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
     size_t ppn = findPageToSwapOut(); //TODOs!!!!!!!!!
     SwappingManager::instance()->swapOutPage(ppn);
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
+    debug(PM, "PageManager::allocPPN: New ppn is %ld. (swapped in)\n", ppn);
     return ppn;
     // assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
   }
@@ -267,6 +268,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
   }
 
   memset((void*)ArchMemory::getIdentAddressOfPPN(found), 0, page_size);
+  debug(PM, "PageManager::allocPPN: New ppn is %d.\n", found);
   return found;
 }
 
@@ -404,12 +406,15 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
 //TODO: At the moment it does nonesens
 size_t PageManager::findPageToSwapOut()
 {
-  delete_later_counter++;
-
-  if(delete_later_counter > 2006)
+  bool key_in_ipt = false;
+  while(!key_in_ipt)
   {
-    delete_later_counter = 1009;
+    possible_ppn_++;    
+    if(possible_ppn_ > 2016)
+    {
+      possible_ppn_ = 1020;
+    }
+    key_in_ipt = InvertedPageTable::instance()->KeyisInMap(possible_ppn_, MAPTYPE::IPT_RAM);
   }
-
-  return delete_later_counter;
+  return possible_ppn_;
 }
