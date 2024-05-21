@@ -23,7 +23,7 @@ ArchMemory::ArchMemory():lock_("archmemory_lock_")
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
 
-  zero_page_ = getZeroFilledPagePPN(zero_page_ppn_);
+  getZeroFilledPagePPN(&zero_page_ppn_);
 
   lock_.release();
 }
@@ -617,11 +617,11 @@ bool ArchMemory::isZeroPage(pointer page)
   return true;
 }
 
-pointer ArchMemory::getZeroFilledPagePPN(size_t zero_page_ppn)
+void ArchMemory::getZeroFilledPagePPN(size_t* zero_page_ppn)
 {
   PageManager* pm = PageManager::instance();
-  zero_page_ppn = pm->allocPPN();
-  pointer zero_page = getIdentAddressOfPPN(zero_page_ppn);
+  *zero_page_ppn = pm->allocPPN();
+  //TODO where to freePPN?
+  pointer zero_page = getIdentAddressOfPPN(*zero_page_ppn);
   memset((void*)zero_page, 0, PAGE_SIZE);
-  return zero_page;
 }
