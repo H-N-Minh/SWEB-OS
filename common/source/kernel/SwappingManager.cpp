@@ -25,6 +25,11 @@ SwappingManager* SwappingManager::instance()
   return instance_;
 }
 
+SwappingManager::~SwappingManager()
+{
+  delete ipt_;
+}
+
 
 //does only work if the page to swap out is also in the archmemory of the current thread
 void SwappingManager::swapOutPage(size_t ppn)
@@ -150,6 +155,8 @@ void SwappingManager::unlock_archmemories(ustl::vector<VirtualPageInfo*> virtual
     }
   }
 }
+
+
 
 
 

@@ -5,6 +5,48 @@
 #include "UserProcess.h"
 #include "UserThread.h"
 
+
+InvertedPageTable* InvertedPageTable::instance_ = nullptr;
+
+InvertedPageTable::InvertedPageTable():ipt_lock_("ipt_lock_")
+{
+  assert(!instance_);
+  instance_ = this;
+}
+
+InvertedPageTable* InvertedPageTable::instance()
+{
+  assert(instance_);
+  return instance_;
+}
+
+InvertedPageTable::~InvertedPageTable()
+{
+  //delete values in ipt_disk
+  for (auto& map_entry : ipt_disk_) 
+  {
+    for(auto& page_info : map_entry.second)
+    {
+      delete page_info;
+    }
+    map_entry.second.clear();
+  }
+  ipt_disk_.clear();
+
+  //delete values in ipt_ram
+  for (auto& map_entry : ipt_ram_) 
+  {
+    for(auto& page_info : map_entry.second)
+    {
+      delete page_info;
+    }
+    map_entry.second.clear();
+  }
+  ipt_ram_.clear();
+}
+
+
+
  ustl::map<size_t, ustl::vector<VirtualPageInfo*>>* InvertedPageTable::selectMap(MAPTYPE map_type)
 {
   if(map_type == IPT_RAM)
@@ -21,20 +63,6 @@
   }
 }
 
-
-InvertedPageTable* InvertedPageTable::instance_ = nullptr;
-
-InvertedPageTable::InvertedPageTable():ipt_lock_("ipt_lock_")
-{
-  assert(!instance_);
-  instance_ = this;
-}
-
-InvertedPageTable* InvertedPageTable::instance()
-{
-  assert(instance_);
-  return instance_;
-}
 
 
 bool InvertedPageTable::KeyisInMap(size_t key, MAPTYPE map_type) //key ppn or disk_offset

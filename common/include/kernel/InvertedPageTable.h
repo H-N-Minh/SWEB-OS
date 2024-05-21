@@ -19,6 +19,7 @@ class InvertedPageTable
   public:
     InvertedPageTable();
     InvertedPageTable(const InvertedPageTable&) = delete;
+    ~InvertedPageTable();
 
     static InvertedPageTable *instance();
     
@@ -36,7 +37,7 @@ class InvertedPageTable
 
   private:
     static InvertedPageTable* instance_;
-    ustl::map<size_t, ustl::vector<VirtualPageInfo*>> ipt_ram_;
-    ustl::map<size_t, ustl::vector<VirtualPageInfo*>> ipt_disk_; //ppn - pageInfos(vpn...)
+    ustl::map<size_t, ustl::vector<VirtualPageInfo*>> ipt_ram_;  //ppn - pageInfo1(vpn, archmemory), pageInfo2, ...
+    ustl::map<size_t, ustl::vector<VirtualPageInfo*>> ipt_disk_; //disk_offset - pageInfo1(vpn, archmemory), pageInfo2, ...
 
 };
