@@ -32,8 +32,10 @@ class InvertedPageTable
 
     ustl::vector<VirtualPageInfo*> getPageInfosForPPN(size_t ppn);
 
-     ustl::map<size_t, ustl::vector<VirtualPageInfo*>>* selectMap(MAPTYPE map_type);
+     ustl::map<size_t, ustl::vector<VirtualPageInfo*>>& selectMap(MAPTYPE map_type);
      ustl::vector<VirtualPageInfo*> moveToOtherMap(size_t old_key, size_t new_key, MAPTYPE from, MAPTYPE to);
+
+    int getNumPagesInMap(MAPTYPE maptype);
 
   private:
     static InvertedPageTable* instance_;
