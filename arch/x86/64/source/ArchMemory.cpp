@@ -22,6 +22,9 @@ ArchMemory::ArchMemory():lock_("archmemory_lock_")
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
+
+  zero_page_ = getZeroFilledPagePPN();
+
   lock_.release();
 }
 
@@ -112,9 +115,6 @@ ArchMemory::ArchMemory(ArchMemory const &src):lock_("archmemory_lock_")
                   debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
                                                                                                PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
                   PageManager::instance()->page_reference_counts_lock_.release();
-
-                  //TODO : maybe copy IPT here?
-
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
               }
@@ -563,7 +563,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
   PageManager* pm = PageManager::instance();
 
   debug(FORK, "ArchMemory::copyPage Resolving mapping \n");
-  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  ArchMemoryMapping pml1 = resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
   assert(pml1_entry && pml1_entry->cow && "Page is not COW");
 
@@ -572,10 +572,18 @@ void ArchMemory::copyPage(size_t virtual_addr)
   assert(pm->getReferenceCount(pml1_entry->page_ppn) > 0 && "Reference count is 0");
   if (pm->getReferenceCount(pml1_entry->page_ppn) > 1)
   {
+
     debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
+    pointer original_page = getIdentAddressOfPPN(pml1_entry->page_ppn);
+
+    //    if(isZeroFilledPage(original_page))
+//    {
+//      pointer new_page = zero_page_ppn_;
+//    }
+
+
     size_t new_page_ppn = pm->allocPPN();
-    pointer original_page = ArchMemory::getIdentAddressOfPPN(pml1_entry->page_ppn);
-    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
+    pointer new_page = getIdentAddressOfPPN(new_page_ppn);
     memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
     debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
@@ -589,4 +597,24 @@ void ArchMemory::copyPage(size_t virtual_addr)
   // pml1_entry->present = 1;   // this should already be 1
   pml1_entry->writeable = 1;
   pml1_entry->cow = 0;  
+}
+
+bool ArchMemory::isZeroFilledPage(void* page)
+{
+  for (size_t i = 0; i < PAGE_SIZE; ++i) {
+    if (*((char*)page + i) != 0) {
+      return false; //page is not zero-filled
+    }
+  }
+  return true; //page is zero-filled
+}
+
+pointer ArchMemory::getZeroFilledPagePPN()
+{
+  PageManager* pm = PageManager::instance();
+  size_t zero_page_ppn;
+  zero_page_ppn = pm->allocPPN();
+  pointer zero_page = getIdentAddressOfPPN(zero_page_ppn);
+  memset((void*)zero_page, 0, PAGE_SIZE);
+  return zero_page;
 }
