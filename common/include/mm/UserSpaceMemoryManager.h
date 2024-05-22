@@ -7,8 +7,6 @@
 #include "Loader.h"
 #include "SpinLock.h"
 #include "UserThread.h"
-#include "Scheduler.h"
-#include "IPTManager.h"
 
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
@@ -23,10 +21,11 @@ class UserSpaceMemoryManager
     size_t current_break_;
     size_t heap_start_;
     Loader* loader_;
-    static IPTManager iptManager;
+
     SpinLock lock_;   // used to protect current_break_
 
     size_t totalUsedHeap();
+
 
     /**
      * adjust the brk by size amount 

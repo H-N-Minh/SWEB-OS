@@ -41,7 +41,7 @@ PageManager* PageManager::instance()
  */
 PageManager::PageManager() 
     : ref_count_lock_("PageManager::ref_count_lock_"),
-      IPT_lock_("PageManager::IPT_lock_"), page_manager_lock_("PageManager::page_manager_lock_")
+      page_manager_lock_("PageManager::page_manager_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -370,92 +370,3 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
   }
 }
 
-
-void PageManager::insertEntryIPT(IPTMapType map_type, uint64 ppn, PageTableEntry* pte, Mutex* archmem_lock)
-{
-  debug(SWAPPING, "PageManager::insertEntryIPT: inserting ppn: %zu, pte: %zu, lock: %zu\n", ppn, (size_t) pte, (size_t) archmem_lock);
-  assert(map_type == IPTMapType::NONE && pte && archmem_lock && "PageManager::insertEntryIPT called with a nullptr argument\n");
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem_lock->isHeldBy((Thread*) currentThread) && "PageManager::insertEntryIPT called without fully locking\n");
-
-  ustl::map<uint64, IPTEntry*>* map = (map_type == IPTMapType::IPT_MAP ? &inverted_page_table_ : &swapped_page_map_);
-
-  if (map->find(ppn) == map->end())
-  {
-    (*map)[ppn] = new IPTEntry();
-  }
-  (*map)[ppn]->addEntry(pte, archmem_lock);
-  
-  debug(SWAPPING, "PageManager::insertIPT: successfully inserted to IPT\n");
-}
-
-void PageManager::removeEntryIPT(IPTMapType map_type, uint64 ppn, PageTableEntry* pte)
-{
-  // Error checking
-  debug(SWAPPING, "PageManager::removeEntryIPT: removing ppn: %zx, pte: %zx\n", ppn, (size_t) pte);
-  assert(map_type == IPTMapType::NONE && pte && "PageManager::removeEntryIPT called with a nullptr argument\n");
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "PageManager::insertEntryIPT called but IPT not locked\n");
-
-  ustl::map<uint64, IPTEntry*>* map = (map_type == IPTMapType::IPT_MAP ? &inverted_page_table_ : &swapped_page_map_);
-
-  if (map->find(ppn) == map->end())
-  {
-    debug(SWAPPING, "PageManager::removeIPT ppn %zu not found in the specified map\n", ppn);
-    assert(0 && "PageManager::removeEntryIPT: ppn doesnt exist in IPT\n");
-  }
-  assert((*map)[ppn]->isLocked(pte) && "PageManager::removeEntryIPT: archmem is not locked\n");
-
-  // Actually remove the pte from the entry, and delete the entry if theres no pte left
-  (*map)[ppn]->removeEntry(pte);
-
-  if ((*map)[ppn]->isEmpty())
-  {
-    delete (*map)[ppn];
-    (*map).erase(ppn);
-  }
-  
-  debug(SWAPPING, "PageManager::removeIPT: successfully removed from IPT\n");
-}
-
-void PageManager::moveEntry(IPTMapType source, uint64 ppn_source, uint64 ppn_destination)
-{
-  debug(SWAPPING, "PageManager::moveEntry: moving entry ppn %zu to ppn %zu\n", ppn_source, ppn_destination);
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "PageManager::moveEntry called but IPT not locked\n");
-  assert(source == IPTMapType::NONE && "PageManager::moveEntry invalid parameter\n");
-
-  ustl::map<uint64, IPTEntry*>* source_map = (source == IPTMapType::IPT_MAP ? &inverted_page_table_ : &swapped_page_map_);
-  ustl::map<uint64, IPTEntry*>* destination_map = (source == IPTMapType::IPT_MAP ? &swapped_page_map_ : &inverted_page_table_);
-  IPTEntry* entry = nullptr;
-
-  if (source_map->find(ppn_source) == source_map->end())
-  {
-    debug(SWAPPING, "PageManager::moveEntry ppn %zu not found in the source map\n", ppn_source);
-    assert(0 && "PageManager::moveEntry: The given ppn doesnt exist in the specifed map\n");
-  }
-  else
-  {
-    entry = (*source_map)[ppn_source];
-    source_map->erase(ppn_source);
-  }
-  
-  if (destination_map->find(ppn_destination) != destination_map->end())
-  {
-    debug(SWAPPING, "PageManager::moveEntry ppn %zu already exists in the destination map\n", ppn_destination);
-    assert(0 && "PageManager::moveEntry: ppn_destination already exists in destination map\n");
-  }
-  else
-  {
-    assert(!entry && "PageManager::moveEntry: IPTEntry* is nullptr\n");
-    (*destination_map)[ppn_destination] = entry;
-    debug(SWAPPING, "PageManager::moveEntry: successfully moved entry\n");
-  }
-}
-
-
-IPTMapType PageManager::isInWhichMap(uint64 ppn)
-{
-  if (inverted_page_table_.find(ppn) != inverted_page_table_.end())
-    return IPTMapType::IPT_MAP;
-  if (swapped_page_map_.find(ppn) != swapped_page_map_.end())
-    return IPTMapType::SWAPPED_PAGE_MAP;
-  return IPTMapType::NONE;
-}
