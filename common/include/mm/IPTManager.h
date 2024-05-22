@@ -19,7 +19,7 @@ public:
   size_t vpn;
   ArchMemory* archmem;
 
-  IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem) : ppn(ppn), vpn(vpn), archmem(archmem) {}
+  IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem);
 
   /**
    * check if the archmem of this entry is locked

@@ -4,7 +4,6 @@
 #include "paging-definitions.h"
 #include "SpinLock.h"
 #include "Mutex.h"
-#include "IPTEntry.h"
 #include "umap.h"
 
 #define DYNAMIC_KMM (0) // Please note that this means that the KMM depends on the page manager

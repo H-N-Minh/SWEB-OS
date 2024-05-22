@@ -9,7 +9,7 @@
 IPTEntry::IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem) : ppn(ppn), vpn(vpn), archmem(archmem) {}
 
 bool IPTEntry::isLocked() {
-  return archmem->lock_.isLocked();
+  return archmem->lock_.isHeldBy((Thread*) currentThread);
 }
 
 
@@ -18,38 +18,38 @@ bool IPTEntry::isLocked() {
 IPTManager::IPTManager() : IPT_lock_("IPTManager::IPT_lock_") {}
 
 ustl::shared_ptr<IPTEntry> IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem) {
-  debug(IPT, "IPTManager::lookupEntryInRAM: Looking up entry in RAM: ppn=%d, vpn=%zu\n", ppn, vpn);
+  debug(IPT, "IPTManager::lookupEntryInRAM: Looking up entry in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
   auto range = ram_map_.equal_range(ppn);
   for (auto it = range.first; it != range.second; ++it) {
     if (it->second->vpn == vpn && it->second->archmem == archmem) {
-      debug(IPT, "IPTManager::lookupEntryInRAM: Entry found in RAM: ppn=%d, vpn=%zu\n", ppn, vpn);
+      debug(IPT, "IPTManager::lookupEntryInRAM: Entry found in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
       return it->second;
     }
   }
-  debug(IPT, "IPTManager::lookupEntryInRAM: Entry not found in RAM: ppn=%d, vpn=%zu\n", ppn, vpn);
+  debug(IPT, "IPTManager::lookupEntryInRAM: Entry not found in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
   return ustl::shared_ptr<IPTEntry>();
 }
 
 ustl::shared_ptr<IPTEntry> IPTManager::lookupEntryInDisk(diskoffset_t diskOffset) {
-  debug(IPT, "IPTManager::lookupEntryInDisk: Looking up entry in Disk: diskOffset=%d\n", diskOffset);
+  debug(IPT, "IPTManager::lookupEntryInDisk: Looking up entry in Disk: diskOffset=%zu\n", diskOffset);
   auto it = disk_map_.find(diskOffset);
   if (it != disk_map_.end()) {
-    debug(IPT, "IPTManager::lookupEntryInDisk: Entry found in Disk: diskOffset=%d\n", diskOffset);
+    debug(IPT, "IPTManager::lookupEntryInDisk: Entry found in Disk: diskOffset=%zu\n", diskOffset);
     return it->second;
   }
-  debug(IPT, "IPTManager::lookupEntryInDisk: Entry not found in Disk: diskOffset=%d\n", diskOffset);
+  debug(IPT, "IPTManager::lookupEntryInDisk: Entry not found in Disk: diskOffset=%zu\n", diskOffset);
   return ustl::shared_ptr<IPTEntry>();
 }
 
 void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
 {
-  debug(SWAPPING, "IPTManager::insertEntryIPT: inserting ppn: %zu, pte: %zu, lock: %zu\n", ppn, (size_t) pte, (size_t) archmem_lock);
+  debug(SWAPPING, "IPTManager::insertEntryIPT: inserting ppn: %zu, vpn: %zu, archmem: %zu\n", ppn, vpn, (size_t) archmem);
   assert(map_type == IPTMapType::NONE && archmem && "IPTManager::insertEntryIPT called with a nullptr argument\n");
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertEntryIPT called without fully locking\n");
 
-  auto* map = (map_type == IPTMapType::IPT_MAP ? &ram_map_ : &disk_map_);
+  auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   // TODO: check if the entry already exists in the map. If it does, assert fail
-  auto* entry = ustl::make_shared<IPTEntry>(ppn, vpn, archmem);
+  ustl::shared_ptr<IPTEntry> entry = ustl::make_shared<IPTEntry>(ppn, vpn, archmem);
   map->insert({ppn, entry});
 
   debug(SWAPPING, "IPTManager::insertIPT: successfully inserted to IPT\n");
@@ -62,7 +62,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   assert(map_type == IPTMapType::NONE && archmem && "IPTManager::removeEntryIPT called with a nullptr argument\n");
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntryIPT called but not fully locked\n");
 
-  auto* map = (map_type == IPTMapType::IPT_MAP ? &ram_map_ : &disk_map_);
+  auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   
   if (map->find(ppn) == map->end())
   {
@@ -75,7 +75,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   auto range = map->equal_range(ppn);
   for (auto it = range.first; it != range.second;) {
     if (it->second->vpn == vpn && it->second->archmem == archmem) {
-      debug(IPT, "IPTManager::removeEntryFromRAM: Entry found and removed from RAM: ppn=%d, vpn=%zu\n", ppn, vpn);
+      debug(IPT, "IPTManager::removeEntryFromRAM: Entry found and removed from RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
       it = map->erase(it);
     } else {
       ++it;
@@ -92,8 +92,8 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   assert(source == IPTMapType::NONE && "IPTManager::moveEntry invalid parameter\n");
   // TODO: assert that all archmem of the entry are locked
 
-  auto* source_map = (map_type == IPTMapType::IPT_MAP ? &ram_map_ : &disk_map_);
-  auto* destination_map = (map_type == IPTMapType::IPT_MAP ? &disk_map_ : &ram_map_);
+  auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
+  auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
 
   // Check if the entry already exists in the destination map
   if (destination_map->find(ppn_destination) != destination_map->end())
