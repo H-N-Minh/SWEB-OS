@@ -27,7 +27,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
 
   if (!already_locked) {
     lock_.acquire();
-    PageManager::instance()->IPT_lock_.acquire();
+    // PageManager::instance()->IPT_lock_.acquire();
     loader_->arch_memory_.lock_.acquire();
   }
 
@@ -63,7 +63,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           if (!already_locked)
           {
             loader_->arch_memory_.lock_.release();
-            PageManager::instance()->IPT_lock_.release();
+            // PageManager::instance()->IPT_lock_.release();
             lock_.release();
           }
           return 0;
@@ -80,7 +80,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           if (!already_locked)
           {
             loader_->arch_memory_.lock_.release();
-            PageManager::instance()->IPT_lock_.release();
+            // PageManager::instance()->IPT_lock_.release();
             lock_.release();
           }
           return 0;
@@ -100,7 +100,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
           if (!already_locked)
           {
             loader_->arch_memory_.lock_.release();
-            PageManager::instance()->IPT_lock_.release();
+            // PageManager::instance()->IPT_lock_.release();
             lock_.release();
           }
           return 0;
@@ -112,7 +112,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
     if (!already_locked)
     {
       loader_->arch_memory_.lock_.release();
-      PageManager::instance()->IPT_lock_.release();
+      // PageManager::instance()->IPT_lock_.release();
       lock_.release();
     }
     assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
@@ -126,7 +126,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
     if (!already_locked)
     {
       loader_->arch_memory_.lock_.release();
-      PageManager::instance()->IPT_lock_.release();
+      // PageManager::instance()->IPT_lock_.release();
       lock_.release();
     }
     return old_break;
@@ -141,7 +141,7 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
 
   lock_.acquire();
-  PageManager::instance()->IPT_lock_.acquire();
+  // PageManager::instance()->IPT_lock_.acquire();
   loader_->arch_memory_.lock_.acquire();
   ssize_t size = new_break_addr - current_break_;
   pointer resevered_space = sbrk(size, 1);
@@ -149,7 +149,7 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: FATAL ERROR, could not set new break at address (%zx)\n", new_break_addr);
     loader_->arch_memory_.lock_.release();
-    PageManager::instance()->IPT_lock_.release();
+    // PageManager::instance()->IPT_lock_.release();
     lock_.release();
     return -1;
   }
@@ -157,7 +157,7 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: new break is set successful at address (%zx)\n", current_break_);
     loader_->arch_memory_.lock_.release();
-    PageManager::instance()->IPT_lock_.release();
+    // PageManager::instance()->IPT_lock_.release();
     lock_.release();
     return 0;
   }

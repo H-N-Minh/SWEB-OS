@@ -24,7 +24,7 @@ public:
   /**
    * check if the archmem of this entry is locked
   */
-  bool isLocked(PageTableEntry* pte);
+  bool isLocked();
 
   // TODO: getter func for getting PTE*
 
@@ -37,6 +37,11 @@ public:
   Mutex IPT_lock_;          // lock both ram_map_ and disk_map_
   ustl::multimap<ppn_t, ustl::shared_ptr<IPTEntry>> ram_map_;
   ustl::multimap<diskoffset_t, ustl::shared_ptr<IPTEntry>> disk_map_;
+  
+  IPTManager();
+
+  ustl::shared_ptr<IPTEntry> lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
+  ustl::shared_ptr<IPTEntry> lookupEntryInDisk(diskoffset_t diskOffset);
 
   /**
    * Insert the PTE to the entry (at key == ppn) of the Inverted Page Table or the Swapped Page Map.
