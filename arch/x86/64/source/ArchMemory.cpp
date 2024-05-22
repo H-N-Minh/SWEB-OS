@@ -586,7 +586,6 @@ void ArchMemory::copyPage(size_t virtual_addr)
     pm->decrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, maptype_old);
     pml1_entry->page_ppn = new_page_ppn;
 
-    //TODOs: check if everything is correct
     MAPTYPE maptype_new = getMapType(*pml1_entry);
     pm->incrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, maptype_new);
     
