@@ -216,3 +216,17 @@ IPTMapType IPTManager::isInWhichMap(uint64 ppn)
     return IPTMapType::SWAPPED_PAGE_MAP;
   return IPTMapType::NONE;
 }
+
+
+template<typename... Args>
+void ArchMemory::lockArchmemInOrder(Args... args)
+{
+    ustl::vector<Mutex*> vec = { args... };
+    ustl::sort(vec.begin(), vec.end());
+
+    // Lock the mutexes in order
+    for(auto& m : vec) {
+      assert(m && "Mutex for archmem is null");
+      m->acquire();
+    }
+}

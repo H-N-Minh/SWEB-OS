@@ -7,11 +7,11 @@
 #include "ArchMemory.h"
 #include "PageManager.h"
 
-typedef int ppn_t;
-typedef int diskoffset_t;
+typedef size_t ppn_t;
+typedef size_t diskoffset_t;
 
 
-enum IPTMapType {IPT_MAP, SWAPPED_PAGE_MAP, NONE};
+enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
 
 class IPTEntry {
 public:
@@ -22,53 +22,39 @@ public:
   IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem) : ppn(ppn), vpn(vpn), archmem(archmem) {}
 
   /**
-   * check if the archmem of the specified PTE is locked by currentThread or not
+   * check if the archmem of this entry is locked
   */
   bool isLocked(PageTableEntry* pte);
 
+  // TODO: getter func for getting PTE*
+
 };
 
+
+// TODO: IPT Manger must be made singleton and be initialized somewhere
 class IPTManager {
 public:
-  ustl::multimap<ppn_t, ustl::shared_ptr<IPTEntry>> ramMap;
-  ustl::map<diskoffset_t, ustl::shared_ptr<IPTEntry>> diskMap;
-
-
-  ustl::shared_ptr<IPTEntry> createIPTEntry(int ppn, size_t vpn, ArchMemory *archmem);
-  void addEntryToRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
-  void addEntryToDisk(diskoffset_t diskOffset, size_t vpn, ArchMemory* archmem);
-  ustl::shared_ptr<IPTEntry> lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
-  ustl::shared_ptr<IPTEntry> lookupEntryInDisk(diskoffset_t diskOffset);
-  void removeEntryFromRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
-  void swapOutPage(ppn_t ppn, diskoffset_t diskOffset);
-  void swapInPage(diskoffset_t diskOffset, ppn_t ppn);
-
-
-
-
-  // Inverted Page Table
-  Mutex IPT_lock_;          // lock both inverted_page_table_ and swapped_page_map_
-  ustl::map<ppn_t , IPTEntry*> inverted_page_table_;  // map<ppn, map<PTE*, archmem_lock> >
-  ustl::map<diskoffset_t , IPTEntry*> swapped_page_map_;  // map<offset in disk, map<PTE*, archmem_lock> >
+  Mutex IPT_lock_;          // lock both ram_map_ and disk_map_
+  ustl::multimap<ppn_t, ustl::shared_ptr<IPTEntry>> ram_map_;
+  ustl::multimap<diskoffset_t, ustl::shared_ptr<IPTEntry>> disk_map_;
 
   /**
    * Insert the PTE to the entry (at key == ppn) of the Inverted Page Table or the Swapped Page Map.
    * This does not accept inserting the same pte twice to the same ppn entry. (asserts fail)
    * @param map_type IPT_MAP for insertion to inverted_page_table_, SWAPPED_PAGE_MAP for swapped_page_map_
    * @param ppn The ppn to insert (or the offset in disk for SWAPPED_PAGE_MAP)
-   * @param pte The PageTableEntry to insert
-   * @param archmem_lock The lock of the archmem that the PTE belongs to
+   * @param vpn the virtual page that will be used to locate the right PTE
   */
-  void insertEntryIPT(IPTMapType map_type, uint64 ppn, PageTableEntry* pte, Mutex* archmem_lock);
+  void insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
 
   /**
    * Remove a pte from an entry from the Inverted Page Table or the Swapped Page Map.
    * This does not accept removing a pte that does not exist at the specified entry. (asserts if this happens)
    * @param map_type IPT_MAP for insertion to inverted_page_table_, SWAPPED_PAGE_MAP for swapped_page_map_
    * @param ppn The ppn to remove (or the offset in disk for SWAPPED_PAGE_MAP)
-   * @param pte The PageTableEntry to remove
+   * @param vpn the virtual page that will be used to locate the right PTE
   */
-  void removeEntryIPT(IPTMapType map_type, uint64 ppn, PageTableEntry* pte);
+  void removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
 
   /**
    * Remove an entry from the source map and insert it to the destination map.
@@ -76,12 +62,17 @@ public:
    * @param ppn_source The location of the entry currently
    * @param ppn_destination Location of the new entry in the destination map. This new entry must be empty.
   */
-  void moveEntry(IPTMapType source, uint64 ppn_source, uint64 ppn_destination);
+  void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
   /**
    * based on the given address, check which map the entry is in currently.
    * @return IPTMapType that indicates which map currently has this ppn as key. 0 if not found in both.
   */
-  IPTMapType isInWhichMap(uint64 ppn);
+  IPTMapType isInWhichMap(size_t ppn);
 
+  /**
+   * Locks the archmems in the order of lowest to highest address of the Mutex
+  */
+  template<typename... Args>
+  void lockArchmemInOrder(Args... args);
 };

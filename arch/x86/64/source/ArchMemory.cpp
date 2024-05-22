@@ -591,16 +591,3 @@ void ArchMemory::copyPage(size_t virtual_addr)
   pml1_entry->cow = 0;  
 }
 
-
-template<typename... Args>
-void ArchMemory::lockArchmemInOrder(Args... args)
-{
-    ustl::vector<Mutex*> vec = { args... };
-    ustl::sort(vec.begin(), vec.end());
-
-    // Lock the mutexes in order
-    for(auto& m : vec) {
-      assert(m && "Mutex for archmem is null");
-      m->acquire();
-    }
-}

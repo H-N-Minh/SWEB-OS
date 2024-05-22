@@ -110,11 +110,6 @@ class ArchMemory
 
     void copyPage(size_t virtual_addr);
 
-    /**
-     * Locks the archmems in the order of lowest to highest address of the Mutex
-    */
-    template<typename... Args>
-    static void lockArchmemInOrder(Args... args);
 
   private:
     /**
