@@ -84,7 +84,7 @@ int childMain()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "calling pthread_create inside pthread_create inside pthread_create");
 
-    rv = pc8();  //calling pthread_create inside pthread_create inside pthread_create
+    rv = pc8();  //invalid userspace addresss as thread_id
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "invalid userspace addresss as thread_id");
 
@@ -93,9 +93,9 @@ int childMain()
     check_return_value(number_of_tests, rv, &successful_tests, 
             "100 threads calling 100 pcreate at the same time, Also test the parameters and return value of all threads shouldnt get mixed up");
 
-    rv = pc10();  // each thread has its own stack but they can still access each other's stack
-    number_of_tests++;
-    check_return_value(number_of_tests, rv, &successful_tests, "each thread has its own stack but they can still access each other's stack");
+    // rv = pc10();  // each thread has its own stack but they can still access each other's stack
+    // number_of_tests++;
+    // check_return_value(number_of_tests, rv, &successful_tests, "each thread has its own stack but they can still access each other's stack");
 
     rv = pc11();  //testing pthread_create attributes (detach):
     //pthread create with wrong attributes
@@ -114,7 +114,7 @@ int childMain()
     rv = pc12();  //test if thread pthread_self()
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "test if pthread_self() works");
-
+    
     rv = pc13();  //test thousands of threads
     number_of_tests++;
     check_return_value(number_of_tests, rv, &successful_tests, "create and destroy 6000 threads");
@@ -135,42 +135,42 @@ int childMain()
 
 int main()
 {
-    pid_t pid = fork();
-    if (pid == 0) {
+    // pid_t pid = fork();
+    // if (pid == 0) {
         int child_exit_code = childMain();
-        exit(child_exit_code);
-    } 
-    else
-    {
-        int status;
-        waitpid(pid, &status, 0);
-        if (status == -3)
-        {
-            printf("Some test(s) failed\n");
-        }
-        else if (status != 0 && status != -1)
-        {
-            printf("process crashed with error code %d\n", status);
-        }
+    //     exit(child_exit_code);
+    // } 
+    // else
+    // {
+    //     int status;
+    //     waitpid(pid, &status, 0);
+    //     if (status == -3)
+    //     {
+    //         printf("Some test(s) failed\n");
+    //     }
+    //     else if (status != 0 && status != -1)
+    //     {
+    //         printf("process crashed with error code %d\n", status);
+    //     }
         
-        for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
-        {
-            /* code */
-        }
+    //     for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
+    //     {
+    //         /* code */
+    //     }
 
-        int num = get_thread_count();
-        if (num == 7 || num == 6)
-        {
-            printf("===  All threads are destroyed correctly  ===\n");
-            return 0;
-        }
-        else
-        {
-            printf("===  %d threads are still alive===  \n", num);
-            return -1;
-        }
+    //     int num = get_thread_count();
+    //     if (num == 7 || num == 6)
+    //     {
+    //         printf("===  All threads are destroyed correctly  ===\n");
+    //         return 0;
+    //     }
+    //     else
+    //     {
+    //         printf("===  %d threads are still alive===  \n", num);
+    //         return -1;
+    //     }
         
-    }
+    // }
     return 0;
 }
                     

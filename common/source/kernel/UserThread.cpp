@@ -1,5 +1,5 @@
 #include "UserProcess.h"
-#include "UserThread.h" //
+#include "UserThread.h"
 #include "Console.h"
 #include "ArchThreads.h"
 #include "Loader.h"
@@ -22,14 +22,17 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
               cancel_state_type_lock_("cancel_state_type_lock_")
 {
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
- 
-    page_for_stack_ = PageManager::instance()->allocPPN();
+
+    InvertedPageTable::instance()->ipt_lock_.acquire();
+    loader->arch_memory_.archmemory_lock_.acquire();
+    ppn_stack = PageManager::instance()->allocPPN();
+    debug(USERTHREAD, "Page for stack is %lu\n", ppn_stack);
     // TODOAG: putting this into a separate function might make it easier to combine with growing stack in PFHandler etc
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
-    loader_->arch_memory_.lock_.acquire();
-    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, page_for_stack_, 1);
-    loader_->arch_memory_.lock_.release();
-    // TODOAG: check/compare with fork!
+    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, ppn_stack, 1);
+    loader_->arch_memory_.archmemory_lock_.release();
+    InvertedPageTable::instance()->ipt_lock_.release();
+     // TODOAG: check/compare with fork!
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
     user_stack_ptr_ = setupMetaHeader();
@@ -71,7 +74,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 size_t UserThread::setupMetaHeader()
 {
   debug(USERTHREAD, "UserThread ctor: Setting up meta data at beginning of stack\n");
-  pointer iden_top_stack = ArchMemory::getIdentAddressOfPPN(page_for_stack_);
+  pointer iden_top_stack = ArchMemory::getIdentAddressOfPPN(ppn_stack);
   iden_top_stack += PAGE_SIZE - sizeof(pointer);
   *(pointer*) iden_top_stack = GUARD_MARKER;
   for (size_t i = 0; i < (META_SIZE - 1); i++)
@@ -98,7 +101,7 @@ size_t UserThread::setupMetaHeader()
 
 UserThread::UserThread(UserThread& other, UserProcess* new_process)
             : Thread(other, new_process->loader_), process_(new_process), vpn_stack_(other.vpn_stack_), user_stack_ptr_(other.user_stack_ptr_),
-            page_for_stack_(other.page_for_stack_),
+            ppn_stack(other.ppn_stack),
             thread_gets_killed_lock_("thread_gets_killed_lock_"),  thread_gets_killed_(&thread_gets_killed_lock_, "thread_gets_killed_"),
             join_state_lock_("join_state_lock_"), join_state_(other.join_state_), cancel_state_type_lock_("cancel_state_type_lock_"),
             cancel_state_(other.cancel_state_), cancel_type_(other.cancel_type_),
@@ -332,6 +335,10 @@ void UserThread::exitThread(void* value_ptr)
   }
   join_state_lock_.release();
 
+  // unmap its stack
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+
   // for exec()
   if(process_->threads_.size() == 1)  // only one thread left, which is the exec thread waiting for the signal
   {
@@ -342,9 +349,7 @@ void UserThread::exitThread(void* value_ptr)
   }
   process_->threads_lock_.release();
 
-  // unmap its stack
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
-  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+
   user_stack_ptr_ = 0;
 
   kill();
@@ -354,8 +359,7 @@ void UserThread::exitThread(void* value_ptr)
 int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper, void* arg, pthread_attr_t* attr)
 {
   if(!Syscall::check_parameter((size_t)thread) || !Syscall::check_parameter((size_t)attr, true)
-  || !Syscall::check_parameter((size_t)start_routine) || !Syscall::check_parameter((size_t)arg, true)
-  || !Syscall::check_parameter((size_t)wrapper))
+  || !Syscall::check_parameter((size_t)start_routine)  || !Syscall::check_parameter((size_t)wrapper))
   {
     return -1;
   }
@@ -374,10 +378,10 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
   {
     join_state = PTHREAD_CREATE_JOINABLE;
   }
-
+  process_->threads_lock_.acquire();
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
-  process_->threads_lock_.acquire();
+ 
   if(new_thread)
   {
     new_thread->join_state_ = join_state;

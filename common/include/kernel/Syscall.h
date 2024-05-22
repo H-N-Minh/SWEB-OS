@@ -69,5 +69,8 @@ public:
 
   static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);
   static size_t brkMemory(size_t new_brk_addr);
+
+  static int getIPTInfos(size_t ppn);
 };
+
 

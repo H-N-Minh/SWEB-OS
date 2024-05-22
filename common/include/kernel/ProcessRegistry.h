@@ -1,9 +1,9 @@
 #pragma once
 
 #include "UserProcess.h"
+#include "UserThread.h"
 #include "Thread.h"
-#include "Mutex.h"
-#include "Condition.h"
+#include "SwappingManager.h"
 
 class ProcessRegistry : public Thread
 {

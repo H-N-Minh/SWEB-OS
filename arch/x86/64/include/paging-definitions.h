@@ -142,7 +142,8 @@ typedef struct
     uint64 dirty                     :1;
     uint64 size                      :1;
     uint64 global                    :1;
-    uint64 ignored_2                 :2;
+    uint64 ignored_2                 :1;
+    uint64 swapped_out               :1;
     uint64 cow                       :1;
     uint64 page_ppn                  :28;
     uint64 reserved_1                :12; // must be 0
@@ -158,15 +159,15 @@ typedef struct
     struct
     {
       size_t offset      : 12;
-      size_t pml1i       : 9;
-      size_t pml2i       : 9;
-      size_t pml3i       : 9;
+      size_t pti         : 9;
+      size_t pdi         : 9;
+      size_t pdpti       : 9;
       size_t pml4i       : 9;
       size_t ignored     : 16;
     } __attribute__((__packed__));
     size_t packed;
     };
-} __attribute__((__packed__)) VPN;
+} __attribute__((__packed__)) VirtualAddress;
 
-static_assert(sizeof(VPN) == 8, "VPN should be 64 bit for 64 bit configuration");
+static_assert(sizeof(VirtualAddress) == 8, "VirtualAddress should be 64 bit for 64 bit configuration");
 

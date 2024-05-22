@@ -2,6 +2,10 @@
 
 #include "../../../common/include/kernel/syscall-definitions.h"
 
+#include "stdarg.h"
+#include "types.h"
+#include "sys/syscall.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -15,6 +19,8 @@ extern "C" {
  *
  */ 
 extern int createprocess(const char* path, int sleep);
+
+extern int getIPTInfos(size_t ppn);
 
 #ifdef __cplusplus
 }

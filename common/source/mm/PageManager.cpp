@@ -10,6 +10,7 @@
 #include "assert.h"
 #include "Bitmap.h"
 #include "ArchThreads.h"
+#include "SwappingManager.h"
 
 PageManager pm;
 
@@ -229,6 +230,7 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
  */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
+  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
   uint32 p;
   uint32 found = 0;
   assert((page_size % PAGE_SIZE) == 0);
@@ -244,12 +246,17 @@ uint32 PageManager::allocPPN(uint32 page_size)
   }
   while ((lowest_unreserved_page_ < number_of_pages_) && page_usage_table_->getBit(lowest_unreserved_page_))
     ++lowest_unreserved_page_;
-
+  
   page_manager_lock_.release();
 
   if (found == 0)
   {
-    assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
+    size_t ppn = findPageToSwapOut(); //TODOs!!!!!!!!!
+    SwappingManager::instance()->swapOutPage(ppn);
+    memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
+    debug(PM, "PageManager::allocPPN: New ppn is %ld. (swapped in)\n", ppn);
+    return ppn;
+    // assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
   }
 
   const char* page_ident_addr = (const char*)ArchMemory::getIdentAddressOfPPN(found);
@@ -261,6 +268,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
   }
 
   memset((void*)ArchMemory::getIdentAddressOfPPN(found), 0, page_size);
+  debug(PM, "PageManager::allocPPN: New ppn is %d.\n", found);
   return found;
 }
 
@@ -318,39 +326,65 @@ uint32 PageManager::getNumPagesForUser() const
   return num_pages_for_user_;
 }
 
-void PageManager::incrementReferenceCount(uint64 page_number)
+void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
 {
+  debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(page_reference_counts_lock_.heldBy() == currentThread);
+
+  InvertedPageTable::instance()->addVirtualPageInfo(offset, vpn, archmemory, maptype);
+
+  if(maptype == MAPTYPE::IPT_DISK)
+  {
+    return;
+  }
+
   //check if the page number is already in the map
-  auto it = page_reference_counts_.find(page_number);
+  auto it = page_reference_counts_.find(offset);
   if (it != page_reference_counts_.end())
   {
     //page number found, increment
-    page_reference_counts_[page_number]++;
+    page_reference_counts_[offset]++;
   }
   else
   {
     //page number not found, initialize reference count to 1
-    page_reference_counts_[page_number] = 1;
+    page_reference_counts_[offset] = 1;
   }
+
 }
 
-void PageManager::decrementReferenceCount(uint64 page_number)
+void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
 {
+  debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(page_reference_counts_lock_.heldBy() == currentThread);
+
+  InvertedPageTable::instance()->removeVirtualPageInfo(offset, vpn, archmemory, maptype);
+
+  if(maptype == MAPTYPE::IPT_DISK)
+  {
+    return;
+  }
+
   //check if the page number is in the map
-  auto it = page_reference_counts_.find(page_number);
+  auto it = page_reference_counts_.find(offset);
   if (it != page_reference_counts_.end())
   {
     //decrement the reference count
-    page_reference_counts_[page_number]--;
+    page_reference_counts_[offset]--;
 
     //if reference count reaches zero, erase the entry from the map
-    if (it->second == 0)
+    if (page_reference_counts_[offset] == 0)
     {
       page_reference_counts_.erase(it);
+      PageManager::instance()->freePPN(offset);
     }
   }
+}
+
+void PageManager::setReferenceCount(uint64 page_number, uint32 reference_count)
+{
+  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  page_reference_counts_[page_number] = reference_count;
 }
 
 uint32 PageManager::getReferenceCount(uint64 page_number)
@@ -366,4 +400,21 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
   {
     return 0;
   }
+}
+
+
+//TODO: At the moment it does nonesens
+size_t PageManager::findPageToSwapOut()
+{
+  bool key_in_ipt = false;
+  while(!key_in_ipt)
+  {
+    possible_ppn_++;    
+    if(possible_ppn_ > 2016)
+    {
+      possible_ppn_ = 1009;
+    }
+    key_in_ipt = InvertedPageTable::instance()->KeyisInMap(possible_ppn_, MAPTYPE::IPT_RAM);
+  }
+  return possible_ppn_;
 }

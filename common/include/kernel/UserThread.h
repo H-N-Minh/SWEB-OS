@@ -58,7 +58,7 @@ class UserThread : public Thread
         UserProcess* process_;
         size_t vpn_stack_;
         size_t user_stack_ptr_;
-        size_t page_for_stack_;     // ppn of the stack of the thread
+        size_t ppn_stack;     // ppn of the stack of the thread
 
         //exit
         bool last_thread_alive_{false};

@@ -19,11 +19,11 @@ extern int fork7();
 
 // set to 1 to test, 0 to skip
 // all 4 & 5 & 6 requires lot of physical memory so each should be tested alone
-#define FORK1 1     //simple fork
-#define FORK2 1     // This tests if the 2 processes can have different values of same variable (they should). Both local and global variables are tested
-#define FORK3 1     // this tests fork then each calls pthread_create
-#define FORK4 1     // this tests multiple nested forks (each child will fork again)
-#define FORK5 1     // this tests multiple nested forks (same thread will fork multiple times)
+#define FORK1 0     //simple fork
+#define FORK2 0     // This tests if the 2 processes can have different values of same variable (they should). Both local and global variables are tested
+#define FORK3 0     // this tests fork then each calls pthread_create
+#define FORK4 0     // this tests multiple nested forks (each child will fork again)
+#define FORK5 0     // this tests multiple nested forks (same thread will fork multiple times)
 #define FORK6 1     // 100 pcreate then all fork at same time
 #define FORK7 1     // fork with waitpid
 

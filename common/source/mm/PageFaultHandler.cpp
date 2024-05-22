@@ -10,6 +10,8 @@
 #include "UserSpaceMemoryManager.h"
 #include "UserThread.h"
 #include "UserProcess.h"
+#include "SwappingManager.h"
+
 
 extern "C" void arch_contextSwitch();
 
@@ -25,147 +27,104 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
   if(address < null_reference_check_border_)
   {
     debug(PAGEFAULT, "Maybe you are dereferencing a null-pointer.\n");
+    return INVALID;
   }
   else if(!user && address >= USER_BREAK)
   {
     debug(PAGEFAULT, "You are accessing an invalid kernel address.\n");
+    return INVALID;
   }
   else if(user && address >= USER_BREAK)
   {
     debug(PAGEFAULT, "You are accessing a kernel address in user-mode.\n");
+    return INVALID;
   }
   else if(present)
   {
-    if (currentThread->loader_->arch_memory_.isCOW(address))
-    {
-      debug(PAGEFAULT_TEST, "pagefault even though the address is mapped BUT ITS COW.\n");
-      return 3;
-    }
-    else
-    {
-      debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
-    }
+    debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+    return PRESENT;
   }
-  else if(user && !present && 
-          address > null_reference_check_border_ && address < USER_BREAK)
-  {
-    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
-    UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
-    assert(manager && "UserSpaceMemoryManager is not initialized.");
-    int retval = manager->checkValidGrowingStack(address);
-    
-    // DEBUGMINH  TODO: remove this
-    debug(MINH, "address: (%p)[%zu] , retval: %d\n", (int*) address, address,  retval);
-    
-    
-    if(retval == 11)  // corruption detected
-    {
-      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Segmentation fault detected. Exiting with error 11\n");
-      return 0;
-    }
-    else if(retval == 1)  // valid growing stack
-    {
-      return 69;
-    }
-    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
-    return 1;
-  }
+  // else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
+  // {
+  //   return USER;
+  // }
   else
   {
     // everything seems to be okay
-    return 1;
+    return VALID;
   }
-  return 0;
+  return INVALID;
 }
 
-inline void PageFaultHandler::handlePageFault(size_t address, bool user,
-                                          bool present, bool writing,
-                                          bool fetch, bool switch_to_us)
+inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool present, bool writing, bool fetch, bool switch_to_us)
 {
   if (PAGEFAULT & OUTPUT_ENABLED)
     kprintfd("\n");
-  debug(PAGEFAULT, "Address: %18zx - Thread %zu: %s (%p)\n",
-        address, currentThread->getTID(), currentThread->getName(), currentThread);
-  debug(PAGEFAULT, "Flags: %spresent, %s-mode, %s, %s-fetch, switch to userspace: %1d\n",
-        present ? "    " : "not ",
-        user ? "  user" : "kernel",
-        writing ? "writing" : "reading",
-        fetch ? "instruction" : "    operand",
-        switch_to_us);
+  debug(PAGEFAULT, "Address: %18zx - Thread %zu: %s (%p)\n", address, currentThread->getTID(), currentThread->getName(), currentThread);
+  debug(PAGEFAULT, "Flags: %spresent, %s-mode, %s, %s-fetch, switch to userspace: %1d\n", present ? "    " : "not ",
+        user ? "  user" : "kernel", writing ? "writing" : "reading",  fetch ? "instruction" : "    operand", switch_to_us);
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  int flag = false; // flag for locking archmemory 
-  if(currentThread->loader_->arch_memory_.lock_.heldBy() != currentThread)
-  {
-    flag = true;
-    currentThread->loader_->arch_memory_.lock_.acquire();
-  }
-  
-  int status = checkPageFaultIsValid(address, user, present, switch_to_us);
-  if (status == 1)
-  {
-    currentThread->loader_->loadPage(address);
-    if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
-  }
-  else if (status == 3)
-  {
-    if(writing && currentThread->loader_->arch_memory_.isCOW(address)) //bit of entry->writable = =1?
-    {
+  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
-      debug(PAGEFAULT_TEST, "is COW, copying Page\n");
-      currentThread->loader_->arch_memory_.copyPage(address);
-      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+  int status = checkPageFaultIsValid(address, user, present, switch_to_us);
+  if (status == VALID)
+  {
+    InvertedPageTable::instance()->ipt_lock_.acquire();
+    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    if(currentThread->loader_->arch_memory_.isSwapped(address))
+    {
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE);
+      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+      InvertedPageTable::instance()->ipt_lock_.release();
     }
     else
     {
-      assert(0 && "This should never be reached.");
       currentThread->loader_->loadPage(address);
-      if(flag) {currentThread->loader_->arch_memory_.lock_.release();}
+      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+      InvertedPageTable::instance()->ipt_lock_.release();
     }
+
   }
-  else if (status == 69)
+  else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
   {
-    
-    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Growing stack is valid. Creating new stack for current thread\n");
-    UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
-    assert(manager && "UserSpaceMemoryManager is not initialized.");
-    status = manager->increaseStackSize(address);
-    if (status == -1)
-    {
-      currentThread->loader_->arch_memory_.lock_.release();
-      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
-      if (currentThread->loader_)
-      {
-        Syscall::exit(9999);
-      }
-      else
-        currentThread->kill();
-      }
-    else
-    {
-      if(flag) 
-      {currentThread->loader_->arch_memory_.lock_.release();}
-      debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
-    }
+    debug(PAGEFAULT_TEST, "is COW, copying Page\n");
+    currentThread->loader_->arch_memory_.copyPage(address);
+    currentThread->loader_->arch_memory_.archmemory_lock_.release();
+    InvertedPageTable::instance()->ipt_lock_.release();
   }
-  else
+  // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
+  // {
+    // InvertedPageTable::instance()->ipt_lock_.acquire();
+    // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    // int retval = checkGrowingStack(address);
+    // currentThread->loader_->arch_memory_.archmemory_lock_.release();
+    //  InvertedPageTable::instance()->ipt_lock_.release();
+    // if (retval == GROWING_STACK_FAILED)
+    // {
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
+    //   errorInPageFaultKillProcess();
+    // }
+    // else if(retval == NOT_RELATED_TO_GROWING_STACK)
+    // {
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
+    //   currentThread->loader_->loadPage(address);
+    // }
+    // else
+    // {
+    //   assert(retval == GROWING_STACK_VALID);
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
+    // }
+  // }
+  else  //status INVALID
   {
-    currentThread->loader_->arch_memory_.lock_.release();
-    // the page-fault seems to be faulty, print out the thread stack traces
-    ArchThreads::printThreadRegisters(currentThread, true);
-    currentThread->printBacktrace(true);
-    if (currentThread->loader_)
-      Syscall::exit(9999);
-    else
-      currentThread->kill();
+    errorInPageFaultKillProcess();
   }
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 
-void PageFaultHandler::enterPageFault(size_t address, bool user,
-                                      bool present, bool writing,
-                                      bool fetch)
+void PageFaultHandler::enterPageFault(size_t address, bool user, bool present, bool writing, bool fetch)
 {
   assert(currentThread && "You have a pagefault, but no current thread");
   //save previous state on stack of currentThread
@@ -182,3 +141,38 @@ void PageFaultHandler::enterPageFault(size_t address, bool user,
   if (currentThread->switch_to_userspace_)
     currentThreadRegisters = currentThread->user_registers_;
 }
+
+
+
+int PageFaultHandler::checkGrowingStack(size_t address)
+{
+    debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
+    UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+    assert(manager && "UserSpaceMemoryManager is not initialized.");
+
+    int status = manager->checkValidGrowingStack(address);
+        
+    if(status != GROWING_STACK_VALID)
+    {
+      return status;
+    }
+
+    status = manager->increaseStackSize(address);
+    return status;
+}
+
+void PageFaultHandler::errorInPageFaultKillProcess()
+{
+    // the page-fault seems to be faulty, print out the thread stack traces
+    ArchThreads::printThreadRegisters(currentThread, true);
+    currentThread->printBacktrace(true);
+    if (currentThread->loader_)
+    {
+       Syscall::exit(9999);
+    }
+    else
+    {
+      currentThread->kill();
+    }   
+}
+

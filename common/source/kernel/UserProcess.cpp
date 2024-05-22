@@ -25,11 +25,10 @@ int64 UserProcess::pid_counter_ = 1;
 
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
-
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
-
     threads_lock_("thread_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
-    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
+    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable(), 
+    process_state_lock_("process_state_lock_")
 {
   ProcessRegistry::instance()->processStart();
   if (fd_ >= 0)
@@ -46,7 +45,6 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
 
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
-  debug(WAIT_PID, "-----------------------pid_ in constructor %d \n", pid_);
 
   ProcessRegistry::instance()->processes_lock_.acquire();
   ProcessRegistry::instance()->processes_.push_back(this);
@@ -68,18 +66,21 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
     terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"),
-    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
+    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable(),
+    process_state_lock_("process_state_lock_")
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
   pid_ = ArchThreads::atomic_add(pid_counter_, 1);
-  debug(WAIT_PID, "-----------------------pid_ in cpy constructor %d \n", pid_);
 
   assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
-  other.loader_->arch_memory_.lock_.acquire();
+
+  InvertedPageTable::instance()->ipt_lock_.acquire();
+  other.loader_->arch_memory_.archmemory_lock_.acquire();
   loader_ = new Loader(*other.loader_, fd_);
-  other.loader_->arch_memory_.lock_.release();
+  other.loader_->arch_memory_.archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
   if (!loader_){assert(0 && "No loader in fork");}
 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
@@ -203,7 +204,9 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
 
   uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
-  arch_memory->lock_.acquire();
+
+  InvertedPageTable::instance()->ipt_lock_.acquire();
+  arch_memory->archmemory_lock_.acquire();
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
     if (arch_memory->checkAddressValid(top_stack))
@@ -217,7 +220,8 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
       continue;
     }
   }
-  arch_memory->lock_.release();
+  arch_memory->archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
 
   debug(SYSCALL, "pthreadExit: Unmapping thread's stack done\n");
 }
@@ -317,6 +321,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
 
   //allocate one (or two) physical pages for the arguments
+  InvertedPageTable::instance()->ipt_lock_.acquire();
+  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
   size_t page_for_args = PageManager::instance()->allocPPN();
   size_t next_page_for_args = NULL;
 
@@ -324,6 +330,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     next_page_for_args = PageManager::instance()->allocPPN();
   }
+  currentThread->loader_->arch_memory_.archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
 
 
   size_t offset = 0;
@@ -373,7 +381,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
   
   //map the argument page(s)
-  loader_->arch_memory_.lock_.acquire();
+  InvertedPageTable::instance()->ipt_lock_.acquire();
+  loader_->arch_memory_.archmemory_lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1);
   assert(vpn_mapped &&  "Virtual page already mapped.");
   if(next_page_for_args)
@@ -382,7 +391,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     assert(vpn_mapped && "Virtual page already mapped.");
 
   }
-  loader_->arch_memory_.lock_.release();
+  loader_->arch_memory_.archmemory_lock_.release();
+  InvertedPageTable::instance()->ipt_lock_.release();
   return 0;
 }
 

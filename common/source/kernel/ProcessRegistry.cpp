@@ -7,6 +7,8 @@
 #include "VirtualFileSystem.h"
 #include "PageManager.h"
 #include "Mutex.h"
+#include "SwappingManager.h"
+
 
 ProcessRegistry* ProcessRegistry::instance_ = 0;
 
@@ -49,6 +51,8 @@ void ProcessRegistry::Run()
 
     KernelMemoryManager::instance()->startTracing();
 
+    SwappingManager* swapping_manager = new SwappingManager();
+
     for (uint32 i = 0; progs_[i]; i++)
     {
         createProcess(progs_[i]);
@@ -60,6 +64,8 @@ void ProcessRegistry::Run()
         all_processes_killed_.wait();
 
     counter_lock_.release();
+
+    delete swapping_manager;
 
     debug(PROCESS_REG, "unmounting userprog-partition because all processes terminated \n");
 

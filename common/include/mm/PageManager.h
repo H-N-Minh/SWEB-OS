@@ -4,6 +4,8 @@
 #include "paging-definitions.h"
 #include "SpinLock.h"
 #include "Mutex.h"
+#include "SwappingManager.h"
+#include "InvertedPageTable.h"
 
 #include "umap.h"
 
@@ -55,15 +57,13 @@ class PageManager
 
     uint32 getNumPagesForUser() const;
 
-//    struct PageInfo{
-//        uint32 reference_count;
-//    };
-    // <ppn, count>
+
     ustl::map<uint32, uint32> page_reference_counts_;
     Mutex page_reference_counts_lock_;
 
-    void incrementReferenceCount(uint64 page_number);
-    void decrementReferenceCount(uint64 page_number);
+    void incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype);
+    void decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype);
+    void setReferenceCount(uint64 page_number, uint32 reference_count);
 
     uint32 getReferenceCount(uint64 page_number);
 
@@ -82,4 +82,8 @@ class PageManager
     static PageManager* instance_;
 
     size_t HEAP_PAGES;
+
+    inline static int possible_ppn_ = 1009; //TODOs:not atomic and bad
+
+    size_t findPageToSwapOut();
 };

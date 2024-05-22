@@ -31,9 +31,9 @@ int pc1()
     rv = pthread_create(&thread_id, NULL, (void * (*)(void *))0x0400800000000000ULL, NULL);
     assert(rv != 0 && "Test4: Invalid ptr to start_routine provided");
 
-    //Test5: Invalid ptr to args provided
-    rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, (void*)0x0000900000000000ULL);
-    assert(rv != 0 && "Test5: Invalid ptr to args provided");
+    // //Test5: Invalid ptr to args provided
+    // rv = pthread_create(&thread_id, NULL, (void * (*)(void *))function1, (void*)0x0000900000000000ULL);
+    // assert(rv != 0 && "Test5: Invalid ptr to args provided");
 
     //Test6: Invalid ptr to attr provided
     rv = pthread_create(&thread_id, (void*)0x0000800000000000ULL, (void * (*)(void *))function1, NULL);

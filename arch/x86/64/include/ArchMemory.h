@@ -1,11 +1,10 @@
 #pragma once
 
+#include "InvertedPageTable.h"
 #include "types.h"
 #include "offsets.h"
 #include "paging-definitions.h"
 #include "Mutex.h"
-
-#include "InvertedPageTable.h"
 
 struct ArchMemoryMapping
 {
@@ -37,11 +36,11 @@ class ArchMemory
     
     uint64 page_map_level_4_;
     
-    //Mutex archmemory_lock_; 
+
 
     static constexpr size_t RESERVED_START = 0xFFFFFFFF80000ULL;
     static constexpr size_t RESERVED_END = 0xFFFFFFFFC0000ULL;
-    Mutex lock_;
+    Mutex archmemory_lock_;
 
     /**
      * Maps a virtual page to a physical page and creates the upper paging-hierarchy tables on demand.
@@ -109,15 +108,16 @@ class ArchMemory
     void deleteEverythingExecpt(size_t virtual_page);
 
     bool isCOW(size_t virtual_addr);
+    bool isSwapped(size_t virtual_addr);
 
     void copyPage(size_t virtual_addr);
 
-    InvertedPageTable invertedPageTable_;
+    bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
+    size_t getDiskLocation(size_t vpn);
+    bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
 
-    size_t zero_page_ppn_;
-
-    bool isZeroPage(pointer page);
-    void getZeroFilledPagePPN(size_t* zero_page_ppn);
+    size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
+    MAPTYPE getMapType(PageTableEntry& pt_entry);
 
   private:
     /**
@@ -143,4 +143,5 @@ class ArchMemory
      * @return True if the table map_ptr is full of zeroes and thus able to be freed.
      */
     template<typename T> static bool checkAndRemove(pointer map_ptr, uint64 index);
+
 };

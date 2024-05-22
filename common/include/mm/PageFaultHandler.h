@@ -2,6 +2,15 @@
 
 #include "types.h"
 
+#define PRESENT 3
+#define INVALID 0
+#define VALID 1
+#define GROWING_STACK_VALID 69
+#define USER 5
+#define ERROR 11
+#define NOT_RELATED_TO_GROWING_STACK 17
+#define GROWING_STACK_FAILED 18
+
 class PageFaultHandler
 {
 private:
@@ -49,4 +58,7 @@ public:
   static void enterPageFault(size_t address, bool user,
                              bool present, bool writing,
                              bool fetch);
+
+  static int checkGrowingStack(size_t address);
+  static void errorInPageFaultKillProcess();
 };
