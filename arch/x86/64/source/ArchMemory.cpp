@@ -23,7 +23,7 @@ ArchMemory::ArchMemory():lock_("archmemory_lock_")
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
 
-  getZeroFilledPagePPN(&zero_page_ppn_);
+  //getZeroFilledPagePPN(&zero_page_ppn_);
 
   lock_.release();
 }
@@ -576,26 +576,23 @@ void ArchMemory::copyPage(size_t virtual_addr)
     debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
     pointer original_page = getIdentAddressOfPPN(pml1_entry->page_ppn);
 
-    if(isZeroPage(original_page))
-    {
-      //pointer new_page = zero_page_;
-      debug(FORK, "ArchMemory::copyPage zero page case\n");
-      pm->decrementReferenceCount(pml1_entry->page_ppn);
-      pml1_entry->page_ppn = zero_page_ppn_;
-      pm->incrementReferenceCount(pml1_entry->page_ppn);
-    }
-    else
-    {
+//    if(isZeroPage(original_page))
+//    {
+//      //pointer new_page = zero_page_;
+//      debug(COW, "---------------------ArchMemory::copyPage zero page case\n");
+//      pm->decrementReferenceCount(pml1_entry->page_ppn);
+//      pml1_entry->page_ppn = zero_page_ppn_;
+//      pm->incrementReferenceCount(pml1_entry->page_ppn);
+//    }
+
       size_t new_page_ppn = pm->allocPPN();
       pointer new_page = getIdentAddressOfPPN(new_page_ppn);
       memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
-      debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
+      debug(COW, "ArchMemory::copyPage update the ref count for old page and new page\n");
       pm->decrementReferenceCount(pml1_entry->page_ppn);
       pml1_entry->page_ppn = new_page_ppn;
       pm->incrementReferenceCount(pml1_entry->page_ppn);
-    }
-
 
 
   }
