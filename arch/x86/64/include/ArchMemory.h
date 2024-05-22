@@ -48,7 +48,7 @@ class ArchMemory
      * @param user_access PTE flag indicating whether the virtual page shall be accessible by threads in user-mode
      * @return True if successful, false otherwise (the PT entry already exists)
      */
-    [[nodiscard]] bool mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access);
+    bool mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access);
 
     /**
      * Removes the mapping to a virtual_page by marking its PTE entry as non-valid and frees the underlying physical page.
