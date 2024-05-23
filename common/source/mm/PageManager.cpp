@@ -40,7 +40,9 @@ PageManager* PageManager::instance()
  * The lock is created in the constructor and is passed a name to uniquely identify it.
  * This allows for easier debugging and tracking of locks.
  */
-PageManager::PageManager() : page_reference_counts_lock_("page_reference_counts_lock_"), page_manager_lock_("PageManager::page_manager_lock_")
+PageManager::PageManager() 
+    : ref_count_lock_("PageManager::ref_count_lock_"),
+      page_manager_lock_("PageManager::page_manager_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -230,7 +232,7 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
  */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
-  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
   uint32 p;
   uint32 found = 0;
   assert((page_size % PAGE_SIZE) == 0);
@@ -326,14 +328,14 @@ uint32 PageManager::getNumPagesForUser() const
   return num_pages_for_user_;
 }
 
-void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
+void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype)
 {
   debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
-  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  assert(ref_count_lock_.heldBy() == currentThread);
 
-  InvertedPageTable::instance()->addVirtualPageInfo(offset, vpn, archmemory, maptype);
+  IPTManager::instance()->insertEntryIPT(maptype, offset, vpn, archmemory);
 
-  if(maptype == MAPTYPE::IPT_DISK)
+  if(maptype == IPTMapType::DISK_MAP)
   {
     return;
   }
@@ -353,14 +355,14 @@ void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 
 }
 
-void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
+void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype)
 {
   debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
-  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  assert(ref_count_lock_.heldBy() == currentThread);
 
-  InvertedPageTable::instance()->removeVirtualPageInfo(offset, vpn, archmemory, maptype);
+  IPTManager::instance()->removeEntryIPT(maptype, offset, vpn, archmemory);
 
-  if(maptype == MAPTYPE::IPT_DISK)
+  if(maptype == IPTMapType::DISK_MAP)
   {
     return;
   }
@@ -383,13 +385,13 @@ void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 
 void PageManager::setReferenceCount(uint64 page_number, uint32 reference_count)
 {
-  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  assert(ref_count_lock_.heldBy() == currentThread);
   page_reference_counts_[page_number] = reference_count;
 }
 
 uint32 PageManager::getReferenceCount(uint64 page_number)
 {
-  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  assert(ref_count_lock_.heldBy() == currentThread);
   // Check if the page number is in the map
   auto it = page_reference_counts_.find(static_cast<uint32>(page_number));
   if (it != page_reference_counts_.end())
@@ -414,7 +416,7 @@ size_t PageManager::findPageToSwapOut()
     {
       possible_ppn_ = 1009;
     }
-    key_in_ipt = InvertedPageTable::instance()->KeyisInMap(possible_ppn_, MAPTYPE::IPT_RAM);
+    key_in_ipt = IPTManager::instance()->KeyisInMap(possible_ppn_, IPTMapType::RAM_MAP);
   }
   return possible_ppn_;
 }

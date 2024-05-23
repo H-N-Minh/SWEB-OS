@@ -1,10 +1,10 @@
 #pragma once
 
-#include "InvertedPageTable.h"
+#include "IPTManager.h"
+#include "Mutex.h"
 #include "types.h"
 #include "offsets.h"
 #include "paging-definitions.h"
-#include "Mutex.h"
 
 struct ArchMemoryMapping
 {
@@ -117,7 +117,7 @@ class ArchMemory
     bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
 
     size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
-    MAPTYPE getMapType(PageTableEntry& pt_entry);
+    IPTMapType getMapType(PageTableEntry& pt_entry);
 
   private:
     /**

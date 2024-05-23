@@ -2,8 +2,10 @@
 
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
-#include "InvertedPageTable.h"
 
+#include "IPTManager.h"
+
+class IPTEntry;
 class SwappingManager
 {
   public:
@@ -16,14 +18,14 @@ class SwappingManager
     void swapOutPage(size_t ppn);
     int swapInPage(size_t vpn);
 
-    void lock_archmemories_in_right_order(ustl::vector<VirtualPageInfo*> virtual_page_infos);
-    void unlock_archmemories(ustl::vector<VirtualPageInfo*> virtual_page_infos);
+    void lock_archmemories_in_right_order(ustl::vector<IPTEntry*> virtual_page_infos);
+    void unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_infos);
 
     Mutex disk_lock_;
 
   private:
     static SwappingManager* instance_;
-    InvertedPageTable* ipt_;
+    IPTManager* ipt_;
 
     BDVirtualDevice* bd_device_;
 
