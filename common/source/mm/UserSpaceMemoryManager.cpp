@@ -23,6 +23,7 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
 
 pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
 {
+  assert(0);
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd) and already locked %ld\n", size, already_locked);
 
   // if (!already_locked) {
@@ -141,6 +142,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
 
 int UserSpaceMemoryManager::brk(size_t new_break_addr)
 {
+  assert(0);
   debug(SBRK, "UserSpaceMemoryManager::brk called with new break address (%zx)\n", new_break_addr);
   assert(new_break_addr >= heap_start_ && "UserSpaceMemoryManager::brk: new break is below heap start");
   assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
