@@ -34,9 +34,8 @@ SwappingManager::~SwappingManager()
 //does only work if the page to swap out is also in the archmemory of the current thread
 void SwappingManager::swapOutPage(size_t ppn)
 {
-  // assert(0 && "Tried swapping out - not working correctly yet");
-  assert(ipt_->IPT_lock_.heldBy() == currentThread);
-  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread);
+  IPTManager::instance()->IPT_lock_.acquire();
+  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();     //TODO: remove!!!
 
 
   //Find free disk_offset (TODOs)
@@ -80,12 +79,16 @@ void SwappingManager::swapOutPage(size_t ppn)
 
   unlock_archmemories(virtual_page_infos);
 
+  IPTManager::instance()->IPT_lock_.release();
+  currentThread->loader_->arch_memory_.archmemory_lock_.release();     //TODO: remove!!!
  
   // PageManager::instance()->freePPN(ppn);
+
+
 }
 
 //Only works if the page i want to swap in is in the archmemory of current thread
-int SwappingManager::swapInPage(size_t vpn)
+int SwappingManager::swapInPage(size_t vpn, ustl::vector<size_t>& ppns)
 {
   //  assert(0 && "Tried swapping in - not working correctly yet");
   // debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with vpn %ld.\n", vpn);
@@ -96,7 +99,7 @@ int SwappingManager::swapInPage(size_t vpn)
  
  //Get disk_offset and new ppn
   size_t disk_offset = archmemory.getDiskLocation(vpn);  
-  size_t ppn = PageManager::instance()->allocPPN(PAGE_SIZE);
+  size_t ppn = PageManager::instance()->getPreAlocatedPage(ppns);
 
   //Move Page infos from  ipt_map_disk to ipt_map_ram
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with disk_offset %ld to ppn %ld.\n", disk_offset, ppn);

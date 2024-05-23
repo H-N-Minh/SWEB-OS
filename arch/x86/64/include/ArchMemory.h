@@ -49,7 +49,7 @@ class ArchMemory
      * @param user_access PTE flag indicating whether the virtual page shall be accessible by threads in user-mode
      * @return True if successful, false otherwise (the PT entry already exists)
      */
-    [[nodiscard]] bool mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access);
+    [[nodiscard]] bool mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access, ustl::vector<size_t>& ppns);
 
     /**
      * Removes the mapping to a virtual_page by marking its PTE entry as non-valid and frees the underlying physical page.
@@ -101,7 +101,7 @@ class ArchMemory
     static PageMapLevel4Entry* getRootOfKernelPagingStructure();
 
     /// Prevents accidental copying/assignment, can be implemented if needed
-    ArchMemory(ArchMemory const &src);
+    ArchMemory(ArchMemory const &src, ustl::vector<size_t>& ppns);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
     
@@ -110,7 +110,7 @@ class ArchMemory
     bool isCOW(size_t virtual_addr);
     bool isSwapped(size_t virtual_addr);
 
-    void copyPage(size_t virtual_addr);
+    void copyPage(size_t virtual_addr, ustl::vector<size_t>& ppns);
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     size_t getDiskLocation(size_t vpn);
@@ -118,6 +118,8 @@ class ArchMemory
 
     size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
     IPTMapType getMapType(PageTableEntry& pt_entry);
+
+    int count_allocations();
 
   private:
     /**

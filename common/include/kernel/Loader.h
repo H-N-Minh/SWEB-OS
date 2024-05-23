@@ -13,7 +13,7 @@ class Loader
 {
   public:
     Loader(ssize_t fd);
-    Loader(const Loader &src, int32 fd);
+    Loader(const Loader &src, int32 fd, ustl::vector<size_t>& ppns);
     ~Loader();
 
     /**
@@ -27,7 +27,7 @@ class Loader
      * Gets a free physical page, copies the contents of the binary to it, and then maps it.
      * @param virtual_address virtual address where to find the page to load
      */
-    void loadPage(pointer virtual_address);
+    void loadPage(pointer virtual_address, ustl::vector<size_t>& ppns);
 
     /**
      * Return the start address of Heap

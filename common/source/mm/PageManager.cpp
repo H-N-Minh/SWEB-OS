@@ -232,7 +232,6 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
  */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
-  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
   uint32 p;
   uint32 found = 0;
   assert((page_size % PAGE_SIZE) == 0);
@@ -420,3 +419,32 @@ size_t PageManager::findPageToSwapOut()
   }
   return possible_ppn_;
 }
+
+ustl::vector<size_t> PageManager::preAlocatePages(int needed_pages_count)
+{
+  ustl::vector<size_t> pre_alocated_pages;
+  for(int i = 0; i < needed_pages_count; i++)
+  {
+    size_t ppn = allocPPN();
+    pre_alocated_pages.push_back(ppn);
+  }
+  return pre_alocated_pages;
+}
+
+void PageManager::releaseNotNeededPages(ustl::vector<size_t>& not_used_pages)
+{
+  for(auto& ppn : not_used_pages)
+  {
+    freePPN(ppn);
+  }
+  not_used_pages.clear();
+}
+
+size_t PageManager::getPreAlocatedPage(ustl::vector<size_t>& pre_alocated_pages)
+{
+  assert(pre_alocated_pages.size() != 0 && "No more page available");
+  size_t ppn = pre_alocated_pages.back();
+  pre_alocated_pages.pop_back();
+  return ppn;
+}
+

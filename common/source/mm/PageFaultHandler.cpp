@@ -69,6 +69,8 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
 
   assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
+  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(4);
+
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
@@ -76,13 +78,13 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
     if(currentThread->loader_->arch_memory_.isSwapped(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE);
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
       currentThread->loader_->arch_memory_.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
     }
     else
     {
-      currentThread->loader_->loadPage(address);
+      currentThread->loader_->loadPage(address, ppns);
       currentThread->loader_->arch_memory_.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
     }
@@ -91,7 +93,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
   {
     debug(PAGEFAULT_TEST, "is COW, copying Page\n");
-    currentThread->loader_->arch_memory_.copyPage(address);
+    currentThread->loader_->arch_memory_.copyPage(address, ppns);
     currentThread->loader_->arch_memory_.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
   }
@@ -120,8 +122,11 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   // }
   else  //status INVALID
   {
+    PageManager::instance()-> releaseNotNeededPages(ppns);
     errorInPageFaultKillProcess();
   }
+
+  PageManager::instance()->releaseNotNeededPages(ppns);
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 
