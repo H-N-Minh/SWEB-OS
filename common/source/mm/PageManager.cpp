@@ -331,7 +331,7 @@ uint32 PageManager::getNumPagesForUser() const
 void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
 {
   debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
-  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  assert(ref_count_lock_.heldBy() == currentThread);
 
   InvertedPageTable::instance()->addVirtualPageInfo(offset, vpn, archmemory, maptype);
 
@@ -358,7 +358,7 @@ void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype)
 {
   debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
-  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  assert(ref_count_lock_.heldBy() == currentThread);
 
   InvertedPageTable::instance()->removeVirtualPageInfo(offset, vpn, archmemory, maptype);
 
@@ -385,7 +385,7 @@ void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 
 void PageManager::setReferenceCount(uint64 page_number, uint32 reference_count)
 {
-  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  assert(ref_count_lock_.heldBy() == currentThread);
   page_reference_counts_[page_number] = reference_count;
 }
 

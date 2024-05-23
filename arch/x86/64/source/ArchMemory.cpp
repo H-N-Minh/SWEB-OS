@@ -102,13 +102,13 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   MAPTYPE maptype = getMapType(PARENT_pt[pti]);
-                  PageManager::instance()->page_reference_counts_lock_.acquire();
+                  PageManager::instance()->ref_count_lock_.acquire();
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
                   assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
 
                   // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
                   //                                                                              PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
-                  PageManager::instance()->page_reference_counts_lock_.release();
+                  PageManager::instance()->ref_count_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
@@ -153,7 +153,7 @@ ArchMemory::~ArchMemory()
               {
                 if (pt[pti].present)
                 {
-                  PageManager::instance()->page_reference_counts_lock_.acquire();
+                  PageManager::instance()->ref_count_lock_.acquire();
                   pt[pti].present = 0;
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
@@ -161,7 +161,7 @@ ArchMemory::~ArchMemory()
 
                   PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
                   debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
-                  PageManager::instance()->page_reference_counts_lock_.release();
+                  PageManager::instance()->ref_count_lock_.release();
                 }
               }
               pd[pdi].pt.present = 0;
@@ -223,17 +223,17 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
 
   MAPTYPE maptype = getMapType((m.pt[m.pti]));
 
-  PageManager::instance()->page_reference_counts_lock_.acquire();
+  PageManager::instance()->ref_count_lock_.acquire();
   PageManager::instance()->decrementReferenceCount(m.page_ppn, virtual_page, this, maptype);
   debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
   
   if(PageManager::instance()->getReferenceCount(m.page_ppn) > 0)
   {
-    PageManager::instance()->page_reference_counts_lock_.release();
+    PageManager::instance()->ref_count_lock_.release();
     return true;
   }
 
-  PageManager::instance()->page_reference_counts_lock_.release();
+  PageManager::instance()->ref_count_lock_.release();
 
 
 
@@ -311,13 +311,13 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
-    PageManager::instance()->page_reference_counts_lock_.acquire();
+    PageManager::instance()->ref_count_lock_.acquire();
 
     MAPTYPE maptype = getMapType(((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti]);
     PageManager::instance()->incrementReferenceCount(page_ppn, virtual_page, this, maptype);
 
     debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
-    PageManager::instance()->page_reference_counts_lock_.release();
+    PageManager::instance()->ref_count_lock_.release();
 
     return true;
   }
@@ -490,14 +490,14 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                 {
                   if(m.page_ppn != pt[pti].page_ppn)
                   {
-                    PageManager::instance()->page_reference_counts_lock_.acquire();
+                    PageManager::instance()->ref_count_lock_.acquire();
 
                     size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                     MAPTYPE maptype = getMapType(pt[pti]);
                     PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
                     debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                     ((uint64*)pt)[pti] = 0;
-                    PageManager::instance()->page_reference_counts_lock_.release();
+                    PageManager::instance()->ref_count_lock_.release();
                   }
                 }
               }

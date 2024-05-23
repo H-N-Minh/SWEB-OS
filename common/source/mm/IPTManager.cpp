@@ -9,7 +9,7 @@
 IPTEntry::IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem) : ppn(ppn), vpn(vpn), archmem(archmem) {}
 
 bool IPTEntry::isLocked() {
-  return archmem->lock_.isHeldBy((Thread*) currentThread);
+  return archmem->archmemory_lock_.isHeldBy((Thread*) currentThread);
 }
 
 
@@ -45,7 +45,7 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
 {
   debug(SWAPPING, "IPTManager::insertEntryIPT: inserting ppn: %zu, vpn: %zu, archmem: %zu\n", ppn, vpn, (size_t) archmem);
   assert(map_type == IPTMapType::NONE && archmem && "IPTManager::insertEntryIPT called with a nullptr argument\n");
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertEntryIPT called without fully locking\n");
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertEntryIPT called without fully locking\n");
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   // TODO: check if the entry already exists in the map. If it does, assert fail
@@ -60,7 +60,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   // Error checking
   debug(SWAPPING, "IPTManager::removeEntryIPT: removing ppn: %zx, archmem: %zx\n", ppn, (size_t) archmem);
   assert(map_type == IPTMapType::NONE && archmem && "IPTManager::removeEntryIPT called with a nullptr argument\n");
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntryIPT called but not fully locked\n");
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntryIPT called but not fully locked\n");
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   

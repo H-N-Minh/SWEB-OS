@@ -98,24 +98,24 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not unmap page\n");
           current_break_ = old_break;
-          if (!already_locked)
-          {
-            loader_->arch_memory_.lock_.release();
-            // PageManager::instance()->IPT_lock_.release();
-            lock_.release();
-          }
+          // if (!already_locked)
+          // {
+          //   loader_->arch_memory_.lock_.release();
+          //   // PageManager::instance()->IPT_lock_.release();
+          //   lock_.release();
+          // }
           return 0;
         }
         old_top_vpn--;
       }
     }
     debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successful, new break value is %zx\n", current_break_);
-    if (!already_locked)
-    {
-      loader_->arch_memory_.lock_.release();
-      // PageManager::instance()->IPT_lock_.release();
-      lock_.release();
-    }
+    // if (!already_locked)
+    // {
+    //   loader_->arch_memory_.lock_.release();
+    //   // PageManager::instance()->IPT_lock_.release();
+    //   lock_.release();
+    // }
     assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
     assert(current_break_ <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: current break is above heap limit");
     return (pointer) old_break;
@@ -124,12 +124,12 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
   {
     debug(SBRK, "UserSpaceMemoryManager::sbrk: returning current break value without changing it %zx\n", current_break_);
     pointer old_break = (pointer) current_break_;
-    if (!already_locked)
-    {
-      loader_->arch_memory_.lock_.release();
-      // PageManager::instance()->IPT_lock_.release();
-      lock_.release();
-    }
+    // if (!already_locked)
+    // {
+    //   loader_->arch_memory_.lock_.release();
+    //   // PageManager::instance()->IPT_lock_.release();
+    //   lock_.release();
+    // }
     return old_break;
   }
 }
