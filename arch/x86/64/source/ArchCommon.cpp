@@ -292,7 +292,7 @@ void ArchCommon::drawStat() {
 
     char buffer_pages_ram[33];
     memset(buffer_pages_ram, '\0', sizeof(buffer_pages_ram));
-    int pages_ram = InvertedPageTable::instance() ? InvertedPageTable::instance()->getNumPagesInMap(MAPTYPE::IPT_RAM) : 0;
+    int pages_ram = IPTManager::instance() ? IPTManager::instance()->getNumPagesInMap(IPTMapType::RAM_MAP) : 0;
     itoa(pages_ram, buffer_pages_ram, 10);
 
     for(size_t i = 0; (i < sizeof(buffer_pages_ram)) && (buffer_pages_ram[i] != '\0'); ++i)
@@ -302,7 +302,7 @@ void ArchCommon::drawStat() {
 
     char buffer_pages_disk[33];
     memset(buffer_pages_disk, '\0', sizeof(buffer_pages_disk));
-    int pages_disk = InvertedPageTable::instance() ? InvertedPageTable::instance()->getNumPagesInMap(MAPTYPE::IPT_DISK) : 0;
+    int pages_disk = IPTManager::instance() ? IPTManager::instance()->getNumPagesInMap(IPTMapType::DISK_MAP) : 0;
     itoa(pages_disk, buffer_pages_disk, 10);
 
     for(size_t i = 0; (i < sizeof(buffer_pages_disk)) && (buffer_pages_disk[i] != '\0'); ++i)

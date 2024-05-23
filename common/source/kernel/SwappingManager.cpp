@@ -13,7 +13,7 @@ SwappingManager::SwappingManager() : disk_lock_("disk_lock_")
   assert(!instance_);
   instance_ = this;
    //TODOs needs to be deleted at some point
-  ipt_ = new InvertedPageTable();          
+  ipt_ = new IPTManager();          
   bd_device_ = BDManager::getInstance()->getDeviceByNumber(3);
   bd_device_->setBlockSize(PAGE_SIZE);
   debug(SWAPPING, "Blocksize %d.\n", bd_device_->getBlockSize());
@@ -45,16 +45,16 @@ void SwappingManager::swapOutPage(size_t ppn)
 
   //Move Page infos from ipt_map_ram to ipt_map_disk
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset);
-  ustl::vector<VirtualPageInfo*> virtual_page_infos = ipt_-> moveToOtherMap(ppn, disk_offset, MAPTYPE::IPT_RAM, MAPTYPE::IPT_DISK);
+  ustl::vector<IPTEntry*> virtual_page_infos = ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
 
   lock_archmemories_in_right_order(virtual_page_infos);
 
   ArchMemory* archmemory = NULL;
   size_t vpn = 0;
-  for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
+  for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    archmemory = virtual_page_info->arch_memory_;
-    vpn = virtual_page_info->vpn_;
+    archmemory = virtual_page_info->archmem;
+    vpn = virtual_page_info->vpn;
   }
 
 
@@ -67,10 +67,10 @@ void SwappingManager::swapOutPage(size_t ppn)
   bd_device_->writeData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
   disk_lock_.release();
 
-  for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
+  for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    archmemory = virtual_page_info->arch_memory_;
-    vpn = virtual_page_info->vpn_;
+    archmemory = virtual_page_info->archmem;
+    vpn = virtual_page_info->vpn;
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
   }
 
@@ -100,14 +100,14 @@ int SwappingManager::swapInPage(size_t vpn)
 
   //Move Page infos from  ipt_map_disk to ipt_map_ram
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with disk_offset %ld to ppn %ld.\n", disk_offset, ppn);
-  ustl::vector<VirtualPageInfo*> virtual_page_infos = ipt_->moveToOtherMap(disk_offset, ppn, MAPTYPE::IPT_DISK, MAPTYPE::IPT_RAM);
+  ustl::vector<IPTEntry*> virtual_page_infos = ipt_->moveEntry(IPTMapType::DISK_MAP, disk_offset, ppn);
 
 
 
-  for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
+  for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    ArchMemory* archmemory = virtual_page_info->arch_memory_;
-    size_t vpn = virtual_page_info->vpn_;
+    ArchMemory* archmemory = virtual_page_info->archmem;
+    size_t vpn = virtual_page_info->vpn;
     archmemory->updatePageTableEntryForSwapIn(vpn, ppn);
   }
 
@@ -130,11 +130,11 @@ int SwappingManager::swapInPage(size_t vpn)
 
 
 //TODOs: Does not lock them in the right order yet and does not lock current thread
-void SwappingManager::lock_archmemories_in_right_order(ustl::vector<VirtualPageInfo*> virtual_page_infos)
+void SwappingManager::lock_archmemories_in_right_order(ustl::vector<IPTEntry*> virtual_page_infos)
 {
-  for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
+  for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    ArchMemory* archmemory = virtual_page_info->arch_memory_;
+    ArchMemory* archmemory = virtual_page_info->archmem;
     if(archmemory != &currentThread->loader_->arch_memory_)
     {
       archmemory->archmemory_lock_.acquire();
@@ -144,11 +144,11 @@ void SwappingManager::lock_archmemories_in_right_order(ustl::vector<VirtualPageI
 
 
 //TODOs: Does at the moment not unlock the current thread
-void SwappingManager::unlock_archmemories(ustl::vector<VirtualPageInfo*> virtual_page_infos)
+void SwappingManager::unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_infos)
 {
-  for(VirtualPageInfo* virtual_page_info : virtual_page_infos)
+  for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    ArchMemory* archmemory = virtual_page_info->arch_memory_;
+    ArchMemory* archmemory = virtual_page_info->archmem;
     if(archmemory != &currentThread->loader_->arch_memory_)
     {
       archmemory->archmemory_lock_.release();

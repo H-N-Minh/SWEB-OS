@@ -4,10 +4,14 @@
 #include "paging-definitions.h"
 #include "SpinLock.h"
 #include "Mutex.h"
+#include "IPTManager.h"
 #include "SwappingManager.h"
-#include "InvertedPageTable.h"
+
+
 
 #include "umap.h"
+
+class ArchMemory;
 
 #define DYNAMIC_KMM (0) // Please note that this means that the KMM depends on the page manager
 // and you will have a harder time implementing swapping. Pros only!
@@ -63,8 +67,8 @@ class PageManager
     ustl::map<uint32, uint32> page_reference_counts_;
     Mutex ref_count_lock_;
 
-    void incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype);
-    void decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype);
+    void incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype);
+    void decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype);
     void setReferenceCount(uint64 page_number, uint32 reference_count);
 
     uint32 getReferenceCount(uint64 page_number);

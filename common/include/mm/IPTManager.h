@@ -4,14 +4,17 @@
 #include "umap.h"
 #include "umemory.h"
 #include "umultimap.h"
+#include "Mutex.h"
+
+enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
+
 #include "ArchMemory.h"
-#include "PageManager.h"
 
 typedef size_t ppn_t;
 typedef size_t diskoffset_t;
 
+class ArchMemory;
 
-enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
 
 class IPTEntry {
 public:
@@ -35,15 +38,16 @@ public:
 class IPTManager {
 public:
   Mutex IPT_lock_;          // lock both ram_map_ and disk_map_
-  ustl::multimap<ppn_t, ustl::shared_ptr<IPTEntry>> ram_map_;
-  ustl::multimap<diskoffset_t, ustl::shared_ptr<IPTEntry>> disk_map_;
+  ustl::multimap<ppn_t, IPTEntry*> ram_map_;
+  ustl::multimap<diskoffset_t, IPTEntry*> disk_map_;
   
   IPTManager();
+  ~IPTManager();
 
   static IPTManager *instance();
 
-  ustl::shared_ptr<IPTEntry> lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
-  ustl::shared_ptr<IPTEntry> lookupEntryInDisk(diskoffset_t diskOffset);
+  IPTEntry* lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
+  IPTEntry* lookupEntryInDisk(diskoffset_t diskOffset);
 
   /**
    * Insert the PTE to the entry (at key == ppn) of the Inverted Page Table or the Swapped Page Map.
@@ -69,8 +73,13 @@ public:
    * @param ppn_source The location of the entry currently
    * @param ppn_destination Location of the new entry in the destination map. This new entry must be empty.
   */
-  void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
+  ustl::vector<IPTEntry*> moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
+  int getNumPagesInMap(IPTMapType maptype);
+
+  bool KeyisInMap(size_t offset, IPTMapType maptype);
+
+  // ustl::vector<IPTEntry*> getPageInfosForPPN(size_t ppn); //TODOs
 
   /**
    * Locks the archmems in the order of lowest to highest address of the Mutex
@@ -81,5 +90,7 @@ public:
   private:
     static IPTManager* instance_;
 
+    int pages_in_ram_ = 0;  //TODOs: at the moment also increases when shared
+    int pages_on_disk_ = 0;  //TODOs: at the moment also increases when shared
   
 };

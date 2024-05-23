@@ -72,19 +72,19 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
-    InvertedPageTable::instance()->IPT_lock_.acquire();
+    IPTManager::instance()->IPT_lock_.acquire();
     currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
     if(currentThread->loader_->arch_memory_.isSwapped(address))
     {
       SwappingManager::instance()->swapInPage(address / PAGE_SIZE);
       currentThread->loader_->arch_memory_.archmemory_lock_.release();
-      InvertedPageTable::instance()->IPT_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
     }
     else
     {
       currentThread->loader_->loadPage(address);
       currentThread->loader_->arch_memory_.archmemory_lock_.release();
-      InvertedPageTable::instance()->IPT_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
     }
 
   }
@@ -93,15 +93,15 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     debug(PAGEFAULT_TEST, "is COW, copying Page\n");
     currentThread->loader_->arch_memory_.copyPage(address);
     currentThread->loader_->arch_memory_.archmemory_lock_.release();
-    InvertedPageTable::instance()->IPT_lock_.release();
+    IPTManager::instance()->IPT_lock_.release();
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
   // {
-    // InvertedPageTable::instance()->IPT_lock_.acquire();
+    // IPTManager::instance()->IPT_lock_.acquire();
     // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
     // int retval = checkGrowingStack(address);
     // currentThread->loader_->arch_memory_.archmemory_lock_.release();
-    //  InvertedPageTable::instance()->IPT_lock_.release();
+    //  IPTManager::instance()->IPT_lock_.release();
     // if (retval == GROWING_STACK_FAILED)
     // {
     //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");

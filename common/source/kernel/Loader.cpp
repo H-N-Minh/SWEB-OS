@@ -93,7 +93,7 @@ void Loader::loadPage(pointer virtual_address)
           {
             program_binary_lock_.release();
             arch_memory_.archmemory_lock_.release();
-            InvertedPageTable::instance()->IPT_lock_.release();
+            IPTManager::instance()->IPT_lock_.release();
             PageManager::instance()->freePPN(ppn);
             debug(LOADER, "ERROR! Some parts of the content could not be loaded from the binary.\n");
             Syscall::exit(999);
@@ -113,7 +113,7 @@ void Loader::loadPage(pointer virtual_address)
       PageManager::instance()->freePPN(ppn);
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
       arch_memory_.archmemory_lock_.release();
-      InvertedPageTable::instance()->IPT_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
       Syscall::exit(666);
     }
 
