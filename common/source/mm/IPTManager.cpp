@@ -14,8 +14,17 @@ bool IPTEntry::isLocked() {
 
 
 ////////////////////// IPTManager //////////////////////
+IPTManager* IPTManager::instance_ = nullptr;
 
-IPTManager::IPTManager() : IPT_lock_("IPTManager::IPT_lock_") {}
+IPTManager::IPTManager() : IPT_lock_("IPTManager::IPT_lock_") {
+  assert(!instance_);
+  instance_ = this;
+}
+
+IPTManager* IPTManager::instance()
+{
+  return instance_;
+}
 
 ustl::shared_ptr<IPTEntry> IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem) {
   debug(IPT, "IPTManager::lookupEntryInRAM: Looking up entry in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
@@ -119,15 +128,6 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
     // Remove the entry from the source map
     source_map->erase(ppn_source);
   }
-}
-
-IPTMapType IPTManager::isInWhichMap(uint64 ppn)
-{
-  if (ram_map_.find(ppn) != ram_map_.end())
-    return IPTMapType::RAM_MAP;
-  if (disk_map_.find(ppn) != disk_map_.end())
-    return IPTMapType::DISK_MAP;
-  return IPTMapType::NONE;
 }
 
 template<typename... Args>

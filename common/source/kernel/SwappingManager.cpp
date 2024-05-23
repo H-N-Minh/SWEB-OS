@@ -35,7 +35,7 @@ SwappingManager::~SwappingManager()
 void SwappingManager::swapOutPage(size_t ppn)
 {
   // assert(0 && "Tried swapping out - not working correctly yet");
-  assert(ipt_->ipt_lock_.heldBy() == currentThread);
+  assert(ipt_->IPT_lock_.heldBy() == currentThread);
   assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread);
 
 
@@ -91,7 +91,7 @@ int SwappingManager::swapInPage(size_t vpn)
   // debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with vpn %ld.\n", vpn);
   ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
   
-  assert(ipt_->ipt_lock_.heldBy() == currentThread);
+  assert(ipt_->IPT_lock_.heldBy() == currentThread);
   assert(archmemory.archmemory_lock_.heldBy() == currentThread);
  
  //Get disk_offset and new ppn

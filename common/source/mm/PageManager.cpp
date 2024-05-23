@@ -232,7 +232,7 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
  */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
-  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->IPT_lock_.heldBy() == currentThread);
   uint32 p;
   uint32 found = 0;
   assert((page_size % PAGE_SIZE) == 0);

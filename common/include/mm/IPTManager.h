@@ -40,6 +40,8 @@ public:
   
   IPTManager();
 
+  static IPTManager *instance();
+
   ustl::shared_ptr<IPTEntry> lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
   ustl::shared_ptr<IPTEntry> lookupEntryInDisk(diskoffset_t diskOffset);
 
@@ -69,15 +71,15 @@ public:
   */
   void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
-  /**
-   * based on the given address, check which map the entry is in currently.
-   * @return IPTMapType that indicates which map currently has this ppn as key. 0 if not found in both.
-  */
-  IPTMapType isInWhichMap(size_t ppn);
 
   /**
    * Locks the archmems in the order of lowest to highest address of the Mutex
   */
   template<typename... Args>
   void lockArchmemInOrder(Args... args);
+
+  private:
+    static IPTManager* instance_;
+
+  
 };

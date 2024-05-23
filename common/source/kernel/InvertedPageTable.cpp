@@ -8,7 +8,7 @@
 
 InvertedPageTable* InvertedPageTable::instance_ = nullptr;
 
-InvertedPageTable::InvertedPageTable():ipt_lock_("ipt_lock_")
+InvertedPageTable::InvertedPageTable():IPT_lock_("IPT_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -67,7 +67,7 @@ InvertedPageTable::~InvertedPageTable()
 bool InvertedPageTable::KeyisInMap(size_t key, MAPTYPE map_type) //key ppn or disk_offset
 {
   debug(IPT, "InvertedPageTable::KeyisInMap: Check if key %ld is in map %s.\n", key, (map_type == MAPTYPE::IPT_RAM)?"IPT_RAM":"IPT_DISK");
-  assert(ipt_lock_.heldBy() == currentThread);
+  assert(IPT_lock_.heldBy() == currentThread);
 
   ustl::map<size_t, ustl::vector<VirtualPageInfo*>>& ipt_map = selectMap(map_type);
 
@@ -87,7 +87,7 @@ bool InvertedPageTable::KeyisInMap(size_t key, MAPTYPE map_type) //key ppn or di
 void InvertedPageTable::addVirtualPageInfo(size_t offset, size_t vpn, ArchMemory* archmemory, MAPTYPE map_type)
 { 
   debug(IPT, "InvertedPageTable::addVirtualPageInfo: Add at offset %ld in map %s the vpn %p and archmemory %p.\n", offset, (map_type == MAPTYPE::IPT_RAM)?"IPT_RAM":"IPT_DISK", (void*)vpn, archmemory);
-  assert(ipt_lock_.heldBy() == currentThread);
+  assert(IPT_lock_.heldBy() == currentThread);
   ustl::map<size_t, ustl::vector<VirtualPageInfo*>>& ipt_map = selectMap(map_type);
 
   VirtualPageInfo* new_info = new VirtualPageInfo{vpn, archmemory};
@@ -98,7 +98,7 @@ void InvertedPageTable::addVirtualPageInfo(size_t offset, size_t vpn, ArchMemory
 void InvertedPageTable::removeVirtualPageInfo(size_t offset, size_t vpn, ArchMemory* archmemory, MAPTYPE map_type)
 {
   debug(IPT, "InvertedPageTable::removeVirtualPageInfo: Remove at offset %ld in map %s the vpn %p and archmemory %p.\n", offset, (map_type == MAPTYPE::IPT_RAM)?"IPT_RAM":"IPT_DISK", (void*)vpn, archmemory);
-  assert(ipt_lock_.heldBy() == currentThread);
+  assert(IPT_lock_.heldBy() == currentThread);
   ustl::map<size_t, ustl::vector<VirtualPageInfo*>>& ipt_map = selectMap(map_type);
   assert(KeyisInMap(offset, map_type) && "No value at given offset in this map.\n");
 
@@ -124,7 +124,7 @@ void InvertedPageTable::removeVirtualPageInfo(size_t offset, size_t vpn, ArchMem
 ustl::vector<VirtualPageInfo*> InvertedPageTable::moveToOtherMap(size_t old_key, size_t new_key, MAPTYPE from, MAPTYPE to)
 {
   debug(IPT, "InvertedPageTable::moveToOtherMap: Move infos at offset %ld in map %s to offset %ld in map %s.\n", old_key, (from == MAPTYPE::IPT_RAM)?"IPT_RAM":"IPT_DISK", new_key, (to == MAPTYPE::IPT_RAM)?"IPT_RAM":"IPT_DISK");
-  assert(ipt_lock_.heldBy() == currentThread);
+  assert(IPT_lock_.heldBy() == currentThread);
 
   ustl::map<size_t, ustl::vector<VirtualPageInfo*>>& source_ipt_map = selectMap(from);
   ustl::map<size_t, ustl::vector<VirtualPageInfo*>>& destination_ipt_map = selectMap(to);
@@ -154,7 +154,7 @@ ustl::vector<VirtualPageInfo*> InvertedPageTable::moveToOtherMap(size_t old_key,
 
 ustl::vector<VirtualPageInfo*> InvertedPageTable::getPageInfosForPPN(size_t ppn)
 {
-  assert(ipt_lock_.heldBy() == currentThread);
+  assert(IPT_lock_.heldBy() == currentThread);
   ustl::map<size_t, ustl::vector<VirtualPageInfo*>>::iterator iterator = ipt_ram_.find(ppn);                                                   
   if(iterator != ipt_ram_.end())
   {

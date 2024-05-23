@@ -23,7 +23,7 @@ class InvertedPageTable
 
     static InvertedPageTable *instance();
     
-    Mutex ipt_lock_;
+    Mutex IPT_lock_;
 
     bool KeyisInMap(size_t ppn, MAPTYPE map_type);
 

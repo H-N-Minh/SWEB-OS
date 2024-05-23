@@ -20,14 +20,14 @@ PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(
 
 ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 {
-  InvertedPageTable::instance()->ipt_lock_.acquire();
+  InvertedPageTable::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
   page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
   archmemory_lock_.release();
-  InvertedPageTable::instance()->ipt_lock_.release();
+  InvertedPageTable::instance()->IPT_lock_.release();
 }
 
 // COPY CONSTRUCTOR
@@ -127,7 +127,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
 ArchMemory::~ArchMemory()
 {
   debug(FORK, "ArchMemory::~ArchMemory\n");
-  InvertedPageTable::instance()->ipt_lock_.acquire();
+  InvertedPageTable::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
   assert(currentThread->kernel_registers_->cr3 != page_map_level_4_ * PAGE_SIZE && "thread deletes its own arch memory");
 
@@ -178,7 +178,7 @@ ArchMemory::~ArchMemory()
   }
   PageManager::instance()->freePPN(page_map_level_4_);
   archmemory_lock_.release();
-  InvertedPageTable::instance()->ipt_lock_.release();
+  InvertedPageTable::instance()->IPT_lock_.release();
 }
 
 pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
@@ -280,7 +280,7 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
 
 bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
 {
-  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread && "IPT need to be alredy  locked.");
+  assert(InvertedPageTable::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be alredy  locked.");
   assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
   assert(archmemory_lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
 
@@ -462,7 +462,7 @@ PageMapLevel4Entry* ArchMemory::getRootOfKernelPagingStructure()
 
 void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 {
-  InvertedPageTable::instance()->ipt_lock_.acquire();
+  InvertedPageTable::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);
 
@@ -526,7 +526,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
     }
   }
   archmemory_lock_.release();
-  InvertedPageTable::instance()->ipt_lock_.release();
+  InvertedPageTable::instance()->IPT_lock_.release();
 }
 
 
@@ -534,7 +534,7 @@ bool ArchMemory::isCOW(size_t virtual_addr)
 {
   debug(A_MEMORY, "ArchMemory::isCow: with virtual address %p.\n", (void*)virtual_addr);
   assert(archmemory_lock_.heldBy() != currentThread);
-  InvertedPageTable::instance()->ipt_lock_.acquire();
+  InvertedPageTable::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
   ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
@@ -547,7 +547,7 @@ bool ArchMemory::isCOW(size_t virtual_addr)
   else
   {
     debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
-    InvertedPageTable::instance()->ipt_lock_.release();
+    InvertedPageTable::instance()->IPT_lock_.release();
     archmemory_lock_.release();
     return false;
   }
@@ -604,7 +604,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
 
 bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 {
-  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);
@@ -622,7 +622,7 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 
 size_t ArchMemory::getDiskLocation(size_t vpn)
 {
-  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);
@@ -664,7 +664,7 @@ bool ArchMemory::isSwapped(size_t virtual_addr)
 
 bool ArchMemory::updatePageTableEntryForSwapIn(size_t vpn, size_t ppn)
 {
-  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);

@@ -249,7 +249,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
 {
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
   assert(arch_memory->archmemory_lock_.heldBy() == currentThread);
-  assert(InvertedPageTable::instance()->ipt_lock_.heldBy() == currentThread);
+  assert(InvertedPageTable::instance()->IPT_lock_.heldBy() == currentThread);
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize called with address (%zx)\n", address);
 
   // Quick check to see if the address is (somewhat) valid

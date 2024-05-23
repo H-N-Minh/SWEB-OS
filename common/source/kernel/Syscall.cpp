@@ -794,8 +794,8 @@ long int Syscall::wait_pid(long int pid, int* status, size_t options)
 
 int Syscall::getIPTInfos(size_t ppn)
 {
-  InvertedPageTable::instance()->ipt_lock_.acquire();
+  InvertedPageTable::instance()->IPT_lock_.acquire();
   ustl::vector<VirtualPageInfo*> page_infos = InvertedPageTable::instance()->getPageInfosForPPN(ppn);
-  InvertedPageTable::instance()->ipt_lock_.release();
+  InvertedPageTable::instance()->IPT_lock_.release();
   return page_infos.size();
 }
