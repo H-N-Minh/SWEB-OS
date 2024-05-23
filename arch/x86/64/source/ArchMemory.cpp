@@ -570,7 +570,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
   }
 
   debug(FORK, "ArchMemory::copyPage If the process is not the last process to own the page, then copy to new page\n");
-  pm->page_reference_counts_lock_.acquire();
+  pm->ref_count_lock_.acquire();
   assert(pm->getReferenceCount(pml1_entry->page_ppn) > 0 && "Reference count is 0");
   if (pm->getReferenceCount(pml1_entry->page_ppn) > 1)
   {
@@ -590,7 +590,12 @@ void ArchMemory::copyPage(size_t virtual_addr)
     pm->incrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, maptype_new);
     
   }
-  pm->page_reference_counts_lock_.release();
+  else if (pm->getReferenceCount(pml1_entry->page_ppn) != 1 || pml1_entry->cow == 0)
+  {
+    debug(FORK, "ArchMemory::copyPage: Error! Refcount is %d, write bit: %d, cow bit: %d\n", pm->getReferenceCount(pml1_entry->page_ppn), pml1_entry->writeable, pml1_entry->cow);
+    assert(0 && "ArchMemory::copyPage: More processes own this page than expected, because this page is being copied even tho its no longer COW\n ");
+  }
+  pm->ref_count_lock_.release();
 
   debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
   pml1_entry->writeable = 1;

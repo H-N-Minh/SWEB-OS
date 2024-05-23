@@ -40,7 +40,9 @@ PageManager* PageManager::instance()
  * The lock is created in the constructor and is passed a name to uniquely identify it.
  * This allows for easier debugging and tracking of locks.
  */
-PageManager::PageManager() : page_reference_counts_lock_("page_reference_counts_lock_"), page_manager_lock_("PageManager::page_manager_lock_")
+PageManager::PageManager() 
+    : ref_count_lock_("PageManager::ref_count_lock_"),
+      page_manager_lock_("PageManager::page_manager_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -389,7 +391,7 @@ void PageManager::setReferenceCount(uint64 page_number, uint32 reference_count)
 
 uint32 PageManager::getReferenceCount(uint64 page_number)
 {
-  assert(page_reference_counts_lock_.heldBy() == currentThread);
+  assert(ref_count_lock_.heldBy() == currentThread);
   // Check if the page number is in the map
   auto it = page_reference_counts_.find(static_cast<uint32>(page_number));
   if (it != page_reference_counts_.end())

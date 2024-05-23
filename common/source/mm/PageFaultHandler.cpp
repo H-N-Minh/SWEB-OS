@@ -12,6 +12,7 @@
 #include "UserProcess.h"
 #include "SwappingManager.h"
 
+#include "PageManager.h"
 
 extern "C" void arch_contextSwitch();
 

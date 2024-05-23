@@ -12,6 +12,8 @@
 #define DYNAMIC_KMM (0) // Please note that this means that the KMM depends on the page manager
 // and you will have a harder time implementing swapping. Pros only!
 
+
+
 class Bitmap;
 
 class PageManager
@@ -57,9 +59,9 @@ class PageManager
 
     uint32 getNumPagesForUser() const;
 
-
+    // COW
     ustl::map<uint32, uint32> page_reference_counts_;
-    Mutex page_reference_counts_lock_;
+    Mutex ref_count_lock_;
 
     void incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype);
     void decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, MAPTYPE maptype);
@@ -67,6 +69,8 @@ class PageManager
 
     uint32 getReferenceCount(uint64 page_number);
 
+
+ 
   private:
     bool reservePages(uint32 ppn, uint32 num = 1);
 
