@@ -187,12 +187,12 @@ pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, vaddress_to_check / PAGE_SIZE);
   if (m.page != 0)
   {
-    debug(A_MEMORY, "checkAddressValid %zx and %zx -> true\n", page_map_level_4_, vaddress_to_check);
+    //debug(A_MEMORY, "checkAddressValid %zx and %zx -> true\n", page_map_level_4_, vaddress_to_check);
     return m.page | (vaddress_to_check % m.page_size);
   }
   else
   {
-    debug(A_MEMORY, "checkAddressValid %zx and %zx -> false\n", page_map_level_4_, vaddress_to_check);
+    //debug(A_MEMORY, "checkAddressValid %zx and %zx -> false\n", page_map_level_4_, vaddress_to_check);
     return 0;
   }
 }
@@ -534,9 +534,8 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 bool ArchMemory::isCOW(size_t virtual_addr)
 {
   debug(A_MEMORY, "ArchMemory::isCow: with virtual address %p.\n", (void*)virtual_addr);
-  assert(archmemory_lock_.heldBy() != currentThread);
-  IPTManager::instance()->IPT_lock_.acquire();
-  archmemory_lock_.acquire();
+  assert(archmemory_lock_.heldBy() == currentThread);
+
   ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
 
@@ -548,8 +547,6 @@ bool ArchMemory::isCOW(size_t virtual_addr)
   else
   {
     debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
-    IPTManager::instance()->IPT_lock_.release();
-    archmemory_lock_.release();
     return false;
   }
 }
@@ -743,6 +740,27 @@ int ArchMemory::count_allocations()
     }
   }
   return counter;
+}
+
+
+bool ArchMemory::isPresent(size_t virtual_addr)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  debug(A_MEMORY, "ArchMemory::isPresent: with virtual address %p.\n", (void*)virtual_addr); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->present)
+  {
+    debug(A_MEMORY, "ArchMemory::isPresent: virtual address %p is present\n", (void*)virtual_addr);
+    return true;
+  }
+  else
+  {
+    debug(A_MEMORY, "ArchMemory::isPresent: virtual address %p is not present\n", (void*)virtual_addr);
+    return false;
+  }
 }
 
 

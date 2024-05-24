@@ -109,6 +109,7 @@ class ArchMemory
 
     bool isCOW(size_t virtual_addr);
     bool isSwapped(size_t virtual_addr);
+    bool isPresent(size_t virtual_addr);
 
     void copyPage(size_t virtual_addr, ustl::vector<size_t>& ppns);
 

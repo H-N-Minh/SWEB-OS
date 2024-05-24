@@ -48,14 +48,17 @@ void SwappingManager::swapOutPage(size_t ppn)
 
   lock_archmemories_in_right_order(virtual_page_infos);
 
-  ArchMemory* archmemory = NULL;
-  size_t vpn = 0;
+
+
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    archmemory = virtual_page_info->archmem;
-    vpn = virtual_page_info->vpn;
+    ArchMemory* archmemory = virtual_page_info->archmem;
+    size_t vpn = virtual_page_info->vpn;
+    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset);
   }
 
+  ArchMemory* archmemory = virtual_page_infos[0]->archmem;
+  size_t vpn = virtual_page_infos[0]->vpn;
 
 
   disk_lock_.acquire();
@@ -90,8 +93,6 @@ void SwappingManager::swapOutPage(size_t ppn)
 //Only works if the page i want to swap in is in the archmemory of current thread
 int SwappingManager::swapInPage(size_t vpn, ustl::vector<size_t>& ppns)
 {
-  //  assert(0 && "Tried swapping in - not working correctly yet");
-  // debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with vpn %ld.\n", vpn);
   ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
   
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
@@ -106,11 +107,12 @@ int SwappingManager::swapInPage(size_t vpn, ustl::vector<size_t>& ppns)
   ustl::vector<IPTEntry*> virtual_page_infos = ipt_->moveEntry(IPTMapType::DISK_MAP, disk_offset, ppn);
 
 
-
+  lock_archmemories_in_right_order(virtual_page_infos);
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem;
     size_t vpn = virtual_page_info->vpn;
+    debug(SWAPPING, "SwappingManager::swapInPage: vpn: %ld, archmemory: %p (disk offset %ld -> ppn %ld).\n", vpn, archmemory, disk_offset, ppn);
     archmemory->updatePageTableEntryForSwapIn(vpn, ppn);
   }
 

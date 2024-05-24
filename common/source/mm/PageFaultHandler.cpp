@@ -67,35 +67,58 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
+  ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
+  assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
-  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(4);
+  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
     IPTManager::instance()->IPT_lock_.acquire();
-    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
-    if(currentThread->loader_->arch_memory_.isSwapped(address))
+    current_archmemory.archmemory_lock_.acquire();
+    if(current_archmemory.isPresent(address))
+    {
+      current_archmemory.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
+    }
+    else if(current_archmemory.isSwapped(address))
     {
       SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
-      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+
+      if(writing && current_archmemory.isCOW(address))
+      {
+        current_archmemory.copyPage(address, ppns);
+      }
+      current_archmemory.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
     }
     else
     {
       currentThread->loader_->loadPage(address, ppns);
-      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+      current_archmemory.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
     }
 
   }
-  else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
+  else if (status == PRESENT)
   {
-    debug(PAGEFAULT_TEST, "is COW, copying Page\n");
-    currentThread->loader_->arch_memory_.copyPage(address, ppns);
-    currentThread->loader_->arch_memory_.archmemory_lock_.release();
-    IPTManager::instance()->IPT_lock_.release();
+    IPTManager::instance()->IPT_lock_.acquire();
+    current_archmemory.archmemory_lock_.acquire();
+    if(writing && current_archmemory.isCOW(address))
+    {
+      debug(PAGEFAULT_TEST, "is COW, copying Page\n");
+      current_archmemory.copyPage(address, ppns);
+      current_archmemory.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
+    }
+    else
+    {
+      current_archmemory.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
+      PageManager::instance()-> releaseNotNeededPages(ppns);
+      errorInPageFaultKillProcess();
+    }
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
   // {
