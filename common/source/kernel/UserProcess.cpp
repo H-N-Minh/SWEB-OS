@@ -77,9 +77,11 @@ UserProcess::UserProcess(const UserProcess& other)
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
 
 
+  IPTManager::instance()->IPT_lock_.acquire();
   other.loader_->arch_memory_.archmemory_lock_.acquire();
   int needed_ppns = other.loader_->arch_memory_.count_allocations();
   other.loader_->arch_memory_.archmemory_lock_.release();
+  IPTManager::instance()->IPT_lock_.release();
   ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(needed_ppns + 10);
 
 

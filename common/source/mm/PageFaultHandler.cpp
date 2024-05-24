@@ -86,11 +86,6 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     else if(current_archmemory.isSwapped(address))
     {
       SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
-
-      // if(writing && current_archmemory.isCOW(address))
-      // {
-      //   current_archmemory.copyPage(address, ppns);
-      // }
     }
     //Page needs to be loader from binary 
     else

@@ -125,26 +125,25 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
   auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
 
+  ustl::vector<IPTEntry*> ipt_entries;
   // Check if the entry already exists in the destination map
   if (destination_map->find(ppn_destination) != destination_map->end())
   {
-    debug(SWAPPING, "IPTManager::moveEntry ppn %zu already exists in the destination map\n", ppn_destination);
-    assert(0 && "IPTManager::moveEntry: ppn_destination already exists in destination map\n");
+    debug(SWAPPING, "IPTManager::moveEntry: At offset %zu in the destination map %s exists already a value.\n", ppn_destination, destination_as_string);
+    assert(0 && "Offset in destination map not free\n");
   }
-
-  ustl::vector<IPTEntry*> ipt_entries;
-
   // Check if the entry exists in the source map
-  if (source_map->find(ppn_source) == source_map->end())
+  else if (source_map->find(ppn_source) == source_map->end())
   {
-    debug(SWAPPING, "IPTManager::moveEntry ppn %zu not found in the source map\n", ppn_source);
-    assert(0 && "IPTManager::moveEntry: The given ppn doesnt exist in the specifed map\n");
+    debug(SWAPPING, "IPTManager::moveEntry: At offset %zu in the source map %s is no value value.\n", ppn_source, source_as_string);
+    assert(0 && "No value at offset in source map\n");
   }
   else
   {
     // Move all values with the corresponding key from source_map to destination_map
     auto range = source_map->equal_range(ppn_source);
-    for (auto it = range.first; it != range.second; ++it) {
+    for (auto it = range.first; it < range.second; it++) 
+    {
       destination_map->insert({ppn_destination, it->second});
       ipt_entries.push_back(it->second);
     }

@@ -85,8 +85,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   IPTManager::instance()->IPT_lock_.release();
   currentThread->loader_->arch_memory_.archmemory_lock_.release();     //TODO: remove!!!
  
-  // PageManager::instance()->freePPN(ppn);
-
+  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
 
 }
 
@@ -129,6 +128,8 @@ int SwappingManager::swapInPage(size_t vpn, ustl::vector<size_t>& ppns)
 
   disk_lock_.release();
   unlock_archmemories(virtual_page_infos);
+
+  debug(SWAPPING, "SwappingManager::swapInPage: Swap in vpn %ld finished", vpn);
   return 0;
 }
 

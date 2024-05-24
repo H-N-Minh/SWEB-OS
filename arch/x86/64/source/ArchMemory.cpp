@@ -52,8 +52,7 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<size_t>& ppns):archme
     if (PARENT_pml4[pml4i].present)
     {
       // setup new page directory pointer table
-      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->getPreAlocatedPage(ppns);;
-
+      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->getPreAlocatedPage(ppns);
 
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* PARENT_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(PARENT_pml4[pml4i].page_ppn);
@@ -94,24 +93,31 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<size_t>& ppns):archme
               {
                 if (PARENT_pt[pti].present)
                 {
-                  PARENT_pt[pti].writeable = 0; //read only
+                  PARENT_pt[pti].writeable = 0;
                   PARENT_pt[pti].cow = 1;
 
-                  CHILD_pt[pti].writeable = 0; //read only
+                  CHILD_pt[pti].writeable = 0;
                   CHILD_pt[pti].cow = 1;
 
-
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  IPTMapType maptype = getMapType(PARENT_pt[pti]);
                   PageManager::instance()->ref_count_lock_.acquire();
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
-                  assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
-
-                  // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
-                  //                                                                              PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
+                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
                   PageManager::instance()->ref_count_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
+                }
+                else if(PARENT_pt[pti].swapped_out)
+                {
+                  PARENT_pt[pti].writeable = 0;
+                  PARENT_pt[pti].cow = 1;
+
+                  CHILD_pt[pti].writeable = 0;
+                  CHILD_pt[pti].cow = 1;
+
+                  size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
+                  PageManager::instance()->ref_count_lock_.acquire();
+                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::DISK_MAP);
+                  PageManager::instance()->ref_count_lock_.release();
                 }
               }
             }
@@ -152,7 +158,7 @@ ArchMemory::~ArchMemory()
               PageTableEntry* pt = (PageTableEntry*) getIdentAddressOfPPN(pd[pdi].pt.page_ppn);
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
-                if (pt[pti].present)
+                if (pt[pti].present)  //TODOs: what if swapped out
                 {
                   PageManager::instance()->ref_count_lock_.acquire();
                   pt[pti].present = 0;
@@ -555,49 +561,46 @@ bool ArchMemory::isCOW(size_t virtual_addr)
 void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<size_t>& ppns)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
+
   PageManager* pm = PageManager::instance();
+  size_t vpn = virtual_addr/PAGE_SIZE;
 
-  debug(FORK, "ArchMemory::copyPage Resolving mapping \n");
-  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
-  assert(pml1_entry && pml1_entry->cow && "Page is not COW");
+  assert(pml1_entry && pml1_entry->cow && !pml1_entry->writeable && "Page is not COW or not set to writable.\n");
 
-  if(pml1_entry->writeable == 1)
-  {
-    return;
-  }
-
-  debug(FORK, "ArchMemory::copyPage If the process is not the last process to own the page, then copy to new page\n");
   pm->ref_count_lock_.acquire();
-  assert(pm->getReferenceCount(pml1_entry->page_ppn) > 0 && "Reference count is 0");
-  if (pm->getReferenceCount(pml1_entry->page_ppn) > 1)
+  size_t reference_count = pm->getReferenceCount(pml1_entry->page_ppn);
+  
+  if (reference_count > 1)
   {
     debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
-    size_t new_page_ppn = pm->getPreAlocatedPage(ppns);
-    pointer original_page = ArchMemory::getIdentAddressOfPPN(pml1_entry->page_ppn);
-    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
-    memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+    size_t old_ppn = pml1_entry->page_ppn;
+    size_t new_ppn = pm->getPreAlocatedPage(ppns);
+    pointer old_page = ArchMemory::getIdentAddressOfPPN(old_ppn);
+    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_ppn);
+    memcpy((void*)new_page, (void*)old_page, PAGE_SIZE);
 
     debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
 
-    IPTMapType maptype_old = getMapType(*pml1_entry);
-    pm->decrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, maptype_old);
-    pml1_entry->page_ppn = new_page_ppn;
+    pm->decrementReferenceCount(old_ppn, vpn, this, IPTMapType::RAM_MAP);
+    pm->incrementReferenceCount(new_ppn, vpn, this, IPTMapType::RAM_MAP);
 
-    IPTMapType maptype_new = getMapType(*pml1_entry);
-    pm->incrementReferenceCount(pml1_entry->page_ppn, virtual_addr/PAGE_SIZE, this, maptype_new);
-    
+    pml1_entry->page_ppn = new_ppn;
+    pml1_entry->writeable = 1;
   }
-  else if (pm->getReferenceCount(pml1_entry->page_ppn) != 1 || pml1_entry->cow == 0)
+  else if(reference_count == 1)
   {
-    debug(FORK, "ArchMemory::copyPage: Error! Refcount is %d, write bit: %d, cow bit: %d\n", pm->getReferenceCount(pml1_entry->page_ppn), pml1_entry->writeable, pml1_entry->cow);
-    assert(0 && "ArchMemory::copyPage: More processes own this page than expected, because this page is being copied even tho its no longer COW\n ");
+    debug(FORK, "ArchMemory::copyPage: Ref count is == 1, Set page to writable\n");
+    pml1_entry->writeable = 1;
+  }
+  else
+  {
+    debug(FORK, "ArchMemory::copyPage: Error! Refcount is %d.\n", pm->getReferenceCount(pml1_entry->page_ppn));
+    assert(0 && "Reference count is 0.\n");
   }
   pm->ref_count_lock_.release();
 
-  debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
-  pml1_entry->writeable = 1;
-  // pml1_entry->cow = 0; //not nessessary i think
 }
 
 bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
