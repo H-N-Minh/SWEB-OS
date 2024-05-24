@@ -445,6 +445,7 @@ size_t PageManager::getPreAlocatedPage(ustl::vector<size_t>& pre_alocated_pages)
   assert(pre_alocated_pages.size() != 0 && "No more page available");
   size_t ppn = pre_alocated_pages.back();
   pre_alocated_pages.pop_back();
+  debug(PM, "PageManager::getPreAlocatedPage: Return ppn %ld.\n", ppn);
   return ppn;
 }
 

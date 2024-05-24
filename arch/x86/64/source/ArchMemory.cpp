@@ -604,7 +604,7 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
-
+  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForSwapOut: Update vpn %ld in archmemory %p and set disk_offset %ld.\n", vpn, this, disk_offset);
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
@@ -645,17 +645,18 @@ bool ArchMemory::isSwapped(size_t virtual_addr)
 {
   debug(A_MEMORY, "ArchMemory::isSwapped: with virtual address %p.\n", (void*)virtual_addr);
   assert(archmemory_lock_.heldBy() == currentThread);
-  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  size_t vpn = virtual_addr/PAGE_SIZE;
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
   if (m.pt && pt_entry && pt_entry->swapped_out)
   {
-    debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p is swapped out\n", (void*)virtual_addr);
+    debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p is swapped out (archmemory %p - vpn %ld)\n", (void*)virtual_addr, this, vpn);
     return true;
   }
   else
   {
-    debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p is not swapped out\n", (void*)virtual_addr);
+    debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p is swapped in (archmemory %p - vpn %ld)\n", (void*)virtual_addr, this, vpn);
     return false;
   }
 }
@@ -664,6 +665,8 @@ bool ArchMemory::updatePageTableEntryForSwapIn(size_t vpn, size_t ppn)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
+
+  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForSwapIn: Update vpn %ld in archmemory %p and set ppn %ld.\n", vpn, this, ppn);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
@@ -759,6 +762,26 @@ bool ArchMemory::isPresent(size_t virtual_addr)
   else
   {
     debug(A_MEMORY, "ArchMemory::isPresent: virtual address %p is not present\n", (void*)virtual_addr);
+    return false;
+  }
+}
+
+bool ArchMemory::isWriteable(size_t virtual_addr)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  debug(A_MEMORY, "ArchMemory::isWriteable: with virtual address %p.\n", (void*)virtual_addr); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->writeable)
+  {
+    debug(A_MEMORY, "ArchMemory::isWriteable: virtual address %p is Writeable\n", (void*)virtual_addr);
+    return true;
+  }
+  else
+  {
+    debug(A_MEMORY, "ArchMemory::isWriteable: virtual address %p is not Writeable\n", (void*)virtual_addr);
     return false;
   }
 }
