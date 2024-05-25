@@ -40,16 +40,7 @@ IPTEntry* IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archme
   return nullptr;
 }
 
-IPTEntry* IPTManager::lookupEntryInDisk(diskoffset_t diskOffset) {
-  debug(IPT, "IPTManager::lookupEntryInDisk: Looking up entry in Disk: diskOffset=%zu\n", diskOffset);
-  auto it = disk_map_.find(diskOffset);
-  if (it != disk_map_.end()) {
-    debug(IPT, "IPTManager::lookupEntryInDisk: Entry found in Disk: diskOffset=%zu\n", diskOffset);
-    return it->second;
-  }
-  debug(IPT, "IPTManager::lookupEntryInDisk: Entry not found in Disk: diskOffset=%zu\n", diskOffset);
-  return nullptr;
-}
+
 
 void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
 {
@@ -58,17 +49,21 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   // TODO: check if the entry already exists in the map. If it does, assert fail
+  if(!KeyisInMap(ppn, map_type))
+  {
+    if(map_type == IPTMapType::RAM_MAP)
+    {
+      pages_in_ram_++;
+    }
+    else
+    {
+      pages_on_disk_++;
+    }
+  }
+
   IPTEntry* entry = new IPTEntry(ppn, vpn, archmem);
   map->insert({ppn, entry});
 
-  if(map_type == IPTMapType::RAM_MAP)
-  {
-    pages_in_ram_++;
-  }
-  else
-  {
-    pages_on_disk_++;
-  }
 
   debug(SWAPPING, "IPTManager::insertIPT: successfully inserted to IPT\n");
 }
@@ -101,14 +96,18 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     }
   }
 
-  if(map_type == IPTMapType::RAM_MAP)
+  if(!KeyisInMap(ppn, map_type))
   {
-    pages_in_ram_--;
+    if(map_type == IPTMapType::RAM_MAP)
+    {
+      pages_in_ram_--;
+    }
+    else
+    {
+      pages_on_disk_--;
+    }
   }
-  else
-  {
-    pages_on_disk_--;
-  }
+
 
   debug(SWAPPING, "IPTManager::removeIPT: successfully removed from IPT\n");
 }

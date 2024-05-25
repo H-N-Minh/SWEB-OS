@@ -162,12 +162,15 @@ ArchMemory::~ArchMemory()
                 {
                   PageManager::instance()->ref_count_lock_.acquire();
                   pt[pti].present = 0;
-
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  IPTMapType maptype = getMapType(pt[pti]);
-
-                  PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
-                  debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                  PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
+                  PageManager::instance()->ref_count_lock_.release();
+                }
+                else if(pt[pti].swapped_out)
+                {
+                  PageManager::instance()->ref_count_lock_.acquire();
+                  size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
+                  PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, IPTMapType::DISK_MAP);
                   PageManager::instance()->ref_count_lock_.release();
                 }
               }
