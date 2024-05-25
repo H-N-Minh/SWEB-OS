@@ -338,10 +338,6 @@ void UserThread::exitThread(void* value_ptr)
   }
   join_state_lock_.release();
 
-  // unmap its stack
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
-  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
-
   // for exec()
   if(process_->threads_.size() == 1)  // only one thread left, which is the exec thread waiting for the signal
   {
@@ -351,6 +347,10 @@ void UserThread::exitThread(void* value_ptr)
     process_->one_thread_left_lock_.release();
   }
   process_->threads_lock_.release();
+
+  // unmap its stack
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
 
 
   user_stack_ptr_ = 0;
@@ -381,10 +381,11 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
   {
     join_state = PTHREAD_CREATE_JOINABLE;
   }
-  process_->threads_lock_.acquire();
+  
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
- 
+  
+  process_->threads_lock_.acquire();
   if(new_thread)
   {
     new_thread->join_state_ = join_state;

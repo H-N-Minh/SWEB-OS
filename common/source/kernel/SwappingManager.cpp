@@ -34,8 +34,8 @@ SwappingManager::~SwappingManager()
 //does only work if the page to swap out is also in the archmemory of the current thread
 void SwappingManager::swapOutPage(size_t ppn)
 {
-  IPTManager::instance()->IPT_lock_.acquire();
-  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();     //TODO: remove!!!
+  assert(ipt_->IPT_lock_.heldBy() == currentThread);
+  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();  //TODOs: remove i think
 
 
   //Find free disk_offset (TODOs)
@@ -82,9 +82,7 @@ void SwappingManager::swapOutPage(size_t ppn)
 
   unlock_archmemories(virtual_page_infos);
 
-  IPTManager::instance()->IPT_lock_.release();
-  currentThread->loader_->arch_memory_.archmemory_lock_.release();     //TODO: remove!!!
- 
+  currentThread->loader_->arch_memory_.archmemory_lock_.release();
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
 
 }

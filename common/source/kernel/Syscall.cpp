@@ -245,18 +245,18 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 
 uint32 Syscall::forkProcess()
 {
-  debug(FORK, "Syscall::forkProcess: start focking \n");
+  debug(FORK, "Syscall::forkProcess: start forking \n");
   UserProcess* parent = ((UserThread*) currentThread)->process_;
   UserProcess* child = new UserProcess(*parent);
 
   if (!child)
   {
-    debug(SYSCALL, "Syscall::forkProcess: fock failed \n");
+    debug(SYSCALL, "Syscall::forkProcess: fork failed \n");
     return -1;
   }
   else
   {
-    debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
+    debug(SYSCALL, "Syscall::forkProcess: fork done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
     return (uint32) currentThread->user_registers_->rax;
   }
 }

@@ -20,8 +20,8 @@ PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(
 
 ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 {
-  IPTManager::instance()->IPT_lock_.acquire();
   size_t ppn = PageManager::instance()->allocPPN();
+  IPTManager::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
   page_map_level_4_ = ppn;
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
