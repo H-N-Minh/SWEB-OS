@@ -81,11 +81,6 @@ public:
 
   // ustl::vector<IPTEntry*> getPageInfosForPPN(size_t ppn); //TODOs
 
-  /**
-   * Locks the archmems in the order of lowest to highest address of the Mutex
-  */
-  template<typename... Args>
-  void lockArchmemInOrder(Args... args);
 
   private:
     static IPTManager* instance_;

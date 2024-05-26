@@ -125,8 +125,17 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
   // Check if the entry already exists in the destination map
   if (destination_map->find(ppn_destination) != destination_map->end())
   {
-    debug(SWAPPING, "IPTManager::moveEntry ppn %zu already exists in the destination map\n", ppn_destination);
-    assert(0 && "IPTManager::moveEntry: ppn_destination already exists in destination map\n");
+    // Compare the values of source_map and destination_map to see if its the same entry
+    auto source_it = source_map->find(ppn_source);
+    auto destination_it = destination_map->find(ppn_destination);
+    if (source_it != source_map->end() && destination_it != destination_map->end())
+    {
+      if (source_it->second == destination_it->second)
+      {
+        debug(SWAPPING, "IPTManager::moveEntry ppn %zu already exists in the destination map\n", ppn_destination);
+        assert(0 && "IPTManager::moveEntry: ppn_destination already exists in destination map\n");
+      }
+    }
   }
 
   ustl::vector<IPTEntry*> ipt_entries;
@@ -141,7 +150,8 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
   {
     // Move all values with the corresponding key from source_map to destination_map
     auto range = source_map->equal_range(ppn_source);
-    for (auto it = range.first; it != range.second; ++it) {
+    for (auto it = range.first; it != range.second; ++it)
+    {
       destination_map->insert({ppn_destination, it->second});
       ipt_entries.push_back(it->second);
     }
@@ -209,18 +219,5 @@ IPTManager::~IPTManager()
 }
 
 
-
-template<typename... Args>
-void IPTManager::lockArchmemInOrder(Args... args)
-{
-    ustl::vector<Mutex*> vec = { args... };
-    ustl::sort(vec.begin(), vec.end());
-
-    // Lock the mutexes in order
-    for(auto& m : vec) {
-      assert(m && "Mutex for archmem is null");
-      m->acquire();
-    }
-}
 
 
