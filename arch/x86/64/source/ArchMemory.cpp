@@ -185,9 +185,15 @@ ArchMemory::~ArchMemory()
               if(PageManager::instance()->getRefCount(pd[pdi].pt.page_ppn) == 1)
               {
                 pd[pdi].pt.present = 0;
-                debug(FORK, "------------------1 \n");
                 PageManager::instance()->freePPN(pd[pdi].pt.page_ppn);
-                debug(FORK, "------------------2 \n");
+                PageManager::instance()->decrementRefCount(pd[pdi].pt.page_ppn);
+                debug(COW, "-----DID FREE PT PPN \n");
+              }
+              else
+              {
+                pd[pdi].pt.present = 0;
+                PageManager::instance()->decrementRefCount(pd[pdi].pt.page_ppn);
+                debug(COW, "-----DIDNT FREE PT PPN \n");
               }
             }
           }
@@ -202,7 +208,7 @@ ArchMemory::~ArchMemory()
   PageManager::instance()->freePPN(page_map_level_4_);
   archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
-  debug(FORK, "------------------Arch de finished \n");
+  debug(COW, "------------------Arch de finished \n");
 }
 
 pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
@@ -266,6 +272,7 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
 
   if (empty)
   {
+    //TODO check ref count == 1 here
     empty = checkAndRemove<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi);
     PageManager::instance()->freePPN(m.pt_ppn);
   }
