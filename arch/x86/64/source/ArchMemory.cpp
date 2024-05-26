@@ -100,37 +100,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
               PageManager::instance()->incrementRefCount(PARENT_pd[pdi].pt.page_ppn);
               debug(COW, "-------------getReferenceCount %d \n", PageManager::instance()->getRefCount(PARENT_pd[pdi].pt.page_ppn));
 
-              PageTableEntry* PARENT_pt = (PageTableEntry*) getIdentAddressOfPPN(PARENT_pd[pdi].pt.page_ppn);
-
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
-
-              // loop through pt to get each pageT
-              for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
-              {
-                if (PARENT_pt[pti].present)
-                {
-                  //PARENT_pt[pti].writeable = 0; //read only
-                  //PARENT_pt[pti].cow = 1;
-
-
-
-
-
-
-                  size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  IPTMapType maptype = getMapType(PARENT_pt[pti]);
-
-                  PageManager::instance()->ref_count_lock_.acquire();
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
-                  assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
-
-                  // debug(FORK, "getReferenceCount in copyconstructor child: %d, parent: %d \n", PageManager::instance()->getReferenceCount(CHILD_pt[pti].page_ppn),
-                  //                                                                              PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
-                  PageManager::instance()->ref_count_lock_.release();
-
-
-                }
-              }
             }
           }
         }
@@ -562,26 +532,34 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 }
 
 
-bool ArchMemory::isCOW(size_t virtual_addr)
+int ArchMemory::isCOW(size_t virtual_addr)
 {
   debug(A_MEMORY, "ArchMemory::isCow: with virtual address %p.\n", (void*)virtual_addr);
   assert(archmemory_lock_.heldBy() != currentThread);
   IPTManager::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
-  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
-  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
+
+  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  PageTableEntry* pml1_entry = &m.pt[m.pti];
+  PageDirEntry* pml2_entry = &m.pd[m.pdi];
+
+  if (pml2_entry && pml2_entry->pt.cow)
+  {
+    debug(COW, "ArchMemory::isCow: virtual address %p is COW with PML2\n", (void*)virtual_addr);
+    return 2;
+  }
 
   if (pml1_entry && pml1_entry->cow)
   {
-    debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is cow\n", (void*)virtual_addr);
-    return true;
+    debug(COW, "ArchMemory::isCow: virtual address %p is cow with PML1\n", (void*)virtual_addr);
+    return 1;
   }
   else
   {
     debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
     IPTManager::instance()->IPT_lock_.release();
     archmemory_lock_.release();
-    return false;
+    return 0;
   }
 }
 

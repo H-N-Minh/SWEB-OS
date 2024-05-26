@@ -107,7 +107,7 @@ class ArchMemory
     
     void deleteEverythingExecpt(size_t virtual_page);
 
-    bool isCOW(size_t virtual_addr);
+    int isCOW(size_t virtual_addr);
     bool isSwapped(size_t virtual_addr);
 
     void copyPage(size_t virtual_addr);

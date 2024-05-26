@@ -70,6 +70,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
+  //int is_cow_value = currentThread->loader_->arch_memory_.isCOW(address);
   if (status == VALID)
   {
     IPTManager::instance()->IPT_lock_.acquire();
@@ -90,7 +91,8 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   }
   else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
   {
-    debug(PAGEFAULT_TEST, "is COW, copying Page\n");
+    int is_cow_value = currentThread->loader_->arch_memory_.isCOW(address);
+    debug(COW, "is COW from PML1, start Copy %d\n", is_cow_value);
     currentThread->loader_->arch_memory_.copyPage(address);
     currentThread->loader_->arch_memory_.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
