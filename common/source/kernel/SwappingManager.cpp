@@ -156,6 +156,44 @@ void SwappingManager::unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_i
   }
 }
 
+void SwappingManager::preSwapPage(size_t vpn) {
+  assert(ipt_->IPT_lock_.heldBy() == currentThread);
+
+  ArchMemory* archmemory = &currentThread->loader_->arch_memory_;
+  archmemory->archmemory_lock_.acquire();
+
+  size_t ppn = archmemory->resolveMapping(vpn).page_ppn;
+  if (ppn == 0) {
+    archmemory->archmemory_lock_.release();
+    return;
+  }
+
+  size_t disk_offset = disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing++;
+  ustl::vector<IPTEntry*> virtual_page_infos = ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
+
+  lock_archmemories_in_right_order(virtual_page_infos);
+
+  disk_lock_.acquire();
+  char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(ppn);
+  bd_device_->writeData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
+  disk_lock_.release();
+
+  for (IPTEntry* virtual_page_info : virtual_page_infos) {
+    archmemory = virtual_page_info->archmem;
+    vpn = virtual_page_info->vpn;
+    archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
+  }
+
+  PageManager::instance()->ref_count_lock_.acquire();
+  PageManager::instance()->setReferenceCount(ppn, 0);
+  PageManager::instance()->ref_count_lock_.release();
+
+  unlock_archmemories(virtual_page_infos);
+  archmemory->archmemory_lock_.release();
+}
+
+
+
 
 
 
