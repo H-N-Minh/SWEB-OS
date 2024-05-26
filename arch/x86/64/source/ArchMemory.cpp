@@ -50,7 +50,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
   {
     if (PARENT_pml4[pml4i].present)
     {
-      // setup new page directory pointer table
+      debug(COW, "---------------PageFault PML4 Loop \n");
+      PARENT_pml4[pml4i].cow = 1;
+      CHILD_pml4[pml4i].cow = 1;
+
       CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
 
 
@@ -65,7 +68,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
       {
         if (PARENT_pdpt[pdpti].pd.present)
         {
-          // setup new page directory
+          debug(COW, "---------------PageFault PML3 Loop \n");
+          PARENT_pdpt[pdpti].pd.cow = 1;
+          CHILD_pdpt[pdpti].pd.cow = 1;
+
           CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
 
           //CHILD_pdpt[pdpti].pd.page_ppn = PARENT_pdpt[pdpti].pd.page_ppn;
@@ -79,7 +85,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
           {
             if (PARENT_pd[pdi].pt.present)
             {
-              // setup new page table
+              debug(COW, "---------------PageFault PML2 Loop \n");
+              PARENT_pd[pdi].pt.cow = 1;
+              CHILD_pd[pdi].pt.cow = 1;
+
               CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
 
               //CHILD_pd[pdi].pt.page_ppn = PARENT_pd[pdi].pt.page_ppn;
@@ -592,7 +601,7 @@ void ArchMemory::copyPage(size_t virtual_addr)
   }
   else if (pm->getReferenceCount(pml1_entry->page_ppn) != 1 || pml1_entry->cow == 0)
   {
-    debug(FORK, "ArchMemory::copyPage: Error! Refcount is %d, write bit: %d, cow bit: %d\n", pm->getReferenceCount(pml1_entry->page_ppn), pml1_entry->writeable, pml1_entry->cow);
+    debug(FORK, "ArchMemory::copyPage: Error! Refcount is %d, write bit: %ld, cow bit: %ld\n", pm->getReferenceCount(pml1_entry->page_ppn), pml1_entry->writeable, pml1_entry->cow);
     assert(0 && "ArchMemory::copyPage: More processes own this page than expected, because this page is being copied even tho its no longer COW\n ");
   }
   pm->ref_count_lock_.release();

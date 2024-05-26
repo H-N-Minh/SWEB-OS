@@ -76,7 +76,7 @@ const size_t MMC_DRIVER         = Ansi_Yellow;
 //group arch
 const size_t A_BOOT             = Ansi_Yellow; //| OUTPUT_ENABLED;
 const size_t A_COMMON           = Ansi_Yellow;
-const size_t A_MEMORY           = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t A_MEMORY           = Ansi_Yellow ;
 const size_t A_SERIALPORT       = Ansi_Yellow;
 const size_t A_KB_MANAGER       = Ansi_Yellow;
 const size_t A_INTERRUPTS       = Ansi_Yellow;
@@ -106,6 +106,8 @@ const size_t Fabi                     = Ansi_Red;
 
 const size_t USERSPACE_LOCKS         = Ansi_Red;
 const size_t WAIT_PID               = Ansi_Red;
+
+const size_t COW        = Ansi_Red | OUTPUT_ENABLED;
 
 
 
