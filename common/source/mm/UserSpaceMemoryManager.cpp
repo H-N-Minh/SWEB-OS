@@ -21,16 +21,25 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
 }
 
 
-pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
+pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked, uint32 preallocated_ppn)
 {
   assert(0 && "I havent checked the locking together with archemory yet. and locks have different names");
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd) and already locked %ld\n", size, already_locked);
 
-  // if (!already_locked) {
-  //   lock_.acquire();
-  //   // PageManager::instance()->IPT_lock_.acquire();
-  //   loader_->arch_memory_.lock_.acquire();
-  // }
+
+  // skip locking for now
+  debug(MINH, "preallocated_ppn: %d\n", preallocated_ppn);
+  already_locked = 1;  // TODO MINH: locking for brk and sbrk needs to be adjusted so allocppn is not called while holding lock
+  
+  
+  
+  
+  if (!already_locked) {
+    preallocated_ppn = PageManager::instance()->allocPPN();  
+    current_break_lock_.acquire();
+    // PageManager::instance()->IPT_lock_.acquire();
+    loader_->arch_memory_.archmemory_lock_.acquire();     // TODO MINH: maybe this lock is not needed?
+  }
 
   assert(current_break_ + size <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: trying to allocate more than MAX_HEAP_SIZE");
   assert(current_break_ + size >= heap_start_ && "UserSpaceMemoryManager::sbrk: trying to deallocate below heap start");
@@ -61,12 +70,12 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, no more physical memory\n");
           current_break_ = old_break;
-          // if (!already_locked)
-          // {
-          //   loader_->arch_memory_.lock_.release();
-          //   // PageManager::instance()->IPT_lock_.release();
-          //   lock_.release();
-          // }
+          if (!already_locked)
+          {
+            loader_->arch_memory_.archmemory_lock_.release();
+            // PageManager::instance()->IPT_lock_.release();
+            current_break_lock_.release();
+          }
           return 0;
         }
 
@@ -78,12 +87,12 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not map page\n");
           current_break_ = old_break;
-          // if (!already_locked)
-          // {
-          //   loader_->arch_memory_.lock_.release();
-          //   // PageManager::instance()->IPT_lock_.release();
-          //   lock_.release();
-          // }
+          if (!already_locked)
+          {
+            loader_->arch_memory_.archmemory_lock_.release();
+            // PageManager::instance()->IPT_lock_.release();
+            current_break_lock_.release();
+          }
           return 0;
         }
       }
@@ -98,24 +107,24 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not unmap page\n");
           current_break_ = old_break;
-          // if (!already_locked)
-          // {
-          //   loader_->arch_memory_.lock_.release();
-          //   // PageManager::instance()->IPT_lock_.release();
-          //   lock_.release();
-          // }
+          if (!already_locked)
+          {
+            loader_->arch_memory_.archmemory_lock_.release();
+            // PageManager::instance()->IPT_lock_.release();
+            current_break_lock_.release();
+          }
           return 0;
         }
         old_top_vpn--;
       }
     }
     debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successful, new break value is %zx\n", current_break_);
-    // if (!already_locked)
-    // {
-    //   loader_->arch_memory_.lock_.release();
-    //   // PageManager::instance()->IPT_lock_.release();
-    //   lock_.release();
-    // }
+    if (!already_locked)
+    {
+      loader_->arch_memory_.archmemory_lock_.release();
+      // PageManager::instance()->IPT_lock_.release();
+      current_break_lock_.release();
+    }
     assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
     assert(current_break_ <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: current break is above heap limit");
     return (pointer) old_break;
@@ -124,12 +133,12 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked)
   {
     debug(SBRK, "UserSpaceMemoryManager::sbrk: returning current break value without changing it %zx\n", current_break_);
     pointer old_break = (pointer) current_break_;
-    // if (!already_locked)
-    // {
-    //   loader_->arch_memory_.lock_.release();
-    //   // PageManager::instance()->IPT_lock_.release();
-    //   lock_.release();
-    // }
+    if (!already_locked)
+    {
+      loader_->arch_memory_.archmemory_lock_.release();
+      // PageManager::instance()->IPT_lock_.release();
+      current_break_lock_.release();
+    }
     return old_break;
   }
 }
@@ -142,10 +151,11 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   assert(new_break_addr >= heap_start_ && "UserSpaceMemoryManager::brk: new break is below heap start");
   assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
 
-  current_break_lock_.acquire();
-  loader_->arch_memory_.archmemory_lock_.acquire();
+  uint32 preallocated_ppn = PageManager::instance()->allocPPN();
+  // current_break_lock_.acquire();
+  // loader_->arch_memory_.archmemory_lock_.acquire();
   ssize_t size = new_break_addr - current_break_;
-  pointer resevered_space = sbrk(size, 1);
+  pointer resevered_space = sbrk(size, 1, preallocated_ppn);
   if (resevered_space == 0)
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: FATAL ERROR, could not set new break at address (%zx)\n", new_break_addr);
@@ -156,8 +166,8 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   else
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: new break is set successful at address (%zx)\n", current_break_);
-    loader_->arch_memory_.archmemory_lock_.release();
-    current_break_lock_.release();
+    // loader_->arch_memory_.archmemory_lock_.release();
+    // current_break_lock_.release();
     return 0;
   }
 }

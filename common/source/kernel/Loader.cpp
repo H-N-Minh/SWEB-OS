@@ -12,7 +12,7 @@
 
 Loader::Loader(ssize_t fd) : fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0){}
 
-Loader::Loader(const Loader &src, int32 fd)
+Loader::Loader(Loader &src, int32 fd)
   : arch_memory_(src.arch_memory_), fd_(fd), hdr_(0), phdrs_(0), program_binary_lock_("Loader::program_binary_lock_"),
     userspace_debug_info_(0)
 {

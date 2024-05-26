@@ -228,7 +228,7 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
   pointer reserved_space = 0;
-  reserved_space = heap_manager->sbrk(size, 0);
+  reserved_space = heap_manager->sbrk(size, 0, 0);
   if (reserved_space == 0)
   {
     debug(SBRK, "Syscall::sbrk: sbrk failed\n");

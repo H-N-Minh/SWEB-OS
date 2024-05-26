@@ -101,7 +101,7 @@ class ArchMemory
     static PageMapLevel4Entry* getRootOfKernelPagingStructure();
 
     /// Prevents accidental copying/assignment, can be implemented if needed
-    ArchMemory(ArchMemory const &src);
+    ArchMemory(ArchMemory &src);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
     

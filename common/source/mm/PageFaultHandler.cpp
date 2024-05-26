@@ -67,7 +67,11 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
+  if (currentThread->holding_lock_list_)
+  {
+    debug(PAGEFAULT, "PageFaultHandler::handlePageFault: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
+    assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
+  }
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)

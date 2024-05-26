@@ -34,7 +34,7 @@ class UserSpaceMemoryManager
      * @param already_locked if the lock for break is already held
      * @return pointer to the reserved space, else return 0 on failure
     */
-    pointer sbrk(ssize_t size, size_t already_locked);
+    pointer sbrk(ssize_t size, size_t already_locked, uint32 preallocated_ppn);
 
     /**
      * set the address of brk to a fixed address

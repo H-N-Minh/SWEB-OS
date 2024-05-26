@@ -10,6 +10,7 @@
 #include "UserProcess.h"
 #include "assert.h"
 #include "SwappingManager.h"
+#include "uvector.h"
 
 
 PageMapLevel4Entry kernel_page_map_level_4[PAGE_MAP_LEVEL_4_ENTRIES] __attribute__((aligned(PAGE_SIZE)));
@@ -20,9 +21,9 @@ PageTableEntry kernel_page_table[8 * PAGE_TABLE_ENTRIES] __attribute__((aligned(
 
 ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 {
+  page_map_level_4_ = PageManager::instance()->allocPPN();
   IPTManager::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
-  page_map_level_4_ = PageManager::instance()->allocPPN();
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
@@ -30,28 +31,90 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
   IPTManager::instance()->IPT_lock_.release();
 }
 
-// COPY CONSTRUCTOR
-ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_")
+/** Helper func for cpy ctor.
+ * count the number of pages with present bit on in the whole archmem of given pml4.
+ * Then that amount of pages (plus a few more) are preallocated for the child's archmem.
+*/
+ustl::vector<uint32> preallocatePages(ArchMemory &archmem)
 {
-  assert(src.archmemory_lock_.heldBy() == currentThread);
-  assert(PageManager::instance()->heldBy() != currentThread);
-  archmemory_lock_.acquire();
-  
+  archmem.archmemory_lock_.acquire();
+  int count = 0;
+  PageMapLevel4Entry* pml4e = (PageMapLevel4Entry*) ArchMemory::getIdentAddressOfPPN(archmem.page_map_level_4_);
+  for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++)
+  {
+    if (pml4e[pml4i].present)
+    {
+      count++;
+      PageDirPointerTableEntry* pdpte = (PageDirPointerTableEntry*) ArchMemory::getIdentAddressOfPPN(pml4e[pml4i].page_ppn);
+      for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
+      {
+        if (pdpte[pdpti].pd.present)
+        {
+          count++;
+          PageDirEntry* pde = (PageDirEntry*) ArchMemory::getIdentAddressOfPPN(pdpte[pdpti].pd.page_ppn);
+          for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
+          {
+            if (pde[pdi].pt.present)
+            {
+              count++;
+              PageTableEntry* pte = (PageTableEntry*) ArchMemory::getIdentAddressOfPPN(pde[pdi].pt.page_ppn);
+              for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+              {
+                if (pte[pti].present)
+                {
+                  count++;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  archmem.archmemory_lock_.release();
+
+  count += 5;    // +5 for safety, but this is not a guarantee that it will be enough 
+
+  debug(MINH, "Archmemory::countPresentPages: preallocating %d pages for the child cpy ctor\n", count);
+  ustl::vector<uint32> preallocated_pages;
+  for (int i = 0; i < count; i++)
+  {
+    preallocated_pages.push_back(PageManager::instance()->allocPPN());
+  }
+
+  return preallocated_pages;
+}
+
+// COPY CONSTRUCTOR
+ArchMemory::ArchMemory(ArchMemory &src):archmemory_lock_("archmemory_lock_")
+{
   debug(FORK, "ArchMemory::copy-constructor starts \n");
-  page_map_level_4_ = PageManager::instance()->allocPPN();
+  assert(PageManager::instance()->heldBy() != currentThread);
+
+  debug(FORK, "ArchMemory::copy-constructor preallocating pages for child's archmem\n");
+  ustl::vector<uint32> preallocated_pages = preallocatePages(src);
+  
+  debug(FORK, "copy-ctor start copying all pages\n");
+  IPTManager::instance()->IPT_lock_.acquire();
+  src.archmemory_lock_.acquire();
+  archmemory_lock_.acquire();
+
+  assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
+  page_map_level_4_ = preallocated_pages.back();
+  preallocated_pages.pop_back();
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
   memcpy((void*) CHILD_pml4, (void*) PARENT_pml4, PAGE_SIZE);
 
-
-  debug(FORK, "copy-ctor start copying all pages\n");
   // Loop through the pml4 to get each pdpt
   for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++) // copy only lower half (userspace)
   {
     if (PARENT_pml4[pml4i].present)
     {
       // setup new page directory pointer table
-      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
+      assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
+      CHILD_pml4[pml4i].page_ppn = preallocated_pages.back();
+      preallocated_pages.pop_back();
 
 
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
@@ -66,7 +129,9 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
         if (PARENT_pdpt[pdpti].pd.present)
         {
           // setup new page directory
-          CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
+          assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
+          CHILD_pdpt[pdpti].pd.page_ppn = preallocated_pages.back();
+          preallocated_pages.pop_back();
 
           //CHILD_pdpt[pdpti].pd.page_ppn = PARENT_pdpt[pdpti].pd.page_ppn;
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
@@ -80,7 +145,9 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
             if (PARENT_pd[pdi].pt.present)
             {
               // setup new page table
-              CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
+              assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
+              CHILD_pd[pdi].pt.page_ppn = preallocated_pages.back();
+              preallocated_pages.pop_back();
 
               //CHILD_pd[pdi].pt.page_ppn = PARENT_pd[pdi].pt.page_ppn;
               PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
@@ -119,8 +186,21 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
       }
     }
   }
-  debug(FORK, "ArchMemory::copy-constructor finished \n");
+
   archmemory_lock_.release();
+  src.archmemory_lock_.release();
+  IPTManager::instance()->IPT_lock_.release();
+
+  // free unused pages
+  if (preallocated_pages.size() > 0)
+  {
+    for (size_t i = 0; i < preallocated_pages.size(); i++)
+    {
+      PageManager::instance()->freePPN(preallocated_pages[i]);
+    }    
+  }
+  
+  debug(FORK, "ArchMemory::copy-constructor finished \n");
 }
 
 
@@ -281,8 +361,8 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
 bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be alredy  locked.");
-  assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
   assert(archmemory_lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
+  assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
 
 
   ArchMemoryMapping m = resolveMapping(page_map_level_4_, virtual_page);

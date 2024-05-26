@@ -76,11 +76,9 @@ UserProcess::UserProcess(const UserProcess& other)
   assert(fd_ >= 0  && "Error: File descriptor doesnt exist, Loading failed in UserProcess copy-ctor\n");
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
 
-  IPTManager::instance()->IPT_lock_.acquire();
-  other.loader_->arch_memory_.archmemory_lock_.acquire();
+
   loader_ = new Loader(*other.loader_, fd_);
-  other.loader_->arch_memory_.archmemory_lock_.release();
-  IPTManager::instance()->IPT_lock_.release();
+
   if (!loader_){assert(0 && "No loader in fork");}
 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
@@ -321,8 +319,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
 
   //allocate one (or two) physical pages for the arguments
-  IPTManager::instance()->IPT_lock_.acquire();
-  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+  // IPTManager::instance()->IPT_lock_.acquire();   // not needed? also cant lock then call allocPPN
+  // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
   size_t page_for_args = PageManager::instance()->allocPPN();
   size_t next_page_for_args = NULL;
 
@@ -330,8 +328,8 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     next_page_for_args = PageManager::instance()->allocPPN();
   }
-  currentThread->loader_->arch_memory_.archmemory_lock_.release();
-  IPTManager::instance()->IPT_lock_.release();
+  // currentThread->loader_->arch_memory_.archmemory_lock_.release();
+  // IPTManager::instance()->IPT_lock_.release();
 
 
   size_t offset = 0;

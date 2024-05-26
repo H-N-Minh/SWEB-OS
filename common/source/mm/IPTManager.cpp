@@ -87,10 +87,17 @@ size_t IPTManager::findPageToSwapOut()
   {
     debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA AGING\n");
 
+    size_t random_num = randomNumGenerator();
+    debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
+    
+    ustl::vector<ppn_t> unique_keys = getUniqueKeysInIPT();
+    size_t random_ipt_index = random_num % unique_keys.size();
+    
+    ppn_retval = (size_t) (unique_keys[random_ipt_index]);
   }
 
   assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
-  debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu\n", ppn_retval);
+  debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%d\n", ppn_retval);
   return ppn_retval;
 }
 

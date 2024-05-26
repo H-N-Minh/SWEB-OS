@@ -13,7 +13,7 @@ class Loader
 {
   public:
     Loader(ssize_t fd);
-    Loader(const Loader &src, int32 fd);
+    Loader(Loader &src, int32 fd);
     ~Loader();
 
     /**

@@ -232,7 +232,12 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
  */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
-  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
+  // if (currentThread->holding_lock_list_)
+  // {
+  //   debug(PM, "PageManager::allocPPN: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
+  //   assert(!currentThread->holding_lock_list_ && "allocPPN should not be called while still holding a lock\n");
+  // }
+  
   uint32 p;
   uint32 found = 0;
   assert((page_size % PAGE_SIZE) == 0);
@@ -403,3 +408,4 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
     return 0;
   }
 }
+
