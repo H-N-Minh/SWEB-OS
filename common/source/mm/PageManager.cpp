@@ -253,7 +253,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
   if (found == 0)
   {
-    size_t ppn = findPageToSwapOut(); //TODOs!!!!!!!!
+    size_t ppn = IPTManager::instance()->findPageToSwapOut();
     SwappingManager::instance()->swapOutPage(ppn);
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
     debug(PM, "PageManager::allocPPN: New ppn is %ld. (swapped in)\n", ppn);
@@ -406,17 +406,17 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
 
 
 //TODO: At the moment it does nonesens
-size_t PageManager::findPageToSwapOut()
-{
-  bool key_in_ipt = false;
-  while(!key_in_ipt)
-  {
-    possible_ppn_++;    
-    if(possible_ppn_ > 2016)
-    {
-      possible_ppn_ = 1009;
-    }
-    key_in_ipt = IPTManager::instance()->KeyisInMap(possible_ppn_, IPTMapType::RAM_MAP);
-  }
-  return possible_ppn_;
-}
+// size_t PageManager::findPageToSwapOut()
+// {
+//   bool key_in_ipt = false;
+//   while(!key_in_ipt)
+//   {
+//     possible_ppn_++;    
+//     if(possible_ppn_ > 2016)
+//     {
+//       possible_ppn_ = 1009;
+//     }
+//     key_in_ipt = IPTManager::instance()->KeyisInMap(possible_ppn_, IPTMapType::RAM_MAP);
+//   }
+//   return possible_ppn_;
+// }

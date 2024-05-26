@@ -81,6 +81,16 @@ public:
 
   // ustl::vector<IPTEntry*> getPageInfosForPPN(size_t ppn); //TODOs
 
+  /**
+   * @return a vector of all unique keys in the ram_map_
+  */
+  ustl::vector<ppn_t> getUniqueKeysInIPT();
+
+  /**
+   * @return the ppn of the page that will be swapped out. This is where the PRA is used
+  */
+  size_t findPageToSwapOut();
+
 
   private:
     static IPTManager* instance_;

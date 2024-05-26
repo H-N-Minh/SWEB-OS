@@ -3,6 +3,8 @@
 #include "assert.h"
 #include "debug.h"
 #include "Thread.h"
+#include "Syscall.h"
+#include "uset.h"
 // #include "ArchMemory.h"
 
 ////////////////////// IPTEntry //////////////////////
@@ -26,6 +28,39 @@ IPTManager* IPTManager::instance()
 {
   return instance_;
 }
+
+size_t randomNumGenerator()
+{
+  size_t time_stamp = (size_t) Syscall::get_current_timestamp_64_bit();
+  return time_stamp / 73;
+}
+
+ustl::vector<ppn_t> IPTManager::getUniqueKeysInIPT()
+{
+  ustl::set<ppn_t> unique_keys;
+  for (auto it = ram_map_.begin(); it != ram_map_.end(); ++it) {
+    unique_keys.insert(it->first);
+  }
+
+  return ustl::vector<ppn_t>(unique_keys.begin(), unique_keys.end());
+}
+
+
+size_t IPTManager::findPageToSwapOut()
+{
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::findPageToSwapOut called but IPT not locked\n");
+
+  size_t random_num = randomNumGenerator();
+  debug(SWAPPING, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
+  
+  ustl::vector<ppn_t> unique_keys = getUniqueKeysInIPT();
+  size_t random_ipt_index = random_num % unique_keys.size();
+  
+  size_t ppn = (size_t) (unique_keys[random_ipt_index]);
+  debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu\n", ppn);
+  return ppn;
+}
+
 
 IPTEntry* IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem) {
   debug(IPT, "IPTManager::lookupEntryInRAM: Looking up entry in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
