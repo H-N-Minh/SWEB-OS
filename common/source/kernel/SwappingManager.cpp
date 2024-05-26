@@ -38,7 +38,6 @@ void SwappingManager::swapOutPage(size_t ppn)
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread);
 
-
   //Find free disk_offset (TODOs)
   size_t disk_offset = disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
   disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing++;

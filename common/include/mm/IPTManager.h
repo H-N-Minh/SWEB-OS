@@ -7,6 +7,7 @@
 #include "Mutex.h"
 
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
+enum PRA_TYPE {RANDOM, AGING};
 
 #include "ArchMemory.h"
 
@@ -37,9 +38,10 @@ public:
 // TODO: IPT Manger must be made singleton and be initialized somewhere
 class IPTManager {
 public:
-  Mutex IPT_lock_;          // lock both ram_map_ and disk_map_
+  Mutex IPT_lock_;          // lock both ram_map_ and disk_map_ and also pra_type_
   ustl::multimap<ppn_t, IPTEntry*> ram_map_;
   ustl::multimap<diskoffset_t, IPTEntry*> disk_map_;
+  PRA_TYPE pra_type_;       // aging is default (in ctor)
   
   IPTManager();
   ~IPTManager();

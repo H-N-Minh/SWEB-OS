@@ -7,6 +7,8 @@
 #include "uset.h"
 // #include "ArchMemory.h"
 
+#define INVALID_PPN -1
+
 ////////////////////// IPTEntry //////////////////////
 
 IPTEntry::IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem) : ppn(ppn), vpn(vpn), archmem(archmem) {}
@@ -22,6 +24,7 @@ IPTManager* IPTManager::instance_ = nullptr;
 IPTManager::IPTManager() : IPT_lock_("IPTManager::IPT_lock_") {
   assert(!instance_);
   instance_ = this;
+  pra_type_ = PRA_TYPE::AGING;
 }
 
 IPTManager* IPTManager::instance()
@@ -33,6 +36,21 @@ size_t randomNumGenerator()
 {
   size_t time_stamp = (size_t) Syscall::get_current_timestamp_64_bit();
   return time_stamp / 73;
+}
+
+// only for debugging, used to see if the random number generator is working
+void debugRandomGenerator()
+{
+  ustl::vector<size_t> randomNumbers;
+  for (int i = 0; i < 1024; ++i) {
+    size_t randomNumber = randomNumGenerator();
+    randomNumbers.push_back(randomNumber);
+  }
+  for (int i = 0; i < 1024; i++)
+  {
+    debug(MINH, "random num is %zu\n", randomNumbers[i] % 1024);
+  }
+  assert(0);
 }
 
 ustl::vector<ppn_t> IPTManager::getUniqueKeysInIPT()
@@ -49,16 +67,31 @@ ustl::vector<ppn_t> IPTManager::getUniqueKeysInIPT()
 size_t IPTManager::findPageToSwapOut()
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::findPageToSwapOut called but IPT not locked\n");
+  
+  int ppn_retval = INVALID_PPN;
 
-  size_t random_num = randomNumGenerator();
-  debug(SWAPPING, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
-  
-  ustl::vector<ppn_t> unique_keys = getUniqueKeysInIPT();
-  size_t random_ipt_index = random_num % unique_keys.size();
-  
-  size_t ppn = (size_t) (unique_keys[random_ipt_index]);
-  debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu\n", ppn);
-  return ppn;
+  if (pra_type_ == PRA_TYPE::RANDOM)
+  {
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
+    // debugRandomGenerator();    // for debugging purposes
+
+    size_t random_num = randomNumGenerator();
+    debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
+    
+    ustl::vector<ppn_t> unique_keys = getUniqueKeysInIPT();
+    size_t random_ipt_index = random_num % unique_keys.size();
+    
+    ppn_retval = (size_t) (unique_keys[random_ipt_index]);
+  }
+  else if (pra_type_ == PRA_TYPE::AGING)
+  {
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA AGING\n");
+
+  }
+
+  assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
+  debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu\n", ppn_retval);
+  return ppn_retval;
 }
 
 

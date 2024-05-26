@@ -403,20 +403,3 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
     return 0;
   }
 }
-
-
-//TODO: At the moment it does nonesens
-// size_t PageManager::findPageToSwapOut()
-// {
-//   bool key_in_ipt = false;
-//   while(!key_in_ipt)
-//   {
-//     possible_ppn_++;    
-//     if(possible_ppn_ > 2016)
-//     {
-//       possible_ppn_ = 1009;
-//     }
-//     key_in_ipt = IPTManager::instance()->KeyisInMap(possible_ppn_, IPTMapType::RAM_MAP);
-//   }
-//   return possible_ppn_;
-// }
