@@ -50,9 +50,12 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
   {
     if (PARENT_pml4[pml4i].present)
     {
-      debug(COW, "---------------PageFault PML4 Loop \n");
+      //debug(COW, "---------------PageFault PML4 Loop \n");
       PARENT_pml4[pml4i].cow = 1;
+      //PARENT_pml4[pml4i].writeable = 0;
+
       CHILD_pml4[pml4i].cow = 1;
+      //CHILD_pml4[pml4i].writeable = 0;
 
       CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
 
@@ -68,9 +71,12 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
       {
         if (PARENT_pdpt[pdpti].pd.present)
         {
-          debug(COW, "---------------PageFault PML3 Loop \n");
+          //debug(COW, "---------------PageFault PML3 Loop \n");
           PARENT_pdpt[pdpti].pd.cow = 1;
+          //PARENT_pdpt[pdpti].pd.writeable = 0;
+
           CHILD_pdpt[pdpti].pd.cow = 1;
+          //CHILD_pdpt[pdpti].pd.writeable = 0;
 
           CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
 
@@ -87,14 +93,15 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
             {
               debug(COW, "---------------PageFault PML2 Loop \n");
               PARENT_pd[pdi].pt.cow = 1;
+              PARENT_pd[pdi].pt.writeable = 0;
               CHILD_pd[pdi].pt.cow = 1;
+              CHILD_pd[pdi].pt.writeable = 0;
 
-              CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->allocPPN();
+              PageManager::instance()->incrementRefCount(PARENT_pd[pdi].pt.page_ppn);
+              debug(COW, "-------------getReferenceCount %d \n", PageManager::instance()->getRefCount(PARENT_pd[pdi].pt.page_ppn));
 
-              //CHILD_pd[pdi].pt.page_ppn = PARENT_pd[pdi].pt.page_ppn;
-              PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
               PageTableEntry* PARENT_pt = (PageTableEntry*) getIdentAddressOfPPN(PARENT_pd[pdi].pt.page_ppn);
-              memcpy((void*) CHILD_pt, (void*) PARENT_pt, PAGE_SIZE);
+
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
 
               // loop through pt to get each pageT
@@ -102,15 +109,17 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
               {
                 if (PARENT_pt[pti].present)
                 {
-                  PARENT_pt[pti].writeable = 0; //read only
-                  PARENT_pt[pti].cow = 1;
+                  //PARENT_pt[pti].writeable = 0; //read only
+                  //PARENT_pt[pti].cow = 1;
 
-                  CHILD_pt[pti].writeable = 0; //read only
-                  CHILD_pt[pti].cow = 1;
+
+
+
 
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   IPTMapType maptype = getMapType(PARENT_pt[pti]);
+
                   PageManager::instance()->ref_count_lock_.acquire();
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
                   assert(PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn) >= 2 && "The reference count should be at least 2");
@@ -119,7 +128,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
                   //                                                                              PageManager::instance()->getReferenceCount(PARENT_pt[pti].page_ppn));
                   PageManager::instance()->ref_count_lock_.release();
 
-                  assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
+
                 }
               }
             }
@@ -169,12 +178,17 @@ ArchMemory::~ArchMemory()
                   IPTMapType maptype = getMapType(pt[pti]);
 
                   PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
-                  debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
+                  //debug(FORK, "getReferenceCount in destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                   PageManager::instance()->ref_count_lock_.release();
                 }
               }
-              pd[pdi].pt.present = 0;
-              PageManager::instance()->freePPN(pd[pdi].pt.page_ppn);
+              if(PageManager::instance()->getRefCount(pd[pdi].pt.page_ppn) == 1)
+              {
+                pd[pdi].pt.present = 0;
+                debug(FORK, "------------------1 \n");
+                PageManager::instance()->freePPN(pd[pdi].pt.page_ppn);
+                debug(FORK, "------------------2 \n");
+              }
             }
           }
           pdpt[pdpti].pd.present = 0;
@@ -188,6 +202,7 @@ ArchMemory::~ArchMemory()
   PageManager::instance()->freePPN(page_map_level_4_);
   archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
+  debug(FORK, "------------------Arch de finished \n");
 }
 
 pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
@@ -314,6 +329,7 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   {
     m.pt_ppn = PageManager::instance()->allocPPN();
     insert<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi, m.pt_ppn, 1, 0, 1, 1);
+    PageManager::instance()->incrementRefCount(m.pt_ppn);
   }
 
   if (m.page_ppn == 0)

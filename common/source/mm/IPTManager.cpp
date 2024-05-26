@@ -84,7 +84,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   if (map->find(ppn) == map->end())
   {
     debug(SWAPPING, "IPTManager::removeEntryIPT ppn %zu not found in the specified map\n", ppn);
-    assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in IPT\n");
+    //assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in IPT\n");
   }
 
   // Actually remove the pte from the entry
@@ -126,7 +126,7 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
   if (destination_map->find(ppn_destination) != destination_map->end())
   {
     debug(SWAPPING, "IPTManager::moveEntry ppn %zu already exists in the destination map\n", ppn_destination);
-    assert(0 && "IPTManager::moveEntry: ppn_destination already exists in destination map\n");
+    //assert(0 && "IPTManager::moveEntry: ppn_destination already exists in destination map\n");
   }
 
   ustl::vector<IPTEntry*> ipt_entries;
@@ -135,7 +135,7 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
   if (source_map->find(ppn_source) == source_map->end())
   {
     debug(SWAPPING, "IPTManager::moveEntry ppn %zu not found in the source map\n", ppn_source);
-    assert(0 && "IPTManager::moveEntry: The given ppn doesnt exist in the specifed map\n");
+    //assert(0 && "IPTManager::moveEntry: The given ppn doesnt exist in the specifed map\n");
   }
   else
   {

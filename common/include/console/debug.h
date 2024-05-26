@@ -53,7 +53,7 @@ const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
 const size_t PIPE               = Ansi_Cyan ;
 const size_t FILEDESCRIPTOR     = Ansi_Cyan    | OUTPUT_ENABLED;
 
-const size_t FORK               = Ansi_Red;
+const size_t FORK               = Ansi_Red| OUTPUT_ENABLED;
 const size_t PAGEFAULT_TEST     = Ansi_Red     | OUTPUT_ENABLED;
 const size_t EXEC               = Ansi_Magenta;
 
@@ -65,7 +65,7 @@ const size_t KMM                = Ansi_Yellow;
 const size_t SBRK               = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t GROW_STACK         = Ansi_Green;
 const size_t IPT                = Ansi_Green | OUTPUT_ENABLED;
-const size_t SWAPPING        = Ansi_Red | OUTPUT_ENABLED;
+const size_t SWAPPING        = Ansi_Red ;
 
 //group driver
 const size_t DRIVER             = Ansi_Yellow;
