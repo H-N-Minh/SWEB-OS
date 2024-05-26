@@ -106,6 +106,10 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       currentThread->loader_->arch_memory_.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
     }
+    else  //status INVALID
+    {
+      errorInPageFaultKillProcess();
+    }
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
   // {

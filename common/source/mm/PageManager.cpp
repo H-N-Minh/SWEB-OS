@@ -332,12 +332,11 @@ void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 {
   debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(ref_count_lock_.heldBy() == currentThread);
+  if(vpn !=0) {
+    IPTManager::instance()->insertEntryIPT(maptype, offset, vpn, archmemory);
 
-  IPTManager::instance()->insertEntryIPT(maptype, offset, vpn, archmemory);
-
-  if(maptype == IPTMapType::DISK_MAP)
-  {
-    return;
+    if (maptype == IPTMapType::DISK_MAP)
+      return;
   }
 
   //check if the page number is already in the map
@@ -360,11 +359,12 @@ void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
   //debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(ref_count_lock_.heldBy() == currentThread);
 
-  IPTManager::instance()->removeEntryIPT(maptype, offset, vpn, archmemory);
-
-  if(maptype == IPTMapType::DISK_MAP)
+  if(vpn!=0)
   {
-    return;
+    IPTManager::instance()->removeEntryIPT(maptype, offset, vpn, archmemory);
+
+    if(maptype == IPTMapType::DISK_MAP)
+      return;
   }
 
   //check if the page number is in the map
