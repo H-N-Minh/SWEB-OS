@@ -89,13 +89,23 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     }
 
   }
-  else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
+  else if (status == PRESENT && writing)
   {
     int is_cow_value = currentThread->loader_->arch_memory_.isCOW(address);
-    debug(COW, "is COW from PML1, start Copy %d\n", is_cow_value);
-    currentThread->loader_->arch_memory_.copyPage(address);
-    currentThread->loader_->arch_memory_.archmemory_lock_.release();
-    IPTManager::instance()->IPT_lock_.release();
+    if(is_cow_value == 2)
+    {
+      debug(COW, "is COW from PML2, start Copy\n");
+      //do copy
+      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
+    }
+    else if(is_cow_value == 1)
+    {
+      debug(COW, "is COW from PML1, start Copy\n");
+      currentThread->loader_->arch_memory_.copyPage(address);
+      currentThread->loader_->arch_memory_.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
+    }
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
   // {
