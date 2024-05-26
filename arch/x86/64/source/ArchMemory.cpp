@@ -611,6 +611,42 @@ void ArchMemory::copyPage(size_t virtual_addr)
   pml1_entry->writeable = 1;
   // pml1_entry->cow = 0; //not nessessary i think
 }
+void ArchMemory::copyPageTable(size_t virtual_addr)
+{
+  debug(FORK, "ArchMemory::copyPage Resolving mapping \n");
+  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  PageDirEntry* pml2_entry = &m.pd[m.pdi];
+
+  size_t new_page_ppn = PageManager::instance()->allocPPN();
+
+  PageTableEntry* original_page = (PageTableEntry*) getIdentAddressOfPPN(pml2_entry->pt.page_ppn);
+  PageTableEntry* new_page = (PageTableEntry*) getIdentAddressOfPPN(new_page_ppn);
+
+  memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
+  PageManager::instance()->decrementRefCount(pml2_entry->pt.page_ppn);
+  //update the page directory entry to point to the new physical page
+  pml2_entry->pt.page_ppn = new_page_ppn;
+  PageManager::instance()->incrementRefCount(pml2_entry->pt.page_ppn);
+  pml2_entry->pt.writeable = 1;
+  pml2_entry->pt.cow = 0;
+
+  for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
+  {
+    if (original_page[pti].present)
+    {
+      original_page[pti].writeable = 0; //read only
+      original_page[pti].cow = 1;
+
+      new_page[pti].writeable = 0; //read only
+      new_page[pti].cow = 1;
+
+      PageManager::instance()->ref_count_lock_.acquire();
+      PageManager::instance()->incrementRefCount(original_page[pti].page_ppn);
+      PageManager::instance()->ref_count_lock_.release();
+    }
+  }
+
+}
 
 bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 {

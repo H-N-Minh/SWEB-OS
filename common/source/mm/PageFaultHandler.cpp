@@ -95,7 +95,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     if(is_cow_value == 2)
     {
       debug(COW, "is COW from PML2, start Copy\n");
-      //do copy
+      currentThread->loader_->arch_memory_.copyPageTable(address);
       currentThread->loader_->arch_memory_.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
     }
