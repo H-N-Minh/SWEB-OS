@@ -68,13 +68,21 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   ArchThreads::printThreadRegisters(currentThread, false);
 
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
-  assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
-  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);
+  if (currentThread->holding_lock_list_)
+  {
+    debug(PAGEFAULT, "PageFaultHandler::handlePageFault: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
+    assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
+  }
+  // assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
+
+  ustl::vector<size_t> preallocated_pages = PageManager::instance()->preAlocatePages(5);
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // loadPage() needs 4 and swapInPage needs 1. 
+
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
 
@@ -85,29 +93,32 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page is swapped out
     else if(current_archmemory.isSwapped(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);
     }
     //Page needs to be loader from binary 
     else
     {
-      currentThread->loader_->loadPage(address, ppns);
+      currentThread->loader_->loadPage(address, preallocated_pages);
     }
     current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
+
+    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   }
   else if (status == PRESENT)
   {
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(1);  // copyPage() and swapInPage each only needs 1 alloc
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
     //Page is not present anymore we need to swap it in
     if(!current_archmemory.isPresent(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);  //TODOs: maybe cow
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);  //TODOs: maybe cow
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
     else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
     {
-      current_archmemory.copyPage(address, ppns);
+      current_archmemory.copyPage(address, preallocated_pages);
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
     else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
@@ -119,12 +130,14 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     {
       current_archmemory.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
-      PageManager::instance()-> releaseNotNeededPages(ppns);
+      PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
       errorInPageFaultKillProcess();
     }
     
     current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
+    
+    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
   // {
@@ -151,11 +164,11 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   // }
   else  //status INVALID
   {
-    PageManager::instance()-> releaseNotNeededPages(ppns);
+    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
     errorInPageFaultKillProcess();
   }
 
-  PageManager::instance()->releaseNotNeededPages(ppns);
+  PageManager::instance()->releaseNotNeededPages(preallocated_pages);
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 

@@ -12,8 +12,8 @@
 
 Loader::Loader(ssize_t fd) : fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0){}
 
-Loader::Loader(const Loader &src, int32 fd, ustl::vector<size_t>& ppns)
-  : arch_memory_(src.arch_memory_, ppns), fd_(fd), hdr_(0), phdrs_(0), program_binary_lock_("Loader::program_binary_lock_"),
+Loader::Loader(const Loader &src, int32 fd, ustl::vector<size_t>& preallocated_pages)
+  : arch_memory_(src.arch_memory_, preallocated_pages), fd_(fd), hdr_(0), phdrs_(0), program_binary_lock_("Loader::program_binary_lock_"),
     userspace_debug_info_(0)
 {
     debug(FORK, "Loader-Copy constructor called.\n");
@@ -64,7 +64,7 @@ void* Loader::getBrkStart()
     return heap_start;
 }
 
-void Loader::loadPage(pointer virtual_address, ustl::vector<size_t>& ppns)
+void Loader::loadPage(pointer virtual_address, ustl::vector<size_t>& preallocated_pages)
 {
     assert(arch_memory_.archmemory_lock_.heldBy() == currentThread && "load page need to hold archmemory lock");
     debug(LOADER, "Loader:loadPage: Request to load the page for address %p.\n", (void*)virtual_address);
@@ -72,7 +72,7 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<size_t>& ppns)
     const pointer virt_page_end_addr = virt_page_start_addr + PAGE_SIZE;
     bool found_page_content = false;
     // get a new page for the mapping
-    size_t ppn = PageManager::instance()->getPreAlocatedPage(ppns);
+    size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 
     program_binary_lock_.acquire();
 
@@ -95,7 +95,7 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<size_t>& ppns)
             arch_memory_.archmemory_lock_.release();
             IPTManager::instance()->IPT_lock_.release();
             PageManager::instance()->freePPN(ppn);
-            PageManager::instance()-> releaseNotNeededPages(ppns);
+            PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
             debug(LOADER, "ERROR! Some parts of the content could not be loaded from the binary.\n");
             Syscall::exit(999);
           }
@@ -115,11 +115,11 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<size_t>& ppns)
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
       arch_memory_.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
-      PageManager::instance()-> releaseNotNeededPages(ppns);
+      PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
       Syscall::exit(666);
     }
 
-    bool page_mapped = arch_memory_.mapPage(virt_page_start_addr / PAGE_SIZE, ppn, true, ppns);
+    bool page_mapped = arch_memory_.mapPage(virt_page_start_addr / PAGE_SIZE, ppn, true, preallocated_pages);
 
     if (!page_mapped)
     {
