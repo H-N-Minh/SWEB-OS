@@ -76,8 +76,6 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   }
   // assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
-  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(5);
-
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
@@ -164,11 +162,9 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   // }
   else  //status INVALID
   {
-    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
     errorInPageFaultKillProcess();
   }
 
-  PageManager::instance()->releaseNotNeededPages(preallocated_pages);
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 

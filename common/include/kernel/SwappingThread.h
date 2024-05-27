@@ -14,7 +14,7 @@ class SwappingThread : public Thread
     virtual void kill();
     virtual void Run();
   
-    void swapPage();
+    void swapPageOut();
 
     Mutex orders_lock_;
     Condition orders_cond_;

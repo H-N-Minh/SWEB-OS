@@ -34,7 +34,8 @@ void SwappingThread::Run()
     }
     else
     {
-      swapPage();
+      assert(orders_ > 0 && "SwappingThread::Run: number of orders is <= 0\n");
+      swapPageOut();
       orders_--;
       orders_cond_.signal();
       orders_lock_.release();
@@ -42,7 +43,7 @@ void SwappingThread::Run()
   }
 }
 
-void SwappingThread::swapPage()
+void SwappingThread::swapPageOut()
 {
   IPTManager* ipt_manager = IPTManager::instance();
   ipt_manager->IPT_lock_.acquire();
