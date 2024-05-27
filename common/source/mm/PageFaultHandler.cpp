@@ -84,21 +84,27 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
 
-    //Page got set to present in the meantime
+    //Page got set to present in the meantime, so no need to do anything anymore
     if(current_archmemory.isPresent(address))
     {
+      current_archmemory.archmemory_lock_.release();
     }
     //Page is swapped out
     else if(current_archmemory.isSwapped(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);
+      size_t vpn = address / PAGE_SIZE;
+      ArchMemory& archmemory = currentThread->loader_->arch_memory_;
+      size_t disk_offset = archmemory.getDiskLocation(vpn);  
+      
+      current_archmemory.archmemory_lock_.release();      // should be fine to release, because we still holding IPT_lock
+      SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
     }
     //Page needs to be loader from binary 
     else
     {
       currentThread->loader_->loadPage(address, preallocated_pages);
+      current_archmemory.archmemory_lock_.release();
     }
-    current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
 
     PageManager::instance()-> releaseNotNeededPages(preallocated_pages);

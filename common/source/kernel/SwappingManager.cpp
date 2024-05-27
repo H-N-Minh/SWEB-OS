@@ -5,7 +5,7 @@
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
 
-size_t SwappingManager::disk_offset_ = 0;
+size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
 
 SwappingManager::SwappingManager() : disk_lock_("disk_lock_")
@@ -36,8 +36,8 @@ void SwappingManager::swapOutPage(size_t ppn)
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
 
   //Move Page infos from ipt_map_ram to ipt_map_disk
-  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_);
-  ustl::vector<IPTEntry*> virtual_page_infos = ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_);
+  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
+  ustl::vector<IPTEntry*> virtual_page_infos = ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
 
   // lock all archmem and choose 1 archmem and vpn (for later to write to disk)
   lock_archmemories_in_right_order(virtual_page_infos);
@@ -47,7 +47,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   {
     ArchMemory* archmemory = virtual_page_info->archmem;
     size_t vpn = virtual_page_info->vpn;
-    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset_);
+    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset_counter_);
   }
 
   ArchMemory* archmemory = virtual_page_infos[0]->archmem;
@@ -58,7 +58,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   ArchMemoryMapping m = ArchMemory::resolveMapping(archmemory->page_map_level_4_, vpn);
   char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
   // kprintf("Pagecontent before: <%s>\n", page_content);
-  bd_device_->writeData(disk_offset_ * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
+  bd_device_->writeData(disk_offset_counter_ * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
   disk_lock_.release();
   total_disk_writes_++;
 
@@ -67,9 +67,9 @@ void SwappingManager::swapOutPage(size_t ppn)
   {
     archmemory = virtual_page_info->archmem;
     vpn = virtual_page_info->vpn;
-    archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_);
+    archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
   }
-  disk_offset_++;
+  disk_offset_counter_++;
 
   PageManager::instance()->ref_count_lock_.acquire();  //??
   PageManager::instance()->setReferenceCount(ppn, 0);
@@ -80,15 +80,12 @@ void SwappingManager::swapOutPage(size_t ppn)
 }
 
 //Only works if the page i want to swap in is in the archmemory of current thread
-int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32>& preallocated_pages)
+int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages)
 {
-  ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
-  
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
-  assert(archmemory.archmemory_lock_.heldBy() == currentThread);
  
- //Get disk_offset and new ppn
-  size_t disk_offset = archmemory.getDiskLocation(vpn);  
+  //Get disk_offset and new ppn
+
   size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 
   //Move Page infos from  ipt_map_disk to ipt_map_ram
@@ -119,7 +116,7 @@ int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32>& preallocated_p
   total_disk_reads_++;
   unlock_archmemories(virtual_page_infos);
 
-  debug(SWAPPING, "SwappingManager::swapInPage: Swap in vpn %ld finished", vpn);
+  debug(SWAPPING, "SwappingManager::swapInPage: Swap in: diskoffset %zu to ppn %zu finished", disk_offset, ppn);
   return 0;
 }
 

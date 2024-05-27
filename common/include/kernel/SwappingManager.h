@@ -16,7 +16,7 @@ class SwappingManager
     ~SwappingManager();
 
     void swapOutPage(size_t ppn);
-    int swapInPage(size_t vpn, ustl::vector<uint32>& preallocated_pages);
+    int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
 
     void lock_archmemories_in_right_order(ustl::vector<IPTEntry*> virtual_page_infos);
     void unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_infos);
@@ -32,7 +32,7 @@ class SwappingManager
 
     BDVirtualDevice* bd_device_;
 
-    static size_t disk_offset_;    //TODO? this only goes up, so disk page is never reused
+    static size_t disk_offset_counter_;    //TODO? this only goes up, so disk page is never reused
 
     int total_disk_reads_ = 0;
     int total_disk_writes_ = 0;

@@ -273,6 +273,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
     }
     
     size_t ppn = swapper->free_pages_.front();
+    swapper->free_pages_.erase(swapper->free_pages_.begin());
     swapper->orders_lock_.release();
 
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
