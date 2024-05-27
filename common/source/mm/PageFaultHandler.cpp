@@ -75,7 +75,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(1);  // loadPage() and swapInPage both needs 1 alloc
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(4);  // loadPage() needs 4 and swapInPage needs 1. 
 
     IPTManager::instance()->IPT_lock_.acquire();
     currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
