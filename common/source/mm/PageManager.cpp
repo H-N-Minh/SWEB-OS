@@ -422,18 +422,18 @@ size_t PageManager::findPageToSwapOut()
   return possible_ppn_;
 }
 
-ustl::vector<size_t> PageManager::preAlocatePages(int needed_pages_count)
+ustl::vector<uint32> PageManager::preAlocatePages(int needed_pages_count)
 {
-  ustl::vector<size_t> pre_alocated_pages;
+  ustl::vector<uint32> pre_alocated_pages;
   for(int i = 0; i < needed_pages_count; i++)
   {
-    size_t ppn = allocPPN();
+    uint32 ppn = allocPPN();
     pre_alocated_pages.push_back(ppn);
   }
   return pre_alocated_pages;
 }
 
-void PageManager::releaseNotNeededPages(ustl::vector<size_t>& not_used_pages)
+void PageManager::releaseNotNeededPages(ustl::vector<uint32>& not_used_pages)
 {
   for(auto& ppn : not_used_pages)
   {
@@ -442,10 +442,10 @@ void PageManager::releaseNotNeededPages(ustl::vector<size_t>& not_used_pages)
   not_used_pages.clear();
 }
 
-size_t PageManager::getPreAlocatedPage(ustl::vector<size_t>& pre_alocated_pages)
+size_t PageManager::getPreAlocatedPage(ustl::vector<uint32>& pre_alocated_pages)
 {
   assert(pre_alocated_pages.size() != 0 && "No more page available");
-  size_t ppn = pre_alocated_pages.back();
+  uint32 ppn = pre_alocated_pages.back();
   pre_alocated_pages.pop_back();
   debug(PM, "PageManager::getPreAlocatedPage: Return ppn %ld.\n", ppn);
   return ppn;

@@ -32,7 +32,7 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 }
 
 // COPY CONSTRUCTOR
-ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<size_t>& preallocated_pages):archmemory_lock_("archmemory_lock_")
+ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated_pages):archmemory_lock_("archmemory_lock_")
 {
   assert(src.archmemory_lock_.heldBy() == currentThread);
   assert(PageManager::instance()->heldBy() != currentThread);
@@ -288,7 +288,7 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
   map[index].present = 1;
 }
 
-bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access, ustl::vector<size_t>& preallocated_pages)
+bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access, ustl::vector<uint32>& preallocated_pages)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be alredy  locked.");
   assert(PageManager::instance()->heldBy() != currentThread && "Holding pagemanager lock when mapPage can lead to double locking.");
@@ -561,7 +561,7 @@ bool ArchMemory::isCOW(size_t virtual_addr)
 }
 
 
-void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<size_t>& preallocated_pages)
+void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
 

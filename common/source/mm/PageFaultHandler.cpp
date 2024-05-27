@@ -76,7 +76,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   }
   // assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
-  ustl::vector<size_t> preallocated_pages = PageManager::instance()->preAlocatePages(5);
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(5);
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
@@ -136,7 +136,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     
     current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
-    
+
     PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later

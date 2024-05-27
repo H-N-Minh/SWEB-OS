@@ -88,7 +88,7 @@ void SwappingManager::swapOutPage(size_t ppn)
 }
 
 //Only works if the page i want to swap in is in the archmemory of current thread
-int SwappingManager::swapInPage(size_t vpn, ustl::vector<size_t>& preallocated_pages)
+int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32>& preallocated_pages)
 {
   ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
   

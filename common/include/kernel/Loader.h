@@ -13,7 +13,7 @@ class Loader
 {
   public:
     Loader(ssize_t fd);
-    Loader(const Loader &src, int32 fd, ustl::vector<size_t>& preallocated_pages);
+    Loader(const Loader &src, int32 fd, ustl::vector<uint32>& preallocated_pages);
     ~Loader();
 
     /**
@@ -28,7 +28,7 @@ class Loader
      * @param virtual_address virtual address where to find the page to load
      * @param preallocated_pages A vector of 4 preallocated ppn
      */
-    void loadPage(pointer virtual_address, ustl::vector<size_t>& preallocated_pages);
+    void loadPage(pointer virtual_address, ustl::vector<uint32>& preallocated_pages);
 
     /**
      * Return the start address of Heap
