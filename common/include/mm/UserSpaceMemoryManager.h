@@ -8,11 +8,20 @@
 #include "SpinLock.h"
 #include "UserThread.h"
 #include "PageFaultHandler.h"
+#include "Syscall.h"
 
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
 #define MAX_STACK_AMOUNT 5    // if this is changed then update the define in pthread.h in userspace 
 #define GUARD_MARKER 0xbadcafe00000ULL  
+
+struct MemoryBlock
+{
+  bool is_free_;
+  size_t size_;
+  void* address_;
+  MemoryBlock* next_;
+};
 
 class UserSpaceMemoryManager
 {
@@ -84,4 +93,24 @@ class UserSpaceMemoryManager
     */
     size_t getTopOfThisStack(size_t address);
 
+
+    bool first_malloc_call = true;
+    size_t used_block_counts_ = 0;
+    size_t free_bytes_left_on_page_ = 0;
+
+
+    void* malloc(size_t size);
+
+    size_t bytesNeededForMemoryBlock(size_t size);
+    int allocateMemoryWithSbrk(size_t bytes_needed);
+    void createNewMemoryBlock(MemoryBlock* memory_block, size_t size, bool is_free, void* address, MemoryBlock* next);
+    void addOverflowProtection(MemoryBlock* memory_block);
+    bool checkOverflowProtection(MemoryBlock* memory_block);
+
+    void free(void *ptr);
+    void* calloc(size_t num_memb, size_t size_each);
+
+
 };
+
+

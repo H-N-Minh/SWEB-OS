@@ -342,23 +342,14 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
 ////////////////////////////////////////////////////////////////
 
 
-bool first_malloc_call = true;
-size_t used_block_counts = 0;
 
-struct MemoryBlock
-{
-  bool is_free_;
-  size_t size_;
-  void* address_;
-  MemoryBlock* next_;
-};
 
-int bytesNeededForMemoryBlock(size_t size)
+size_t UserSpaceMemoryManager::bytesNeededForMemoryBlock(size_t size)
 {
   return size + sizeof(MemoryBlock) + sizeof(char);
 }
 
-int allocateMemoryWithSbrk(size_t bytes_needed)
+int UserSpaceMemoryManager::allocateMemoryWithSbrk(size_t bytes_needed)
 {
   size_t pages_needed = (bytes_needed / (PAGE_SIZE + 1)) + 1;
   free_bytes_left_on_page_ =  PAGE_SIZE - (bytes_needed % PAGE_SIZE);
@@ -368,12 +359,37 @@ int allocateMemoryWithSbrk(size_t bytes_needed)
     free_bytes_left_on_page_ = 0;
   }
 
-  void* rv = sbrk(pages_needed * PAGE_SIZE);
+  void* rv = (void*)sbrk((ssize_t)(pages_needed * PAGE_SIZE), false); //TODOs (already locked)
   if(rv == (void*)-1)
   {
     return -1;
   }
   return 0;
+}
+
+void UserSpaceMemoryManager::createNewMemoryBlock(MemoryBlock* memory_block, size_t size, bool is_free, void* address, MemoryBlock* next)
+{
+  memory_block->size_ = size;
+  memory_block->is_free_ = is_free;
+  memory_block->address_ = address;
+  memory_block->next_ = next;
+}
+
+void UserSpaceMemoryManager::addOverflowProtection(MemoryBlock* memory_block)
+{
+  *((char*)((size_t)memory_block->address_ + memory_block->size_)) = '|';
+}
+
+bool UserSpaceMemoryManager::checkOverflowProtection(MemoryBlock* memory_block)
+{
+  if(*((char*)((size_t)memory_block->address_ + memory_block->size_)) == '|')
+  {
+    return true;
+  }
+  else
+  {
+    return false;
+  }
 }
 
 size_t free_bytes_left_on_page_ = 0;
@@ -382,21 +398,17 @@ MemoryBlock* first_memory_block_ = NULL;
 MemoryBlock* heap_start__;
 
 
-void *Memory::malloc(size_t size)
+void* UserSpaceMemoryManager::malloc(size_t size)
 {
   if(size == 0)
   {
     return NULL;
   }
-  else if(size < 0)
-  {
-    return -1;
-  }
 
   //TODOs: lock memory mutex
   if(first_malloc_call)
   {
-    heap_start__ = (MemoryBlock*)sbrk(0);
+    heap_start__ = (MemoryBlock*)sbrk(0, false);  //TODOs: already locked?
     first_malloc_call = false;
   }
 
@@ -407,16 +419,13 @@ void *Memory::malloc(size_t size)
     if(rv == -1)
     {
       //TODO unlock
-      return -1;
+      return NULL;
     }
 
     first_memory_block_ = heap_start__;
-    first_memory_block_->size_ = size;
-    first_memory_block_->is_free_ = false;
-    first_memory_block_->address_ = first_memory_block_ + 1;
-    first_memory_block_->next_ = NULL;
-    *((char*)((size_t)first_memory_block_->address_ + first_memory_block_->size_)) = '|';
-    used_block_counts++;
+    createNewMemoryBlock(first_memory_block_, size, false, first_memory_block_ + 1, NULL);
+    addOverflowProtection(first_memory_block_);
+    used_block_counts_++;
     //TODOs: unlock memory mutex
     return first_memory_block_->address_;
   }
@@ -425,33 +434,30 @@ void *Memory::malloc(size_t size)
     MemoryBlock* next_memory_block = first_memory_block_;
     while(1)
     {
-      if(*((char*)((size_t)next_memory_block->address_ + next_memory_block->size_)) != '|')
+      if(!checkOverflowProtection(next_memory_block))
       {
         //TODOs: unlock memory mutex
-        exit(-1);
+        Syscall::exit(-1);
       }
       if(next_memory_block->is_free_ && next_memory_block->size_ >= size)
       {
-        if(next_memory_block->size_ >= size + 2 * (sizeof(MemoryBlock) + sizeof(char)))
+        if(next_memory_block->size_ >= bytesNeededForMemoryBlock(size) + bytesNeededForMemoryBlock(0))
         {
-          MemoryBlock* memory_block_new = (MemoryBlock*)((size_t)next_memory_block + bytesNeededForMemoryBlock(size));
-          memory_block_new->address_ = memory_block_new + 1;
-          memory_block_new->is_free_ = true;
-          memory_block_new->next_ = next_memory_block->next_;
-          memory_block_new->size_ = next_memory_block->size_ - sizeof(MemoryBlock) - sizeof(char) - size;
+          MemoryBlock* new_unused_memory_block = (MemoryBlock*)((size_t)next_memory_block + bytesNeededForMemoryBlock(size));
+          createNewMemoryBlock(new_unused_memory_block, next_memory_block->size_ - bytesNeededForMemoryBlock(size), true, new_unused_memory_block + 1, next_memory_block->next_);
 
-          next_memory_block->next_ = memory_block_new;
+          next_memory_block->next_ = new_unused_memory_block;
           next_memory_block->size_ = size;
-          *((char*)((size_t)next_memory_block->address_ + next_memory_block->size_)) = '|';
+          addOverflowProtection(next_memory_block);
 
-          if(memory_block_new->next_ && memory_block_new->next_->is_free_)
+          if(new_unused_memory_block->next_ && new_unused_memory_block->next_->is_free_)
           {
-            memory_block_new->size_ = memory_block_new->size_ + memory_block_new->next_->size_ + sizeof(char) + sizeof(MemoryBlock);
-            memory_block_new->next_ = memory_block_new->next_->next_;
+            new_unused_memory_block->size_ = new_unused_memory_block->size_ + bytesNeededForMemoryBlock(new_unused_memory_block->next_->size_);
+            new_unused_memory_block->next_ = new_unused_memory_block->next_->next_;
           }
         }
         next_memory_block->is_free_ = false;
-        used_block_counts++;
+        used_block_counts_++;
         //TODOs: unlock memory mutex
         return next_memory_block->address_;
       }
@@ -465,21 +471,19 @@ void *Memory::malloc(size_t size)
         else
         {
           size_t bytes_needed = bytesNeededForMemoryBlock(size) - free_bytes_left_on_page_;
-          int = allocateMemoryWithSbrk(bytes_needed);
+          int rv = allocateMemoryWithSbrk(bytes_needed);
           if(rv == -1)
           {
             //TODO unlock
-            return -1;
+            return NULL;
           }
         }
-        MemoryBlock* memory_block_new = (MemoryBlock*)((size_t)next_memory_block + next_memory_block->size_ + sizeof(MemoryBlock) + sizeof(char));
+        MemoryBlock* memory_block_new = (MemoryBlock*)((size_t)next_memory_block + bytesNeededForMemoryBlock(next_memory_block->size_));
+        createNewMemoryBlock(memory_block_new, size, false, memory_block_new + 1, NULL);
+        addOverflowProtection(memory_block_new);
+        used_block_counts_++;
         next_memory_block->next_ = memory_block_new;
-        memory_block_new->size_ = size;
-        memory_block_new->is_free_ = false;
-        memory_block_new->address_ = memory_block_new + 1;
-        memory_block_new->next_ = NULL;
-        *((char*)((size_t)memory_block_new->address_ + memory_block_new->size_)) = '|';
-        used_block_counts++;
+        
         //TODOs: unlock memory mutex
         return memory_block_new->address_;
       }
@@ -493,7 +497,7 @@ void *Memory::malloc(size_t size)
 }
 
 
-void Memory::free(void *ptr)
+void UserSpaceMemoryManager::free(void *ptr)
 {
   if(ptr == NULL) //TODOs (check pointer)
   {
@@ -506,7 +510,7 @@ void Memory::free(void *ptr)
   if(next == NULL)
   {
     //TODOs: unlock memory mutex
-    exit(-1);
+    Syscall::exit(-1);
   }
   MemoryBlock* element_before;
   while(next->next_ != NULL)
@@ -514,7 +518,7 @@ void Memory::free(void *ptr)
     if(*((char*)((size_t)next->address_ + next->size_)) != '|')
     {
       //TODOs: unlock memory mutex
-      exit(-1);
+      Syscall::exit(-1);
     }
     if(next->next_ == element_to_free)
     {
@@ -525,18 +529,18 @@ void Memory::free(void *ptr)
   if(!element_before && element_to_free != first_memory_block_) //Check if element can be found in list
   {
     //TODOs: unlock memory mutex
-    exit(-1);
+    Syscall::exit(-1);
   }
   if(element_to_free->is_free_) //check if element is already free
   {
     //TODOs: unlock memory mutex
-    exit(-1);
+    Syscall::exit(-1);
   }
-  used_block_counts--;
-  if(used_block_counts == 0)
+  used_block_counts_--;
+  if(used_block_counts_ == 0)
   {
     free_bytes_left_on_page_ = 0;
-    brk(first_memory_block_);
+    brk((size_t)first_memory_block_);
     first_memory_block_ = NULL;
     //TODOs: unlock memory mutex
     return;
@@ -557,7 +561,7 @@ void Memory::free(void *ptr)
 }
 
 
-void *Memory::calloc(size_t num_memb, size_t size_each)
+void* UserSpaceMemoryManager::calloc(size_t num_memb, size_t size_each)
 {
   void* temp = malloc(num_memb * size_each);
   memset(temp, 0, num_memb * size_each);

@@ -20,6 +20,8 @@
 #pragma once
 
 #include "types.h"
+#include "sys/syscall.h"
+#include "../../../common/include/kernel/syscall-definitions.h"
 
 #ifdef __cplusplus
 extern "C" {

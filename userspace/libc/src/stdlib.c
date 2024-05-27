@@ -2,7 +2,7 @@
 
 void *malloc(size_t size)
 {
-  return __syscall(sc_malloc, size, 0x0, 0x0, 0x0, 0x0);
+  return (void*)__syscall(sc_malloc, size, 0x0, 0x0, 0x0, 0x0);
 }
 
 void free(void *ptr)
