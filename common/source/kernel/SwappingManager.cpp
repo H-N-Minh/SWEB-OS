@@ -21,7 +21,6 @@ SwappingManager::SwappingManager() : disk_lock_("disk_lock_")
 
 SwappingManager* SwappingManager::instance()
 {
-  assert(instance_);
   return instance_;
 }
 

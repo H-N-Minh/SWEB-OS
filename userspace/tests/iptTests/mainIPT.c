@@ -9,19 +9,19 @@ extern int ipt1();
 extern int ipt2();
 extern int ipt3();
 
-void printDebugInfo()
-{
-  while(1)
-  {
-    getIPTInfos();
-    sleep(1); 
-  }
-}
+// void printDebugInfo()
+// {
+//   while(1)
+//   {
+//     getIPTInfos();
+//     sleep(1); 
+//   }
+// }
 
 int main()
 {
-    pthread_t thread_id;
-    pthread_create(&thread_id, NULL, (void*)printDebugInfo, NULL);
+    // pthread_t thread_id;
+    // pthread_create(&thread_id, NULL, (void*)printDebugInfo, NULL);
 
     // ipt1();
     // printf("first done\n");
