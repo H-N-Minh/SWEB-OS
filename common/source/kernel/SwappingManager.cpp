@@ -21,7 +21,6 @@ SwappingManager::SwappingManager() : disk_lock_("disk_lock_")
 
 SwappingManager* SwappingManager::instance()
 {
-  assert(instance_);
   return instance_;
 }
 
@@ -34,9 +33,8 @@ SwappingManager::~SwappingManager()
 //does only work if the page to swap out is also in the archmemory of the current thread
 void SwappingManager::swapOutPage(size_t ppn)
 {
-  // assert(0 && "Tried swapping out - not working correctly yet");
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
-  assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread);
+  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();  //TODOs: remove i think
 
   //Find free disk_offset (TODOs)
   size_t disk_offset = disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
@@ -48,15 +46,18 @@ void SwappingManager::swapOutPage(size_t ppn)
 
   // lock all archmem and choose 1 archmem and vpn (for later to write to disk)
   lock_archmemories_in_right_order(virtual_page_infos);
-  ArchMemory* archmemory = NULL;
-  size_t vpn = 0;
+
+
+
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    archmemory = virtual_page_info->archmem;
-    vpn = virtual_page_info->vpn;
-    assert(archmemory && vpn && "SwappingManager::swapOutPage: Archmemory or vpn is null");
-    break;
+    ArchMemory* archmemory = virtual_page_info->archmem;
+    size_t vpn = virtual_page_info->vpn;
+    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset);
   }
+
+  ArchMemory* archmemory = virtual_page_infos[0]->archmem;
+  size_t vpn = virtual_page_infos[0]->vpn;
 
   //write to disk
   disk_lock_.acquire();
@@ -65,6 +66,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   // kprintf("Pagecontent before: <%s>\n", page_content);
   bd_device_->writeData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
   disk_lock_.release();
+  total_disk_writes_++;
 
   // updating all archmem to point to disk
   for(IPTEntry* virtual_page_info : virtual_page_infos)
@@ -80,15 +82,14 @@ void SwappingManager::swapOutPage(size_t ppn)
 
   unlock_archmemories(virtual_page_infos);
 
- 
-  // PageManager::instance()->freePPN(ppn);
+  currentThread->loader_->arch_memory_.archmemory_lock_.release();
+  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
+
 }
 
 //Only works if the page i want to swap in is in the archmemory of current thread
-int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32> preallocated_pages)
+int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32>& preallocated_pages)
 {
-  //  assert(0 && "Tried swapping in - not working correctly yet");
-  // debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with vpn %ld.\n", vpn);
   ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
   
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
@@ -96,9 +97,7 @@ int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32> preallocated_pa
  
  //Get disk_offset and new ppn
   size_t disk_offset = archmemory.getDiskLocation(vpn);  
-  assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
-  size_t ppn = preallocated_pages.back();
-  preallocated_pages.pop_back();
+  size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 
   //Move Page infos from  ipt_map_disk to ipt_map_ram
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with disk_offset %ld to ppn %ld.\n", disk_offset, ppn);
@@ -110,6 +109,7 @@ int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32> preallocated_pa
   {
     ArchMemory* archmemory = virtual_page_info->archmem;
     size_t vpn = virtual_page_info->vpn;
+    debug(SWAPPING, "SwappingManager::swapInPage: vpn: %ld, archmemory: %p (disk offset %ld -> ppn %ld).\n", vpn, archmemory, disk_offset, ppn);
     archmemory->updatePageTableEntryForSwapIn(vpn, ppn);
   }
 
@@ -124,8 +124,10 @@ int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32> preallocated_pa
   bd_device_->readData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
   // kprintf("Pagecontent after: <%s>\n", page_content);
   disk_lock_.release();
-
+  total_disk_reads_++;
   unlock_archmemories(virtual_page_infos);
+
+  debug(SWAPPING, "SwappingManager::swapInPage: Swap in vpn %ld finished", vpn);
   return 0;
 }
 
@@ -173,6 +175,19 @@ void SwappingManager::unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_i
       archmemory->archmemory_lock_.release();
     }
   }
+}
+
+
+int SwappingManager::getDiskWrites()
+{
+  return total_disk_writes_;
+}
+
+
+
+int SwappingManager::getDiskReads()
+{
+  return total_disk_reads_;
 }
 
 

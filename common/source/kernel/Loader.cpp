@@ -12,7 +12,7 @@
 
 Loader::Loader(ssize_t fd) : fd_(fd), hdr_(0), phdrs_(), program_binary_lock_("Loader::program_binary_lock_"), userspace_debug_info_(0){}
 
-Loader::Loader(const Loader &src, int32 fd, ustl::vector<size_t>& preallocated_pages)
+Loader::Loader(const Loader &src, int32 fd, ustl::vector<uint32>& preallocated_pages)
   : arch_memory_(src.arch_memory_, preallocated_pages), fd_(fd), hdr_(0), phdrs_(0), program_binary_lock_("Loader::program_binary_lock_"),
     userspace_debug_info_(0)
 {
@@ -64,7 +64,7 @@ void* Loader::getBrkStart()
     return heap_start;
 }
 
-void Loader::loadPage(pointer virtual_address, ustl::vector<size_t>& preallocated_pages)
+void Loader::loadPage(pointer virtual_address, ustl::vector<uint32>& preallocated_pages)
 {
     assert(arch_memory_.archmemory_lock_.heldBy() == currentThread && "load page need to hold archmemory lock");
     debug(LOADER, "Loader:loadPage: Request to load the page for address %p.\n", (void*)virtual_address);

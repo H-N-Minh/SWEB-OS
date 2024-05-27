@@ -185,8 +185,8 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t new_break_addr)
 int UserSpaceMemoryManager::brk(size_t new_break_addr)
 {
   debug(SBRK, "UserSpaceMemoryManager::brk called with new break address (%zx)\n", new_break_addr);
-  assert(new_break_addr >= heap_start_ && "UserSpaceMemoryManager::brk: new break is below heap start");
-  assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
+  // assert(new_break_addr >= heap_start_ && "UserSpaceMemoryManager::brk: new break is below heap start");
+  // assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
 
   pointer resevered_space = sbrk(0, new_break_addr);
   if (resevered_space == 0)
@@ -327,7 +327,7 @@ size_t UserSpaceMemoryManager::getTopOfThisPage(size_t address)
 size_t UserSpaceMemoryManager::getTopOfThisStack(size_t address)
 {
   size_t top_current_stack = getTopOfThisPage(address);
-  ArchMemory arch_memory = ((UserThread*) currentThread)->process_->loader_->arch_memory_;
+  ArchMemory& arch_memory = ((UserThread*) currentThread)->process_->loader_->arch_memory_;
   for (size_t i = 0; i < MAX_STACK_AMOUNT; i++)
   {
     if (top_current_stack && top_current_stack < USER_BREAK)

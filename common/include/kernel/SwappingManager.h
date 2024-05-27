@@ -16,7 +16,7 @@ class SwappingManager
     ~SwappingManager();
 
     void swapOutPage(size_t ppn);
-    int swapInPage(size_t vpn, ustl::vector<size_t>& ppns);
+    int swapInPage(size_t vpn, ustl::vector<uint32>& preallocated_pages);
 
     void lock_archmemories_in_right_order(ustl::vector<IPTEntry*> virtual_page_infos);
     void unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_infos);

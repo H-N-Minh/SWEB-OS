@@ -19,6 +19,7 @@
 #include "UserSpaceMemoryManager.h"
 #include "ProcessRegistry.h"
 #include "ScopeLock.h"
+#include "SwappingManager.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -141,7 +142,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = wait_pid((int)arg1, (int*)arg2, arg3);
       break;
     case sc_getIPTInfos:
-      return_value = getIPTInfos((size_t)arg1);
+      getIPTInfos();
       break; 
     default:
       return_value = -1;
@@ -246,18 +247,18 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 
 uint32 Syscall::forkProcess()
 {
-  debug(FORK, "Syscall::forkProcess: start focking \n");
+  debug(FORK, "Syscall::forkProcess: start forking \n");
   UserProcess* parent = ((UserThread*) currentThread)->process_;
   UserProcess* child = new UserProcess(*parent);
 
   if (!child)
   {
-    debug(SYSCALL, "Syscall::forkProcess: fock failed \n");
+    debug(SYSCALL, "Syscall::forkProcess: fork failed \n");
     return -1;
   }
   else
   {
-    debug(SYSCALL, "Syscall::forkProcess: fock done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
+    debug(SYSCALL, "Syscall::forkProcess: fork done with return (%d) \n", (uint32) currentThread->user_registers_->rax);
     return (uint32) currentThread->user_registers_->rax;
   }
 }
@@ -793,11 +794,55 @@ long int Syscall::wait_pid(long int pid, int* status, size_t options)
   return current_process->waitProcess(pid, status, options);
 }
 
-int Syscall::getIPTInfos(size_t ppn)
+void addBarChart(ustl::string lines[], int position, int number, ustl::string title)
 {
-  return ppn - ppn + 1;//TODOs
-  //IPTManager::instance()->IPT_lock_.acquire();
-  // ustl::vector<IPTEntry*> page_infos = IPTManager::instance()->getPageInfosForPPN(ppn); //TODOs
-  //IPTManager::instance()->IPT_lock_.release();
-  //return page_infos.size();
+  int bar_size = number/50;
+
+  lines[position - 1].replace(1,title.size(), title);
+  for(int i = 1; i <= bar_size; i++)
+  {
+    lines[position].replace(i,1,"x");
+  }
+  ustl::string number_as_string = "(=" + ustl::to_string(number) + ")";
+  lines[position].replace(bar_size + 2 ,number_as_string.size(),number_as_string);
+  
+}
+
+void Syscall::getIPTInfos()
+{
+  
+
+  ustl::string empty_line = "|                                                                         |\n";
+  ustl::string first_line = "___________________________________________________________________________\n";
+  ustl::string last_line  = "|_________________________________________________________________________|\n";
+  ustl::string info_line  = "|                                                x = 50 pages             |\n";
+  
+  ustl::string lines[20];
+  lines[0] = first_line;
+  lines[19] = last_line;
+  for(int i = 1; i < 19; i++)
+  {
+    lines[i] = empty_line;
+  }
+  lines[3] = info_line;
+  kprintf("\n");
+
+  int pages_ipt_ram = IPTManager::instance()->getNumPagesInMap(IPTMapType::RAM_MAP);
+  addBarChart(lines, 7, pages_ipt_ram, "Pages in RAM-MAP");
+
+  int pages_ipt_disk = IPTManager::instance()->getNumPagesInMap(IPTMapType::DISK_MAP);
+  addBarChart(lines, 10, pages_ipt_disk, "Pages in DISK-MAP");
+
+  int total_disk_reads = 2;
+  // int total_disk_reads = SwappingManager::instance()->getDiskReads();
+  addBarChart(lines, 13, total_disk_reads, "Total disk reads");
+
+  int total_disk_writes = SwappingManager::instance()->getDiskWrites();
+  addBarChart(lines, 16, total_disk_writes, "Total disk writes");
+
+  for(int i = 0; i < 20; i++)
+  {
+     kprintf("%s", lines[i].c_str());
+  }
+  kprintf("\n\n");
 }

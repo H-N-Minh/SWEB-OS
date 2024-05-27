@@ -50,7 +50,7 @@ class ArchMemory
      * @param preallocated_pages A vector of 3 preallocated ppn
      * @return True if successful, false otherwise (the PT entry already exists)
      */
-    [[nodiscard]] bool mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access, ustl::vector<size_t>& ppns);
+    [[nodiscard]] bool mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access, ustl::vector<uint32>& preallocated_pages);
 
     /**
      * Removes the mapping to a virtual_page by marking its PTE entry as non-valid and frees the underlying physical page.
@@ -102,7 +102,7 @@ class ArchMemory
     static PageMapLevel4Entry* getRootOfKernelPagingStructure();
 
     /// Prevents accidental copying/assignment, can be implemented if needed
-    ArchMemory(ArchMemory const &src, ustl::vector<size_t>& ppns);
+    ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated_pages);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
     
@@ -113,7 +113,7 @@ class ArchMemory
     bool isPresent(size_t virtual_addr);
     bool isWriteable(size_t virtual_addr);
 
-    void copyPage(size_t virtual_addr, ustl::vector<size_t>& ppns);
+    void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     size_t getDiskLocation(size_t vpn);

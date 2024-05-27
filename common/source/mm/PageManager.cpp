@@ -260,8 +260,10 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
   if (found == 0)
   {
+    IPTManager::instance()->IPT_lock_.acquire(); // TODO MINH: Thread must not hold lock when swapping
     size_t ppn = IPTManager::instance()->findPageToSwapOut();
     SwappingManager::instance()->swapOutPage(ppn);
+    IPTManager::instance()->IPT_lock_.release();
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
     debug(PM, "PageManager::allocPPN: New ppn is %ld. (swapped in)\n", ppn);
     return ppn;
@@ -409,5 +411,35 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
   {
     return 0;
   }
+}
+
+
+ustl::vector<uint32> PageManager::preAlocatePages(int needed_pages_count)
+{
+  ustl::vector<uint32> pre_alocated_pages;
+  for(int i = 0; i < needed_pages_count; i++)
+  {
+    uint32 ppn = allocPPN();
+    pre_alocated_pages.push_back(ppn);
+  }
+  return pre_alocated_pages;
+}
+
+void PageManager::releaseNotNeededPages(ustl::vector<uint32>& not_used_pages)
+{
+  for(auto& ppn : not_used_pages)
+  {
+    freePPN(ppn);
+  }
+  not_used_pages.clear();
+}
+
+size_t PageManager::getPreAlocatedPage(ustl::vector<uint32>& pre_alocated_pages)
+{
+  assert(pre_alocated_pages.size() != 0 && "No more page available");
+  uint32 ppn = pre_alocated_pages.back();
+  pre_alocated_pages.pop_back();
+  debug(PM, "PageManager::getPreAlocatedPage: Return ppn %d.\n", ppn);
+  return ppn;
 }
 

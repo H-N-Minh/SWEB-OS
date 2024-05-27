@@ -49,7 +49,6 @@ public:
   static IPTManager *instance();
 
   IPTEntry* lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
-  IPTEntry* lookupEntryInDisk(diskoffset_t diskOffset);
 
   /**
    * Insert the PTE to the entry (at key == ppn) of the Inverted Page Table or the Swapped Page Map.

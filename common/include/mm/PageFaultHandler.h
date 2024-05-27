@@ -1,6 +1,7 @@
 #pragma once
 
 #include "types.h"
+#include "uvector.h"
 
 #define PRESENT 3
 #define INVALID 0
@@ -61,4 +62,5 @@ public:
 
   static int checkGrowingStack(size_t address);
   static void errorInPageFaultKillProcess();
+
 };

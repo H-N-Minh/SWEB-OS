@@ -82,7 +82,7 @@ UserProcess::UserProcess(const UserProcess& other)
   int needed_preallocated_pages = other.loader_->arch_memory_.countArchmemPages();
   other.loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
-  ustl::vector<size_t> preallocated_pages = PageManager::instance()->preAlocatePages(needed_preallocated_pages + 10);   // +10 for safety, not garanteed thats enough
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(needed_preallocated_pages + 10);   // +10 for safety, not garanteed thats enough
 
 
   IPTManager::instance()->IPT_lock_.acquire();
@@ -389,7 +389,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
   
   //map the argument page(s)
-  ustl::vector<size_t> preallocated_pages = PageManager::instance()->preAlocatePages(8);
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(8);
   IPTManager::instance()->IPT_lock_.acquire();
   loader_->arch_memory_.archmemory_lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1, preallocated_pages);
