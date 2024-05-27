@@ -73,6 +73,15 @@ class PageManager
 
     uint32 getReferenceCount(uint64 page_number);
 
+    /**
+     * preallocate pages so allocPPN is not called while holding a lock
+    */
+    ustl::vector<uint32> preallocate_pages (int amount);
+
+    /**
+     * free preallocated pages, if theres any left that was not used
+    */
+    void free_preallocated_pages (ustl::vector<uint32> preallocated_pages);
 
  
   private:

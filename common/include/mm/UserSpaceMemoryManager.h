@@ -31,16 +31,21 @@ class UserSpaceMemoryManager
     /**
      * adjust the brk by size amount 
      * @param size the amount to adjust the brk by (can be positive or negative)
-     * @param already_locked if the lock for break is already held
+     * @param new_break_addr set a fix address for the break, if this is not 0 then para "size" is ignored
      * @return pointer to the reserved space, else return 0 on failure
     */
-    pointer sbrk(ssize_t size, size_t already_locked, uint32 preallocated_ppn);
+    pointer sbrk(ssize_t size, size_t new_break_addr = 0);
 
     /**
      * set the address of brk to a fixed address
      * @return 0 on success, else return -1
     */
     int brk(size_t new_break_addr);
+
+    /**
+     * helper func for sbrk
+    */
+    ustl::vector<uint32> preallocate_pages_for_sbrk(ssize_t size, size_t new_break_addr = 0);
 
     /**
      * check if the address is a valid growing stack address

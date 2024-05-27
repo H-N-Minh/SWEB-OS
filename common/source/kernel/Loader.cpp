@@ -64,7 +64,8 @@ void* Loader::getBrkStart()
     return heap_start;
 }
 
-void Loader::loadPage(pointer virtual_address)
+
+void Loader::loadPage(pointer virtual_address, ustl::vector<uint32> preallocated_pages)
 {
     assert(arch_memory_.archmemory_lock_.heldBy() == currentThread && "load page need to hold archmemory lock");
     debug(LOADER, "Loader:loadPage: Request to load the page for address %p.\n", (void*)virtual_address);
@@ -72,7 +73,9 @@ void Loader::loadPage(pointer virtual_address)
     const pointer virt_page_end_addr = virt_page_start_addr + PAGE_SIZE;
     bool found_page_content = false;
     // get a new page for the mapping
-    size_t ppn = PageManager::instance()->allocPPN();
+    assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
+    size_t ppn = preallocated_pages.back();
+    preallocated_pages.pop_back();
 
     program_binary_lock_.acquire();
 
@@ -117,7 +120,7 @@ void Loader::loadPage(pointer virtual_address)
       Syscall::exit(666);
     }
 
-    bool page_mapped = arch_memory_.mapPage(virt_page_start_addr / PAGE_SIZE, ppn, true);
+    bool page_mapped = arch_memory_.mapPage(virt_page_start_addr / PAGE_SIZE, ppn, true, preallocated_pages);
 
     if (!page_mapped)
     {

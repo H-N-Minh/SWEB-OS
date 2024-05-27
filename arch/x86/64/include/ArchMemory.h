@@ -47,9 +47,10 @@ class ArchMemory
      * @param virtual_page The virtual page to map
      * @param physical_page The physical page to which the virtual page shall be mapped
      * @param user_access PTE flag indicating whether the virtual page shall be accessible by threads in user-mode
+     * @param preallocated_pages A vector of 3 preallocated ppn
      * @return True if successful, false otherwise (the PT entry already exists)
      */
-    [[nodiscard]] bool mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access);
+    [[nodiscard]] bool mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access, ustl::vector<uint32> preallocated_pages);
 
     /**
      * Removes the mapping to a virtual_page by marking its PTE entry as non-valid and frees the underlying physical page.
@@ -110,7 +111,7 @@ class ArchMemory
     bool isCOW(size_t virtual_addr);
     bool isSwapped(size_t virtual_addr);
 
-    void copyPage(size_t virtual_addr);
+    void copyPage(size_t virtual_addr, ustl::vector<uint32> preallocated_pages);
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     size_t getDiskLocation(size_t vpn);

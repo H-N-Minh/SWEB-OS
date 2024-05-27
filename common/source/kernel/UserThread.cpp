@@ -24,14 +24,18 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
 
     ppn_stack = PageManager::instance()->allocPPN();
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(3); // for mapPage later
+
     IPTManager::instance()->IPT_lock_.acquire();
     loader->arch_memory_.archmemory_lock_.acquire();
     debug(USERTHREAD, "Page for stack is %lu\n", ppn_stack);
     // TODOAG: putting this into a separate function might make it easier to combine with growing stack in PFHandler etc
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
-    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, ppn_stack, 1);
+    bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, ppn_stack, 1, preallocated_pages);
     loader_->arch_memory_.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
+    PageManager::instance()->free_preallocated_pages(preallocated_pages);
+
      // TODOAG: check/compare with fork!
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 

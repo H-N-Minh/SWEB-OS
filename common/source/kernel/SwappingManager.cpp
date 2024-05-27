@@ -85,7 +85,7 @@ void SwappingManager::swapOutPage(size_t ppn)
 }
 
 //Only works if the page i want to swap in is in the archmemory of current thread
-int SwappingManager::swapInPage(size_t vpn)
+int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32> preallocated_pages)
 {
   //  assert(0 && "Tried swapping in - not working correctly yet");
   // debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with vpn %ld.\n", vpn);
@@ -96,7 +96,9 @@ int SwappingManager::swapInPage(size_t vpn)
  
  //Get disk_offset and new ppn
   size_t disk_offset = archmemory.getDiskLocation(vpn);  
-  size_t ppn = PageManager::instance()->allocPPN(PAGE_SIZE);
+  assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
+  size_t ppn = preallocated_pages.back();
+  preallocated_pages.pop_back();
 
   //Move Page infos from  ipt_map_disk to ipt_map_ram
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with disk_offset %ld to ppn %ld.\n", disk_offset, ppn);

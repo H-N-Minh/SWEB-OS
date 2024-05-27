@@ -11,7 +11,6 @@
 #include "UserThread.h"
 #include "UserProcess.h"
 #include "SwappingManager.h"
-
 #include "PageManager.h"
 
 extern "C" void arch_contextSwitch();
@@ -76,28 +75,40 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(1);  // loadPage() and swapInPage both needs 1 alloc
+
     IPTManager::instance()->IPT_lock_.acquire();
     currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
     if(currentThread->loader_->arch_memory_.isSwapped(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE);
-      currentThread->loader_->arch_memory_.archmemory_lock_.release();
-      IPTManager::instance()->IPT_lock_.release();
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);
     }
     else
     {
-      currentThread->loader_->loadPage(address);
-      currentThread->loader_->arch_memory_.archmemory_lock_.release();
-      IPTManager::instance()->IPT_lock_.release();
+      currentThread->loader_->loadPage(address, preallocated_pages);
     }
-
-  }
-  else if (status == PRESENT && writing && currentThread->loader_->arch_memory_.isCOW(address))
-  {
-    debug(PAGEFAULT_TEST, "is COW, copying Page\n");
-    currentThread->loader_->arch_memory_.copyPage(address);
     currentThread->loader_->arch_memory_.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
+
+    PageManager::instance()->free_preallocated_pages(preallocated_pages);
+  }
+  else if (status == PRESENT && writing)
+  {
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(1);  // copyPage() needs 1 alloc
+
+    IPTManager::instance()->IPT_lock_.acquire();
+    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+
+    if (currentThread->loader_->arch_memory_.isCOW(address))
+    {
+      debug(PAGEFAULT_TEST, "is COW, copying Page\n");
+      currentThread->loader_->arch_memory_.copyPage(address, preallocated_pages);
+    }
+    
+    currentThread->loader_->arch_memory_.archmemory_lock_.release(); 
+    IPTManager::instance()->IPT_lock_.release();
+
+    PageManager::instance()->free_preallocated_pages(preallocated_pages);
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
   // {

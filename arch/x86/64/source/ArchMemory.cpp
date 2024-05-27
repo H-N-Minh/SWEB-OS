@@ -194,9 +194,9 @@ ArchMemory::ArchMemory(ArchMemory &src):archmemory_lock_("archmemory_lock_")
   // free unused pages
   if (preallocated_pages.size() > 0)
   {
-    for (size_t i = 0; i < preallocated_pages.size(); i++)
+    for (auto page : preallocated_pages)
     {
-      PageManager::instance()->freePPN(preallocated_pages[i]);
+      PageManager::instance()->freePPN(page);
     }    
   }
   
@@ -358,7 +358,7 @@ void ArchMemory::insert(pointer map_ptr, uint64 index, uint64 ppn, uint64 bzero,
   map[index].present = 1;
 }
 
-bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access)
+bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_access, ustl::vector<uint32> preallocated_pages)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be alredy  locked.");
   assert(archmemory_lock_.heldBy() == currentThread && "Try to map page without holding archmemory lock");
@@ -371,19 +371,25 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
   if (m.pdpt_ppn == 0)
   {
-    m.pdpt_ppn = PageManager::instance()->allocPPN();
+    assert(preallocated_pages.size() && "ArchMemory::mapPage: Did not preallocate enough pages\n");
+    m.pdpt_ppn = preallocated_pages.back();
+    preallocated_pages.pop_back();
     insert<PageMapLevel4Entry>((pointer) m.pml4, m.pml4i, m.pdpt_ppn, 1, 0, 1, 1);
   }
 
   if (m.pd_ppn == 0)
   {
-    m.pd_ppn = PageManager::instance()->allocPPN();
+    assert(preallocated_pages.size() && "ArchMemory::mapPage: Did not preallocate enough pages\n");
+    m.pd_ppn = preallocated_pages.back();
+    preallocated_pages.pop_back();
     insert<PageDirPointerTablePageDirEntry>(getIdentAddressOfPPN(m.pdpt_ppn), m.pdpti, m.pd_ppn, 1, 0, 1, 1);
   }
 
   if (m.pt_ppn == 0)
   {
-    m.pt_ppn = PageManager::instance()->allocPPN();
+    assert(preallocated_pages.size() && "ArchMemory::mapPage: Did not preallocate enough pages\n");
+    m.pt_ppn = preallocated_pages.back();
+    preallocated_pages.pop_back();
     insert<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi, m.pt_ppn, 1, 0, 1, 1);
   }
 
@@ -613,9 +619,8 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 bool ArchMemory::isCOW(size_t virtual_addr)
 {
   debug(A_MEMORY, "ArchMemory::isCow: with virtual address %p.\n", (void*)virtual_addr);
-  assert(archmemory_lock_.heldBy() != currentThread);
-  IPTManager::instance()->IPT_lock_.acquire();
-  archmemory_lock_.acquire();
+  assert(archmemory_lock_.heldBy() == currentThread);
+
   ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
 
@@ -627,14 +632,12 @@ bool ArchMemory::isCOW(size_t virtual_addr)
   else
   {
     debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
-    IPTManager::instance()->IPT_lock_.release();
-    archmemory_lock_.release();
     return false;
   }
 }
 
 
-void ArchMemory::copyPage(size_t virtual_addr)
+void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32> preallocated_pages)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
   PageManager* pm = PageManager::instance();
@@ -655,7 +658,9 @@ void ArchMemory::copyPage(size_t virtual_addr)
   if (pm->getReferenceCount(pml1_entry->page_ppn) > 1)
   {
     debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
-    size_t new_page_ppn = pm->allocPPN();
+    assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
+    size_t new_page_ppn = preallocated_pages.back();
+    preallocated_pages.pop_back();
     pointer original_page = ArchMemory::getIdentAddressOfPPN(pml1_entry->page_ppn);
     pointer new_page = ArchMemory::getIdentAddressOfPPN(new_page_ppn);
     memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);

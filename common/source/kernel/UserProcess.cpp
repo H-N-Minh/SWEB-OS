@@ -379,18 +379,19 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
   
   //map the argument page(s)
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(6);  // each mapPage needs max 3 new pages, and we have 2 mapPage
   IPTManager::instance()->IPT_lock_.acquire();
   loader_->arch_memory_.archmemory_lock_.acquire();
-  bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1);
+  bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1, preallocated_pages);
   assert(vpn_mapped &&  "Virtual page already mapped.");
   if(next_page_for_args)
   {
-    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 , next_page_for_args, 1);
+    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 , next_page_for_args, 1, preallocated_pages);
     assert(vpn_mapped && "Virtual page already mapped.");
-
   }
   loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
+  PageManager::instance()->free_preallocated_pages(preallocated_pages);
   return 0;
 }
 

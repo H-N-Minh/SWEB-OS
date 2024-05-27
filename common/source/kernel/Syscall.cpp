@@ -193,8 +193,9 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
     debug(SBRK, "Syscall::brkMemory: address %p is not within heap segment\n", (void*) new_brk_addr);
     return -1;
   }
-
-  int successly_brk = heap_manager->brk(new_brk_addr);
+  size_t new_brk_addr_kernel = new_brk_addr;
+  int successly_brk = heap_manager->brk(new_brk_addr_kernel);
+  
   if (successly_brk == 0)
   {
     debug(SBRK, "Syscall::brkMemory: brk done with address %p\n", (void*) new_brk_addr);
@@ -228,7 +229,7 @@ size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
 
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
   pointer reserved_space = 0;
-  reserved_space = heap_manager->sbrk(size, 0, 0);
+  reserved_space = heap_manager->sbrk(size);
   if (reserved_space == 0)
   {
     debug(SBRK, "Syscall::sbrk: sbrk failed\n");

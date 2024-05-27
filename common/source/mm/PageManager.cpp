@@ -226,17 +226,19 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
   return false;
 }
 
+
+
 /**
  * @class PageManager
  * @brief Manages physical pages in the SWEB operating system
  */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
-  // if (currentThread->holding_lock_list_)
-  // {
-  //   debug(PM, "PageManager::allocPPN: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
-  //   assert(!currentThread->holding_lock_list_ && "allocPPN should not be called while still holding a lock\n");
-  // }
+  if (currentThread->holding_lock_list_)
+  {
+    debug(PM, "PageManager::allocPPN: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
+    assert(!currentThread->holding_lock_list_ && "allocPPN should not be called while still holding a lock\n");
+  }
   
   uint32 p;
   uint32 found = 0;
@@ -409,3 +411,21 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
   }
 }
 
+
+ustl::vector<uint32> PageManager::preallocate_pages (int amount)
+{
+  ustl::vector<uint32> preallocated_pages;
+  for (int i = 0; i < amount; i++)
+  {
+    preallocated_pages.push_back(PageManager::instance()->allocPPN());
+  }
+  return preallocated_pages;
+}
+
+void PageManager::free_preallocated_pages (ustl::vector<uint32> preallocated_pages)
+{
+  for (auto page : preallocated_pages)
+  {
+    PageManager::instance()->freePPN(page);
+  }
+}

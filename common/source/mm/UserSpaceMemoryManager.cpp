@@ -21,24 +21,66 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
 }
 
 
-pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked, uint32 preallocated_ppn)
+ustl::vector<uint32> UserSpaceMemoryManager::preallocate_pages_for_sbrk(ssize_t size, size_t new_break_addr)
 {
-  assert(0 && "I havent checked the locking together with archemory yet. and locks have different names");
-  debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd) and already locked %ld\n", size, already_locked);
+  int counter = 0;
+
+  IPTManager::instance()->IPT_lock_.acquire();
+  loader_->arch_memory_.archmemory_lock_.acquire();
+  current_break_lock_.acquire();
+
+  if (new_break_addr != 0)
+  {
+    size = new_break_addr - current_break_;
+  }
+
+  if(size != 0)
+  {
+    size_t old_break = current_break_;
+    size_t new_break = current_break_ + size;
+
+    size_t old_top_vpn = old_break / PAGE_SIZE;
+    if ((old_break % PAGE_SIZE) == 0)
+    {
+      old_top_vpn--;
+    }
+    size_t new_top_vpn = new_break / PAGE_SIZE;
+    if ((new_break % PAGE_SIZE) == 0)
+    {
+      new_top_vpn--;
+    }
+    if(size > 0)
+    {
+      while(old_top_vpn != new_top_vpn)
+      {
+        debug(SBRK, "%zx != %zx\n", old_top_vpn, new_top_vpn);
+        old_top_vpn++;
+
+        counter += 4; // 1 for alloc, 3 for mapPage
+      }
+    }
+  }
+  current_break_lock_.release();
+  loader_->arch_memory_.archmemory_lock_.release();
+  IPTManager::instance()->IPT_lock_.release();
+  
+  return PageManager::instance()->preallocate_pages(counter + 5);   // +5 for safty, but not a guarantee this will be enough
+}
 
 
-  // skip locking for now
-  debug(MINH, "preallocated_ppn: %d\n", preallocated_ppn);
-  already_locked = 1;  // TODO MINH: locking for brk and sbrk needs to be adjusted so allocppn is not called while holding lock
-  
-  
-  
-  
-  if (!already_locked) {
-    preallocated_ppn = PageManager::instance()->allocPPN();  
-    current_break_lock_.acquire();
-    // PageManager::instance()->IPT_lock_.acquire();
-    loader_->arch_memory_.archmemory_lock_.acquire();     // TODO MINH: maybe this lock is not needed?
+pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t new_break_addr)
+{
+  debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd) and new_break_addr %zu\n", size, new_break_addr);
+
+  ustl::vector<uint32> preallocated_pages = preallocate_pages_for_sbrk(size, new_break_addr); // for mapPage later
+
+  IPTManager::instance()->IPT_lock_.acquire();
+  loader_->arch_memory_.archmemory_lock_.acquire();
+  current_break_lock_.acquire();
+
+  if (new_break_addr != 0)
+  {
+    size = new_break_addr - current_break_;
   }
 
   assert(current_break_ + size <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: trying to allocate more than MAX_HEAP_SIZE");
@@ -65,34 +107,34 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked, uint32
         debug(SBRK, "%zx != %zx\n", old_top_vpn, new_top_vpn);
         old_top_vpn++;
 
-        size_t new_page = PageManager::instance()->allocPPN();
+        assert(preallocated_pages.size() && "ArchMemory::ArchMemory cpy ctor: Did not preallocate enough pages\n");
+        size_t new_page = preallocated_pages.back();
+        preallocated_pages.pop_back();
+
         if(unlikely(new_page == 0))
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, no more physical memory\n");
           current_break_ = old_break;
-          if (!already_locked)
-          {
-            loader_->arch_memory_.archmemory_lock_.release();
-            // PageManager::instance()->IPT_lock_.release();
-            current_break_lock_.release();
-          }
+
+          current_break_lock_.release();
+          loader_->arch_memory_.archmemory_lock_.release();
+          IPTManager::instance()->IPT_lock_.release();
+          PageManager::instance()->free_preallocated_pages(preallocated_pages);
           return 0;
         }
 
         debug(SBRK, "kbsrk: map %zx -> %zx\n", old_top_vpn, new_page);
         void* new_page_ptr = (void*) ArchMemory::getIdentAddressOfPPN(new_page);
         memset(new_page_ptr, 0 , PAGE_SIZE);
-        bool successly_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1);
+        bool successly_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1, preallocated_pages);
+        PageManager::instance()->free_preallocated_pages(preallocated_pages);
         if(unlikely(!successly_mapped))
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not map page\n");
           current_break_ = old_break;
-          if (!already_locked)
-          {
-            loader_->arch_memory_.archmemory_lock_.release();
-            // PageManager::instance()->IPT_lock_.release();
-            current_break_lock_.release();
-          }
+          current_break_lock_.release();
+          loader_->arch_memory_.archmemory_lock_.release();
+          IPTManager::instance()->IPT_lock_.release();
           return 0;
         }
       }
@@ -107,38 +149,34 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked, uint32
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not unmap page\n");
           current_break_ = old_break;
-          if (!already_locked)
-          {
-            loader_->arch_memory_.archmemory_lock_.release();
-            // PageManager::instance()->IPT_lock_.release();
-            current_break_lock_.release();
-          }
+          current_break_lock_.release();
+          loader_->arch_memory_.archmemory_lock_.release();
+          IPTManager::instance()->IPT_lock_.release();
+          PageManager::instance()->free_preallocated_pages(preallocated_pages);
           return 0;
         }
         old_top_vpn--;
       }
     }
     debug(SBRK, "UserSpaceMemoryManager::sbrk: break is changed successful, new break value is %zx\n", current_break_);
-    if (!already_locked)
-    {
-      loader_->arch_memory_.archmemory_lock_.release();
-      // PageManager::instance()->IPT_lock_.release();
-      current_break_lock_.release();
-    }
+    current_break_lock_.release();
+    loader_->arch_memory_.archmemory_lock_.release();
+    IPTManager::instance()->IPT_lock_.release();
+
     assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
     assert(current_break_ <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: current break is above heap limit");
+    PageManager::instance()->free_preallocated_pages(preallocated_pages);
     return (pointer) old_break;
   }
   else
   {
     debug(SBRK, "UserSpaceMemoryManager::sbrk: returning current break value without changing it %zx\n", current_break_);
     pointer old_break = (pointer) current_break_;
-    if (!already_locked)
-    {
-      loader_->arch_memory_.archmemory_lock_.release();
-      // PageManager::instance()->IPT_lock_.release();
-      current_break_lock_.release();
-    }
+
+    current_break_lock_.release();
+    loader_->arch_memory_.archmemory_lock_.release();
+    IPTManager::instance()->IPT_lock_.release();
+    PageManager::instance()->free_preallocated_pages(preallocated_pages);
     return old_break;
   }
 }
@@ -146,28 +184,19 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t already_locked, uint32
 
 int UserSpaceMemoryManager::brk(size_t new_break_addr)
 {
-   assert(0 && "I havent checked the locking together with archemory yets");
   debug(SBRK, "UserSpaceMemoryManager::brk called with new break address (%zx)\n", new_break_addr);
   assert(new_break_addr >= heap_start_ && "UserSpaceMemoryManager::brk: new break is below heap start");
   assert(new_break_addr <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::brk: new break is above heap limit");
 
-  uint32 preallocated_ppn = PageManager::instance()->allocPPN();
-  // current_break_lock_.acquire();
-  // loader_->arch_memory_.archmemory_lock_.acquire();
-  ssize_t size = new_break_addr - current_break_;
-  pointer resevered_space = sbrk(size, 1, preallocated_ppn);
+  pointer resevered_space = sbrk(0, new_break_addr);
   if (resevered_space == 0)
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: FATAL ERROR, could not set new break at address (%zx)\n", new_break_addr);
-    loader_->arch_memory_.archmemory_lock_.release();
-    current_break_lock_.release();
     return -1;
   }
   else
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: new break is set successful at address (%zx)\n", current_break_);
-    // loader_->arch_memory_.archmemory_lock_.release();
-    // current_break_lock_.release();
     return 0;
   }
 }
@@ -271,10 +300,12 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
   
-  
+  // TODO MINH: growing stack  now has broken locking because of new allocPPN rule
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
-  uint32 new_ppn = PageManager::instance()->allocPPN(); //TODOs: lock ipt before arch memory
-  bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true);
+  uint32 new_ppn = PageManager::instance()->allocPPN(); //TODO MINH: this alloc and the prealloc below should be put outside locks
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(3); // for mapPage later
+  bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true, preallocated_pages);
+  PageManager::instance()->free_preallocated_pages(preallocated_pages);
 
   if (!page_mapped)
   {
