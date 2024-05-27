@@ -40,6 +40,8 @@
 // malloc
 #define sc_sbrk 600
 #define sc_brk 601
+#define sc_malloc 602
+
 
 
 // Needed for test system Tortillas

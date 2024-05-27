@@ -337,3 +337,228 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
   debug(GROW_STACK, "UserSpaceMemoryManager::checkGuardValid: All guards are still intact\n");
   return 1;
 }
+
+
+////////////////////////////////////////////////////////////////
+  
+pthread_mutex_t memory_mutex = PTHREAD_MUTEX_INITIALIZER;
+
+size_t malloc_counter = 0;
+size_t used_block_counts = 0;
+
+struct MemoryBlock
+{
+  bool is_free_;
+  size_t size_;
+  void* address_;
+  MemoryBlock* next_;
+};
+
+
+size_t num_free_bytes_on_page = 0;
+size_t used_pages = 0;
+
+MemoryBlock* first_memory_block_ = NULL;
+MemoryBlock* begin_heap;
+
+
+void* addMemoryBlock(MemoryBlock* memory_block, size_t size, bool is_free, void* address, MemoryBlock* next)
+{
+  memory_block->size_ = size;
+  memory_block->is_free_ = is_free;
+  memory_block->address_ = address;
+  memory_block->next_ = next;
+}
+
+
+void *Memory::malloc(size_t size)
+{
+  pthread_mutex_lock(&memory_mutex);
+  malloc_counter++;
+  if(malloc_counter == 1)
+  {
+    begin_heap = (MemoryBlock*)sbrk(0);
+  }
+
+  if(size == 0)
+  {
+    pthread_mutex_unlock(&memory_mutex);
+    return NULL;
+  }
+  if(first_memory_block_ == NULL)
+  {
+    size_t bytes_needed = size + sizeof(MemoryBlock) + sizeof(char);
+    size_t needed_pages = (bytes_needed / (PAGE_SIZE + 1)) + 1;
+    num_free_bytes_on_page =  PAGE_SIZE - (bytes_needed % PAGE_SIZE);
+    if(num_free_bytes_on_page == PAGE_SIZE)
+    {
+      num_free_bytes_on_page = 0;
+    }
+    void* rv = sbrk(needed_pages * PAGE_SIZE)
+    if(rv == (void*)-1)
+    {
+      //TODO unlock
+      return -1;
+    }
+
+    used_pages += needed_pages;
+    MemoryBlock* next_memory_block = begin_heap;
+    first_memory_block_ = begin_heap;
+    addMemoryBlock(next_memory_block, size, false, next_memory_block + 1, NULL)
+    *((char*)((size_t)next_memory_block->address_ + next_memory_block->size_)) = '|';
+    used_block_counts++;
+    pthread_mutex_unlock(&memory_mutex);
+    return next_memory_block->address_;
+  }
+  else
+  {
+    MemoryBlock* next_memory_block = first_memory_block_;
+    while(1)
+    {
+      if(*((char*)((size_t)next_memory_block->address_ + next_memory_block->size_)) != '|')
+      {
+        pthread_mutex_unlock(&memory_mutex);
+        exit(-1);
+      }
+      if(next_memory_block->is_free_ && next_memory_block->size_ >= size)
+      {
+        if(next_memory_block->size_ >= size + 2 * (sizeof(MemoryBlock) + sizeof(char)))
+        {
+          MemoryBlock* memory_block_new = (MemoryBlock*)((size_t)next_memory_block + size + sizeof(MemoryBlock) + sizeof(char));
+          memory_block_new->address_ = memory_block_new + 1;
+          memory_block_new->is_free_ = true;
+          memory_block_new->next_ = next_memory_block->next_;
+          memory_block_new->size_ = next_memory_block->size_ - sizeof(MemoryBlock) - sizeof(char) - size;
+
+          next_memory_block->next_ = memory_block_new;
+          next_memory_block->size_ = size;
+          *((char*)((size_t)next_memory_block->address_ + next_memory_block->size_)) = '|';
+
+          if(memory_block_new->next_ && memory_block_new->next_->is_free_)
+          {
+            memory_block_new->size_ = memory_block_new->size_ + memory_block_new->next_->size_ + sizeof(char) + sizeof(MemoryBlock);
+            memory_block_new->next_ = memory_block_new->next_->next_;
+          }
+        }
+        next_memory_block->is_free_ = false;
+        used_block_counts++;
+        pthread_mutex_unlock(&memory_mutex);
+        return next_memory_block->address_;
+      }
+      else
+      {
+        if(next_memory_block->next_ == NULL)
+        {
+          if((size + sizeof(MemoryBlock) + sizeof(char)) <= num_free_bytes_on_page)
+          {
+            num_free_bytes_on_page = num_free_bytes_on_page - (size + sizeof(MemoryBlock) + sizeof(char));
+          }
+          else
+          {
+            size_t values_that_dont_fit_on_the_first_page = (size + sizeof(MemoryBlock) + sizeof(char)) - num_free_bytes_on_page;
+            size_t needed_pages = (values_that_dont_fit_on_the_first_page / (PAGE_SIZE + 1)) + 1;
+            num_free_bytes_on_page =  PAGE_SIZE - (values_that_dont_fit_on_the_first_page % PAGE_SIZE);
+            if(num_free_bytes_on_page == PAGE_SIZE)
+            {
+              num_free_bytes_on_page = 0;
+            }
+            if(sbrk(needed_pages * PAGE_SIZE) == (void*)-1)
+            {
+              pthread_mutex_unlock(&memory_mutex);
+              return NULL;
+            }
+            used_pages += needed_pages;
+          }
+          MemoryBlock* memory_block_new = (MemoryBlock*)((size_t)next_memory_block + next_memory_block->size_ + sizeof(MemoryBlock) + sizeof(char));
+          next_memory_block->next_ = memory_block_new;
+          memory_block_new->size_ = size;
+          memory_block_new->is_free_ = false;
+          memory_block_new->address_ = memory_block_new + 1;
+          memory_block_new->next_ = NULL;
+          *((char*)((size_t)memory_block_new->address_ + memory_block_new->size_)) = '|';
+          used_block_counts++;
+          pthread_mutex_unlock(&memory_mutex);
+          return memory_block_new->address_;
+        }
+        next_memory_block = next_memory_block->next_;
+      }
+    }
+    pthread_mutex_unlock(&memory_mutex);
+  }
+}
+
+
+void Memory::free(void *ptr)
+{
+  if(ptr == NULL) //TODOs (check pointer)
+  {
+    return;
+  }
+
+  pthread_mutex_lock(&memory_mutex);
+  MemoryBlock* element_to_free = (MemoryBlock*)ptr - 1;
+  MemoryBlock* next = first_memory_block_;
+  if(next == NULL)
+  {
+    pthread_mutex_unlock(&memory_mutex);
+    exit(-1);
+  }
+  MemoryBlock* element_before;
+  while(next->next_ != NULL)
+  {
+    if(*((char*)((size_t)next->address_ + next->size_)) != '|')
+    {
+      pthread_mutex_unlock(&memory_mutex);
+      exit(-1);
+    }
+    if(next->next_ == element_to_free)
+    {
+      element_before = next;
+    }
+    next = next->next_;
+  }
+  if(!element_before && element_to_free != first_memory_block_) //Check if element can be found in list
+  {
+    pthread_mutex_unlock(&memory_mutex);
+    exit(-1);
+  }
+  if(element_to_free->is_free_) //check if element is already free
+  {
+    pthread_mutex_unlock(&memory_mutex);
+    exit(-1);
+  }
+  used_block_counts--;
+  if(used_block_counts == 0)
+  {
+    num_free_bytes_on_page = 0;
+    used_pages = 0;
+    brk(first_memory_block_);
+    first_memory_block_ = NULL;
+    pthread_mutex_unlock(&memory_mutex);
+    return;
+  }
+  element_to_free->is_free_ = true;
+
+  if(element_to_free->next_ && element_to_free->next_->is_free_)
+  {
+    element_to_free->size_ = element_to_free->size_ + element_to_free->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
+    element_to_free->next_ = element_to_free->next_->next_;
+  }
+  if(element_to_free != first_memory_block_ &&element_before->is_free_)
+  {
+    element_before->size_ = element_before->size_ + element_before->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
+    element_before->next_ = element_before->next_->next_;
+  }
+  pthread_mutex_unlock(&memory_mutex);
+}
+
+
+void *Memory::calloc(size_t num_memb, size_t size_each)
+{
+  void* temp = malloc(num_memb * size_each);
+  memset(temp, 0, num_memb * size_each);
+  return temp; 
+}
+
+
+
