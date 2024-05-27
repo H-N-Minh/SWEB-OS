@@ -23,19 +23,18 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 {
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
 
-    ppn_stack = PageManager::instance()->allocPPN();
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(3); // for mapPage later
-
+    ustl::vector<size_t> preallocated_pages = PageManager::instance()->preAlocatePages(3); // for mapPage later
+    ppn_stack = PageManager::instance()->allocPPN();   
     IPTManager::instance()->IPT_lock_.acquire();
     loader->arch_memory_.archmemory_lock_.acquire();
+    
     debug(USERTHREAD, "Page for stack is %lu\n", ppn_stack);
     // TODOAG: putting this into a separate function might make it easier to combine with growing stack in PFHandler etc
     vpn_stack_ = USER_BREAK / PAGE_SIZE - tid_ * MAX_STACK_AMOUNT - 1;
     bool vpn_mapped = loader_->arch_memory_.mapPage(vpn_stack_, ppn_stack, 1, preallocated_pages);
     loader_->arch_memory_.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
-    PageManager::instance()->free_preallocated_pages(preallocated_pages);
-
+    PageManager::instance()->releaseNotNeededPages(preallocated_pages);
      // TODOAG: check/compare with fork!
     assert(vpn_mapped && "Virtual page for stack was already mapped - this should never happen");
 
@@ -339,10 +338,6 @@ void UserThread::exitThread(void* value_ptr)
   }
   join_state_lock_.release();
 
-  // unmap its stack
-  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
-  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
-
   // for exec()
   if(process_->threads_.size() == 1)  // only one thread left, which is the exec thread waiting for the signal
   {
@@ -352,6 +347,10 @@ void UserThread::exitThread(void* value_ptr)
     process_->one_thread_left_lock_.release();
   }
   process_->threads_lock_.release();
+
+  // unmap its stack
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
 
 
   user_stack_ptr_ = 0;
@@ -382,10 +381,11 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
   {
     join_state = PTHREAD_CREATE_JOINABLE;
   }
-  process_->threads_lock_.acquire();
+  
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
- 
+  
+  process_->threads_lock_.acquire();
   if(new_thread)
   {
     new_thread->join_state_ = join_state;

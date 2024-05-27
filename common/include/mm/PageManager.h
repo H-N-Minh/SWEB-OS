@@ -52,6 +52,17 @@ class PageManager
      */
     void freePPN(uint32 page_number, uint32 page_size = PAGE_SIZE);
 
+    /**
+     * preallocate pages so allocPPN is not called while holding a lock
+    */
+    ustl::vector<size_t> preAlocatePages(int needed_pages_count);
+
+    /**
+     * free preallocated pages, if theres any left that was not used
+    */
+    void releaseNotNeededPages(ustl::vector<size_t>& not_used_pages);
+    size_t getPreAlocatedPage(ustl::vector<size_t>& pre_alocated_pages);
+
     Thread* heldBy()
     {
       return page_manager_lock_.heldBy();
@@ -73,15 +84,7 @@ class PageManager
 
     uint32 getReferenceCount(uint64 page_number);
 
-    /**
-     * preallocate pages so allocPPN is not called while holding a lock
-    */
-    ustl::vector<uint32> preallocate_pages (int amount);
 
-    /**
-     * free preallocated pages, if theres any left that was not used
-    */
-    void free_preallocated_pages (ustl::vector<uint32> preallocated_pages);
 
  
   private:

@@ -16,10 +16,13 @@ class SwappingManager
     ~SwappingManager();
 
     void swapOutPage(size_t ppn);
-    int swapInPage(size_t vpn, ustl::vector<uint32> preallocated_pages);
+    int swapInPage(size_t vpn, ustl::vector<size_t>& ppns);
 
     void lock_archmemories_in_right_order(ustl::vector<IPTEntry*> virtual_page_infos);
     void unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_infos);
+
+    int getDiskWrites();
+    int getDiskReads();
 
     Mutex disk_lock_;
 
@@ -30,4 +33,7 @@ class SwappingManager
     BDVirtualDevice* bd_device_;
 
     static int disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
+
+    int total_disk_reads_ = 0;
+    int total_disk_writes_ = 0;
 };

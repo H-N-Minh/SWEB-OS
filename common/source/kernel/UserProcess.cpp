@@ -26,7 +26,7 @@ int64 UserProcess::pid_counter_ = 1;
 
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
-    threads_lock_("thread_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
+    threads_lock_("threads_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
     one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable(), 
     process_state_lock_("process_state_lock_")
 {
@@ -65,7 +65,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 // COPY CONSTRUCTOR
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
-    terminal_number_(other.terminal_number_), threads_lock_("thread_lock_"),
+    terminal_number_(other.terminal_number_), threads_lock_("threads_lock_"),
     one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable(),
     process_state_lock_("process_state_lock_")
 {
@@ -77,9 +77,24 @@ UserProcess::UserProcess(const UserProcess& other)
   debug(USERPROCESS, "Copy-ctor: Calling Archmemory copy-ctor for new Loader\n");
 
 
-  loader_ = new Loader(*other.loader_, fd_);
+  IPTManager::instance()->IPT_lock_.acquire();
+  other.loader_->arch_memory_.archmemory_lock_.acquire();
+  int needed_preallocated_pages = other.loader_->arch_memory_.countArchmemPages();
+  other.loader_->arch_memory_.archmemory_lock_.release();
+  IPTManager::instance()->IPT_lock_.release();
+  ustl::vector<size_t> preallocated_pages = PageManager::instance()->preAlocatePages(needed_preallocated_pages + 10);   // +10 for safety, not garanteed thats enough
 
+
+  IPTManager::instance()->IPT_lock_.acquire();
+  other.loader_->arch_memory_.archmemory_lock_.acquire();
+  int check_that_count_is_the_same = other.loader_->arch_memory_.countArchmemPages();  //TODOs
+  assert(needed_preallocated_pages + 10 > check_that_count_is_the_same);
+  loader_ = new Loader(*other.loader_, fd_, preallocated_pages);
+  other.loader_->arch_memory_.archmemory_lock_.release();
+  IPTManager::instance()->IPT_lock_.release();
   if (!loader_){assert(0 && "No loader in fork");}
+
+  PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
 
@@ -319,8 +334,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
 
   //allocate one (or two) physical pages for the arguments
-  // IPTManager::instance()->IPT_lock_.acquire();   // not needed? also cant lock then call allocPPN
-  // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
   size_t page_for_args = PageManager::instance()->allocPPN();
   size_t next_page_for_args = NULL;
 
@@ -328,9 +341,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     next_page_for_args = PageManager::instance()->allocPPN();
   }
-  // currentThread->loader_->arch_memory_.archmemory_lock_.release();
-  // IPTManager::instance()->IPT_lock_.release();
-
 
   size_t offset = 0;
   size_t virtual_address_args = USER_BREAK - 2 * PAGE_SIZE;
@@ -379,7 +389,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
   
   //map the argument page(s)
-  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(6);  // each mapPage needs max 3 new pages, and we have 2 mapPage
+  ustl::vector<size_t> preallocated_pages = PageManager::instance()->preAlocatePages(8);
   IPTManager::instance()->IPT_lock_.acquire();
   loader_->arch_memory_.archmemory_lock_.acquire();
   bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1, preallocated_pages);
@@ -388,10 +398,11 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   {
     bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 , next_page_for_args, 1, preallocated_pages);
     assert(vpn_mapped && "Virtual page already mapped.");
+
   }
   loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
-  PageManager::instance()->free_preallocated_pages(preallocated_pages);
+  PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   return 0;
 }
 

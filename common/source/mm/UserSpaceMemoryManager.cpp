@@ -64,7 +64,7 @@ ustl::vector<uint32> UserSpaceMemoryManager::preallocate_pages_for_sbrk(ssize_t 
   loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
   
-  return PageManager::instance()->preallocate_pages(counter + 5);   // +5 for safty, but not a guarantee this will be enough
+  return PageManager::instance()->preAlocatePages(counter + 5);   // +5 for safty, but not a guarantee this will be enough
 }
 
 
@@ -119,7 +119,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t new_break_addr)
           current_break_lock_.release();
           loader_->arch_memory_.archmemory_lock_.release();
           IPTManager::instance()->IPT_lock_.release();
-          PageManager::instance()->free_preallocated_pages(preallocated_pages);
+          PageManager::instance()->releaseNotNeededPages(preallocated_pages);
           return 0;
         }
 
@@ -127,7 +127,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t new_break_addr)
         void* new_page_ptr = (void*) ArchMemory::getIdentAddressOfPPN(new_page);
         memset(new_page_ptr, 0 , PAGE_SIZE);
         bool successly_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1, preallocated_pages);
-        PageManager::instance()->free_preallocated_pages(preallocated_pages);
+        PageManager::instance()->releaseNotNeededPages(preallocated_pages);
         if(unlikely(!successly_mapped))
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not map page\n");
@@ -152,7 +152,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t new_break_addr)
           current_break_lock_.release();
           loader_->arch_memory_.archmemory_lock_.release();
           IPTManager::instance()->IPT_lock_.release();
-          PageManager::instance()->free_preallocated_pages(preallocated_pages);
+          PageManager::instance()->releaseNotNeededPages(preallocated_pages);
           return 0;
         }
         old_top_vpn--;
@@ -165,7 +165,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t new_break_addr)
 
     assert(current_break_ >= heap_start_ && "UserSpaceMemoryManager::sbrk: current break is below heap start");
     assert(current_break_ <= MAX_HEAP_SIZE && "UserSpaceMemoryManager::sbrk: current break is above heap limit");
-    PageManager::instance()->free_preallocated_pages(preallocated_pages);
+    PageManager::instance()->releaseNotNeededPages(preallocated_pages);
     return (pointer) old_break;
   }
   else
@@ -176,7 +176,7 @@ pointer UserSpaceMemoryManager::sbrk(ssize_t size, size_t new_break_addr)
     current_break_lock_.release();
     loader_->arch_memory_.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
-    PageManager::instance()->free_preallocated_pages(preallocated_pages);
+    PageManager::instance()->releaseNotNeededPages(preallocated_pages);
     return old_break;
   }
 }
@@ -303,9 +303,9 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   // TODO MINH: growing stack  now has broken locking because of new allocPPN rule
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
   uint32 new_ppn = PageManager::instance()->allocPPN(); //TODO MINH: this alloc and the prealloc below should be put outside locks
-  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preallocate_pages(3); // for mapPage later
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(3); // for mapPage later
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true, preallocated_pages);
-  PageManager::instance()->free_preallocated_pages(preallocated_pages);
+  PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 
   if (!page_mapped)
   {

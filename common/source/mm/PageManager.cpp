@@ -411,21 +411,3 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
   }
 }
 
-
-ustl::vector<uint32> PageManager::preallocate_pages (int amount)
-{
-  ustl::vector<uint32> preallocated_pages;
-  for (int i = 0; i < amount; i++)
-  {
-    preallocated_pages.push_back(PageManager::instance()->allocPPN());
-  }
-  return preallocated_pages;
-}
-
-void PageManager::free_preallocated_pages (ustl::vector<uint32> preallocated_pages)
-{
-  for (auto page : preallocated_pages)
-  {
-    PageManager::instance()->freePPN(page);
-  }
-}
