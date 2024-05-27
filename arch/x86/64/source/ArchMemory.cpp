@@ -636,7 +636,7 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
 
   if(!pt_entry->swapped_out || pt_entry->present)
   {
-    assert(0 && "Page needs to be swapped out and not present");
+    assert(0 && "ArchMemory::getDiskLocation: Page was not swapped out yet or not present");
   }
   else
   {
@@ -718,37 +718,42 @@ IPTMapType ArchMemory::getMapType(PageTableEntry& pt_entry)
 }
 
 
-int ArchMemory::count_allocations()
+/** Helper func for cpy ctor.
+ * count the number of pages with present bit on in the whole archmem of given pml4.
+ * Then that amount of pages (plus a few more) are preallocated for the child's archmem.
+*/
+int ArchMemory::countArchmemPages()
 {
-  int counter = 0;
+  assert(archmemory_lock_.heldBy() == currentThread && "call ArchMemory::preallocatePages but not holding the lock\n");
 
-  counter++;
-  PageMapLevel4Entry* pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
+  int count = 0;
+  count++; // for the pml4 
+  PageMapLevel4Entry* pml4e = (PageMapLevel4Entry*) ArchMemory::getIdentAddressOfPPN(page_map_level_4_);
   for (uint64 pml4i = 0; pml4i < PAGE_MAP_LEVEL_4_ENTRIES / 2; pml4i++)
   {
-    if (pml4[pml4i].present)
+    if (pml4e[pml4i].present)
     {
-      counter++;
-      PageDirPointerTableEntry* pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(pml4[pml4i].page_ppn);
+      count++;
+      PageDirPointerTableEntry* pdpte = (PageDirPointerTableEntry*) ArchMemory::getIdentAddressOfPPN(pml4e[pml4i].page_ppn);
       for (uint64 pdpti = 0; pdpti < PAGE_DIR_POINTER_TABLE_ENTRIES; pdpti++)
       {
-        if (pdpt[pdpti].pd.present)
+        if (pdpte[pdpti].pd.present)
         {
-
-          counter++;
-          PageDirEntry* pd = (PageDirEntry*) getIdentAddressOfPPN(pdpt[pdpti].pd.page_ppn);
+          count++;
+          PageDirEntry* pde = (PageDirEntry*) ArchMemory::getIdentAddressOfPPN(pdpte[pdpti].pd.page_ppn);
           for (uint64 pdi = 0; pdi < PAGE_DIR_ENTRIES; pdi++)
           {
-            if (pd[pdi].pt.present)
+            if (pde[pdi].pt.present)
             {
-              counter++;
+              count++;
             }
           }
         }
       }
     }
   }
-  return counter;
+
+  return count;
 }
 
 

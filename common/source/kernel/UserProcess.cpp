@@ -79,15 +79,15 @@ UserProcess::UserProcess(const UserProcess& other)
 
   IPTManager::instance()->IPT_lock_.acquire();
   other.loader_->arch_memory_.archmemory_lock_.acquire();
-  int needed_ppns = other.loader_->arch_memory_.count_allocations();
+  int needed_ppns = other.loader_->arch_memory_.countArchmemPages();
   other.loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
-  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(needed_ppns + 10);
+  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(needed_ppns + 10);   // +10 for safety, not garanteed thats enough
 
 
   IPTManager::instance()->IPT_lock_.acquire();
   other.loader_->arch_memory_.archmemory_lock_.acquire();
-  int check_that_count_is_the_same = other.loader_->arch_memory_.count_allocations();  //TODOs
+  int check_that_count_is_the_same = other.loader_->arch_memory_.countArchmemPages();  //TODOs
   assert(needed_ppns + 10 > check_that_count_is_the_same);
   loader_ = new Loader(*other.loader_, fd_, ppns);
   other.loader_->arch_memory_.archmemory_lock_.release();
