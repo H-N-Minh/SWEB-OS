@@ -23,12 +23,12 @@ int main()
     // pthread_t thread_id;
     // pthread_create(&thread_id, NULL, (void*)printDebugInfo, NULL);
 
-    // ipt1();
-    // printf("first done\n");
-    ipt2();
-    printf("second done\n");
-    ipt3();
-    printf("third done\n");
+    ipt1();
+    printf("first done\n");
+    // ipt2();
+    // printf("second done\n");
+    // ipt3();
+    // printf("third done\n");
 
 
     // printf("\n\nipt testcases successful\n");
