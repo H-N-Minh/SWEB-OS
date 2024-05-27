@@ -68,6 +68,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   // kprintf("Pagecontent before: <%s>\n", page_content);
   bd_device_->writeData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
   disk_lock_.release();
+  total_disk_writes_++;
 
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
@@ -123,8 +124,8 @@ int SwappingManager::swapInPage(size_t vpn, ustl::vector<size_t>& ppns)
   char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(ppn);
   bd_device_->readData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
   // kprintf("Pagecontent after: <%s>\n", page_content);
-
   disk_lock_.release();
+  total_disk_reads_++;
   unlock_archmemories(virtual_page_infos);
 
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in vpn %ld finished", vpn);
@@ -158,6 +159,19 @@ void SwappingManager::unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_i
       archmemory->archmemory_lock_.release();
     }
   }
+}
+
+
+int SwappingManager::getDiskWrites()
+{
+  return total_disk_writes_;
+}
+
+
+
+int SwappingManager::getDiskReads()
+{
+  return total_disk_reads_;
 }
 
 

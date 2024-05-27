@@ -7,7 +7,7 @@
 #include "wait.h"
 
 
-#define NUM_THREADS 80
+#define NUM_THREADS 20
 
 int global = 0;
 int all_threads_created = 0;
