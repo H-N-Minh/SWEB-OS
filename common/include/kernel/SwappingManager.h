@@ -32,7 +32,7 @@ class SwappingManager
 
     BDVirtualDevice* bd_device_;
 
-    static int disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
+    static size_t disk_offset_;    //TODO? this only goes up, so disk page is never reused
 
     int total_disk_reads_ = 0;
     int total_disk_writes_ = 0;

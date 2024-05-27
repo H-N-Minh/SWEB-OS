@@ -3,6 +3,8 @@
 #include "Thread.h"
 #include "Condition.h"
 #include "Mutex.h"
+#include "uvector.h"
+#include "types.h"
 
 class SwappingThread : public Thread
 {
@@ -12,9 +14,11 @@ class SwappingThread : public Thread
     virtual void kill();
     virtual void Run();
   
+    void swapPage();
 
     Mutex orders_lock_;
     Condition orders_cond_;
     int orders_;
+    ustl::vector<uint32> free_pages_;
 };
 

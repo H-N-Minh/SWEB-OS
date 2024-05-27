@@ -5,7 +5,7 @@
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
 
-int SwappingManager::disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing = 0;
+size_t SwappingManager::disk_offset_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
 
 SwappingManager::SwappingManager() : disk_lock_("disk_lock_")
@@ -34,26 +34,20 @@ SwappingManager::~SwappingManager()
 void SwappingManager::swapOutPage(size_t ppn)
 {
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
-  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();  //TODOs: remove i think
-
-  //Find free disk_offset (TODOs)
-  size_t disk_offset = disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
-  disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing++;
 
   //Move Page infos from ipt_map_ram to ipt_map_disk
-  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset);
-  ustl::vector<IPTEntry*> virtual_page_infos = ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
+  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_);
+  ustl::vector<IPTEntry*> virtual_page_infos = ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_);
 
   // lock all archmem and choose 1 archmem and vpn (for later to write to disk)
   lock_archmemories_in_right_order(virtual_page_infos);
 
-
-
+  // for debuging
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem;
     size_t vpn = virtual_page_info->vpn;
-    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset);
+    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset_);
   }
 
   ArchMemory* archmemory = virtual_page_infos[0]->archmem;
@@ -64,7 +58,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   ArchMemoryMapping m = ArchMemory::resolveMapping(archmemory->page_map_level_4_, vpn);
   char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
   // kprintf("Pagecontent before: <%s>\n", page_content);
-  bd_device_->writeData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
+  bd_device_->writeData(disk_offset_ * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
   disk_lock_.release();
   total_disk_writes_++;
 
@@ -73,18 +67,16 @@ void SwappingManager::swapOutPage(size_t ppn)
   {
     archmemory = virtual_page_info->archmem;
     vpn = virtual_page_info->vpn;
-    archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
+    archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_);
   }
+  disk_offset_++;
 
   PageManager::instance()->ref_count_lock_.acquire();  //??
   PageManager::instance()->setReferenceCount(ppn, 0);
   PageManager::instance()->ref_count_lock_.release();
 
   unlock_archmemories(virtual_page_infos);
-
-  currentThread->loader_->arch_memory_.archmemory_lock_.release();
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
-
 }
 
 //Only works if the page i want to swap in is in the archmemory of current thread
@@ -132,7 +124,6 @@ int SwappingManager::swapInPage(size_t vpn, ustl::vector<uint32>& preallocated_p
 }
 
 
-//TODOs: does not lock current thread
 void SwappingManager::lock_archmemories_in_right_order(ustl::vector<IPTEntry*> virtual_page_infos)
 {
   debug(SWAPPING, "SwappingManager::unlock_archmemories: locking archmem in order of lowest ArchMemory* address to highest\n");
@@ -147,15 +138,11 @@ void SwappingManager::lock_archmemories_in_right_order(ustl::vector<IPTEntry*> v
 
   for(ArchMemory* archmemory : archmemories)
   {
-    if(archmemory != &currentThread->loader_->arch_memory_)
-    {
-      archmemory->archmemory_lock_.acquire();
-    }
+    archmemory->archmemory_lock_.acquire();
   }
 }
 
 
-//TODOs: Does at the moment not unlock the current thread
 void SwappingManager::unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_infos)
 {
   debug(SWAPPING, "SwappingManager::unlock_archmemories: unlocking archmem in order of highest ArchMemory* to lowest ArchMemory*\n");
@@ -170,10 +157,7 @@ void SwappingManager::unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_i
 
   for(ArchMemory* archmemory : archmemories)
   {
-    if(archmemory != &currentThread->loader_->arch_memory_)
-    {
-      archmemory->archmemory_lock_.release();
-    }
+    archmemory->archmemory_lock_.release();
   }
 }
 

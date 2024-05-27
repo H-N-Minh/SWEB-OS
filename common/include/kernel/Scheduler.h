@@ -71,8 +71,9 @@ class Scheduler
 
     IdleThread idle_thread_;
     CleanupThread cleanup_thread_;
-    SwappingThread swapping_thread_;
   public:
+    SwappingThread swapping_thread_;
+    
     uint64_t last_time_stamp_{0};
     uint64_t timestamp_fs_{0};
 

@@ -11,6 +11,7 @@
 #include "Bitmap.h"
 #include "ArchThreads.h"
 #include "SwappingManager.h"
+#include "SwappingThread.h"
 
 PageManager pm;
 
@@ -260,12 +261,22 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
   if (found == 0)
   {
-    IPTManager::instance()->IPT_lock_.acquire(); // TODO MINH: Thread must not hold lock when swapping
-    size_t ppn = IPTManager::instance()->findPageToSwapOut();
-    SwappingManager::instance()->swapOutPage(ppn);
-    IPTManager::instance()->IPT_lock_.release();
+    debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
+    SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+
+    swapper->orders_lock_.acquire();
+    swapper->orders_++;
+
+    while (swapper->free_pages_.empty())
+    {
+      swapper->orders_cond_.wait();
+    }
+    
+    size_t ppn = swapper->free_pages_.front();
+    swapper->orders_lock_.release();
+
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
-    debug(PM, "PageManager::allocPPN: New ppn is %ld. (swapped in)\n", ppn);
+    debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
     return ppn;
     // assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
   }

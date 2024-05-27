@@ -1,5 +1,7 @@
 #include "SwappingThread.h"
 #include "Scheduler.h"
+#include "IPTManager.h"
+#include "SwappingManager.h"
 
 SwappingThread::SwappingThread() 
   : Thread(0, "SwappingThread", Thread::KERNEL_THREAD), orders_lock_("swapping_orders_lock_"),
@@ -32,11 +34,22 @@ void SwappingThread::Run()
     }
     else
     {
+      swapPage();
       orders_--;
       orders_cond_.signal();
       orders_lock_.release();
     }
-    
   }
 }
 
+void SwappingThread::swapPage()
+{
+  IPTManager* ipt_manager = IPTManager::instance();
+  ipt_manager->IPT_lock_.acquire();
+  
+  size_t ppn = ipt_manager->findPageToSwapOut();
+  SwappingManager::instance()->swapOutPage(ppn);
+  free_pages_.push_back(ppn);
+
+  ipt_manager->IPT_lock_.release();
+}
