@@ -9,11 +9,11 @@
 //Checks if ipt is set and not bigger than 1 for any page
 int ipt1()
 {
-  for(int i = 0; i< 100; i++)
-  {
-    getIPTInfos(i * 100);
-    sleep(1);  
-  }
+  // for(int i = 0; i< 100; i++)
+  // {
+  //   getIPTInfos(i * 100);
+  //   sleep(1);  
+  // }
   
   // int counter = 0;
   // for(size_t ppn = 1009; ppn < 2016; ppn++)  //ppn used for userspace
