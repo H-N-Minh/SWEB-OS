@@ -78,8 +78,7 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
           //CHILD_pdpt[pdpti].pd.writeable = 0;
 
           CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
-
-          //CHILD_pdpt[pdpti].pd.page_ppn = PARENT_pdpt[pdpti].pd.page_ppn;
+          
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
           memcpy((void*) CHILD_pd, (void*) PARENT_pd, PAGE_SIZE);
@@ -607,12 +606,12 @@ void ArchMemory::copyPage(size_t virtual_addr)
 
   debug(FORK, "ArchMemory::copyPage Setting up the bit of the new page (present, write, !cow)\n");
   pml1_entry->writeable = 1;
-  // pml1_entry->cow = 0; //not nessessary i think
+  pml1_entry->cow = 0; //not nessessary i think
 }
 void ArchMemory::copyPageTable(size_t virtual_addr)
 {
   debug(FORK, "ArchMemory::copyPage Resolving mapping \n");
-  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  ArchMemoryMapping m = resolveMapping(virtual_addr/PAGE_SIZE);
   PageDirEntry* pml2_entry = &m.pd[m.pdi];
 
   size_t new_page_ppn = PageManager::instance()->allocPPN();
