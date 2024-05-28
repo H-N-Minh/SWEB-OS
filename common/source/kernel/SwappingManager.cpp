@@ -33,15 +33,15 @@ SwappingManager::~SwappingManager()
 //does only work if the page to swap out is also in the archmemory of the current thread
 void SwappingManager::swapOutPage(size_t ppn)
 {
+  // lock in order IPT -> disk -> archmem
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   disk_lock_.acquire();
+  ustl::vector<IPTEntry*> virtual_page_infos = ipt_->getRamEntriesFromKey(ppn);
+  lock_archmemories_in_right_order(virtual_page_infos);   // lock archmem before moveEntry, because moveEntry checks for this
 
   //Move Page infos from ipt_map_ram to ipt_map_disk
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
-  ustl::vector<IPTEntry*> virtual_page_infos = ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
-
-  // lock all archmem and choose 1 archmem and vpn (for later to write to disk)
-  lock_archmemories_in_right_order(virtual_page_infos);
+  ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
 
   // for debuging
   for(IPTEntry* virtual_page_info : virtual_page_infos)
@@ -50,7 +50,7 @@ void SwappingManager::swapOutPage(size_t ppn)
     size_t vpn = virtual_page_info->vpn_;
     debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset_counter_);
   }
-
+  // take 1 archmem, any is fine, they should all point to same ppn
   ArchMemory* archmemory = virtual_page_infos[0]->archmem_;
   size_t vpn = virtual_page_infos[0]->vpn_;
 
