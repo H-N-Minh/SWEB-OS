@@ -465,7 +465,7 @@ pointer KernelMemoryManager::ksbrk(ssize_t size)
         debug(KMM, "%zx != %zx\n", cur_top_vpn, new_top_vpn);
         cur_top_vpn++;
         assert(pm_ready_ && "Kernel Heap should not be used before PageManager is ready");
-        size_t new_page = PageManager::instance()->allocPPN(); //TODOs: lock ipt before arch memory
+        size_t new_page = PageManager::instance()->allocPPN();
         if(unlikely(new_page == 0))
         {
           kprintfd("KernelMemoryManager::freeSegment: FATAL ERROR\n");

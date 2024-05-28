@@ -70,7 +70,12 @@ public:
   static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);
   static size_t brkMemory(size_t new_brk_addr);
 
-  static int getIPTInfos(size_t ppn);
+  static void getIPTInfos();
+
+  /**
+   * check if the ppn of all archmem matches the IPT, and opposite
+  */
+  static void assertIPT();
 };
 
 

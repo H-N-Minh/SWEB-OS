@@ -16,7 +16,12 @@ void _start()
 }
 
 
-int getIPTInfos(size_t ppn)
+int getIPTInfos()
 {
-  return __syscall(sc_getIPTInfos, ppn, 0x00, 0x00, 0x00, 0x00);
+  return __syscall(sc_getIPTInfos, 0x00, 0x00, 0x00, 0x00, 0x00);
+}
+
+int assertIPT()
+{
+  return __syscall(sc_assertIPT, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
