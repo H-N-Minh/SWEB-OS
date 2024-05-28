@@ -71,6 +71,10 @@ public:
   static size_t brkMemory(size_t new_brk_addr);
 
   static void getIPTInfos();
+
+  static void* malloc(size_t size);
+  static void free(void* ptr);
+  static void* calloc(size_t nmemb, size_t size);
 };
 
 

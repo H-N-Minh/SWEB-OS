@@ -144,6 +144,15 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_getIPTInfos:
       getIPTInfos();
       break; 
+    case sc_malloc:
+      return_value = (size_t)malloc(arg1);
+      break;
+    case sc_free:
+      free((void*)arg1);
+      break;
+    case sc_calloc:
+      return_value = (size_t)calloc(arg1, arg2);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -769,6 +778,34 @@ unsigned int Syscall::clock(void)
 
   return (unsigned int)clock_in_microseconds;
 }
+
+
+void* Syscall::malloc(size_t size)
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  return current_process.user_mem_manager_->malloc(size);
+}
+
+void Syscall::free(void *ptr)
+{
+  //TODOs: check ptr
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  return current_process.user_mem_manager_->free(ptr); 
+}
+
+
+void* Syscall::calloc(size_t nmemb, size_t size)
+{
+  UserThread& currentUserThread = *((UserThread*)currentThread);
+  UserProcess& current_process = *currentUserThread.process_;
+
+  return current_process.user_mem_manager_->calloc(nmemb, size); 
+}
+
 
 uint64_t Syscall::get_current_timestamp_64_bit()
 {
