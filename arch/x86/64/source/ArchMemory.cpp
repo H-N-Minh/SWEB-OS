@@ -1,4 +1,3 @@
-#include "IPTManager.h"
 #include "ArchMemory.h"
 #include "ArchInterrupts.h"
 #include "kprintf.h"
@@ -97,8 +96,10 @@ ArchMemory::ArchMemory(ArchMemory const &src):archmemory_lock_("archmemory_lock_
               CHILD_pd[pdi].pt.cow = 1;
               CHILD_pd[pdi].pt.writeable = 0;
 
-              PageManager::instance()->incrementRefCount(PARENT_pd[pdi].pt.page_ppn);
-              debug(COW, "-------------getReferenceCount %d \n", PageManager::instance()->getRefCount(PARENT_pd[pdi].pt.page_ppn));
+              PageManager::instance()->ref_count_lock_.acquire();
+              PageManager::instance()->incrementEntryReferenceCount(PARENT_pd[pdi].pt.page_ppn);
+              debug(COW, "-------------getReferenceCount %d \n", PageManager::instance()->getReferenceCount(PARENT_pd[pdi].pt.page_ppn));
+              PageManager::instance()->ref_count_lock_.release();
 
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
             }
@@ -152,19 +153,10 @@ ArchMemory::~ArchMemory()
                   PageManager::instance()->ref_count_lock_.release();
                 }
               }
-              if(PageManager::instance()->getRefCount(pd[pdi].pt.page_ppn) == 1)
-              {
+                PageManager::instance()->ref_count_lock_.acquire();
                 pd[pdi].pt.present = 0;
-                PageManager::instance()->freePPN(pd[pdi].pt.page_ppn);
-                PageManager::instance()->decrementRefCount(pd[pdi].pt.page_ppn);
-                debug(COW, "-----DID FREE PT PPN \n");
-              }
-              else
-              {
-                pd[pdi].pt.present = 0;
-                PageManager::instance()->decrementRefCount(pd[pdi].pt.page_ppn);
-                debug(COW, "-----DIDNT FREE PT PPN \n");
-              }
+                PageManager::instance()->decrementEntryReferenceCount(pd[pdi].pt.page_ppn);
+                PageManager::instance()->ref_count_lock_.release();
             }
           }
           pdpt[pdpti].pd.present = 0;
@@ -244,7 +236,9 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   {
     //TODO check ref count == 1 here
     empty = checkAndRemove<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi);
-    PageManager::instance()->freePPN(m.pt_ppn);
+    PageManager::instance()->ref_count_lock_.acquire();
+    PageManager::instance()->decrementEntryReferenceCount(m.pt_ppn);
+    PageManager::instance()->ref_count_lock_.release();
   }
   if (empty)
   {
@@ -306,13 +300,17 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   {
     m.pt_ppn = PageManager::instance()->allocPPN();
     insert<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi, m.pt_ppn, 1, 0, 1, 1);
-    PageManager::instance()->incrementRefCount(m.pt_ppn);
+
+    PageManager::instance()->ref_count_lock_.acquire();
+    PageManager::instance()->incrementEntryReferenceCount(m.pt_ppn);
+    PageManager::instance()->ref_count_lock_.release();
   }
 
   if (m.page_ppn == 0)
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
+
     PageManager::instance()->ref_count_lock_.acquire();
 
     IPTMapType maptype = getMapType(((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti]);
@@ -623,10 +621,17 @@ void ArchMemory::copyPageTable(size_t virtual_addr)
   PageTableEntry* new_page = (PageTableEntry*) getIdentAddressOfPPN(new_page_ppn);
 
   memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
-  PageManager::instance()->decrementRefCount(pml2_entry->pt.page_ppn);
+
+  // PageManager::instance()->ref_count_lock_.acquire();
+  // PageManager::instance()->decrementEntryReferenceCount(pml2_entry->pt.page_ppn);
+  // PageManager::instance()->ref_count_lock_.release();
+
   //update the page directory entry to point to the new physical page
   pml2_entry->pt.page_ppn = new_page_ppn;
-  PageManager::instance()->incrementRefCount(pml2_entry->pt.page_ppn);
+
+  PageManager::instance()->ref_count_lock_.acquire();
+  PageManager::instance()->incrementEntryReferenceCount(pml2_entry->pt.page_ppn);
+  PageManager::instance()->ref_count_lock_.release();
   pml2_entry->pt.writeable = 1;
   pml2_entry->pt.cow = 0;
 
@@ -641,8 +646,14 @@ void ArchMemory::copyPageTable(size_t virtual_addr)
       new_page[pti].cow = 1;
 
       PageManager::instance()->ref_count_lock_.acquire();
-      PageManager::instance()->incrementRefCount(original_page[pti].page_ppn);
+      PageManager::instance()->incrementEntryReferenceCount(original_page[pti].page_ppn);
       PageManager::instance()->ref_count_lock_.release();
+
+      // size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
+      // PageManager::instance()->ref_count_lock_.acquire();
+      // PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
+      // PageManager::instance()->ref_count_lock_.release();
+
     }
   }
 

@@ -332,12 +332,10 @@ void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 {
   debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(ref_count_lock_.heldBy() == currentThread);
-  if(vpn !=0) {
-    IPTManager::instance()->insertEntryIPT(maptype, offset, vpn, archmemory);
+  IPTManager::instance()->insertEntryIPT(maptype, offset, vpn, archmemory);
 
-    if (maptype == IPTMapType::DISK_MAP)
-      return;
-  }
+  if (maptype == IPTMapType::DISK_MAP)
+    return;
 
   //check if the page number is already in the map
   auto it = page_reference_counts_.find(offset);
@@ -359,13 +357,10 @@ void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
   //debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(ref_count_lock_.heldBy() == currentThread);
 
-  if(vpn!=0)
-  {
-    IPTManager::instance()->removeEntryIPT(maptype, offset, vpn, archmemory);
+  IPTManager::instance()->removeEntryIPT(maptype, offset, vpn, archmemory);
 
-    if(maptype == IPTMapType::DISK_MAP)
-      return;
-  }
+  if(maptype == IPTMapType::DISK_MAP)
+    return;
 
   //check if the page number is in the map
   auto it = page_reference_counts_.find(offset);
@@ -378,7 +373,7 @@ void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
     if (page_reference_counts_[offset] == 0)
     {
       page_reference_counts_.erase(it);
-      PageManager::instance()->freePPN(offset);
+      freePPN(offset);
     }
   }
 }
@@ -421,8 +416,9 @@ size_t PageManager::findPageToSwapOut()
   return possible_ppn_;
 }
 
-void PageManager::incrementRefCount(uint64 page_number)
+void PageManager::incrementEntryReferenceCount(uint64 page_number)
 {
+  assert(ref_count_lock_.heldBy() == currentThread);
   //check if the page number is already in the map
   auto it = page_reference_counts_.find(page_number);
   if (it != page_reference_counts_.end())
@@ -437,8 +433,9 @@ void PageManager::incrementRefCount(uint64 page_number)
   }
 }
 
-void PageManager::decrementRefCount(uint64 page_number)
+void PageManager::decrementEntryReferenceCount(uint64 page_number)
 {
+  assert(ref_count_lock_.heldBy() == currentThread);
   //check if the page number is in the map
   auto it = page_reference_counts_.find(page_number);
   if (it != page_reference_counts_.end())
@@ -447,23 +444,11 @@ void PageManager::decrementRefCount(uint64 page_number)
     page_reference_counts_[page_number]--;
 
     //if reference count reaches zero, erase the entry from the map
-    if (it->second == 0)
+    if (page_reference_counts_[page_number] == 0)
     {
       page_reference_counts_.erase(it);
+      freePPN(page_number);
     }
   }
 }
 
-uint32 PageManager::getRefCount(uint64 page_number)
-{
-  // Check if the page number is in the map
-  auto it = page_reference_counts_.find(static_cast<uint32>(page_number));
-  if (it != page_reference_counts_.end())
-  {
-    return it->second;
-  }
-  else
-  {
-    return 0;
-  }
-}
