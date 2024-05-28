@@ -32,7 +32,7 @@ char const *user_progs[] = {
 
 // UserSpace Memory -------------------------------------------------
                             // "/usr/growingStackTests.sweb",
-                            // "/usr/mallocTests.sweb",
+                            "/usr/mallocTests.sweb",
 
 // Userspace Locking -------------------------------------------------
                             // "/usr/condTests.sweb",
@@ -53,7 +53,7 @@ char const *user_progs[] = {
                             // "/usr/no_test.sweb",
 
 //Swapping-----------------------------------------------------------------------
-                            "/usr/iptTests.sweb",  
+                            // "/usr/iptTests.sweb",  
   
 
                             0

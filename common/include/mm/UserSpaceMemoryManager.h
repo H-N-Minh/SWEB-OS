@@ -40,10 +40,9 @@ class UserSpaceMemoryManager
     /**
      * adjust the brk by size amount 
      * @param size the amount to adjust the brk by (can be positive or negative)
-     * @param already_locked if the lock for break is already held
      * @return pointer to the reserved space, else return 0 on failure
     */
-    pointer sbrk(ssize_t size, size_t already_locked);
+    void* sbrk(ssize_t size);
 
     /**
      * set the address of brk to a fixed address
@@ -111,6 +110,8 @@ class UserSpaceMemoryManager
     void* calloc(size_t num_memb, size_t size_each);
 
 
+    void lock();
+    void unlock();
 };
 
 

@@ -70,7 +70,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
   assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
-  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);
+  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
@@ -102,7 +102,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page is not present anymore we need to swap it in
     if(!current_archmemory.isPresent(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);  //TODOs: maybe cow
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
     else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))

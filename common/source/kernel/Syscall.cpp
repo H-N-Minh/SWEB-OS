@@ -133,7 +133,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_tortillas_finished:   // needed for test system Tortillas
       break;
     case sc_sbrk:
-      return_value = sbrkMemory(arg1, arg2);
+      return_value = sbrkMemory((ssize_t)arg1);
       break;
     case sc_brk:
       return_value = brkMemory(arg1);
@@ -196,60 +196,38 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
   debug(SBRK, "Syscall::brkMemory: brk called with address %p. Checking if addr is valid \n", (void*) new_brk_addr);
 
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
-  size_t heap_start = heap_manager->heap_start_;
 
-  if (new_brk_addr > MAX_HEAP_SIZE || new_brk_addr < heap_start)
-  {
-    debug(SBRK, "Syscall::brkMemory: address %p is not within heap segment\n", (void*) new_brk_addr);
-    return -1;
-  }
+  IPTManager::instance()->IPT_lock_.acquire();
+  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+  heap_manager->current_break_lock_.acquire();
 
   int successly_brk = heap_manager->brk(new_brk_addr);
-  if (successly_brk == 0)
-  {
-    debug(SBRK, "Syscall::brkMemory: brk done with address %p\n", (void*) new_brk_addr);
-    return 0;
-  }
-  else
-  {
-    debug(SBRK, "Syscall::brkMemory: brk failed with address %p\n", (void*) new_brk_addr);
-    return -1;
-  }
+
+  IPTManager::instance()->IPT_lock_.release();
+  currentThread->loader_->arch_memory_.archmemory_lock_.release();
+  heap_manager->current_break_lock_.release();
+
+  return successly_brk;
 }
 
-size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
+size_t Syscall::sbrkMemory(ssize_t size)
 {
   debug(SBRK, "Syscall::sbrkMemory: sbrk called\n");
-  assert(size_ptr != 0 && "Syscall::sbrkMemory: size_ptr is null\n");
-  assert(return_ptr != 0 && "Syscall::sbrkMemory: return_ptr is null\n");
-
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
 
-  debug(SBRK, "Syscall::sbrkMemory: get the size amount and check if its valid\n");
-  ssize_t size = *(ssize_t*) size_ptr;
-  size_t potential_new_break = heap_manager->current_break_ + size;
-  size_t heap_start = heap_manager->heap_start_;
-
-  if (potential_new_break > MAX_HEAP_SIZE || potential_new_break < heap_start)
-  {
-    debug(SBRK, "Syscall::sbrk: size %zd is too big\n", size);
-    return -1;
-  }
-
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
-  pointer reserved_space = 0;
-  reserved_space = heap_manager->sbrk(size, 0);
-  if (reserved_space == 0)
-  {
-    debug(SBRK, "Syscall::sbrk: sbrk failed\n");
-    return -1;
-  }
-  else
-  {
-    debug(SBRK, "Syscall::sbrk: sbrk done with return %p\n", (void*) reserved_space);
-    *(pointer*) return_ptr = reserved_space;
-    return 0;
-  }
+
+  IPTManager::instance()->IPT_lock_.acquire();
+  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+  heap_manager->current_break_lock_.acquire();
+
+  void* old_break = heap_manager->sbrk(size);
+
+  IPTManager::instance()->IPT_lock_.release();
+  currentThread->loader_->arch_memory_.archmemory_lock_.release();
+  heap_manager->current_break_lock_.release();
+
+  return (size_t)old_break;
 }
 
 
