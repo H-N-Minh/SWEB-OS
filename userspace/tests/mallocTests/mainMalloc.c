@@ -32,13 +32,13 @@ int main()
         else                                  { printf("===> brk1 failed!\n");  return -1;}
     }
 
-    // if (MALLOC)
-    // {
-    //     printf("\nTesting brk1: basic test...\n");
-    //     retval = malloc1();
-    //     if (retval == 0)                      { printf("===> malloc1 successful!\n"); } 
-    //     else                                  { printf("===> malloc1 failed!\n");  return -1;}
-    // }
+    if (MALLOC)
+    {
+        printf("\nTesting brk1: basic test...\n");
+        retval = malloc1();
+        if (retval == 0)                      { printf("===> malloc1 successful!\n"); } 
+        else                                  { printf("===> malloc1 failed!\n");  return -1;}
+    }
 
     printf("\n\n---All tests completed! (press F12 to make sure all threads died correctly)---\n");
     return 0;

@@ -25,8 +25,6 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
 {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd).\n", size);
 
-  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT needs to be locked.");
-  assert(loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread && "Archmemory needs to be locked");
   assert(current_break_lock_.heldBy() == currentThread && "Currentbreak needs to be locked");
   size_t potential_new_break = current_break_ + size;
   if (potential_new_break > MAX_HEAP_SIZE || potential_new_break < heap_start_)
@@ -69,7 +67,15 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
         void* new_page_ptr = (void*) ArchMemory::getIdentAddressOfPPN(new_page);
         memset(new_page_ptr, 0 , PAGE_SIZE);
         ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);   //TODOs: should not be when holding a lock
+
+        IPTManager::instance()->IPT_lock_.acquire();
+        loader_->arch_memory_.archmemory_lock_.acquire();
+
         bool successly_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1, ppns);  //TODOs: need preallocated pages
+
+        loader_->arch_memory_.archmemory_lock_.release();
+        IPTManager::instance()->IPT_lock_.release();
+
         PageManager::instance()-> releaseNotNeededPages(ppns);
         if(unlikely(!successly_mapped))
         {
@@ -84,7 +90,11 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
       debug(SBRK, "old break is on page %zx >= new break is on page %zx\n", old_top_vpn, new_top_vpn);
       while(old_top_vpn != new_top_vpn)
       {
+        IPTManager::instance()->IPT_lock_.acquire();
+        loader_->arch_memory_.archmemory_lock_.acquire();
         bool successly_unmapped = loader_->arch_memory_.unmapPage(old_top_vpn);
+        loader_->arch_memory_.archmemory_lock_.release();
+        IPTManager::instance()->IPT_lock_.release();
         if(unlikely(!successly_unmapped))
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, could not unmap page\n");
@@ -110,8 +120,6 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
 
 int UserSpaceMemoryManager::brk(size_t new_break_addr)
 {
-  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT needs to be locked.");
-  assert(loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread && "Archmemory needs to be locked");
   assert(current_break_lock_.heldBy() == currentThread && "Currentbreak needs to be locked");
 
   debug(SBRK, "UserSpaceMemoryManager::brk called with new break address (%zx)\n", new_break_addr);
@@ -373,15 +381,11 @@ MemoryBlock* heap_start__;
 
 void UserSpaceMemoryManager::lock()
 {
-  IPTManager::instance()->IPT_lock_.acquire();
-  loader_->arch_memory_.archmemory_lock_.acquire();
   current_break_lock_.acquire();
 }
 
 void UserSpaceMemoryManager::unlock()
 {
-  IPTManager::instance()->IPT_lock_.release();
-  loader_->arch_memory_.archmemory_lock_.release();
   current_break_lock_.release();
 }
 

@@ -197,14 +197,9 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
 
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
 
-  IPTManager::instance()->IPT_lock_.acquire();
-  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+
   heap_manager->current_break_lock_.acquire();
-
   int successly_brk = heap_manager->brk(new_brk_addr);
-
-  IPTManager::instance()->IPT_lock_.release();
-  currentThread->loader_->arch_memory_.archmemory_lock_.release();
   heap_manager->current_break_lock_.release();
 
   return successly_brk;
@@ -217,14 +212,9 @@ size_t Syscall::sbrkMemory(ssize_t size)
 
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
 
-  IPTManager::instance()->IPT_lock_.acquire();
-  currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+
   heap_manager->current_break_lock_.acquire();
-
   void* old_break = heap_manager->sbrk(size);
-
-  IPTManager::instance()->IPT_lock_.release();
-  currentThread->loader_->arch_memory_.archmemory_lock_.release();
   heap_manager->current_break_lock_.release();
 
   return (size_t)old_break;
