@@ -374,6 +374,7 @@ void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
     {
       page_reference_counts_.erase(it);
       freePPN(offset);
+      debug(COW, "----freePPN from decrementReferenceCount \n");
     }
   }
 }
@@ -448,6 +449,7 @@ void PageManager::decrementEntryReferenceCount(uint64 page_number)
     {
       page_reference_counts_.erase(it);
       freePPN(page_number);
+      debug(COW, ".....freePPN from decrementEntryReferenceCount \n");
     }
   }
 }

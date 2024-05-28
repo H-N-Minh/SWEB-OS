@@ -622,9 +622,10 @@ void ArchMemory::copyPageTable(size_t virtual_addr)
 
   memcpy((void*)new_page, (void*)original_page, PAGE_SIZE);
 
-  // PageManager::instance()->ref_count_lock_.acquire();
-  // PageManager::instance()->decrementEntryReferenceCount(pml2_entry->pt.page_ppn);
-  // PageManager::instance()->ref_count_lock_.release();
+  PageManager::instance()->ref_count_lock_.acquire();
+  debug(COW, "----getReferenceCount in CopyPageTable %d \n", PageManager::instance()->getReferenceCount(pml2_entry->pt.page_ppn));
+  PageManager::instance()->decrementEntryReferenceCount(pml2_entry->pt.page_ppn);
+  PageManager::instance()->ref_count_lock_.release();
 
   //update the page directory entry to point to the new physical page
   pml2_entry->pt.page_ppn = new_page_ppn;
@@ -645,14 +646,10 @@ void ArchMemory::copyPageTable(size_t virtual_addr)
       new_page[pti].writeable = 0; //read only
       new_page[pti].cow = 1;
 
+      size_t vpn = construct_VPN(pti, m.pdi, m.pdpti, m.pml4i);
       PageManager::instance()->ref_count_lock_.acquire();
-      PageManager::instance()->incrementEntryReferenceCount(original_page[pti].page_ppn);
+      PageManager::instance()->incrementReferenceCount(original_page[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
       PageManager::instance()->ref_count_lock_.release();
-
-      // size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-      // PageManager::instance()->ref_count_lock_.acquire();
-      // PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
-      // PageManager::instance()->ref_count_lock_.release();
 
     }
   }
