@@ -607,6 +607,7 @@ void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocate
 
     pml1_entry->page_ppn = new_ppn;
     pml1_entry->writeable = 1;
+    pml1_entry->cow = 0;
   }
   else if(reference_count == 1)
   {
@@ -793,25 +794,29 @@ bool ArchMemory::isPresent(size_t virtual_addr)
   }
 }
 
-bool ArchMemory::isWriteable(size_t virtual_addr)
+int ArchMemory::isNotWriteable(size_t virtual_addr)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
 
   debug(A_MEMORY, "ArchMemory::isWriteable: with virtual address %p.\n", (void*)virtual_addr);
   ArchMemoryMapping m = resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pt_entry = &m.pt[m.pti];
-  //PageDirEntry* pml2_entry = &m.pd[m.pdi];
+  PageDirEntry* pml2_entry = &m.pd[m.pdi];
 
-  if (m.pt && pt_entry && pt_entry->writeable)
+  if(m.pd && pml2_entry && !pml2_entry->pt.writeable)
   {
     debug(A_MEMORY, "ArchMemory::isWriteable: virtual address %p is Writeable\n", (void*)virtual_addr);
-    return true;
+    return 2;
   }
-  else
+
+  if (m.pt && pt_entry && !pt_entry->writeable)
   {
-    debug(A_MEMORY, "ArchMemory::isWriteable: virtual address %p is not Writeable\n", (void*)virtual_addr);
-    return false;
+    debug(A_MEMORY, "ArchMemory::isWriteable: virtual address %p is Writeable\n", (void*)virtual_addr);
+    return 1;
   }
+
+  debug(A_MEMORY, "ArchMemory::isWriteable: virtual address %p is not Writeable\n", (void*)virtual_addr);
+  return 0;
 }
 
 void ArchMemory::copyPageTable(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages)

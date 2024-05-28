@@ -125,11 +125,14 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     else if(writing)
     {
       int is_cow_value = current_archmemory.isCOW(address);
+      int is_not_writable_value = current_archmemory.isNotWriteable(address);
 
-      if(is_cow_value == 2)
+      if(is_cow_value == 2 && is_not_writable_value == 2)
         current_archmemory.copyPageTable(address, preallocated_pages); //TODO add preallocated_pages here?
-      else if(is_cow_value == 1)
+      else if(is_cow_value == 1 && is_not_writable_value == 1)
         current_archmemory.copyPage(address, preallocated_pages);
+      else
+        errorInPageFaultKillProcess();
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
     // else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
