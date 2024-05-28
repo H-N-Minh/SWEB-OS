@@ -852,6 +852,9 @@ void Syscall::getIPTInfos()
 
 void Syscall::assertIPT()
 {
+  debug(SYSCALL, "Syscall::assertIPT: Checking validity of ram map, disk map, swap metadata\n");
   IPTManager::instance()->checkRamMapConsistency();
   IPTManager::instance()->checkDiskMapConsistency();
+  IPTManager::instance()->checkSwapMetaDataConsistency();
+  debug(SYSCALL, "Syscall::assertIPT: All IPT looks good\n");
 }

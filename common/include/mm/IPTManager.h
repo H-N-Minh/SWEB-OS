@@ -37,12 +37,15 @@ public:
 // TODO: IPT Manger must be made singleton and be initialized somewhere
 class IPTManager {
 public:
-  // locking order: Ipt -> disk -> archmem
+  // locking order: Ipt_lock -> disk_lock -> archmem_lock
   Mutex IPT_lock_;          // responsible for: ram_map_, disk_map_, pra_type_, swap_meta_data_
   ustl::multimap<ppn_t, IPTEntry*> ram_map_;
   ustl::multimap<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // aging is default (in ctor)
-  ustl::map<ppn_t, size_t> swap_meta_data_;  // key: ppn, value: counter for how often the page is used
+  // key: ppn, value: counter for how often the page is used.
+  // Key is managed by IPTManager, must be in sync with ram_map_.
+  // Value is managed by SwappingThread
+  ustl::map<ppn_t, uint32> swap_meta_data_;
   
   IPTManager();
   ~IPTManager();
@@ -109,7 +112,7 @@ public:
   ustl::vector<IPTEntry*> getRamEntriesFromKey(size_t ppn);
 
   /**
-   * Debug func, check if ppn of all archmem matches the key of ram_map_
+   * Debug func, check if ppn of all archmem matches the key of ram_map_.
   */
   void checkRamMapConsistency();
 
@@ -117,6 +120,11 @@ public:
    * Debug func, check if ppn of all archmem matches the key of disk_map_
   */
   void checkDiskMapConsistency();
+
+  /**
+   * Debug func, check if the swap_meta_data_ is in sync with ram_map_
+  */
+  void checkSwapMetaDataConsistency();
 
 
   private:

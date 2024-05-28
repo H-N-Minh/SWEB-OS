@@ -125,13 +125,20 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   
+  // Error checking: entry should not already exist
   if (isEntryInMap(ppn, map_type, archmem))
   {
     debug(IPT, "IPTManager::insertEntryIPT: Entry (ppn: %zu, archmem: %p) already exists in %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
     assert(0 && "IPTManager::insertEntryIPT: Entry already exists in map\n");
   }
+  else if (swap_meta_data_.find(ppn) != swap_meta_data_.end())
+  {
+    debug(IPT, "IPTManager::insertEntryIPT: Entry (ppn: %zu) already exists in SWAP_META_DATA\n", ppn);
+    assert(0 && "IPTManager::insertEntryIPT: Entry already exists in SWAP_META_DATA. SWAP_META_DATA and ram_map_ should be in sync\n");
+  }
   debug(IPT, "IPTManager::insertEntryIPT: Entry does not exist in %s yet. Inserting\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   
+  // update debugging info
   if(!isKeyInMap(ppn, map_type))
   {
     if(map_type == IPTMapType::RAM_MAP)
@@ -144,27 +151,35 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     }
   }
 
+  // Actually insert the pte to the entry
   IPTEntry* entry = new IPTEntry(vpn, archmem);
   map->insert({ppn, entry});
-
+  swap_meta_data_[ppn] = 0;
 
   debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
 }
 
 void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
 {
-  // Error checking
   debug(IPT, "IPTManager::removeEntryIPT: removing ppn: %zx, archmem: %p from map %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntryIPT called but not fully locked\n");
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   
+  // Error checking that the entry does exist in the map before removing
   if (!isEntryInMap(ppn, map_type, archmem))
   {
     debug(IPT, "IPTManager::removeEntryIPT Entry (ppn %zu, archmem %p) not found in the map %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
     assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in map\n");
   }
+  else if (swap_meta_data_.find(ppn) == swap_meta_data_.end())
+  {
+    debug(IPT, "IPTManager::removeEntryIPT: Entry (ppn: %zu) doesnt exists in SWAP_META_DATA\n", ppn);
+    assert(0 && "IPTManager::insertEntryIPT: Entry doesnt exists in SWAP_META_DATA. SWAP_META_DATA and ram_map_ should be in sync\n");
+  }
+  swap_meta_data_.erase(ppn);
   debug(IPT, "IPTManager::removeEntryIPT: Entry found in map %s. Removing\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
+  
   // Actually remove the pte from the entry
   auto range = map->equal_range(ppn);
   for (auto it = range.first; it != range.second;) {
@@ -190,7 +205,6 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     }
   }
 
-
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
 }
 
@@ -205,16 +219,26 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
   auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
 
-  // Check if the entry already exists in the destination map, also check if the archmem are locked
+  // Check if the entry already exists in the destination map
+  // also check if the archmem are locked
+  // also check if the swap_meta_data is in sync with the ram_map_
   ustl::vector<IPTEntry*> ipt_entries;
 
   if (source == IPTMapType::RAM_MAP)
   {
     ipt_entries = getRamEntriesFromKey(ppn_source);
+    if (swap_meta_data_.find(ppn_source) == swap_meta_data_.end())
+    {
+      debug(SWAPPING, "IPTManager::moveEntry: Entry %zu to be moved does not exist in the swap_meta_data\n", ppn_source);
+    }
   }
   else
   {
     ipt_entries = getDiskEntriesFromKey(ppn_source);
+    if (swap_meta_data_.find(ppn_source) != swap_meta_data_.end())
+    {
+      debug(SWAPPING, "IPTManager::moveEntry: Entry %zu to be moved already exists in the swap_meta_data\n", ppn_source);
+    }
   }
   assert(ipt_entries.size() > 0 && "IPTManager::moveEntry: No entries found in source map\n");
   for (auto entry : ipt_entries)
@@ -233,14 +257,16 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
   }
   source_map->erase(ppn_source);
 
-  // updating debuging info
+  // updating debuging info, also update the swap_meta_data
   if(source == IPTMapType::DISK_MAP)
   {
+    swap_meta_data_[ppn_destination] = 0;
     pages_in_ram_++;
     pages_on_disk_--;
   }
   else
   {
+    swap_meta_data_.erase(ppn_source);
     pages_on_disk_++;
     pages_in_ram_--;
   }
@@ -264,7 +290,7 @@ bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archme
 }
 
 bool IPTManager::isKeyInMap(size_t offset, IPTMapType maptype)
- {
+{
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::isKeyInMap called but IPT not locked\n");
   auto* map = (maptype == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   if (map->find(offset) == map->end())
@@ -275,8 +301,8 @@ bool IPTManager::isKeyInMap(size_t offset, IPTMapType maptype)
   {
     return true;
   }
+}
 
- }
 
 int IPTManager::getNumPagesInMap(IPTMapType maptype)
 {
@@ -378,6 +404,30 @@ void IPTManager::checkDiskMapConsistency()
     ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(ipt_entry->vpn_);
     assert(key == disk_offset && "checkRampMapConsistency: ppn in disk_map_ (key) does not match disk offset in ArchMemory\n");
     entry_arch->archmemory_lock_.release();
+  }
+
+  IPT_lock_.release();
+}
+
+void IPTManager::checkSwapMetaDataConsistency()
+{
+  IPT_lock_.acquire();
+
+  ustl::set<ppn_t> uniqueKeys;
+  for (auto entry : ram_map_)
+  {
+    uniqueKeys.insert(entry.first);
+  }
+
+  assert(uniqueKeys.size() == swap_meta_data_.size() && "checkSwapMetaDataConsistency: swap_meta_data_ and ram_map_ are not in sync\n");
+  
+  for (auto key : uniqueKeys)
+  {
+    if (swap_meta_data_.find(key) == swap_meta_data_.end())
+    {
+      debug(SWAPPING, "IPTManager::checkSwapMetaDataConsistency: Key %zu in ram_map_ does not exist in swap_meta_data_\n", key);
+      assert(0 && "checkSwapMetaDataConsistency: swap_meta_data_ and ram_map_ are not in sync\n");
+    }
   }
 
   IPT_lock_.release();
