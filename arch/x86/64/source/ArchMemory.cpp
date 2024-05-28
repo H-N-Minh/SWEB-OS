@@ -634,9 +634,9 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
   assert(pt_entry && "No pagetable entry");
 
-  if(!pt_entry->swapped_out || pt_entry->present)
+  if((!pt_entry->swapped_out) || pt_entry->present)
   {
-    assert(0 && "ArchMemory::getDiskLocation: Page was not swapped out yet or not present");
+    assert(0 && "ArchMemory::getDiskLocation: Page was not swapped out yet ");
   }
   else
   {

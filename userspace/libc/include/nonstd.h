@@ -21,6 +21,7 @@ extern "C" {
 extern int createprocess(const char* path, int sleep);
 
 extern int getIPTInfos();
+extern int assertIPT();
 
 #ifdef __cplusplus
 }

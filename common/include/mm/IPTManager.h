@@ -19,11 +19,10 @@ class ArchMemory;
 
 class IPTEntry {
 public:
-  ppn_t ppn;
-  size_t vpn;
-  ArchMemory* archmem;
+  size_t vpn_;
+  ArchMemory* archmem_;
 
-  IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem);
+  IPTEntry(size_t vpn, ArchMemory* archmem);
 
   /**
    * check if the archmem of this entry is locked
@@ -38,6 +37,7 @@ public:
 // TODO: IPT Manger must be made singleton and be initialized somewhere
 class IPTManager {
 public:
+  // locking order: Ipt -> disk -> archmem
   Mutex IPT_lock_;          // lock both ram_map_ and disk_map_ and also pra_type_
   ustl::multimap<ppn_t, IPTEntry*> ram_map_;
   ustl::multimap<diskoffset_t, IPTEntry*> disk_map_;
@@ -91,6 +91,26 @@ public:
    * @return the ppn of the page that will be swapped out. This is where the PRA is used
   */
   size_t findPageToSwapOut();
+
+  /**
+   * @return find all the values of a given key in the disk_map_ and put them into a vector
+  */
+  ustl::vector<IPTEntry*> getDiskEntriesFromKey(size_t disk_offset);
+
+  /**
+   * @return find all the values of a given key in the ram_map_ and put them into a vector
+  */
+  ustl::vector<IPTEntry*> getRamEntriesFromKey(size_t ppn);
+
+  /**
+   * Debug func, check if ppn of all archmem matches the key of ram_map_
+  */
+  void checkRamMapConsistency();
+
+  /**
+   * Debug func, check if ppn of all archmem matches the key of disk_map_
+  */
+  void checkDiskMapConsistency();
 
 
   private:

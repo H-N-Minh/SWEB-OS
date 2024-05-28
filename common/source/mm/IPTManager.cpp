@@ -5,16 +5,17 @@
 #include "Thread.h"
 #include "Syscall.h"
 #include "uset.h"
-// #include "ArchMemory.h"
+#include "SwappingManager.h"
+#include "ArchMemory.h"
 
 #define INVALID_PPN -1
 
 ////////////////////// IPTEntry //////////////////////
 
-IPTEntry::IPTEntry(ppn_t ppn, size_t vpn, ArchMemory* archmem) : ppn(ppn), vpn(vpn), archmem(archmem) {}
+IPTEntry::IPTEntry(size_t vpn, ArchMemory* archmem) : vpn_(vpn), archmem_(archmem) {}
 
 bool IPTEntry::isLocked() {
-  return archmem->archmemory_lock_.isHeldBy((Thread*) currentThread);
+  return archmem_->archmemory_lock_.isHeldBy((Thread*) currentThread);
 }
 
 
@@ -106,7 +107,7 @@ IPTEntry* IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archme
   debug(IPT, "IPTManager::lookupEntryInRAM: Looking up entry in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
   auto range = ram_map_.equal_range(ppn);
   for (auto it = range.first; it != range.second; ++it) {
-    if (it->second->vpn == vpn && it->second->archmem == archmem) {
+    if (it->second->vpn_ == vpn && it->second->archmem_ == archmem) {
       debug(IPT, "IPTManager::lookupEntryInRAM: Entry found in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
       return it->second;
     }
@@ -136,7 +137,7 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     }
   }
 
-  IPTEntry* entry = new IPTEntry(ppn, vpn, archmem);
+  IPTEntry* entry = new IPTEntry(vpn, archmem);
   map->insert({ppn, entry});
 
 
@@ -161,7 +162,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   // TODO: check if the IPTEntry*, that is being removed, exists in the map. If it doesnt, assert fail
   auto range = map->equal_range(ppn);
   for (auto it = range.first; it != range.second;) {
-    if (it->second->vpn == vpn && it->second->archmem == archmem) {
+    if (it->second->vpn_ == vpn && it->second->archmem_ == archmem) {
       debug(IPT, "IPTManager::removeEntryFromRAM: Entry found and removed from RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
       delete it->second;
       it = map->erase(it);
@@ -293,6 +294,75 @@ IPTManager::~IPTManager()
   disk_map_.clear();
 }
 
+ustl::vector<IPTEntry*> IPTManager::getRamEntriesFromKey(size_t ppn)
+{
+  ustl::vector<IPTEntry*> ram_entries;
+  auto range = ram_map_.equal_range(ppn);
+  for (auto it = range.first; it != range.second; ++it)
+  {
+    ram_entries.push_back(it->second);
+  }
+  return ram_entries;
+}
 
+ustl::vector<IPTEntry*> IPTManager::getDiskEntriesFromKey(size_t disk_offset)
+{
+  ustl::vector<IPTEntry*> disk_entries;
+  auto range = disk_map_.equal_range(disk_offset);
+  for (auto it = range.first; it != range.second; ++it)
+  {
+    disk_entries.push_back(it->second);
+  }
+  return disk_entries;
+}
 
+void IPTManager::checkRamMapConsistency()
+{
+  IPT_lock_.acquire();
 
+  for (auto it = ram_map_.begin(); it != ram_map_.end(); ++it)
+  {
+    ppn_t key = it->first;
+    IPTEntry* ipt_entry = it->second;
+    ArchMemory* entry_arch = ipt_entry->archmem_;
+    assert(entry_arch && "No archmem in IPTEntry");
+
+    entry_arch->archmemory_lock_.acquire();
+    ArchMemoryMapping mapping = entry_arch->resolveMapping((size_t) ipt_entry->vpn_);
+    PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+    assert(pt_entry && "checkRampMapConsistency: No pagetable entry");
+
+    if(!pt_entry->present)
+    {
+      assert(0 && "checkRampMapConsistency: page is not present");
+    }
+    else
+    {
+      assert(pt_entry->page_ppn == key && "checkRampMapConsistency: ppn in ram_map_ (key) does not match ppn in ArchMemory\n");
+    }
+
+    entry_arch->archmemory_lock_.release();
+  }
+
+  IPT_lock_.release();
+}
+
+void IPTManager::checkDiskMapConsistency()
+{
+  IPT_lock_.acquire();
+
+  for (auto it = disk_map_.begin(); it != disk_map_.end(); ++it)
+  {
+    ppn_t key = it->first;
+    IPTEntry* ipt_entry = it->second;
+    ArchMemory* entry_arch = ipt_entry->archmem_;
+    assert(entry_arch && "No archmem in IPTEntry");
+
+    entry_arch->archmemory_lock_.acquire();
+    ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(ipt_entry->vpn_);
+    assert(key == disk_offset && "checkRampMapConsistency: ppn in disk_map_ (key) does not match disk offset in ArchMemory\n");
+    entry_arch->archmemory_lock_.release();
+  }
+
+  IPT_lock_.release();
+}

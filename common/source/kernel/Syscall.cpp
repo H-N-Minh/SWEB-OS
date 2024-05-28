@@ -144,6 +144,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_getIPTInfos:
       getIPTInfos();
       break; 
+    case sc_assertIPT:
+      assertIPT();
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -845,4 +848,10 @@ void Syscall::getIPTInfos()
      kprintf("%s", lines[i].c_str());
   }
   kprintf("\n\n");
+}
+
+void Syscall::assertIPT()
+{
+  IPTManager::instance()->checkRamMapConsistency();
+  IPTManager::instance()->checkDiskMapConsistency();
 }

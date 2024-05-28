@@ -26,11 +26,21 @@ int ipt2()
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     big_array[i * (PAGESIZE / 8)] = (size_t)i;
+    if (i%100 == 0)
+    {
+      assertIPT();
+    }
+    
   }
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     assert(big_array[i * (PAGESIZE / 8)] == i);
+    if (i%100 == 0)
+    {
+      assertIPT();
+    }
+    
   }
 
   return 0;

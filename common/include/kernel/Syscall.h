@@ -71,6 +71,11 @@ public:
   static size_t brkMemory(size_t new_brk_addr);
 
   static void getIPTInfos();
+
+  /**
+   * check if the ppn of all archmem matches the IPT, and opposite
+  */
+  static void assertIPT();
 };
 
 
