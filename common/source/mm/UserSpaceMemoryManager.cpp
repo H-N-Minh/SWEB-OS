@@ -415,7 +415,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
 
     first_memory_block_ = heap_start__;
     createNewMemoryBlock(first_memory_block_, size, false, first_memory_block_ + 1, NULL);
-    addOverflowProtection(first_memory_block_);
+    // addOverflowProtection(first_memory_block_);
     used_block_counts_++;
     unlock();
     return first_memory_block_->address_;
@@ -425,11 +425,11 @@ void* UserSpaceMemoryManager::malloc(size_t size)
     MemoryBlock* next_memory_block = first_memory_block_;
     while(1)
     {
-      if(!checkOverflowProtection(next_memory_block))
-      {
-        unlock();
-        Syscall::exit(-1);
-      }
+      // if(!checkOverflowProtection(next_memory_block))
+      // {
+      //   unlock();
+      //   Syscall::exit(-1);
+      // }
       if(next_memory_block->is_free_ && next_memory_block->size_ >= size)
       {
         if(next_memory_block->size_ >= bytesNeededForMemoryBlock(size) + bytesNeededForMemoryBlock(0))
@@ -439,7 +439,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
 
           next_memory_block->next_ = new_unused_memory_block;
           next_memory_block->size_ = size;
-          addOverflowProtection(next_memory_block);
+          // addOverflowProtection(next_memory_block);
 
           if(new_unused_memory_block->next_ && new_unused_memory_block->next_->is_free_)
           {
@@ -471,7 +471,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
         }
         MemoryBlock* memory_block_new = (MemoryBlock*)((size_t)next_memory_block + bytesNeededForMemoryBlock(next_memory_block->size_));
         createNewMemoryBlock(memory_block_new, size, false, memory_block_new + 1, NULL);
-        addOverflowProtection(memory_block_new);
+        // addOverflowProtection(memory_block_new);
         used_block_counts_++;
         next_memory_block->next_ = memory_block_new;
         
@@ -531,7 +531,12 @@ void UserSpaceMemoryManager::free(void *ptr)
   if(used_block_counts_ == 0)
   {
     free_bytes_left_on_page_ = 0;
-    brk((size_t)first_memory_block_);
+    int rv = brk((size_t)first_memory_block_);
+    if(rv != 0)
+    {
+      unlock();
+      Syscall::exit(-1);
+    }
     first_memory_block_ = NULL;
     unlock();
     return;
