@@ -120,12 +120,19 @@ IPTEntry* IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archme
 
 void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
 {
-  debug(SWAPPING, "IPTManager::insertEntryIPT: inserting ppn: %zu, vpn: %zu, archmem: %p\n", ppn, vpn, archmem);
+  debug(SWAPPING, "IPTManager::insertEntryIPT: inserting ppn: %zu, vpn: %zu, archmem: %p to %s\n", ppn, vpn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertEntryIPT called without fully locking\n");
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
-  // TODO: check if the entry already exists in the map. If it does, assert fail
-  if(!KeyisInMap(ppn, map_type))
+  
+  if (isEntryInMap(ppn, map_type, archmem))
+  {
+    debug(IPT, "IPTManager::insertEntryIPT: Entry (ppn: %zu, archmem: %p) already exists in %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
+    assert(0 && "IPTManager::insertEntryIPT: Entry already exists in map\n");
+  }
+  debug(IPT, "IPTManager::insertEntryIPT: Entry does not exist in %s yet. Inserting\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
+  
+  if(!isKeyInMap(ppn, map_type))
   {
     if(map_type == IPTMapType::RAM_MAP)
     {
@@ -141,25 +148,24 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   map->insert({ppn, entry});
 
 
-  debug(SWAPPING, "IPTManager::insertIPT: successfully inserted to IPT\n");
+  debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
 }
 
 void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
 {
   // Error checking
-  debug(SWAPPING, "IPTManager::removeEntryIPT: removing ppn: %zx, archmem: %p\n", ppn, archmem);
+  debug(IPT, "IPTManager::removeEntryIPT: removing ppn: %zx, archmem: %p from map %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntryIPT called but not fully locked\n");
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   
-  if (map->find(ppn) == map->end())
+  if (!isEntryInMap(ppn, map_type, archmem))
   {
-    debug(SWAPPING, "IPTManager::removeEntryIPT ppn %zu not found in the specified map\n", ppn);
-    assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in IPT\n");
+    debug(IPT, "IPTManager::removeEntryIPT Entry (ppn %zu, archmem %p) not found in the map %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
+    assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in map\n");
   }
-
+  debug(IPT, "IPTManager::removeEntryIPT: Entry found in map %s. Removing\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   // Actually remove the pte from the entry
-  // TODO: check if the IPTEntry*, that is being removed, exists in the map. If it doesnt, assert fail
   auto range = map->equal_range(ppn);
   for (auto it = range.first; it != range.second;) {
     if (it->second->vpn_ == vpn && it->second->archmem_ == archmem) {
@@ -172,7 +178,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     }
   }
 
-  if(!KeyisInMap(ppn, map_type))
+  if(!isKeyInMap(ppn, map_type))
   {
     if(map_type == IPTMapType::RAM_MAP)
     {
@@ -185,7 +191,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   }
 
 
-  debug(SWAPPING, "IPTManager::removeIPT: successfully removed from IPT\n");
+  debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
 }
 
 ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
@@ -195,46 +201,39 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
 
   debug(SWAPPING, "IPTManager::moveEntry: moving entry at offset %zu in %s to offset %zu in %s\n", ppn_source, source_as_string, ppn_destination, destination_as_string);
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::moveEntry called but IPT not locked\n");
-  // TODO: assert that all archmem of the entry are locked
 
   auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
 
+  // Check if the entry already exists in the destination map, also check if the archmem are locked
   ustl::vector<IPTEntry*> ipt_entries;
-  // Check if the entry already exists in the destination map
-  if (destination_map->find(ppn_destination) != destination_map->end())
+
+  if (source == IPTMapType::RAM_MAP)
   {
-    // Compare the values of source_map and destination_map to see if its the same entry
-    auto source_it = source_map->find(ppn_source);
-    auto destination_it = destination_map->find(ppn_destination);
-    if (source_it != source_map->end() && destination_it != destination_map->end())
-    {
-      if (source_it->second == destination_it->second)
-      {
-        debug(SWAPPING, "IPTManager::moveEntry ppn %zu already exists in the destination map\n", ppn_destination);
-        assert(0 && "IPTManager::moveEntry: ppn_destination already exists in destination map\n");
-      }
-    }
-  }
-  // Check if the entry exists in the source map
-  else if (source_map->find(ppn_source) == source_map->end())
-  {
-    debug(SWAPPING, "IPTManager::moveEntry: At offset %zu in the source map %s is no value value.\n", ppn_source, source_as_string);
-    assert(0 && "No value at offset in source map\n");
+    ipt_entries = getRamEntriesFromKey(ppn_source);
   }
   else
   {
-    // Move all values with the corresponding key from source_map to destination_map
-    auto range = source_map->equal_range(ppn_source);
-    for (auto it = range.first; it != range.second; ++it)
-    {
-      destination_map->insert({ppn_destination, it->second});
-      ipt_entries.push_back(it->second);
-    }
+    ipt_entries = getDiskEntriesFromKey(ppn_source);
+  }
+  assert(ipt_entries.size() > 0 && "IPTManager::moveEntry: No entries found in source map\n");
+  for (auto entry : ipt_entries)
+  {
+    assert(entry->archmem_->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
+    IPTMapType destination_map_type = (source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP);
+    assert(!isEntryInMap(ppn_destination, destination_map_type, entry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
+  }
+  debug(SWAPPING, "IPTManager::moveEntry: Entry to be moved does not exist in the destination map, moving now\n");
 
-    // Remove the entry from the source map
-    source_map->erase(ppn_source);
+  // Moving entries
+  auto range = source_map->equal_range(ppn_source);
+  for (auto it = range.first; it != range.second; ++it)
+  {
+    destination_map->insert({ppn_destination, it->second});
+  }
+  source_map->erase(ppn_source);
 
+  // updating debuging info
   if(source == IPTMapType::DISK_MAP)
   {
     pages_in_ram_++;
@@ -245,13 +244,28 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
     pages_on_disk_++;
     pages_in_ram_--;
   }
-  }
 
   return ipt_entries;
 }
 
- bool IPTManager::KeyisInMap(size_t offset, IPTMapType maptype)
+bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem)
+{
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::isEntryInMap called but IPT not locked\n");
+  auto* map = (maptype == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
+  auto range = map->equal_range(ppn);
+  for (auto it = range.first; it != range.second; ++it)
+  {
+    if (it->second->archmem_ == archmem)
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+bool IPTManager::isKeyInMap(size_t offset, IPTMapType maptype)
  {
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::isKeyInMap called but IPT not locked\n");
   auto* map = (maptype == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   if (map->find(offset) == map->end())
   {
@@ -296,6 +310,7 @@ IPTManager::~IPTManager()
 
 ustl::vector<IPTEntry*> IPTManager::getRamEntriesFromKey(size_t ppn)
 {
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getRamEntriesFromKey called but IPT not locked\n");
   ustl::vector<IPTEntry*> ram_entries;
   auto range = ram_map_.equal_range(ppn);
   for (auto it = range.first; it != range.second; ++it)
@@ -307,6 +322,7 @@ ustl::vector<IPTEntry*> IPTManager::getRamEntriesFromKey(size_t ppn)
 
 ustl::vector<IPTEntry*> IPTManager::getDiskEntriesFromKey(size_t disk_offset)
 {
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getDiskEntriesFromKey called but IPT not locked\n");
   ustl::vector<IPTEntry*> disk_entries;
   auto range = disk_map_.equal_range(disk_offset);
   for (auto it = range.first; it != range.second; ++it)

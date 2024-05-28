@@ -38,10 +38,11 @@ public:
 class IPTManager {
 public:
   // locking order: Ipt -> disk -> archmem
-  Mutex IPT_lock_;          // lock both ram_map_ and disk_map_ and also pra_type_
+  Mutex IPT_lock_;          // responsible for: ram_map_, disk_map_, pra_type_, swap_meta_data_
   ustl::multimap<ppn_t, IPTEntry*> ram_map_;
   ustl::multimap<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // aging is default (in ctor)
+  ustl::map<ppn_t, size_t> swap_meta_data_;  // key: ppn, value: counter for how often the page is used
   
   IPTManager();
   ~IPTManager();
@@ -78,7 +79,12 @@ public:
 
   int getNumPagesInMap(IPTMapType maptype);
 
-  bool KeyisInMap(size_t offset, IPTMapType maptype);
+  bool isKeyInMap(size_t offset, IPTMapType maptype);
+
+  /**
+   * helper for insert, remove, moveEntry. This checks if an entry is already in the map
+  */
+  bool isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem);
 
   // ustl::vector<IPTEntry*> getPageInfosForPPN(size_t ppn); //TODOs
 
