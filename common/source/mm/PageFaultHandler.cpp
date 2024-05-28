@@ -121,7 +121,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);  //TODOs: maybe cow
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
-    else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
+    else if(writing && !current_archmemory.isWriteable(address))
     {
       int is_cow_value = current_archmemory.isCOW(address);
 

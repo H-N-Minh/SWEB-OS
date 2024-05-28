@@ -555,8 +555,6 @@ int ArchMemory::isCOW(size_t virtual_addr)
 {
   debug(A_MEMORY, "ArchMemory::isCow: with virtual address %p.\n", (void*)virtual_addr);
   assert(archmemory_lock_.heldBy() == currentThread);
-  IPTManager::instance()->IPT_lock_.acquire();
-  archmemory_lock_.acquire();
 
   ArchMemoryMapping m = resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &m.pt[m.pti];
@@ -575,8 +573,6 @@ int ArchMemory::isCOW(size_t virtual_addr)
   }
 
   debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
-  IPTManager::instance()->IPT_lock_.release();
-  archmemory_lock_.release();
   return 0;
 }
 
@@ -858,7 +854,19 @@ void ArchMemory::copyPageTable(size_t virtual_addr)
       PageManager::instance()->ref_count_lock_.acquire();
       PageManager::instance()->incrementReferenceCount(original_page[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
       PageManager::instance()->ref_count_lock_.release();
+    }
+    else if(original_page[pti].swapped_out)
+    {
+      original_page[pti].writeable = 0;
+      original_page[pti].cow = 1;
 
+      new_page[pti].writeable = 0;
+      new_page[pti].cow = 1;
+
+      size_t vpn = construct_VPN(pti, m.pdi, m.pdpti, m.pml4i);
+      PageManager::instance()->ref_count_lock_.acquire();
+      PageManager::instance()->incrementReferenceCount(original_page[pti].page_ppn, vpn, this, IPTMapType::DISK_MAP);
+      PageManager::instance()->ref_count_lock_.release();
     }
   }
 
