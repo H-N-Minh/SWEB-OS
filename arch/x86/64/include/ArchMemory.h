@@ -113,7 +113,7 @@ class ArchMemory
     bool isPresent(size_t virtual_addr);
     bool isWriteable(size_t virtual_addr);
 
-    void copyPageTable(size_t virtual_addr);
+    void copyPageTable(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);

@@ -584,7 +584,7 @@ void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocate
   PageManager* pm = PageManager::instance();
   size_t vpn = virtual_addr/PAGE_SIZE;
 
-  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(vpn);
+  ArchMemoryMapping pml1 = resolveMapping(vpn);
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
   assert(pml1_entry && pml1_entry->cow && !pml1_entry->writeable && "Page is not COW or not set to writable.\n");
 
@@ -798,8 +798,9 @@ bool ArchMemory::isWriteable(size_t virtual_addr)
   assert(archmemory_lock_.heldBy() == currentThread);
 
   debug(A_MEMORY, "ArchMemory::isWriteable: with virtual address %p.\n", (void*)virtual_addr);
-  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  ArchMemoryMapping m = resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pt_entry = &m.pt[m.pti];
+  //PageDirEntry* pml2_entry = &m.pd[m.pdi];
 
   if (m.pt && pt_entry && pt_entry->writeable)
   {
@@ -813,13 +814,13 @@ bool ArchMemory::isWriteable(size_t virtual_addr)
   }
 }
 
-void ArchMemory::copyPageTable(size_t virtual_addr)
+void ArchMemory::copyPageTable(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages)
 {
   debug(FORK, "ArchMemory::copyPage Resolving mapping \n");
   ArchMemoryMapping m = resolveMapping(virtual_addr/PAGE_SIZE);
   PageDirEntry* pml2_entry = &m.pd[m.pdi];
 
-  size_t new_page_ppn = PageManager::instance()->allocPPN();
+  size_t new_page_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 
   PageTableEntry* original_page = (PageTableEntry*) getIdentAddressOfPPN(pml2_entry->pt.page_ppn);
   PageTableEntry* new_page = (PageTableEntry*) getIdentAddressOfPPN(new_page_ppn);

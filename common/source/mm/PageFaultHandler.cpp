@@ -121,20 +121,21 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);  //TODOs: maybe cow
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
-    else if(writing && !current_archmemory.isWriteable(address))
+    //else if(writing && !current_archmemory.isWriteable(address))
+    else if(writing)
     {
       int is_cow_value = current_archmemory.isCOW(address);
 
       if(is_cow_value == 2)
-        current_archmemory.copyPageTable(address); //TODO add preallocated_pages here?
-      if(is_cow_value == 1)
+        current_archmemory.copyPageTable(address, preallocated_pages); //TODO add preallocated_pages here?
+      else if(is_cow_value == 1)
         current_archmemory.copyPage(address, preallocated_pages);
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
-    else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
-    {
-
-    }
+    // else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
+    // {
+    //
+    // }
     //We want to write to a page that is readable and not cow -> error
     else
     {
