@@ -53,7 +53,7 @@ char const *user_progs[] = {
                             // "/usr/no_test.sweb",
 
 //Swapping-----------------------------------------------------------------------
-                            "/usr/iptTests.sweb",  
+                            //"/usr/iptTests.sweb",
   
 
                             0

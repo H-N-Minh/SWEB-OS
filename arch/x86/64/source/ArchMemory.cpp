@@ -57,7 +57,7 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
       CHILD_pml4[pml4i].cow = 1;
       //CHILD_pml4[pml4i].writeable = 0;
 
-      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->allocPPN();
+      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 
 
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
@@ -78,7 +78,7 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
           CHILD_pdpt[pdpti].pd.cow = 1;
           //CHILD_pdpt[pdpti].pd.writeable = 0;
 
-          CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->allocPPN();
+          CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
           PageDirEntry* PARENT_pd = (PageDirEntry*) getIdentAddressOfPPN(PARENT_pdpt[pdpti].pd.page_ppn);
@@ -554,11 +554,11 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 int ArchMemory::isCOW(size_t virtual_addr)
 {
   debug(A_MEMORY, "ArchMemory::isCow: with virtual address %p.\n", (void*)virtual_addr);
-  assert(archmemory_lock_.heldBy() != currentThread);
+  assert(archmemory_lock_.heldBy() == currentThread);
   IPTManager::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
 
-  ArchMemoryMapping m = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
+  ArchMemoryMapping m = resolveMapping(virtual_addr/PAGE_SIZE);
   PageTableEntry* pml1_entry = &m.pt[m.pti];
   PageDirEntry* pml2_entry = &m.pd[m.pdi];
 
@@ -573,13 +573,11 @@ int ArchMemory::isCOW(size_t virtual_addr)
     debug(COW, "ArchMemory::isCow: virtual address %p is cow with PML1\n", (void*)virtual_addr);
     return 1;
   }
-  else
-  {
-    debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
-    IPTManager::instance()->IPT_lock_.release();
-    archmemory_lock_.release();
-    return 0;
-  }
+
+  debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
+  IPTManager::instance()->IPT_lock_.release();
+  archmemory_lock_.release();
+  return 0;
 }
 
 
@@ -602,8 +600,8 @@ void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocate
     debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
     size_t old_ppn = pml1_entry->page_ppn;
     size_t new_ppn = pm->getPreAlocatedPage(preallocated_pages);
-    pointer old_page = ArchMemory::getIdentAddressOfPPN(old_ppn);
-    pointer new_page = ArchMemory::getIdentAddressOfPPN(new_ppn);
+    pointer old_page = getIdentAddressOfPPN(old_ppn);
+    pointer new_page = getIdentAddressOfPPN(new_ppn);
     memcpy((void*)new_page, (void*)old_page, PAGE_SIZE);
 
     debug(FORK, "ArchMemory::copyPage update the ref count for old page and new page\n");
