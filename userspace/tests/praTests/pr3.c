@@ -21,7 +21,7 @@ size_t big_array3[ELEMENTS_IN_ARRAY];  //5 Megabyes
 
 
 //Trigger out of memory
-int pr3()
+int pra3()
 {
   setPRA(0);  // 0 for random pra, 1 for NFU
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
