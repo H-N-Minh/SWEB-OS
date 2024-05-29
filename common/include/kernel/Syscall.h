@@ -81,6 +81,11 @@ public:
    * set the page replacement algorithm. 0: random, 1: NFU
   */
   static void setPraType(size_t type);
+
+  /**
+   * get the statistics of PRA
+  */
+  static int getPRAstats(int* hit_count, int* miss_count);
 };
 
 

@@ -93,15 +93,6 @@ size_t IPTManager::findPageToSwapOut()
   }
   else if (pra_type_ == PRA_TYPE::NFU)
   {
-
-    // size_t random_num = randomNumGenerator();
-    // debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
-    
-    // ustl::vector<ppn_t> unique_keys = getUniqueKeysInRamMap();
-    // size_t random_ipt_index = random_num % unique_keys.size();
-    
-    // ppn_retval = (size_t) (unique_keys[random_ipt_index]);
-
     debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
     uint32 min_counter = UINT32_MAX;
     ustl::vector<uint32> min_ppns;    // vector of all pages with the minimum counter

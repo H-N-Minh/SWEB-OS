@@ -94,6 +94,7 @@ void SwappingThread::updateMetaData()
           ipt->swap_meta_data_[key]++;
           archmem->archmemory_lock_.release();
           debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
+          hit_count_++;
           break;
         }
         archmem->archmemory_lock_.release();
@@ -131,6 +132,25 @@ void SwappingThread::swapPageOut()
   size_t ppn = ipt_manager->findPageToSwapOut();
   SwappingManager::instance()->swapOutPage(ppn);
   free_pages_.push_back(ppn);
+  miss_count_++;
 
   ipt_manager->IPT_lock_.release();
+}
+
+uint32 SwappingThread::getHitCount()
+{
+  IPTManager* ipt_manager = IPTManager::instance();
+  ipt_manager->IPT_lock_.acquire();
+  uint32 hit_count = hit_count_;
+  ipt_manager->IPT_lock_.release();
+  return hit_count;
+}
+
+uint32 SwappingThread::getMissCount()
+{
+  IPTManager* ipt_manager = IPTManager::instance();
+  ipt_manager->IPT_lock_.acquire();
+  uint32 miss_count = miss_count_;
+  ipt_manager->IPT_lock_.release();
+  return miss_count;
 }

@@ -150,6 +150,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_setPRA:
       setPraType(arg1);
       break;
+    case sc_getPRAstats:
+      return_value = getPRAstats((int*)arg1, (int*)arg2);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -874,4 +877,18 @@ void Syscall::setPraType(size_t type)
   ipt->IPT_lock_.acquire();
   ipt->pra_type_ = type? PRA_TYPE::NFU : PRA_TYPE::RANDOM;
   ipt->IPT_lock_.release();
+}
+
+int Syscall::getPRAstats(int* hit_count, int* miss_count)
+{
+  if(!check_parameter((size_t)hit_count, false) || !check_parameter((size_t)miss_count, false))
+  {
+    debug(USERTHREAD, "Syscall::getPRAstats. Invalid pointers given to store the pra stats\n");
+    return -1;
+  }
+  SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+  *hit_count = swapper->getHitCount();
+  *miss_count = swapper->getMissCount();
+
+  return 0;
 }

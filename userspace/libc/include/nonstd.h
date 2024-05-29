@@ -10,6 +10,9 @@
 extern "C" {
 #endif
 
+#define __RANDOM_PRA__ 0
+#define __NFU_PRA__ 1
+
 /**
  * Creates a new process.
  *
@@ -23,6 +26,7 @@ extern int createprocess(const char* path, int sleep);
 extern int getIPTInfos();
 extern int assertIPT();
 extern int setPRA(int pra);
+extern int getPRAstats(int* hit_count, int* miss_count);
 
 #ifdef __cplusplus
 }

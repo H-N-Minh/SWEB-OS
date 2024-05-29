@@ -53,3 +53,4 @@
 #define sc_assertIPT 402
 
 #define sc_setPRA 403
+#define sc_getPRAstats 404
