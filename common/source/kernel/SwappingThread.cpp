@@ -17,7 +17,6 @@ SwappingThread::SwappingThread()
   
 }
 
-
 SwappingThread::~SwappingThread()
 {
   assert(false && "SwappingThread destruction means that you probably have accessed an invalid pointer somewhere.");
@@ -43,6 +42,9 @@ void SwappingThread::Run()
     
     if (orders_ == 0)
     {
+      size_t ppn_to_preswap = IPTManager::instance()->findPageToSwapOut();
+
+      SwappingManager::instance()->enqueuePageForPreSwap(ppn_to_preswap);
       orders_lock_.release();
       Scheduler::instance()->yield();
     }
