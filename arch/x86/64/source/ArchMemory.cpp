@@ -797,4 +797,45 @@ bool ArchMemory::isWriteable(size_t virtual_addr)
   }
 }
 
+bool ArchMemory::isPageAccessed(size_t vpn)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  debug(A_MEMORY, "ArchMemory::isPageAccessed: with vpn %zu.\n", vpn); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->present)
+  {
+    if (pt_entry->accessed || pt_entry->dirty)
+    {
+      debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu is accessed or dirty\n", vpn);
+      return true;
+    }
+  }
+  debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu is NOT accessed nor dirty\n", vpn);
+  return false;
+}
+
+void ArchMemory::resetAccessDirtyBits(size_t vpn)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  debug(A_MEMORY, "ArchMemory::resetAccessDirtyBits: with vpn %zu.\n", vpn); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->present)
+  {
+    if (pt_entry->accessed || pt_entry->dirty)
+    {
+      pt_entry->accessed = 0;
+      pt_entry->dirty = 0;
+      debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu reseted accessed and dirty bits\n", vpn);
+    }
+  }
+  
+  assert(0 && "ArchMemory::resetAccessDirtyBits: page is neither accessed nor dirty\n");
+}
+
 

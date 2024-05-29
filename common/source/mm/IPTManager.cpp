@@ -15,7 +15,8 @@
 
 IPTEntry::IPTEntry(size_t vpn, ArchMemory* archmem) : vpn_(vpn), archmem_(archmem) {}
 
-bool IPTEntry::isLocked() {
+bool IPTEntry::isLocked()
+{
   return archmem_->archmemory_lock_.isHeldBy((Thread*) currentThread);
 }
 
@@ -23,7 +24,9 @@ bool IPTEntry::isLocked() {
 ////////////////////// IPTManager //////////////////////
 IPTManager* IPTManager::instance_ = nullptr;
 
-IPTManager::IPTManager() : IPT_lock_("IPTManager::IPT_lock_") {
+IPTManager::IPTManager() 
+  : IPT_lock_("IPTManager::IPT_lock_")
+{
   assert(!instance_);
   instance_ = this;
   pra_type_ = PRA_TYPE::NFU;
@@ -407,6 +410,7 @@ void IPTManager::checkDiskMapConsistency()
     entry_arch->archmemory_lock_.release();
   }
 }
+
 
 void IPTManager::checkSwapMetaDataConsistency()
 {

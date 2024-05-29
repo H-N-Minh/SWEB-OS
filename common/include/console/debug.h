@@ -49,6 +49,7 @@ const size_t USERTHREAD         = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t PROCESS_REG        = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
+const size_t SWAPTHREAD          = Ansi_Yellow  | OUTPUT_ENABLED;
 
 const size_t PIPE               = Ansi_Cyan ;
 const size_t FILEDESCRIPTOR     = Ansi_Cyan    | OUTPUT_ENABLED;

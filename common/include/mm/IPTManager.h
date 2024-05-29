@@ -41,7 +41,7 @@ public:
   Mutex IPT_lock_;          // responsible for: ram_map_, disk_map_, pra_type_, swap_meta_data_
   ustl::multimap<ppn_t, IPTEntry*> ram_map_;
   ustl::multimap<diskoffset_t, IPTEntry*> disk_map_;
-  PRA_TYPE pra_type_;       // NFU is default (in ctor)
+  PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
   // key: ppn, value: counter for how often the page is used.
   // Key is managed by IPTManager, must be in sync with ram_map_.
   // Value is managed by SwappingThread

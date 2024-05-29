@@ -124,6 +124,16 @@ class ArchMemory
 
     int countArchmemPages();
 
+    /**
+     * if access or dirty bit is set, return true, else false
+    */
+    bool isPageAccessed(size_t vpn);
+
+    /**
+     * Reset the access and dirty bits of a page to 0
+    */
+    void resetAccessDirtyBits(size_t vpn);
+
   private:
     /**
      * Adds a PML4Entry, PDPTEntry, PDEntry or PTEntry to the given PML4, PDPT, PD or PT respectively.
