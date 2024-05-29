@@ -4,6 +4,7 @@
 #include "BDManager.h"
 
 #include "IPTManager.h"
+#include "uqueue.h"
 
 class IPTEntry;
 class SwappingManager
@@ -17,12 +18,15 @@ class SwappingManager
 
     void swapOutPage(size_t ppn);
     int swapInPage(size_t vpn);
-    void preSwapPage(size_t vpn);
 
     void lock_archmemories_in_right_order(ustl::vector<IPTEntry*> virtual_page_infos);
     void unlock_archmemories(ustl::vector<IPTEntry*> virtual_page_infos);
 
     Mutex disk_lock_;
+
+  void enqueuePageForPreSwap(size_t ppn);
+  void performPreSwap();
+  size_t getPreSwapQueueSize();
 
   private:
     static SwappingManager* instance_;
@@ -31,4 +35,6 @@ class SwappingManager
     BDVirtualDevice* bd_device_;
 
     static int disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
+    ustl::queue<size_t> pre_swap_queue_;
+    Mutex pre_swap_lock_;
 };
