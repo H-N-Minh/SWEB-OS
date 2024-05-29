@@ -79,7 +79,7 @@ size_t IPTManager::findPageToSwapOut()
 
   if (pra_type_ == PRA_TYPE::RANDOM)
   {
-    debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
+    debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
     // debugRandomGenerator();    // for debugging purposes
 
     size_t random_num = randomNumGenerator();
@@ -89,7 +89,7 @@ size_t IPTManager::findPageToSwapOut()
     size_t random_ipt_index = random_num % unique_keys.size();
     
     ppn_retval = (size_t) (unique_keys[random_ipt_index]);
-    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%d\n", ppn_retval);
+    debug(IPT, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%d\n", ppn_retval);
   }
   else if (pra_type_ == PRA_TYPE::NFU)
   {
@@ -102,8 +102,9 @@ size_t IPTManager::findPageToSwapOut()
     
     // ppn_retval = (size_t) (unique_keys[random_ipt_index]);
 
-    debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
+    debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
     uint32 min_counter = UINT32_MAX;
+    ustl::vector<uint32> min_ppns;    // vector of all pages with the minimum counter
 
     for(auto& pair : swap_meta_data_)
     {
@@ -112,11 +113,26 @@ size_t IPTManager::findPageToSwapOut()
       if (counter < min_counter)
       {
         min_counter = counter;
+        min_ppns.clear();
         ppn_retval = key;
+        min_ppns.push_back(key);
+      }
+      else if (counter == min_counter)
+      {
+        min_ppns.push_back(key);
       }
       
     }
-    debug(MINH, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu, counter=%d\n", ppn_retval, min_counter);
+    debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
+    if (min_ppns.size() > 1)
+    {
+      debug(IPT, "IPTManager::findPageToSwapOut: Multiple pages with the minimum counter. Randomly selecting one\n");
+      size_t random_num = randomNumGenerator();
+      size_t random_index = random_num % min_ppns.size();
+      ppn_retval = min_ppns[random_index];
+    }
+
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu, counter=%d\n", ppn_retval, min_counter);
   }
 
   assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
