@@ -9,6 +9,7 @@
 
 extern int pra1();
 extern int pra2();
+extern int pra3();
 
 int PRA1 = 0;  
 int PRA2 = 0; 
@@ -23,7 +24,7 @@ int childMain()
 
     // comment out the tests you don't want to run
     // PRA1 = 1;   // Test Random PRA
-    PRA2 = 1;   // Test NFU PRA
+    // PRA2 = 1;   // Test NFU PRA
     PRA3 = 1;   // Test switching PRA using syscall
 
     if (PRA1)
@@ -40,6 +41,14 @@ int childMain()
         retval = pra2();
         if (retval == 0)                      { printf("===> pra2 successful!\n"); }
         else                                  { printf("===> pra2 failed!\n");  return -1;}
+    }
+
+    if (PRA3)
+    {
+        printf("\nTesting pra3: test switching PRA using syscall...\n");
+        retval = pra3();
+        if (retval == 0)                      { printf("===> pra3 successful!\n"); }
+        else                                  { printf("===> pra3 failed!\n");  return -1;}
     }
 
 
