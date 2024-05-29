@@ -25,3 +25,13 @@ int assertIPT()
 {
   return __syscall(sc_assertIPT, 0x0, 0x0, 0x0, 0x0, 0x0);
 }
+
+int setPRA(int pra)
+{
+  if (pra != 0 && pra != 1)
+  {
+    return -1;
+  }
+  return __syscall(sc_setPRA, (size_t) pra, 0x0, 0x0, 0x0, 0x0);
+  
+}

@@ -22,6 +22,7 @@ extern int createprocess(const char* path, int sleep);
 
 extern int getIPTInfos();
 extern int assertIPT();
+extern int setPRA(int pra);
 
 #ifdef __cplusplus
 }

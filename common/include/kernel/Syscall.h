@@ -76,6 +76,11 @@ public:
    * check if the ppn of all archmem matches the IPT, and opposite
   */
   static void assertIPT();
+
+  /**
+   * set the page replacement algorithm. 0: random, 1: NFU
+  */
+  static void setPraType(size_t type);
 };
 
 

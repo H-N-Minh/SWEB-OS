@@ -147,6 +147,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_assertIPT:
       assertIPT();
       break;
+    case sc_setPRA:
+      setPraType(arg1);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -861,5 +864,14 @@ void Syscall::assertIPT()
   ipt->checkSwapMetaDataConsistency();
   debug(SYSCALL, "Syscall::assertIPT: All IPT looks good\n");
 
+  ipt->IPT_lock_.release();
+}
+
+void Syscall::setPraType(size_t type)
+{
+  debug(SYSCALL, "Syscall::setPraType: Setting PRA type to %s\n", type == 0 ? "RANDOM" : "NFU");
+  IPTManager* ipt = IPTManager::instance();
+  ipt->IPT_lock_.acquire();
+  ipt->pra_type_ = type? PRA_TYPE::NFU : PRA_TYPE::RANDOM;
   ipt->IPT_lock_.release();
 }

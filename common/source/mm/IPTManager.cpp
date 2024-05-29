@@ -192,6 +192,11 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   map->insert({ppn, entry});
 
   debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
+
+  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
+  // checkRamMapConsistency();
+  // checkDiskMapConsistency();
+  // checkSwapMetaDataConsistency();
 }
 
 void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
@@ -244,10 +249,10 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
 
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
 
-  // checking is swap_meta_data_ is in sync with the ram_map_. This is not necessary and slow down the system, but it is good for debugging
-  checkRamMapConsistency();
-  checkDiskMapConsistency();
-  checkSwapMetaDataConsistency();
+  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
+  // checkRamMapConsistency();
+  // checkDiskMapConsistency();
+  // checkSwapMetaDataConsistency();
 }
 
 ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
@@ -412,7 +417,14 @@ void IPTManager::checkRamMapConsistency()
     ArchMemory* entry_arch = ipt_entry->archmem_;
     assert(entry_arch && "No archmem in IPTEntry");
 
-    entry_arch->archmemory_lock_.acquire();
+    // this locking will not solve deadlock completely, but this is debug func so who cares
+    int locked_by_us = 0;
+    if (!entry_arch->archmemory_lock_.isHeldBy((Thread*) currentThread))
+    {
+      entry_arch->archmemory_lock_.acquire();
+      locked_by_us = 1;
+    }
+
     ArchMemoryMapping mapping = entry_arch->resolveMapping((size_t) ipt_entry->vpn_);
     PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
     assert(pt_entry && "checkRampMapConsistency: No pagetable entry");
@@ -426,7 +438,10 @@ void IPTManager::checkRamMapConsistency()
       assert(pt_entry->page_ppn == key && "checkRampMapConsistency: ppn in ram_map_ (key) does not match ppn in ArchMemory\n");
     }
 
-    entry_arch->archmemory_lock_.release();
+    if (locked_by_us)
+    {
+      entry_arch->archmemory_lock_.release();
+    }
   }
 }
 
@@ -441,10 +456,20 @@ void IPTManager::checkDiskMapConsistency()
     ArchMemory* entry_arch = ipt_entry->archmem_;
     assert(entry_arch && "No archmem in IPTEntry");
 
-    entry_arch->archmemory_lock_.acquire();
+    // this locking will not solve deadlock completely, but this is debug func so who cares
+    int locked_by_us = 0;
+    if (!entry_arch->archmemory_lock_.isHeldBy((Thread*) currentThread))
+    {
+      entry_arch->archmemory_lock_.acquire();
+      locked_by_us = 1;
+    }
+    
     ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(ipt_entry->vpn_);
     assert(key == disk_offset && "checkRampMapConsistency: ppn in disk_map_ (key) does not match disk offset in ArchMemory\n");
-    entry_arch->archmemory_lock_.release();
+    if (locked_by_us)
+    {
+      entry_arch->archmemory_lock_.release();
+    }
   }
 }
 
