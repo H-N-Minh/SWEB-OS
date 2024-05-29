@@ -16,17 +16,17 @@
 #define PAGES_IN_ARRAY N_MEGABYTE/PAGESIZE
 
 
-size_t big_array[ELEMENTS_IN_ARRAY];  //5 Megabyes
+size_t big_array3[ELEMENTS_IN_ARRAY];  //5 Megabyes
 
 
 
 //Trigger out of memory
-int ipt2()
+int pr3()
 {
   setPRA(0);  // 0 for random pra, 1 for NFU
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    big_array[i * (PAGESIZE / 8)] = (size_t)i;
+    big_array3[i * (PAGESIZE / 8)] = (size_t)i;
     if (i%100 == 0)
     {
       // assertIPT();
@@ -38,7 +38,7 @@ int ipt2()
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    assert(big_array[i * (PAGESIZE / 8)] == i);
+    assert(big_array3[i * (PAGESIZE / 8)] == i);
     if (i%100 == 0)
     {
       // assertIPT();

@@ -26,8 +26,14 @@ class SwappingThread : public Thread
 
     bool isOneTimeStep();
     void updateMetaData();
-  
+
+    uint32 getHitCount();
+    uint32 getMissCount();
+
   private:
-    uint32 last_clock_;
+    uint32 last_clock_;   // protected by orders_lock_
+
+    uint32 hit_count_;    // protected by IPT lock
+    uint32 miss_count_;   // protected by IPT lock
 };
 

@@ -93,15 +93,6 @@ size_t IPTManager::findPageToSwapOut()
   }
   else if (pra_type_ == PRA_TYPE::NFU)
   {
-
-    // size_t random_num = randomNumGenerator();
-    // debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
-    
-    // ustl::vector<ppn_t> unique_keys = getUniqueKeysInRamMap();
-    // size_t random_ipt_index = random_num % unique_keys.size();
-    
-    // ppn_retval = (size_t) (unique_keys[random_ipt_index]);
-
     debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
     uint32 min_counter = UINT32_MAX;
     ustl::vector<uint32> min_ppns;    // vector of all pages with the minimum counter
@@ -132,7 +123,7 @@ size_t IPTManager::findPageToSwapOut()
       ppn_retval = min_ppns[random_index];
     }
 
-    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu, counter=%d\n", ppn_retval, min_counter);
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%d, counter=%d\n", ppn_retval, min_counter);
   }
 
   assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
@@ -192,6 +183,11 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   map->insert({ppn, entry});
 
   debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
+
+  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
+  // checkRamMapConsistency();
+  // checkDiskMapConsistency();
+  // checkSwapMetaDataConsistency();
 }
 
 void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
@@ -208,8 +204,6 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in map\n");
   }
   
-  // checking is swap_meta_data_ is in sync with the ram_map_. This is not necessary and slow down the system, but it is good for debugging
-  checkSwapMetaDataConsistency();
   
   debug(IPT, "IPTManager::removeEntryIPT: Entry found in map %s, seems valid. Removing\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   
@@ -245,6 +239,11 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   }
 
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
+
+  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
+  // checkRamMapConsistency();
+  // checkDiskMapConsistency();
+  // checkSwapMetaDataConsistency();
 }
 
 ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
@@ -409,7 +408,14 @@ void IPTManager::checkRamMapConsistency()
     ArchMemory* entry_arch = ipt_entry->archmem_;
     assert(entry_arch && "No archmem in IPTEntry");
 
-    entry_arch->archmemory_lock_.acquire();
+    // this locking will not solve deadlock completely, but this is debug func so who cares
+    int locked_by_us = 0;
+    if (!entry_arch->archmemory_lock_.isHeldBy((Thread*) currentThread))
+    {
+      entry_arch->archmemory_lock_.acquire();
+      locked_by_us = 1;
+    }
+
     ArchMemoryMapping mapping = entry_arch->resolveMapping((size_t) ipt_entry->vpn_);
     PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
     assert(pt_entry && "checkRampMapConsistency: No pagetable entry");
@@ -423,7 +429,10 @@ void IPTManager::checkRamMapConsistency()
       assert(pt_entry->page_ppn == key && "checkRampMapConsistency: ppn in ram_map_ (key) does not match ppn in ArchMemory\n");
     }
 
-    entry_arch->archmemory_lock_.release();
+    if (locked_by_us)
+    {
+      entry_arch->archmemory_lock_.release();
+    }
   }
 }
 
@@ -438,13 +447,22 @@ void IPTManager::checkDiskMapConsistency()
     ArchMemory* entry_arch = ipt_entry->archmem_;
     assert(entry_arch && "No archmem in IPTEntry");
 
-    entry_arch->archmemory_lock_.acquire();
+    // this locking will not solve deadlock completely, but this is debug func so who cares
+    int locked_by_us = 0;
+    if (!entry_arch->archmemory_lock_.isHeldBy((Thread*) currentThread))
+    {
+      entry_arch->archmemory_lock_.acquire();
+      locked_by_us = 1;
+    }
+    
     ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(ipt_entry->vpn_);
     assert(key == disk_offset && "checkRampMapConsistency: ppn in disk_map_ (key) does not match disk offset in ArchMemory\n");
-    entry_arch->archmemory_lock_.release();
+    if (locked_by_us)
+    {
+      entry_arch->archmemory_lock_.release();
+    }
   }
 }
-
 
 void IPTManager::checkSwapMetaDataConsistency()
 {
