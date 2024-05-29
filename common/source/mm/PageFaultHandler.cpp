@@ -109,10 +109,12 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     }
     // Enqueue the page for pre swapping
     SwappingManager::instance()->enqueuePageForPreSwap(address / PAGE_SIZE);
+    debug(PRESWAPPING, "PageFaultHandler::handlePageFault: Enqueued page %p for pre swapping\n", (void*)address);
 
     // Perform pre swapping if queue is full
     if (SwappingManager::instance()->getPreSwapQueueSize() >= PRE_SWAP_QUEUE_THRESHOLD)
     {
+      debug(PRESWAPPING, "PageFaultHandler::handlePageFault: Performing pre swapping\n");
       SwappingManager::instance()->performPreSwap();
     }
     IPTManager::instance()->IPT_lock_.release();

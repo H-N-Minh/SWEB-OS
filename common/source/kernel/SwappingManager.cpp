@@ -176,6 +176,7 @@ int SwappingManager::getDiskReads()
 
 void SwappingManager::enqueuePageForPreSwap(size_t ppn)
 {
+  debug(PRESWAPPING, "SwappingManager::enqueuePageForPreSwap: %zu\n", ppn);
   pre_swap_lock_.acquire();
   pre_swap_queue_.push(ppn);
   pre_swap_lock_.release();
@@ -183,6 +184,7 @@ void SwappingManager::enqueuePageForPreSwap(size_t ppn)
 
 void SwappingManager::performPreSwap()
 {
+  debug(PRESWAPPING, "SwappingManager::performPreSwap\n");
   pre_swap_lock_.acquire();
   while(!pre_swap_queue_.empty())
   {
@@ -192,6 +194,7 @@ void SwappingManager::performPreSwap()
 
     assert(currentThread->loader_);
     currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    debug(PRESWAPPING, "SwappingManager::performPreSwap: %zu\n", ppn);
     this->swapOutPageContent(ppn);
 
     currentThread->loader_->arch_memory_.archmemory_lock_.release();
@@ -204,7 +207,7 @@ void SwappingManager::performPreSwap()
 size_t SwappingManager::getPreSwapQueueSize()
 {
   size_t size;
-
+  debug(PRESWAPPING, "SwappingManager::getPreSwapQueueSize\n");
   pre_swap_lock_.acquire();
   size = pre_swap_queue_.size();
   pre_swap_lock_.release();
@@ -219,7 +222,7 @@ void SwappingManager::swapOutPageContent(size_t ppn)
 
   size_t disk_offset = disk_offset_counter_;
 
-  debug(SWAPPING, "SwappingManager::swapOutPageContent: Swap out page content with ppn %ld to disk offset %ld.\n", ppn, disk_offset);
+  debug(PRESWAPPING, "SwappingManager::swapOutPageContent: Swap out page content with ppn %ld to disk offset %ld.\n", ppn, disk_offset);
   ustl::vector<IPTEntry*> virtual_page_infos = ipt_->getRamEntriesFromKey(ppn);
 
   lock_archmemories_in_right_order(virtual_page_infos);
