@@ -107,6 +107,14 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       currentThread->loader_->loadPage(address, preallocated_pages);
       current_archmemory.archmemory_lock_.release();
     }
+    // Enqueue the page for pre swapping
+    SwappingManager::instance()->enqueuePageForPreSwap(address / PAGE_SIZE);
+
+    // Perform pre swapping if queue is full
+    if (SwappingManager::instance()->getPreSwapQueueSize() >= PRE_SWAP_QUEUE_THRESHOLD)
+    {
+      SwappingManager::instance()->performPreSwap();
+    }
     IPTManager::instance()->IPT_lock_.release();
 
     PageManager::instance()-> releaseNotNeededPages(preallocated_pages);

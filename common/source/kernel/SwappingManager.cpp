@@ -213,18 +213,17 @@ void SwappingManager::swapOutPageContent(size_t ppn)
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   assert(currentThread->loader_->arch_memory_.archmemory_lock_.heldBy() == currentThread);
 
-  size_t disk_offset = disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
-  disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing++;
+  size_t disk_offset = disk_offset_counter_;
 
   debug(SWAPPING, "SwappingManager::swapOutPageContent: Swap out page content with ppn %ld to disk offset %ld.\n", ppn, disk_offset);
-  ustl::vector<IPTEntry*> virtual_page_infos = ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
+  ustl::vector<IPTEntry*> virtual_page_infos = ipt_->getRamEntriesFromKey(ppn);
 
   lock_archmemories_in_right_order(virtual_page_infos);
 
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    ArchMemory* archmemory = virtual_page_info->archmem;
-    size_t vpn = virtual_page_info->vpn;
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
 
     ArchMemoryMapping m = ArchMemory::resolveMapping(archmemory->page_map_level_4_, vpn);
     char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
