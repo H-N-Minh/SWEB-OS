@@ -7,6 +7,7 @@
 #include "uset.h"
 #include "SwappingManager.h"
 #include "ArchMemory.h"
+#include "SwappingThread.h"
 
 #define INVALID_PPN -1
 
@@ -25,7 +26,8 @@ IPTManager* IPTManager::instance_ = nullptr;
 IPTManager::IPTManager() : IPT_lock_("IPTManager::IPT_lock_") {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::AGING;
+  pra_type_ = PRA_TYPE::NFU;
+  SwappingThread::ipt_initialized_flag_ = 1;
 }
 
 IPTManager* IPTManager::instance()
@@ -84,9 +86,9 @@ size_t IPTManager::findPageToSwapOut()
     
     ppn_retval = (size_t) (unique_keys[random_ipt_index]);
   }
-  else if (pra_type_ == PRA_TYPE::AGING)
+  else if (pra_type_ == PRA_TYPE::NFU)
   {
-    debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA AGING\n");
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
 
     size_t random_num = randomNumGenerator();
     debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);

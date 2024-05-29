@@ -5,6 +5,7 @@
 #include "Mutex.h"
 #include "uvector.h"
 #include "types.h"
+#include "IPTManager.h"
 
 class SwappingThread : public Thread
 {
@@ -20,5 +21,13 @@ class SwappingThread : public Thread
     Condition orders_cond_;
     int orders_;
     ustl::vector<uint32> free_pages_;
+
+    static int ipt_initialized_flag_;    // 0: not initialized, 1: initialized. Only IPTManager can change this flag.
+
+    bool isOneTimeStep();
+    void updateMetaData();
+  
+  private:
+    uint32 last_clock_;
 };
 
