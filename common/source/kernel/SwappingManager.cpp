@@ -190,7 +190,11 @@ void SwappingManager::performPreSwap()
     pre_swap_queue_.pop();
     pre_swap_lock_.release();
 
+    assert(currentThread->loader_);
+    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
     this->swapOutPageContent(ppn);
+
+    currentThread->loader_->arch_memory_.archmemory_lock_.release();
 
     pre_swap_lock_.acquire();
   }
