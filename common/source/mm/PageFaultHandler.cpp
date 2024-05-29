@@ -68,6 +68,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   ArchThreads::printThreadRegisters(currentThread, false);
 
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
+   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
   assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
   ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
@@ -86,6 +87,14 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     else if(current_archmemory.isSwapped(address))
     {
       SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
+    }
+    //Page is on heap
+    else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)  //TODOs needs to be locked
+    {
+      size_t ppn = PageManager::instance()->getPreAlocatedPage(ppns);
+      size_t vpn = address / PAGE_SIZE;
+      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, ppns);
+      assert(rv == true);
     }
     //Page needs to be loader from binary 
     else
