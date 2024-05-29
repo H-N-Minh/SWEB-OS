@@ -94,7 +94,7 @@ public:
   /**
    * @return a vector of all unique keys in the ram_map_
   */
-  ustl::vector<ppn_t> getUniqueKeysInIPT();
+  ustl::vector<ppn_t> getUniqueKeysInRamMap();
 
   /**
    * @return the ppn of the page that will be swapped out. This is where the PRA is used

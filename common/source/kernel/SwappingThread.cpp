@@ -60,6 +60,7 @@ void SwappingThread::Run()
 void SwappingThread::updateMetaData()
 {
   assert(orders_lock_.isHeldBy((Thread*) currentThread) && "SwappingThread::updateMetaData: orders_lock_ is not held by currentThread\n");
+ 
   if (!ipt_initialized_flag_)
   {
     return;
@@ -69,7 +70,7 @@ void SwappingThread::updateMetaData()
 
   if (ipt->pra_type_ == NFU)
   {
-    debug(SWAPTHREAD, "SwappingThread::updateMetaData: updating meta data for PRA NFU\n");
+    // debug(SWAPTHREAD, "SwappingThread::updateMetaData: updating meta data for PRA NFU\n");
     // check validity of swap_meta_data_ and ram_map_
     ipt->checkSwapMetaDataConsistency();
 
@@ -105,7 +106,7 @@ void SwappingThread::updateMetaData()
 bool SwappingThread::isOneTimeStep()
 {
   uint32 current_clock = Syscall::clock();
-  debug(MINH, "SwappingThread::isOneTimeStep: current_clock: %d, last_clock_: %d\n", current_clock, last_clock_);
+  // debug(MINH, "SwappingThread::isOneTimeStep: current_clock: %d, last_clock_: %d\n", current_clock, last_clock_);
   if (current_clock < last_clock_)    // idk why this happens
   {
     last_clock_ = current_clock;
@@ -115,7 +116,7 @@ bool SwappingThread::isOneTimeStep()
   uint32 time_passed = (current_clock - last_clock_) / CLOCKS_PER_SEC;
   if (time_passed >= TIME_STEP)
   {    
-    debug(MINH, "SwappingThread::isOneTimeStep: time_passed: %ds\n", time_passed);
+    // debug(MINH, "SwappingThread::isOneTimeStep: time_passed: %ds\n", time_passed);
     last_clock_ = current_clock;
     return true;
   }

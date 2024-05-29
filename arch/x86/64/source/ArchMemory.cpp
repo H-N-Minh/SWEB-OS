@@ -832,6 +832,7 @@ void ArchMemory::resetAccessDirtyBits(size_t vpn)
       pt_entry->accessed = 0;
       pt_entry->dirty = 0;
       debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu reseted accessed and dirty bits\n", vpn);
+      return;
     }
   }
   

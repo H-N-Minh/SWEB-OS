@@ -10,6 +10,7 @@
 #include "SwappingThread.h"
 
 #define INVALID_PPN -1
+#define UINT32_MAX 0xFFFFFFFF
 
 ////////////////////// IPTEntry //////////////////////
 
@@ -59,7 +60,7 @@ void debugRandomGenerator()
   assert(0);
 }
 
-ustl::vector<ppn_t> IPTManager::getUniqueKeysInIPT()
+ustl::vector<ppn_t> IPTManager::getUniqueKeysInRamMap()
 {
   ustl::set<ppn_t> unique_keys;
   for (auto it = ram_map_.begin(); it != ram_map_.end(); ++it) {
@@ -84,26 +85,41 @@ size_t IPTManager::findPageToSwapOut()
     size_t random_num = randomNumGenerator();
     debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
     
-    ustl::vector<ppn_t> unique_keys = getUniqueKeysInIPT();
+    ustl::vector<ppn_t> unique_keys = getUniqueKeysInRamMap();
     size_t random_ipt_index = random_num % unique_keys.size();
     
     ppn_retval = (size_t) (unique_keys[random_ipt_index]);
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%d\n", ppn_retval);
   }
   else if (pra_type_ == PRA_TYPE::NFU)
   {
-    debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
 
-    size_t random_num = randomNumGenerator();
-    debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
+    // size_t random_num = randomNumGenerator();
+    // debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
     
-    ustl::vector<ppn_t> unique_keys = getUniqueKeysInIPT();
-    size_t random_ipt_index = random_num % unique_keys.size();
+    // ustl::vector<ppn_t> unique_keys = getUniqueKeysInRamMap();
+    // size_t random_ipt_index = random_num % unique_keys.size();
     
-    ppn_retval = (size_t) (unique_keys[random_ipt_index]);
+    // ppn_retval = (size_t) (unique_keys[random_ipt_index]);
+
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
+    uint32 min_counter = UINT32_MAX;
+
+    for(auto& pair : swap_meta_data_)
+    {
+      ppn_t key = pair.first;
+      uint32 counter = pair.second;
+      if (counter < min_counter)
+      {
+        min_counter = counter;
+        ppn_retval = key;
+      }
+      
+    }
+    debug(MINH, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu, counter=%d\n", ppn_retval, min_counter);
   }
 
   assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
-  debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%d\n", ppn_retval);
   return ppn_retval;
 }
 
@@ -111,8 +127,10 @@ size_t IPTManager::findPageToSwapOut()
 IPTEntry* IPTManager::lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem) {
   debug(IPT, "IPTManager::lookupEntryInRAM: Looking up entry in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
   auto range = ram_map_.equal_range(ppn);
-  for (auto it = range.first; it != range.second; ++it) {
-    if (it->second->vpn_ == vpn && it->second->archmem_ == archmem) {
+  for (auto it = range.first; it != range.second; ++it)
+  {
+    if (it->second->vpn_ == vpn && it->second->archmem_ == archmem)
+    {
       debug(IPT, "IPTManager::lookupEntryInRAM: Entry found in RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
       return it->second;
     }
