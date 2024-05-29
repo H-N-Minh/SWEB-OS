@@ -27,6 +27,7 @@ class SwappingManager
   void enqueuePageForPreSwap(size_t ppn);
   void performPreSwap();
   size_t getPreSwapQueueSize();
+  void swapOutPageContent(size_t ppn);
 
   private:
     static SwappingManager* instance_;
