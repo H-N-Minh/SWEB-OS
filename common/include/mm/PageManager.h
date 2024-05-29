@@ -52,6 +52,17 @@ class PageManager
      */
     void freePPN(uint32 page_number, uint32 page_size = PAGE_SIZE);
 
+    /**
+     * preallocate pages so allocPPN is not called while holding a lock
+    */
+    ustl::vector<uint32> preAlocatePages(int needed_pages_count);
+
+    /**
+     * free preallocated pages, if theres any left that was not used
+    */
+    void releaseNotNeededPages(ustl::vector<uint32>& not_used_pages);
+    size_t getPreAlocatedPage(ustl::vector<uint32>& pre_alocated_pages);
+
     Thread* heldBy()
     {
       return page_manager_lock_.heldBy();
@@ -74,6 +85,7 @@ class PageManager
     uint32 getReferenceCount(uint64 page_number);
 
 
+
  
   private:
     bool reservePages(uint32 ppn, uint32 num = 1);
@@ -92,6 +104,4 @@ class PageManager
     size_t HEAP_PAGES;
 
     inline static int possible_ppn_ = 1009; //TODOs:not atomic and bad
-
-    size_t findPageToSwapOut();
 };

@@ -11,6 +11,7 @@
 #include "Bitmap.h"
 #include "ArchThreads.h"
 #include "SwappingManager.h"
+#include "SwappingThread.h"
 
 PageManager pm;
 
@@ -226,13 +227,20 @@ bool PageManager::reservePages(uint32 ppn, uint32 num)
   return false;
 }
 
+
+
 /**
  * @class PageManager
  * @brief Manages physical pages in the SWEB operating system
  */
 uint32 PageManager::allocPPN(uint32 page_size)
 {
-  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
+  if (currentThread->holding_lock_list_)
+  {
+    debug(PM, "PageManager::allocPPN: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
+    assert(!currentThread->holding_lock_list_ && "allocPPN should not be called while still holding a lock\n");
+  }
+  
   uint32 p;
   uint32 found = 0;
   assert((page_size % PAGE_SIZE) == 0);
@@ -253,10 +261,23 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
   if (found == 0)
   {
-    size_t ppn = findPageToSwapOut(); //TODOs!!!!!!!!!
-    SwappingManager::instance()->swapOutPage(ppn);
+    debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
+    SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+
+    swapper->orders_lock_.acquire();
+    swapper->orders_++;
+
+    while (swapper->free_pages_.empty())
+    {
+      swapper->orders_cond_.wait();
+    }
+    
+    size_t ppn = swapper->free_pages_.front();
+    swapper->free_pages_.erase(swapper->free_pages_.begin());
+    swapper->orders_lock_.release();
+
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
-    debug(PM, "PageManager::allocPPN: New ppn is %ld. (swapped in)\n", ppn);
+    debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
     return ppn;
     // assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
   }
@@ -405,18 +426,32 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
 }
 
 
-//TODO: At the moment it does nonesens
-size_t PageManager::findPageToSwapOut()
+ustl::vector<uint32> PageManager::preAlocatePages(int needed_pages_count)
 {
-  bool key_in_ipt = false;
-  while(!key_in_ipt)
+  ustl::vector<uint32> pre_alocated_pages;
+  for(int i = 0; i < needed_pages_count; i++)
   {
-    possible_ppn_++;    
-    if(possible_ppn_ > 2016)
-    {
-      possible_ppn_ = 1009;
-    }
-    key_in_ipt = IPTManager::instance()->KeyisInMap(possible_ppn_, IPTMapType::RAM_MAP);
+    uint32 ppn = allocPPN();
+    pre_alocated_pages.push_back(ppn);
   }
-  return possible_ppn_;
+  return pre_alocated_pages;
 }
+
+void PageManager::releaseNotNeededPages(ustl::vector<uint32>& not_used_pages)
+{
+  for(auto& ppn : not_used_pages)
+  {
+    freePPN(ppn);
+  }
+  not_used_pages.clear();
+}
+
+size_t PageManager::getPreAlocatedPage(ustl::vector<uint32>& pre_alocated_pages)
+{
+  assert(pre_alocated_pages.size() != 0 && "No more page available");
+  uint32 ppn = pre_alocated_pages.back();
+  pre_alocated_pages.pop_back();
+  debug(PM, "PageManager::getPreAlocatedPage: Return ppn %d.\n", ppn);
+  return ppn;
+}
+

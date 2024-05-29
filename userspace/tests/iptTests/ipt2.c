@@ -2,6 +2,7 @@
 #include "pthread.h"
 #include "assert.h"
 #include "unistd.h"
+#include "sched.h"
 #include "nonstd.h"
 
 #define MEGABYTE 1048576
@@ -17,30 +18,30 @@
 
 size_t big_array[ELEMENTS_IN_ARRAY];  //5 Megabyes
 
+
+
 //Trigger out of memory
 int ipt2()
 {
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    // if(i == 1000)
-    // {
-    //   break;
-    // }
     big_array[i * (PAGESIZE / 8)] = (size_t)i;
+    if (i%100 == 0)
+    {
+      assertIPT();
+    }
+    
   }
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     assert(big_array[i * (PAGESIZE / 8)] == i);
+    if (i%100 == 0)
+    {
+      assertIPT();
+    }
+    
   }
-
-  // for(int i = 0; i < PAGES_IN_ARRAY; i++)
-  // {
-  //   printf("%ld\n", (size_t)big_array[i * (PAGESIZE / 8)]);
-  // }
-
-
-
 
   return 0;
 }
