@@ -409,9 +409,15 @@ uint32 PageManager::getReferenceCount(uint64 page_number)
 //TODO: At the moment it does nonesens
 size_t PageManager::findPageToSwapOut()
 {
+  int counter = 0;
   bool key_in_ipt = false;
   while(!key_in_ipt)
   {
+    counter++;
+    if(counter == 2000)
+    {
+      assert(0 && "No page to swap out\n");
+    }
     possible_ppn_++;    
     if(possible_ppn_ > 2016)
     {

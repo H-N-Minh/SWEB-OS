@@ -21,7 +21,7 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
 }
 
 
-void* UserSpaceMemoryManager::sbrk(ssize_t size)
+void* UserSpaceMemoryManager::sbrk(ssize_t size, ustl::vector<size_t>& ppns)
 {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd).\n", size);
 
@@ -55,7 +55,7 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
         debug(SBRK, "%zx != %zx\n", old_top_vpn, new_top_vpn);
         old_top_vpn++;
 
-        size_t new_page = PageManager::instance()->allocPPN(); //TODOs: use preallocated ppn
+        size_t new_page = PageManager::instance()->getPreAlocatedPage(ppns);
         if(unlikely(new_page == 0))
         {
           debug(SBRK, "UserSpaceMemoryManager::sbrk: FATAL ERROR, no more physical memory\n");
@@ -66,12 +66,11 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
         debug(SBRK, "kbsrk: map %zx -> %zx\n", old_top_vpn, new_page);
         void* new_page_ptr = (void*) ArchMemory::getIdentAddressOfPPN(new_page);
         memset(new_page_ptr, 0 , PAGE_SIZE);
-        ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);   //TODOs: should not be when holding a lock
 
         IPTManager::instance()->IPT_lock_.acquire();
         loader_->arch_memory_.archmemory_lock_.acquire();
 
-        bool successly_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1, ppns);  //TODOs: need preallocated pages
+        bool successly_mapped = loader_->arch_memory_.mapPage(old_top_vpn, new_page, 1, ppns);
 
         loader_->arch_memory_.archmemory_lock_.release();
         IPTManager::instance()->IPT_lock_.release();
@@ -118,7 +117,7 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
 }
 
 
-int UserSpaceMemoryManager::brk(size_t new_break_addr)
+int UserSpaceMemoryManager::brk(size_t new_break_addr, ustl::vector<size_t>& ppns)
 {
   assert(current_break_lock_.heldBy() == currentThread && "Currentbreak needs to be locked");
 
@@ -131,7 +130,7 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   }
 
   ssize_t size = new_break_addr - current_break_;
-  void* resevered_space = sbrk(size);
+  void* resevered_space = sbrk(size, ppns);
   if (resevered_space == (void*)-1)
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: FATAL ERROR, could not set new break at address (%zx)\n", new_break_addr);
@@ -330,7 +329,7 @@ size_t UserSpaceMemoryManager::bytesNeededForMemoryBlock(size_t size)
   return size + sizeof(MemoryBlock) + sizeof(char);
 }
 
-int UserSpaceMemoryManager::allocateMemoryWithSbrk(size_t bytes_needed)
+int UserSpaceMemoryManager::allocateMemoryWithSbrk(size_t bytes_needed, ustl::vector<size_t>& ppns)
 {
   size_t pages_needed = (bytes_needed / (PAGE_SIZE + 1)) + 1;
   free_bytes_left_on_page_ =  PAGE_SIZE - (bytes_needed % PAGE_SIZE);
@@ -340,7 +339,7 @@ int UserSpaceMemoryManager::allocateMemoryWithSbrk(size_t bytes_needed)
     free_bytes_left_on_page_ = 0;
   }
 
-  void* rv = (void*)sbrk((ssize_t)(pages_needed * PAGE_SIZE));
+  void* rv = (void*)sbrk((ssize_t)(pages_needed * PAGE_SIZE), ppns);
   if(rv == (void*)-1)
   {
     return -1;
@@ -389,6 +388,7 @@ void UserSpaceMemoryManager::unlock()
   current_break_lock_.release();
 }
 
+
 void* UserSpaceMemoryManager::malloc(size_t size)
 {
   if(size == 0)
@@ -396,17 +396,19 @@ void* UserSpaceMemoryManager::malloc(size_t size)
     return NULL;
   }
 
+  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(0);  //TODOs release
+
   lock();  //TODOs: probably a little bit of overlocking - dont think i need to hold archmemory all the time ??
-  if(first_malloc_call)
+  if(first_malloc_call) //TODOs make check atomic
   {
-    heap_start__ = (MemoryBlock*)sbrk(0);
+    heap_start__ = (MemoryBlock*)sbrk(0, ppns);
     first_malloc_call = false;
   }
 
   if(!first_memory_block_)
   {
     size_t bytes_needed = bytesNeededForMemoryBlock(size);
-    int rv = allocateMemoryWithSbrk(bytes_needed);
+    int rv = allocateMemoryWithSbrk(bytes_needed, ppns);
     if(rv == -1)
     {
       unlock();
@@ -462,7 +464,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
         else
         {
           size_t bytes_needed = bytesNeededForMemoryBlock(size) - free_bytes_left_on_page_;
-          int rv = allocateMemoryWithSbrk(bytes_needed);
+          int rv = allocateMemoryWithSbrk(bytes_needed, ppns);
           if(rv == -1)
           {
             unlock();
@@ -483,8 +485,9 @@ void* UserSpaceMemoryManager::malloc(size_t size)
         next_memory_block = next_memory_block->next_;
       }
     }
-    unlock();
   }
+  unlock();
+  return NULL;
 }
 
 
@@ -494,6 +497,8 @@ void UserSpaceMemoryManager::free(void *ptr)
   {
     return;
   }
+
+  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(0);  //TODOs release
 
   lock();
   MemoryBlock* element_to_free = (MemoryBlock*)ptr - 1;
@@ -531,7 +536,7 @@ void UserSpaceMemoryManager::free(void *ptr)
   if(used_block_counts_ == 0)
   {
     free_bytes_left_on_page_ = 0;
-    int rv = brk((size_t)first_memory_block_);
+    int rv = brk((size_t)first_memory_block_, ppns);
     if(rv != 0)
     {
       unlock();

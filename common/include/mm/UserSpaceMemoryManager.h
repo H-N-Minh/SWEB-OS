@@ -42,13 +42,13 @@ class UserSpaceMemoryManager
      * @param size the amount to adjust the brk by (can be positive or negative)
      * @return pointer to the reserved space, else return 0 on failure
     */
-    void* sbrk(ssize_t size);
+    void* sbrk(ssize_t size, ustl::vector<size_t>& ppns);
 
     /**
      * set the address of brk to a fixed address
      * @return 0 on success, else return -1
     */
-    int brk(size_t new_break_addr);
+    int brk(size_t new_break_addr,ustl::vector<size_t>& ppns);
 
     /**
      * check if the address is a valid growing stack address
@@ -101,7 +101,7 @@ class UserSpaceMemoryManager
     void* malloc(size_t size);
 
     size_t bytesNeededForMemoryBlock(size_t size);
-    int allocateMemoryWithSbrk(size_t bytes_needed);
+    int allocateMemoryWithSbrk(size_t bytes_needed, ustl::vector<size_t>& ppns);
     void createNewMemoryBlock(MemoryBlock* memory_block, size_t size, bool is_free, void* address, MemoryBlock* next);
     void addOverflowProtection(MemoryBlock* memory_block);
     bool checkOverflowProtection(MemoryBlock* memory_block);

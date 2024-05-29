@@ -19,7 +19,7 @@ char const *user_progs[] = {
 
 //Fork/Exec -------------------------------------------------------------------
                             // "/usr/waitpidTests.sweb",                
-                            "/usr/forkTests.sweb",
+                            // "/usr/forkTests.sweb",
 
                             // "/usr/fork7.sweb",
                             // "/usr/fork8.sweb",
@@ -32,7 +32,7 @@ char const *user_progs[] = {
 
 // UserSpace Memory -------------------------------------------------
                             // "/usr/growingStackTests.sweb",
-                            // "/usr/mallocTests.sweb",
+                            "/usr/mallocTests.sweb",
 
 // Userspace Locking -------------------------------------------------
                             // "/usr/condTests.sweb",

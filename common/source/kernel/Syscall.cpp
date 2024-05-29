@@ -196,12 +196,26 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
   debug(SBRK, "Syscall::brkMemory: brk called with address %p. Checking if addr is valid \n", (void*) new_brk_addr);
 
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+  size_t heap_start = heap_manager->heap_start_;
+
+  if (new_brk_addr > MAX_HEAP_SIZE || new_brk_addr < heap_start)
+  {
+    debug(SBRK, "Syscall::brkMemory: address %p is not within heap segment\n", (void*) new_brk_addr);
+    return -1;
+  }
 
 
   heap_manager->current_break_lock_.acquire();
-  int successly_brk = heap_manager->brk(new_brk_addr);
+  size_t current_brk_addr = heap_manager->current_break_;
+  size_t size = (new_brk_addr > current_brk_addr) ? new_brk_addr - current_brk_addr : 0;
+  size_t max_needed_pages = ((size / PAGE_SIZE) + 5) * 4;  //TODOs check that still valid
+  kprintf("max_needed_pages %ld\n", max_needed_pages);
+  heap_manager->current_break_lock_.release(); 
+  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(max_needed_pages);  //TODOs release
+  heap_manager->current_break_lock_.acquire();
+  int successly_brk = heap_manager->brk(new_brk_addr, ppns);
   heap_manager->current_break_lock_.release();
-
+  PageManager::instance()-> releaseNotNeededPages(ppns);
   return successly_brk;
 }
 
@@ -212,10 +226,23 @@ size_t Syscall::sbrkMemory(ssize_t size)
 
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
 
-
   heap_manager->current_break_lock_.acquire();
-  void* old_break = heap_manager->sbrk(size);
+  size_t potential_new_break = heap_manager->current_break_ + size;
+  size_t heap_start = heap_manager->heap_start_;
+  if (potential_new_break > MAX_HEAP_SIZE || potential_new_break < heap_start)
+  {
+    heap_manager->current_break_lock_.release(); 
+    debug(SBRK, "Syscall::sbrk: size %zd is too big\n", size);
+    return -1;
+  }
+  heap_manager->current_break_lock_.release(); 
+
+  size_t max_needed_pages = ((size / PAGE_SIZE) + 1) * 4;
+  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(max_needed_pages); //TODOs release
+  heap_manager->current_break_lock_.acquire();
+  void* old_break = heap_manager->sbrk(size, ppns);
   heap_manager->current_break_lock_.release();
+  PageManager::instance()-> releaseNotNeededPages(ppns);
 
   return (size_t)old_break;
 }
