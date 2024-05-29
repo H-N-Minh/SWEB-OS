@@ -132,7 +132,7 @@ size_t IPTManager::findPageToSwapOut()
       ppn_retval = min_ppns[random_index];
     }
 
-    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%zu, counter=%d\n", ppn_retval, min_counter);
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%d, counter=%d\n", ppn_retval, min_counter);
   }
 
   assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
@@ -208,8 +208,6 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in map\n");
   }
   
-  // checking is swap_meta_data_ is in sync with the ram_map_. This is not necessary and slow down the system, but it is good for debugging
-  checkSwapMetaDataConsistency();
   
   debug(IPT, "IPTManager::removeEntryIPT: Entry found in map %s, seems valid. Removing\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   
@@ -245,6 +243,11 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   }
 
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
+
+  // checking is swap_meta_data_ is in sync with the ram_map_. This is not necessary and slow down the system, but it is good for debugging
+  checkRamMapConsistency();
+  checkDiskMapConsistency();
+  checkSwapMetaDataConsistency();
 }
 
 ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
@@ -444,7 +447,6 @@ void IPTManager::checkDiskMapConsistency()
     entry_arch->archmemory_lock_.release();
   }
 }
-
 
 void IPTManager::checkSwapMetaDataConsistency()
 {
