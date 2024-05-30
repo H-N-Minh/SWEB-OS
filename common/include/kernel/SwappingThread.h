@@ -16,6 +16,7 @@ class SwappingThread : public Thread
     virtual void Run();
   
     void swapPageOut();
+    void swap10PagesOut();
 
     Mutex orders_lock_;
     Condition orders_cond_;

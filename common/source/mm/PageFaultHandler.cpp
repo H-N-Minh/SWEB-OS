@@ -18,7 +18,7 @@ extern "C" void arch_contextSwitch();
 
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
 
-const size_t PRE_SWAP_QUEUE_THRESHOLD = 4; //not sure if necessary and might need replacement
+
 
 inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
                                                     bool present, bool switch_to_us)
@@ -106,16 +106,6 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     {
       currentThread->loader_->loadPage(address, preallocated_pages);
       current_archmemory.archmemory_lock_.release();
-    }
-    // Enqueue the page for pre swapping
-    SwappingManager::instance()->enqueuePageForPreSwap(address / PAGE_SIZE);
-    debug(PRESWAPPING, "PageFaultHandler::handlePageFault: Enqueued page %p for pre swapping\n", (void*)address);
-
-    // Perform pre swapping if queue is full
-    if (SwappingManager::instance()->getPreSwapQueueSize() >= PRE_SWAP_QUEUE_THRESHOLD)
-    {
-      debug(PRESWAPPING, "PageFaultHandler::handlePageFault: Performing pre swapping\n");
-      SwappingManager::instance()->performPreSwap();
     }
     IPTManager::instance()->IPT_lock_.release();
 
