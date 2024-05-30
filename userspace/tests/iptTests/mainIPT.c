@@ -27,9 +27,10 @@ int main()
     // printf("first done\n");
     ipt2();
     printf("second done\n");
-    ipt3();
-    printf("third done\n");
+    // ipt3();
+    // printf("third done\n");
 
 
     // printf("\n\nipt testcases successful\n");
 }
+

@@ -79,22 +79,22 @@ UserProcess::UserProcess(const UserProcess& other)
 
   IPTManager::instance()->IPT_lock_.acquire();
   other.loader_->arch_memory_.archmemory_lock_.acquire();
-  int needed_ppns = other.loader_->arch_memory_.count_allocations();
+  int needed_preallocated_pages = other.loader_->arch_memory_.countArchmemPages();
   other.loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
-  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(needed_ppns + 10);
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(needed_preallocated_pages + 10);   // +10 for safety, not garanteed thats enough
 
 
   IPTManager::instance()->IPT_lock_.acquire();
   other.loader_->arch_memory_.archmemory_lock_.acquire();
-  int check_that_count_is_the_same = other.loader_->arch_memory_.count_allocations();  //TODOs
-  assert(needed_ppns + 10 > check_that_count_is_the_same);
-  loader_ = new Loader(*other.loader_, fd_, ppns);
+  int check_that_count_is_the_same = other.loader_->arch_memory_.countArchmemPages();  //TODOs
+  assert(needed_preallocated_pages + 10 > check_that_count_is_the_same);
+  loader_ = new Loader(*other.loader_, fd_, preallocated_pages);
   other.loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
   if (!loader_){assert(0 && "No loader in fork");}
 
-  PageManager::instance()-> releaseNotNeededPages(ppns);
+  PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
 
   user_mem_manager_ = new UserSpaceMemoryManager(loader_);
 
@@ -389,20 +389,20 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
   
   //map the argument page(s)
-  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(8);
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(8);
   IPTManager::instance()->IPT_lock_.acquire();
   loader_->arch_memory_.archmemory_lock_.acquire();
-  bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1, ppns);
+  bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 2 , page_for_args, 1, preallocated_pages);
   assert(vpn_mapped &&  "Virtual page already mapped.");
   if(next_page_for_args)
   {
-    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 , next_page_for_args, 1, ppns);
+    bool vpn_mapped = loader_->arch_memory_.mapPage(USER_BREAK / PAGE_SIZE - 1 , next_page_for_args, 1, preallocated_pages);
     assert(vpn_mapped && "Virtual page already mapped.");
 
   }
   loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
-  PageManager::instance()-> releaseNotNeededPages(ppns);
+  PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   return 0;
 }
 

@@ -152,6 +152,14 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_calloc:
       return_value = (size_t)calloc(arg1, arg2);
+    case sc_assertIPT:
+      assertIPT();
+      break;
+    case sc_setPRA:
+      setPraType(arg1);
+      break;
+    case sc_getPRAstats:
+      return_value = getPRAstats((int*)arg1, (int*)arg2);
       break;
     default:
       return_value = -1;
@@ -849,4 +857,41 @@ void Syscall::getIPTInfos()
      kprintf("%s", lines[i].c_str());
   }
   kprintf("\n\n");
+}
+
+void Syscall::assertIPT()
+{
+  auto* ipt = IPTManager::instance();
+  ipt->IPT_lock_.acquire();
+
+  debug(SYSCALL, "Syscall::assertIPT: Checking validity of ram map, disk map, swap metadata\n");
+  ipt->checkRamMapConsistency();
+  ipt->checkDiskMapConsistency();
+  ipt->checkSwapMetaDataConsistency();
+  debug(SYSCALL, "Syscall::assertIPT: All IPT looks good\n");
+
+  ipt->IPT_lock_.release();
+}
+
+void Syscall::setPraType(size_t type)
+{
+  debug(SYSCALL, "Syscall::setPraType: Setting PRA type to %s\n", type == 0 ? "RANDOM" : "NFU");
+  IPTManager* ipt = IPTManager::instance();
+  ipt->IPT_lock_.acquire();
+  ipt->pra_type_ = type? PRA_TYPE::NFU : PRA_TYPE::RANDOM;
+  ipt->IPT_lock_.release();
+}
+
+int Syscall::getPRAstats(int* hit_count, int* miss_count)
+{
+  if(!check_parameter((size_t)hit_count, false) || !check_parameter((size_t)miss_count, false))
+  {
+    debug(USERTHREAD, "Syscall::getPRAstats. Invalid pointers given to store the pra stats\n");
+    return -1;
+  }
+  SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+  *hit_count = swapper->getHitCount();
+  *miss_count = swapper->getMissCount();
+
+  return 0;
 }

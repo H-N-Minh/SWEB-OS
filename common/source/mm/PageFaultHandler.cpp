@@ -68,31 +68,46 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   ArchThreads::printThreadRegisters(currentThread, false);
 
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
-   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
-  assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
 
-  // if (currentThread->holding_lock_list_)
+
+  // if (currentThread->holding_lock_list_)                 //TODOs comment out
   // {
   //   debug(PAGEFAULT, "PageFaultHandler::handlePageFault: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
   //   assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
   // }
-
-  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
+  assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // loadPage() needs 4 and swapInPage needs 1. //TODOs make sure that it gets freed in all cases
+
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
 
-    //Page got set to present in the meantime
+    //Page got set to present in the meantime, so no need to do anything anymore
     if(current_archmemory.isPresent(address))
     {
+      current_archmemory.archmemory_lock_.release();
     }
     //Page is swapped out
     else if(current_archmemory.isSwapped(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
+      size_t vpn = address / PAGE_SIZE;
+      if(ASYNCHRON)
+      {
+      ArchMemory& archmemory = currentThread->loader_->arch_memory_;
+      size_t disk_offset = archmemory.getDiskLocation(vpn);  
+      
+      current_archmemory.archmemory_lock_.release();      // should be fine to release, because we still holding IPT_lock
+      SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
+      }
+      else
+      {
+        SwappingManager::instance()->swapInPage(vpn, preallocated_pages);
+        current_archmemory.archmemory_lock_.release(); 
+      }
     }
     //Page is on heap
     else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)  //TODOs needs to be locked
@@ -101,28 +116,44 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       size_t vpn = address / PAGE_SIZE;
       bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, ppns);
       assert(rv == true);
+      current_archmemory.archmemory_lock_.release();
     }
     //Page needs to be loader from binary 
     else
     {
-      currentThread->loader_->loadPage(address, ppns);
+      currentThread->loader_->loadPage(address, preallocated_pages);
+      current_archmemory.archmemory_lock_.release();
     }
-    current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
+    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   }
   else if (status == PRESENT)
   {
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // copyPage() and swapInPage each only needs 1 alloc
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
     //Page is not present anymore we need to swap it in
     if(!current_archmemory.isPresent(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
+      size_t vpn = address / PAGE_SIZE;
+      if(ASYNCHRON)
+      {
+        ArchMemory& archmemory = currentThread->loader_->arch_memory_;
+        size_t disk_offset = archmemory.getDiskLocation(vpn);  
+      
+        current_archmemory.archmemory_lock_.release();      // should be fine to release, because we still holding IPT_lock
+        SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
+        current_archmemory.archmemory_lock_.acquire();
+      }
+      else
+      {
+        SwappingManager::instance()->swapInPage(vpn, preallocated_pages);
+      }
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
     else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
     {
-      current_archmemory.copyPage(address, ppns);
+      current_archmemory.copyPage(address, preallocated_pages);
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
     else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
@@ -134,12 +165,14 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     {
       current_archmemory.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
-      PageManager::instance()-> releaseNotNeededPages(ppns);
+      PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
       errorInPageFaultKillProcess();
     }
     
     current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
+    
+    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
   // {
@@ -166,11 +199,9 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   // }
   else  //status INVALID
   {
-    PageManager::instance()-> releaseNotNeededPages(ppns);
     errorInPageFaultKillProcess();
   }
 
-  PageManager::instance()->releaseNotNeededPages(ppns);
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 

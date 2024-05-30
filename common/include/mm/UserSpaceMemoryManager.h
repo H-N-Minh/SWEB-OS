@@ -51,6 +51,11 @@ class UserSpaceMemoryManager
     int brk(size_t new_break_addr);
 
     /**
+     * helper func for sbrk
+    */
+    ustl::vector<uint32> preallocate_pages_for_sbrk(ssize_t size, size_t new_break_addr = 0);
+
+    /**
      * check if the address is a valid growing stack address
      * @param address the address to check
      * @return 1 if the address is valid, 11 if its a segment fault, else return 0.

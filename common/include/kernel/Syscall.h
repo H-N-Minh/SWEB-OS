@@ -75,6 +75,20 @@ public:
   static void* malloc(size_t size);
   static void free(void* ptr);
   static void* calloc(size_t nmemb, size_t size);
+  /**
+   * check if the ppn of all archmem matches the IPT, and opposite
+  */
+  static void assertIPT();
+
+  /**
+   * set the page replacement algorithm. 0: random, 1: NFU
+  */
+  static void setPraType(size_t type);
+
+  /**
+   * get the statistics of PRA
+  */
+  static int getPRAstats(int* hit_count, int* miss_count);
 };
 
 

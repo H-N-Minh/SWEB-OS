@@ -194,7 +194,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize called with address (%zx)\n", address);
 
   // Quick check to see if the address is (somewhat) valid
-  // size_t top_this_page = getTopOfThisPage(address);
+  size_t top_this_page = getTopOfThisPage(address);
   size_t top_this_stack = getTopOfThisStack(address);
   assert(top_this_stack != 0 && "UserSpaceMemoryManager::increaseStackSize: guards are corrupted. Segfault!!");
   finalSanityCheck(address, top_this_stack);
@@ -202,17 +202,19 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
   
-  
-  // uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
-  //uint32 new_ppn = PageManager::instance()->getPreallocatedPPN(); //TODOs: lock ipt before arch memory
-  //bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true);
+  // TODO MINH: growing stack  now has broken locking because of new allocPPN rule
+  uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
+  uint32 new_ppn = PageManager::instance()->allocPPN(); //TODO MINH: this alloc and the prealloc below should be put outside locks
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(3); // for mapPage later
+  bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true, preallocated_pages);
+  PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 
-  // if (!page_mapped)
-  // {
-  //   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: could not map new page\n");
-  //   PageManager::instance()->freePPN(new_ppn);
-  //   return GROWING_STACK_FAILED;
-  // }
+  if (!page_mapped)
+  {
+    debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: could not map new page\n");
+    PageManager::instance()->freePPN(new_ppn);
+    return GROWING_STACK_FAILED;
+  }
 
   return GROWING_STACK_VALID;
 }
