@@ -3,6 +3,7 @@
 #include "SwappingManager.h"
 #include "Syscall.h"
 #include "ArchMemory.h"
+#include "PageManager.h"
 
 #define TIME_STEP 2 // in seconds
 #define CLOCKS_PER_SEC 1000000
@@ -17,7 +18,6 @@ SwappingThread::SwappingThread()
   
 }
 
-
 SwappingThread::~SwappingThread()
 {
   assert(false && "SwappingThread destruction means that you probably have accessed an invalid pointer somewhere.");
@@ -30,37 +30,51 @@ void SwappingThread::kill()
 
 void SwappingThread::Run()
 {
+  PageManager* pageManager = PageManager::instance();
+  IPTManager* ipt_manager = IPTManager::instance();
+
   while (1)
   {
-    // debug(MINH, "SwappingThread::Run: running\n");
-    orders_lock_.acquire();
-    assert(orders_ >= 0 && "SwappingThread::Run: number of orders is negative\n");
+    if (ipt_initialized_flag_)
+    {
+      if (isOneTimeStep())
+      {
+        updateMetaData();
+      }
 
-    if (isOneTimeStep())
-    {
-      updateMetaData();
-    }
-    
-    if (orders_ == 0)
-    {
-      orders_lock_.release();
-      Scheduler::instance()->yield();
+      uint32_t totalNumPages = pageManager->getTotalNumPages();
+      uint32_t usedNumPages = totalNumPages - pageManager->getNumFreePages();
+      uint32_t usedMemoryRatio = (usedNumPages * 100) / totalNumPages;
+
+      // 80% is the threshold for swapping -> can be changed
+      bool isMemoryNearLimit = usedMemoryRatio > 80;
+
+      ipt_manager->IPT_lock_.acquire();
+      bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
+      ipt_manager->IPT_lock_.release();
+
+      if (isMemoryNearLimit || free_pages_.size() < 20)
+      {
+        while (free_pages_.size() < 20 && thereAnyPageToSwapOut)
+        {
+          swap10PagesOut();
+        }
+      }
+      else
+      {
+        Scheduler::instance()->yield();
+      }
     }
     else
     {
-      assert(orders_ > 0 && "SwappingThread::Run: number of orders is <= 0\n");
-      swapPageOut();
-      orders_--;
-      orders_cond_.signal();
-      orders_lock_.release();
+      Scheduler::instance()->yield();
     }
   }
 }
 
+
 void SwappingThread::updateMetaData()
 {
-  assert(orders_lock_.isHeldBy((Thread*) currentThread) && "SwappingThread::updateMetaData: orders_lock_ is not held by currentThread\n");
- 
   if (!ipt_initialized_flag_)
   {
     return;
@@ -128,11 +142,41 @@ void SwappingThread::swapPageOut()
 {
   IPTManager* ipt_manager = IPTManager::instance();
   ipt_manager->IPT_lock_.acquire();
-  
-  size_t ppn = ipt_manager->findPageToSwapOut();
-  SwappingManager::instance()->swapOutPage(ppn);
-  free_pages_.push_back(ppn);
-  miss_count_++;
+
+  bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
+
+  if (thereAnyPageToSwapOut)
+  {
+    size_t ppn = ipt_manager->findPageToSwapOut();
+    SwappingManager::instance()->swapOutPage(ppn);
+    free_pages_.push_back(ppn);
+    miss_count_++;
+  }
+
+  ipt_manager->IPT_lock_.release();
+}
+
+void SwappingThread::swap10PagesOut()
+{
+  IPTManager* ipt_manager = IPTManager::instance();
+  ipt_manager->IPT_lock_.acquire();
+
+  for(int i=0; i<10; i++)
+  {
+    if(free_pages_.size() >= 20)
+    {
+      // if free_pages_ already has 20 pages, we break the loop early
+      break;
+    }
+    bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
+    if (thereAnyPageToSwapOut)
+    {
+      size_t ppn = ipt_manager->findPageToSwapOut();
+      SwappingManager::instance()->swapOutPage(ppn);
+      free_pages_.push_back(ppn);
+      miss_count_++;
+    }
+  }
 
   ipt_manager->IPT_lock_.release();
 }

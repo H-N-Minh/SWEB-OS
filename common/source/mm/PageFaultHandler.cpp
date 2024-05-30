@@ -18,6 +18,8 @@ extern "C" void arch_contextSwitch();
 
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
 
+
+
 inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
                                                     bool present, bool switch_to_us)
 {
@@ -79,7 +81,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // loadPage() needs 4 and swapInPage needs 1. 
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // loadPage() needs 4 and swapInPage needs 1.
 
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
@@ -94,12 +96,12 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     {
       size_t vpn = address / PAGE_SIZE;
       ArchMemory& archmemory = currentThread->loader_->arch_memory_;
-      size_t disk_offset = archmemory.getDiskLocation(vpn);  
-      
+      size_t disk_offset = archmemory.getDiskLocation(vpn);
+
       current_archmemory.archmemory_lock_.release();      // should be fine to release, because we still holding IPT_lock
       SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
     }
-    //Page needs to be loader from binary 
+    //Page needs to be loader from binary
     else
     {
       currentThread->loader_->loadPage(address, preallocated_pages);
@@ -137,10 +139,10 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
       errorInPageFaultKillProcess();
     }
-    
+
     current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
-    
+
     PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   }
   // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later

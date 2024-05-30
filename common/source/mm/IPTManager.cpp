@@ -519,3 +519,36 @@ void IPTManager::checkSwapMetaDataConsistency()
     }
   }
 }
+
+bool IPTManager::isThereAnyPageToSwapOut()
+{
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::isThereAnyPageToSwapOut called but IPT not locked\n");
+
+  if (pra_type_ == PRA_TYPE::RANDOM)
+  {
+    ustl::vector<ppn_t> unique_keys = getUniqueKeysInRamMap();
+
+    if (!unique_keys.empty()) {
+      return true;
+    }
+  }
+  else if (pra_type_ == PRA_TYPE::NFU)
+  {
+    uint32 min_counter = UINT32_MAX;
+
+    for(auto& pair : swap_meta_data_)
+    {
+      uint32 counter = pair.second;
+      if (counter < min_counter)
+      {
+        min_counter = counter;
+      }
+    }
+
+    if (min_counter < UINT32_MAX) {
+      return true;
+    }
+  }
+
+  return false;
+}

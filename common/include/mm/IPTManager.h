@@ -130,6 +130,8 @@ public:
    * Debug func, check if the swap_meta_data_ is in sync with disk_map_
   */
   void debugRandomGenerator();
+  
+  bool isThereAnyPageToSwapOut();
 
 
   private:
@@ -137,5 +139,4 @@ public:
 
     int pages_in_ram_ = 0;  //TODOs: at the moment also increases when shared
     int pages_on_disk_ = 0;  //TODOs: at the moment also increases when shared
-  
 };

@@ -4,6 +4,7 @@
 #include "BDManager.h"
 
 #include "IPTManager.h"
+#include "uqueue.h"
 
 class IPTEntry;
 class SwappingManager
@@ -27,12 +28,20 @@ class SwappingManager
     // locking order: Ipt -> disk -> archmem
     Mutex disk_lock_;
 
+  void enqueuePageForPreSwap(size_t ppn);
+  void performPreSwap();
+  size_t getPreSwapQueueSize();
+  void swapOutPageContent(size_t ppn);
+
   private:
     static SwappingManager* instance_;
     IPTManager* ipt_;
 
     BDVirtualDevice* bd_device_;
 
+    static int disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
+    ustl::queue<size_t> pre_swap_queue_;
+    Mutex pre_swap_lock_;
     static size_t disk_offset_counter_;    //TODO? this only goes up, so disk page is never reused
 
     int total_disk_reads_ = 0;

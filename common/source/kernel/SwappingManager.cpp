@@ -8,7 +8,7 @@
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
 
-SwappingManager::SwappingManager() : disk_lock_("disk_lock_")
+SwappingManager::SwappingManager() : disk_lock_("disk_lock_"), pre_swap_lock_("pre_swap_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -172,8 +172,3 @@ int SwappingManager::getDiskReads()
 {
   return total_disk_reads_;
 }
-
-
-
-
-
