@@ -73,7 +73,7 @@ public:
   static void getIPTInfos();
 
   /**
-   * check if the ppn of all archmem matches the IPT, and opposite
+   * debug syscall check if the ppn of all archmem matches the IPT, and opposite
   */
   static void assertIPT();
 
@@ -86,6 +86,11 @@ public:
    * get the statistics of PRA
   */
   static int getPRAstats(int* hit_count, int* miss_count);
+
+  /**
+   * debug syscall print the result of random PRA
+  */
+  static void checkRandomPRA();
 };
 
 

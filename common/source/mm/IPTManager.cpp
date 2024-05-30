@@ -46,18 +46,53 @@ size_t randomNumGenerator()
 }
 
 // only for debugging, used to see if the random number generator is working
-void debugRandomGenerator()
+void IPTManager::debugRandomGenerator()
 {
-  ustl::vector<size_t> randomNumbers;
-  for (int i = 0; i < 1024; ++i) {
-    size_t randomNumber = randomNumGenerator();
-    randomNumbers.push_back(randomNumber);
-  }
-  for (int i = 0; i < 1024; i++)
+  ustl::map<int, int> myMap;
+
+  for (size_t i = 0; i < 2000000; i++)
   {
-    debug(MINH, "random num is %zu\n", randomNumbers[i] % 1024);
+    size_t randomNum = randomNumGenerator();
+    int randomNum_resized = randomNum % 1024;
+    if (myMap.find(randomNum_resized) != myMap.end())
+    {
+      myMap[randomNum_resized]++;
+    }
+    else
+    {
+      myMap[randomNum_resized] = 1;
+    }
   }
-  assert(0);
+  
+  ustl::vector<ustl::pair<int, int>> numberPairs;
+  for (const auto& pair : myMap) {
+    numberPairs.push_back(pair);
+  }
+  struct Compare {
+    bool operator()(const ustl::pair<int, int>& a, const ustl::pair<int, int>& b) {
+      return a.second < b.second;
+    }
+  };
+  ustl::sort(numberPairs.begin(), numberPairs.end(), Compare());
+
+  debug(MINH, "\n\nsort by number of time showing up\n");
+  for (const auto& pair : numberPairs)
+  {
+    debug(MINH, "number: %d, count: %d\n", pair.first, pair.second);
+  }
+
+  struct Compare2 {
+    bool operator()(const ustl::pair<int, int>& a, const ustl::pair<int, int>& b) {
+      return a.first < b.first;
+    }
+  };
+  ustl::sort(numberPairs.begin(), numberPairs.end(), Compare2());
+
+  debug(MINH, "\n\nsort by value of generated number\n");
+  for (const auto& pair : numberPairs)
+  {
+    debug(MINH, "number: %d, count: %d\n", pair.first, pair.second);
+  }
 }
 
 ustl::vector<ppn_t> IPTManager::getUniqueKeysInRamMap()
@@ -80,7 +115,6 @@ size_t IPTManager::findPageToSwapOut()
   if (pra_type_ == PRA_TYPE::RANDOM)
   {
     debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
-    // debugRandomGenerator();    // for debugging purposes
 
     size_t random_num = randomNumGenerator();
     debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);

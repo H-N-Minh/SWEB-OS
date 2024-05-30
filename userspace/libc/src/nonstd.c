@@ -40,3 +40,8 @@ int getPRAstats(int* hit_count, int* miss_count)
 {
   return __syscall(sc_getPRAstats, (size_t) hit_count, (size_t) miss_count, 0x0, 0x0, 0x0);
 }
+
+int checkRandomPRA()
+{
+  return __syscall(sc_checkRandomPRA, 0x0, 0x0, 0x0, 0x0, 0x0);
+}

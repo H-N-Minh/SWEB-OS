@@ -34,8 +34,6 @@ int pra1()
     big_array1[i * (PAGESIZE / 8)] = (size_t)i;
   }
 
-  int switched_pra = 0;
-
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     assert(big_array1[i * (PAGESIZE / 8)] == i);

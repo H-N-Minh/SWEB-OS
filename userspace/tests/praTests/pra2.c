@@ -34,7 +34,6 @@ int pra2()
     big_array2[i * (PAGESIZE / 8)] = (size_t)i;
   }
 
-  int switched_pra = 0;
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {

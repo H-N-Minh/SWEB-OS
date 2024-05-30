@@ -126,6 +126,11 @@ public:
   */
   void checkSwapMetaDataConsistency();
 
+  /**
+   * Debug func, check if the swap_meta_data_ is in sync with disk_map_
+  */
+  void debugRandomGenerator();
+
 
   private:
     static IPTManager* instance_;

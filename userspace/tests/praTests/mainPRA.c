@@ -10,10 +10,12 @@
 extern int pra1();
 extern int pra2();
 extern int pra3();
+extern int random1();
 
 int PRA1 = 0;  
 int PRA2 = 0; 
 int PRA3 = 0;  
+int RANDOM1 = 0;
 
 // @problem: currently pra1 and pra2 cant be run together
 
@@ -25,7 +27,8 @@ int childMain()
     // comment out the tests you don't want to run
     // PRA1 = 1;   // Test Random PRA
     // PRA2 = 1;   // Test NFU PRA
-    PRA3 = 1;   // Test switching PRA using syscall
+    // PRA3 = 1;      // Test switching PRA every 100 pages using syscall
+    RANDOM1 = 1;  // Test Random PRA is actually random
 
     if (PRA1)
     {
@@ -49,6 +52,14 @@ int childMain()
         retval = pra3();
         if (retval == 0)                      { printf("===> pra3 successful!\n"); }
         else                                  { printf("===> pra3 failed!\n");  return -1;}
+    }
+
+    if (RANDOM1)
+    {
+        printf("\nTesting random1: testing Random PRA is actually random...\n");
+        retval = random1();
+        if (retval == 0)                      { printf("===> random1 successful!\n"); }
+        else                                  { printf("===> random1 failed!\n");  return -1;}
     }
 
 

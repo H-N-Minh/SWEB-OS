@@ -27,6 +27,7 @@ extern int getIPTInfos();
 extern int assertIPT();
 extern int setPRA(int pra);
 extern int getPRAstats(int* hit_count, int* miss_count);
+extern int checkRandomPRA();
 
 #ifdef __cplusplus
 }

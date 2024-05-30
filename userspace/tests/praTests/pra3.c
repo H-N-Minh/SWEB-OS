@@ -23,7 +23,13 @@ size_t big_array3[ELEMENTS_IN_ARRAY];  //5 Megabyes
 //change PRA in every 100 pages
 int pra3()
 {
-  setPRA(0);  // 0 for random pra, 1 for NFU
+  
+  int hit;
+  int miss;
+  getPRAstats(&hit, &miss);
+  printf("Random PRA: Hit: %d, Miss: %d (before test)\n", hit, miss);
+
+
   int counter = 0;
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
@@ -45,6 +51,8 @@ int pra3()
       counter++;
     }
   }
+  getPRAstats(&hit, &miss);
+  printf("Combination of NFU and Random: Hit: %d, Miss: %d (after test)\n", hit, miss);
 
   return 0;
 }

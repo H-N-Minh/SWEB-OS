@@ -153,6 +153,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_getPRAstats:
       return_value = getPRAstats((int*)arg1, (int*)arg2);
       break;
+    case sc_checkRandomPRA:
+      checkRandomPRA();
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -891,4 +894,10 @@ int Syscall::getPRAstats(int* hit_count, int* miss_count)
   *miss_count = swapper->getMissCount();
 
   return 0;
+}
+
+void Syscall::checkRandomPRA()
+{
+  IPTManager* ipt = IPTManager::instance();
+  ipt->debugRandomGenerator();
 }
