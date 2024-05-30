@@ -14,7 +14,8 @@ class SwappingThread : public Thread
     virtual ~SwappingThread();
     virtual void kill();
     virtual void Run();
-  
+
+    void swapPage();
     void swapPageOut();
     void swap10PagesOut();
 

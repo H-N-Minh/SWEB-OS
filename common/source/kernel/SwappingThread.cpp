@@ -138,11 +138,9 @@ bool SwappingThread::isOneTimeStep()
   return false;
 }
 
-void SwappingThread::swapPageOut()
+void SwappingThread::swapPage()
 {
   IPTManager* ipt_manager = IPTManager::instance();
-  ipt_manager->IPT_lock_.acquire();
-
   bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
 
   if (thereAnyPageToSwapOut)
@@ -152,6 +150,15 @@ void SwappingThread::swapPageOut()
     free_pages_.push_back(ppn);
     miss_count_++;
   }
+}
+
+//not used at the moment but for debugging or other reason still here
+void SwappingThread::swapPageOut()
+{
+  IPTManager* ipt_manager = IPTManager::instance();
+  ipt_manager->IPT_lock_.acquire();
+
+  swapPage();
 
   ipt_manager->IPT_lock_.release();
 }
@@ -161,22 +168,8 @@ void SwappingThread::swap10PagesOut()
   IPTManager* ipt_manager = IPTManager::instance();
   ipt_manager->IPT_lock_.acquire();
 
-  for(int i=0; i<10; i++)
-  {
-    if(free_pages_.size() >= 20)
-    {
-      // if free_pages_ already has 20 pages, we break the loop early
-      break;
-    }
-    bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
-    if (thereAnyPageToSwapOut)
-    {
-      size_t ppn = ipt_manager->findPageToSwapOut();
-      SwappingManager::instance()->swapOutPage(ppn);
-      free_pages_.push_back(ppn);
-      miss_count_++;
-    }
-  }
+  for(int i=0; i<10 && free_pages_.size() < 20; i++)
+    swapPage();
 
   ipt_manager->IPT_lock_.release();
 }
