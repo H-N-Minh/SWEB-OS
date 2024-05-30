@@ -126,11 +126,12 @@ public:
   */
   void checkSwapMetaDataConsistency();
 
+  bool isThereAnyPageToSwapOut();
+
 
   private:
     static IPTManager* instance_;
 
     int pages_in_ram_ = 0;  //TODOs: at the moment also increases when shared
     int pages_on_disk_ = 0;  //TODOs: at the moment also increases when shared
-  
 };

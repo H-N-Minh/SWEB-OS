@@ -31,6 +31,7 @@ void SwappingThread::kill()
 void SwappingThread::Run()
 {
   PageManager* pageManager = PageManager::instance();
+  IPTManager* ipt_manager = IPTManager::instance();
 
   while (1)
   {
@@ -48,9 +49,13 @@ void SwappingThread::Run()
       // 80% is the threshold for swapping -> can be changed
       bool isMemoryNearLimit = usedMemoryRatio > 80;
 
+      ipt_manager->IPT_lock_.acquire();
+      bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
+      ipt_manager->IPT_lock_.release();
+
       if (isMemoryNearLimit || free_pages_.size() < 20)
       {
-        while (free_pages_.size() < 20)
+        while (free_pages_.size() < 20 && thereAnyPageToSwapOut)
         {
           swap10PagesOut();
         }
@@ -138,10 +143,15 @@ void SwappingThread::swapPageOut()
   IPTManager* ipt_manager = IPTManager::instance();
   ipt_manager->IPT_lock_.acquire();
 
-  size_t ppn = ipt_manager->findPageToSwapOut();
-  SwappingManager::instance()->swapOutPage(ppn);
-  free_pages_.push_back(ppn);
-  miss_count_++;
+  bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
+
+  if (thereAnyPageToSwapOut)
+  {
+    size_t ppn = ipt_manager->findPageToSwapOut();
+    SwappingManager::instance()->swapOutPage(ppn);
+    free_pages_.push_back(ppn);
+    miss_count_++;
+  }
 
   ipt_manager->IPT_lock_.release();
 }
@@ -158,10 +168,14 @@ void SwappingThread::swap10PagesOut()
       // if free_pages_ already has 20 pages, we break the loop early
       break;
     }
-    size_t ppn = ipt_manager->findPageToSwapOut();
-    SwappingManager::instance()->swapOutPage(ppn);
-    free_pages_.push_back(ppn);
-    miss_count_++;
+    bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
+    if (thereAnyPageToSwapOut)
+    {
+      size_t ppn = ipt_manager->findPageToSwapOut();
+      SwappingManager::instance()->swapOutPage(ppn);
+      free_pages_.push_back(ppn);
+      miss_count_++;
+    }
   }
 
   ipt_manager->IPT_lock_.release();
