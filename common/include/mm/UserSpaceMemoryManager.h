@@ -32,7 +32,7 @@ class UserSpaceMemoryManager
     size_t heap_start_;
     Loader* loader_;
 
-    SpinLock current_break_lock_;   // used to protect current_break_
+    Mutex current_break_lock_;   // used to protect current_break_
 
     size_t totalUsedHeap();
 
@@ -109,9 +109,6 @@ class UserSpaceMemoryManager
     void free(void *ptr);
     void* calloc(size_t num_memb, size_t size_each);
 
-
-    void lock();
-    void unlock();
 };
 
 

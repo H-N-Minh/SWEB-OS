@@ -338,16 +338,6 @@ MemoryBlock* first_memory_block_ = NULL;
 MemoryBlock* heap_start__;
 
 
-void UserSpaceMemoryManager::lock()
-{
-  current_break_lock_.acquire();
-}
-
-void UserSpaceMemoryManager::unlock()
-{
-  current_break_lock_.release();
-}
-
 void* UserSpaceMemoryManager::malloc(size_t size)
 {
   if(size == 0)
@@ -355,7 +345,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
     return NULL;
   }
 
-  lock();  //TODOs: probably a little bit of overlocking - dont think i need to hold archmemory all the time ??
+  current_break_lock_.acquire();
   if(first_malloc_call) //TODOs make check atomic
   {
     heap_start__ = (MemoryBlock*)sbrk(0);
@@ -368,7 +358,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
     int rv = allocateMemoryWithSbrk(bytes_needed);
     if(rv == -1)
     {
-      unlock();
+      current_break_lock_.release();
       return NULL;
     }
 
@@ -376,7 +366,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
     createNewMemoryBlock(first_memory_block_, size, false, first_memory_block_ + 1, NULL);
     addOverflowProtection(first_memory_block_);
     used_block_counts_++;
-    unlock();
+    current_break_lock_.release();
     return first_memory_block_->address_;
   }
   else
@@ -386,7 +376,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
     {
       if(!checkOverflowProtection(next_memory_block))
       {
-        unlock();
+        current_break_lock_.release();
         Syscall::exit(-1);
       }
       if(next_memory_block->is_free_ && next_memory_block->size_ >= size)
@@ -408,7 +398,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
         }
         next_memory_block->is_free_ = false;
         used_block_counts_++;
-        unlock();
+        current_break_lock_.release();
         return next_memory_block->address_;
       }
       //last element of linked list reached
@@ -424,7 +414,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
           int rv = allocateMemoryWithSbrk(bytes_needed);
           if(rv == -1)
           {
-            unlock();
+            current_break_lock_.release();
             return NULL;
           }
         }
@@ -434,7 +424,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
         used_block_counts_++;
         next_memory_block->next_ = memory_block_new;
         
-        unlock();
+        current_break_lock_.release();
         return memory_block_new->address_;
       }
       else
@@ -442,7 +432,7 @@ void* UserSpaceMemoryManager::malloc(size_t size)
         next_memory_block = next_memory_block->next_;
       }
     }
-    unlock();
+    current_break_lock_.release();
   }
 }
 
@@ -454,12 +444,12 @@ void UserSpaceMemoryManager::free(void *ptr)
     return;
   }
 
-  lock();
+  current_break_lock_.acquire();
   MemoryBlock* element_to_free = (MemoryBlock*)ptr - 1;
   MemoryBlock* next = first_memory_block_;
   if(next == NULL)
   {
-    unlock();
+    current_break_lock_.release();
     Syscall::exit(-1);
   }
   MemoryBlock* element_before;
@@ -467,7 +457,7 @@ void UserSpaceMemoryManager::free(void *ptr)
   {
     if(*((char*)((size_t)next->address_ + next->size_)) != '|')
     {
-      unlock();
+      current_break_lock_.release();
       Syscall::exit(-1);
     }
     if(next->next_ == element_to_free)
@@ -478,12 +468,12 @@ void UserSpaceMemoryManager::free(void *ptr)
   }
   if(!element_before && element_to_free != first_memory_block_) //Check if element can be found in list
   {
-    unlock();
+    current_break_lock_.release();
     Syscall::exit(-1);
   }
   if(element_to_free->is_free_) //check if element is already free
   {
-    unlock();
+    current_break_lock_.release();
     Syscall::exit(-1);
   }
   used_block_counts_--;
@@ -493,11 +483,11 @@ void UserSpaceMemoryManager::free(void *ptr)
     int rv = brk((size_t)first_memory_block_);
     if(rv != 0)
     {
-      unlock();
+      current_break_lock_.release();
       Syscall::exit(-1);
     }
     first_memory_block_ = NULL;
-    unlock();
+    current_break_lock_.release();
     return;
   }
   element_to_free->is_free_ = true;
@@ -512,7 +502,7 @@ void UserSpaceMemoryManager::free(void *ptr)
     element_before->size_ = element_before->size_ + element_before->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
     element_before->next_ = element_before->next_->next_;
   }
-  unlock();
+  current_break_lock_.release();
 }
 
 
