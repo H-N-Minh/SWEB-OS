@@ -32,11 +32,6 @@ int pra1()
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     big_array1[i * (PAGESIZE / 8)] = (size_t)i;
-    if (i%100 == 0)
-    {
-      // assertIPT();
-    }
-    
   }
 
   int switched_pra = 0;
@@ -44,17 +39,6 @@ int pra1()
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     assert(big_array1[i * (PAGESIZE / 8)] == i);
-    if (i%100 == 0)
-    {
-      // assertIPT();
-    }
-    if (!switched_pra && i > 1000)
-    {
-      setPRA(1);
-      switched_pra = 1;
-    }
-    
-    
   }
   getPRAstats(&hit, &miss);
   printf("Random PRA: Hit: %d, Miss: %d (after test)\n", hit, miss);

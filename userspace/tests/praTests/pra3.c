@@ -20,36 +20,30 @@ size_t big_array3[ELEMENTS_IN_ARRAY];  //5 Megabyes
 
 
 
-//Trigger out of memory
-int pr3()
+//change PRA in every 100 pages
+int pra3()
 {
   setPRA(0);  // 0 for random pra, 1 for NFU
+  int counter = 0;
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     big_array3[i * (PAGESIZE / 8)] = (size_t)i;
     if (i%100 == 0)
     {
-      // assertIPT();
+      setPRA(counter % 2);
+      counter++;
     }
     
   }
-
-  int switched_pra = 0;
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     assert(big_array3[i * (PAGESIZE / 8)] == i);
     if (i%100 == 0)
     {
-      // assertIPT();
+      setPRA(counter % 2);
+      counter++;
     }
-    if (!switched_pra && i > 1000)
-    {
-      setPRA(1);
-      switched_pra = 1;
-    }
-    
-    
   }
 
   return 0;
