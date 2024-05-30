@@ -13,7 +13,6 @@
 #include "SwappingManager.h"
 #include "SwappingThread.h"
 
-#define ASYNCHRON 1
 
 PageManager pm;
 
@@ -264,6 +263,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
   if (found == 0)
   {
     debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
+    size_t ppn = 0;
     if(ASYNCHRON)
     {
       SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
@@ -276,15 +276,15 @@ uint32 PageManager::allocPPN(uint32 page_size)
         swapper->orders_cond_.wait();
       }
     
-      size_t ppn = swapper->free_pages_.front();
+      ppn = swapper->free_pages_.front();
       swapper->free_pages_.erase(swapper->free_pages_.begin());
       swapper->orders_lock_.release();  
     }
     else
     {
       IPTManager::instance()->IPT_lock_.acquire();
-      size_t ppn = IPTManager::instance()->findPageToSwapOut();
-      SwappingManager::instance()->swapOutPage(ppn);
+      ppn = IPTManager::instance()->findPageToSwapOut();
+      SwappingManager::instance()->directSwapOutPage(ppn);
       IPTManager::instance()->IPT_lock_.release();
 
     }

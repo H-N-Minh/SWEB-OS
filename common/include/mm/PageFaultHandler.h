@@ -12,6 +12,8 @@
 #define NOT_RELATED_TO_GROWING_STACK 17
 #define GROWING_STACK_FAILED 18
 
+#define ASYNCHRON 0 //set to 1 for asynchron swapping and 0 for direct swapping
+
 class PageFaultHandler
 {
 private:

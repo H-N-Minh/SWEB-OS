@@ -15,6 +15,7 @@
 #include "Lock.h"
 #include "ProcessRegistry.h"
 #include "Syscall.h"
+#include "PageFaultHandler.h"
 
 ArchThreadRegisters *currentThreadRegisters;
 Thread *currentThread;
@@ -34,7 +35,11 @@ Scheduler::Scheduler()
   ticks_ = 0;
   addNewThread(&cleanup_thread_);
   addNewThread(&idle_thread_);
-  addNewThread(&swapping_thread_);
+  if(ASYNCHRON)
+  {
+    addNewThread(&swapping_thread_);
+  }
+
 }
 
 void Scheduler::schedule()

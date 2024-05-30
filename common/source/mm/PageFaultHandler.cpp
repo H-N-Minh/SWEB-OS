@@ -105,16 +105,16 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       }
       else
       {
-        SwappingManager::instance()->swapInPage(vpn, preallocated_pages);
+        SwappingManager::instance()->directSwapInPage(vpn, preallocated_pages);
         current_archmemory.archmemory_lock_.release(); 
       }
     }
     //Page is on heap
     else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)  //TODOs needs to be locked
     {
-      size_t ppn = PageManager::instance()->getPreAlocatedPage(ppns);
+      size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
       size_t vpn = address / PAGE_SIZE;
-      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, ppns);
+      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
       assert(rv == true);
       current_archmemory.archmemory_lock_.release();
     }
@@ -147,7 +147,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       }
       else
       {
-        SwappingManager::instance()->swapInPage(vpn, preallocated_pages);
+        SwappingManager::instance()->directSwapInPage(vpn, preallocated_pages);
       }
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page

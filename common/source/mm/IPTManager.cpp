@@ -30,7 +30,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::NFU;
+  pra_type_ = PRA_TYPE::DEBUG;
   SwappingThread::ipt_initialized_flag_ = 1;
 }
 
@@ -141,7 +141,7 @@ size_t IPTManager::findPageToSwapOut()
       {
         ppn_retval = 1009;
       }
-      KeyisInMap(ppn_retval, IPTMapType::RAM_MAP);
+      isKeyInMap(ppn_retval, IPTMapType::RAM_MAP);
     }
   }
 

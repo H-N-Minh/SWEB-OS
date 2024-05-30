@@ -6,6 +6,7 @@
 #include "Mutex.h"
 #include "IPTManager.h"
 #include "SwappingManager.h"
+#include "PageFaultHandler.h"
 
 
 
@@ -15,7 +16,6 @@ class ArchMemory;
 
 #define DYNAMIC_KMM (0) // Please note that this means that the KMM depends on the page manager
 // and you will have a harder time implementing swapping. Pros only!
-
 
 
 class Bitmap;

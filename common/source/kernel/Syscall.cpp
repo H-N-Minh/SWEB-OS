@@ -152,6 +152,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       break;
     case sc_calloc:
       return_value = (size_t)calloc(arg1, arg2);
+      break;
     case sc_assertIPT:
       assertIPT();
       break;

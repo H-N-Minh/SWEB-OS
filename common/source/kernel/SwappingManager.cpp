@@ -123,7 +123,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
 }
 
 //Only works if the page i want to swap in is in the archmemory of current thread
-int SwappingManager::directSwapInPage(size_t vpn, ustl::vector<size_t>& ppns)
+int SwappingManager::directSwapInPage(size_t vpn, ustl::vector<uint32>& ppns)
 {
   ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
   
@@ -139,11 +139,11 @@ int SwappingManager::directSwapInPage(size_t vpn, ustl::vector<size_t>& ppns)
   ustl::vector<IPTEntry*> virtual_page_infos = ipt_->moveEntry(IPTMapType::DISK_MAP, disk_offset, ppn);
 
 
-  lock_archmemories_in_right_order(virtual_page_infos);
+  lock_archmemories_in_right_order2(virtual_page_infos);
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    ArchMemory* archmemory = virtual_page_info->archmem;
-    size_t vpn = virtual_page_info->vpn;
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
     debug(SWAPPING, "SwappingManager::swapInPage: vpn: %ld, archmemory: %p (disk offset %ld -> ppn %ld).\n", vpn, archmemory, disk_offset, ppn);
     archmemory->updatePageTableEntryForSwapIn(vpn, ppn);
   }
@@ -160,7 +160,7 @@ int SwappingManager::directSwapInPage(size_t vpn, ustl::vector<size_t>& ppns)
   // kprintf("Pagecontent after: <%s>\n", page_content);
   disk_lock_.release();
   total_disk_reads_++;
-  unlock_archmemories(virtual_page_infos);
+  unlock_archmemories2(virtual_page_infos);
 
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in vpn %ld finished", vpn);
   return 0;
@@ -181,19 +181,19 @@ void SwappingManager::directSwapOutPage(size_t ppn)
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset);
   ustl::vector<IPTEntry*> virtual_page_infos = ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
 
-  lock_archmemories_in_right_order(virtual_page_infos);
+  lock_archmemories_in_right_order2(virtual_page_infos);
 
 
 
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    ArchMemory* archmemory = virtual_page_info->archmem;
-    size_t vpn = virtual_page_info->vpn;
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
     debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset);
   }
 
-  ArchMemory* archmemory = virtual_page_infos[0]->archmem;
-  size_t vpn = virtual_page_infos[0]->vpn;
+  ArchMemory* archmemory = virtual_page_infos[0]->archmem_;
+  size_t vpn = virtual_page_infos[0]->vpn_;
 
 
   disk_lock_.acquire();
@@ -207,8 +207,8 @@ void SwappingManager::directSwapOutPage(size_t ppn)
 
   for(IPTEntry* virtual_page_info : virtual_page_infos)
   {
-    archmemory = virtual_page_info->archmem;
-    vpn = virtual_page_info->vpn;
+    archmemory = virtual_page_info->archmem_;
+    vpn = virtual_page_info->vpn_;
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
   }
 
@@ -216,7 +216,7 @@ void SwappingManager::directSwapOutPage(size_t ppn)
   PageManager::instance()->setReferenceCount(ppn, 0);
   PageManager::instance()->ref_count_lock_.release();
 
-  unlock_archmemories(virtual_page_infos);
+  unlock_archmemories2(virtual_page_infos);
 
   currentThread->loader_->arch_memory_.archmemory_lock_.release();
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
@@ -253,6 +253,35 @@ void SwappingManager::unlock_archmemories(ustl::vector<IPTEntry*> &virtual_page_
     virtual_page_info->archmem_->archmemory_lock_.release();
   }
 }
+
+
+//TODOs: Does not lock them in the right order yet and does not lock current thread
+void SwappingManager::lock_archmemories_in_right_order2(ustl::vector<IPTEntry*> &virtual_page_infos)
+{
+  for(IPTEntry* virtual_page_info : virtual_page_infos)
+  {
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    if(archmemory != &currentThread->loader_->arch_memory_)
+    {
+      archmemory->archmemory_lock_.acquire();
+    }
+  }
+}
+
+
+//TODOs: Does at the moment not unlock the current thread
+void SwappingManager::unlock_archmemories2(ustl::vector<IPTEntry*> &virtual_page_infos)
+{
+  for(IPTEntry* virtual_page_info : virtual_page_infos)
+  {
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    if(archmemory != &currentThread->loader_->arch_memory_)
+    {
+      archmemory->archmemory_lock_.release();
+    }
+  }
+}
+
 
 
 int SwappingManager::getDiskWrites()
