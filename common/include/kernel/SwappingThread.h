@@ -10,7 +10,7 @@
 class SwappingThread : public Thread
 {
   public:
-    static int ipt_initialized_flag_;    // 0: not initialized, 1: initialized. Only IPTManager can change this flag.
+    static int user_initialized_flag_;    // 0: not initialized, 1: initialized. Only UserThread can change this flag.
   
     SwappingThread();
     virtual ~SwappingThread();

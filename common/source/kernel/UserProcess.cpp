@@ -57,6 +57,8 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
   }
 
   threads_.push_back(new UserThread(fs_info, filename, Thread::USER_THREAD, terminal_number, loader_, this, 0, 0, 0));
+  
+  SwappingThread::user_initialized_flag_ = 1;
   debug(USERPROCESS, "ctor: Done creating Thread\n");
 
 }

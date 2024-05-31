@@ -31,7 +31,6 @@ IPTManager::IPTManager()
   assert(!instance_);
   instance_ = this;
   pra_type_ = PRA_TYPE::NFU;
-  SwappingThread::ipt_initialized_flag_ = 1;
 }
 
 IPTManager* IPTManager::instance()

@@ -12,7 +12,7 @@
 #define SWAP_OUT_AMOUNT 10     // max number of pages to swap out at a time
 #define SWAP_IN_AMOUNT 10     // max number of pages to swap in at a time
 
-int SwappingThread::ipt_initialized_flag_ = 0;
+int SwappingThread::user_initialized_flag_ = 0;
 
 
 SwappingThread::SwappingThread() 
@@ -118,7 +118,7 @@ void SwappingThread::Run()
 {
   while (1)
   {
-    if (ipt_initialized_flag_)
+    if (user_initialized_flag_)
     {
       // 1. Updating Meta data for PRA NFU every 2 seconds
       if (isOneTimeStep())
@@ -141,7 +141,7 @@ void SwappingThread::Run()
 
 void SwappingThread::updateMetaData()
 {
-  if (!ipt_initialized_flag_)
+  if (!user_initialized_flag_)
   {
     return;
   }
