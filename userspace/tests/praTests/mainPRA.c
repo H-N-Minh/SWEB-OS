@@ -25,8 +25,8 @@ int childMain()
     int retval = 0;
 
     // comment out the tests you don't want to run
-    PRA1 = 1;   // Test Random PRA
-    // PRA2 = 1;   // Test NFU PRA
+    // PRA1 = 1;   // Test Random PRA
+    PRA2 = 1;   // Test NFU PRA
     // PRA3 = 1;      // Test switching PRA every 100 pages using syscall
     // RANDOM1 = 1;  // Test Random PRA is actually random
 
