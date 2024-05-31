@@ -264,18 +264,16 @@ uint32 PageManager::allocPPN(uint32 page_size)
     debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
     SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
 
-    swapper->orders_lock_.acquire();
-    swapper->orders_++;
-
-    while (swapper->free_pages_.empty())
+    // wait for the swapping thread to be give a free page
+    swapper->swap_out_lock_.acquire();
+    while (!swapper->isFreePageAvailable())
     {
-      swapper->orders_cond_.wait();
+      swapper->swap_out_cond_.wait();
     }
-    
-    size_t ppn = swapper->free_pages_.front();
-    swapper->free_pages_.erase(swapper->free_pages_.begin());
-    swapper->orders_lock_.release();
+    size_t ppn = swapper->getFreePage();
+    swapper->swap_out_lock_.release();
 
+    // clear the new page and return it
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
     debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
     return ppn;

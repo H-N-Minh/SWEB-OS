@@ -39,7 +39,6 @@ class SwappingManager
 
     BDVirtualDevice* bd_device_;
 
-    static int disk_offset_should_be_atomic_if_we_do_it_this_way_what_we_probably_not_doing;
     ustl::queue<size_t> pre_swap_queue_;
     Mutex pre_swap_lock_;
     static size_t disk_offset_counter_;    //TODO? this only goes up, so disk page is never reused
