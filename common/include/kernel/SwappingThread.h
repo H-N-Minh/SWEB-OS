@@ -19,7 +19,7 @@ class SwappingThread : public Thread
   
     /////////////////// PRA metadata
   private:
-    uint32 last_clock_;   // protected by orders_lock_
+    uint32 last_tick_;
   public:
     bool isOneTimeStep();
     void updateMetaData();

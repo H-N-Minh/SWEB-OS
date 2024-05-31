@@ -6,7 +6,7 @@
 #include "PageManager.h"
 
 #define TIME_STEP 2 // in seconds
-#define CLOCKS_PER_SEC 1000000
+#define TICKS_PER_SEC 18
 #define PRESWAP_THRESHOLD 80  // in percentage (start pre-swapping when memory usage is above 80%)
 #define MAX_PRESWAP_PAGES 20  // maximum total number of pages to pre-swap
 #define SWAP_OUT_AMOUNT 10     // max number of pages to swap out at a time
@@ -186,28 +186,16 @@ void SwappingThread::updateMetaData()
 
 bool SwappingThread::isOneTimeStep()
 {
-  return false;
-  size_t ticks = Scheduler::instance()->getTicks();
-  if (ticks % 18 == 0)
-  {
-    debug(SWAPTHREAD, "SwappingThread::isOneTimeStep: seconds: %zu\n", ticks/18);
-    /* code */
+  size_t current_ticks = Scheduler::instance()->getTicks();
+  assert(current_ticks >= last_tick_ && "SwappingThread::isOneTimeStep: current_ticks must be greater than last_tick_\n");
+  size_t time_passed = (current_ticks - last_tick_) / TICKS_PER_SEC;
+  if (time_passed >= TIME_STEP)
+  {    
+    // debug(MINH, "SwappingThread::isOneTimeStep: time_passed: %ds\n", time_passed);
+    last_tick_ = current_ticks;
+    return true;
   }
   
-  // debug(MINH, "SwappingThread::isOneTimeStep: current_clock: %d, last_clock_: %d\n", current_clock, last_clock_);
-  // if (current_clock < last_clock_)    // idk why this happens
-  // {
-  //   last_clock_ = current_clock;
-  //   return false;
-  // }
-  
-  // uint32 time_passed = (current_clock - last_clock_) / CLOCKS_PER_SEC;
-  // if (time_passed >= TIME_STEP)
-  // {    
-  //   // debug(MINH, "SwappingThread::isOneTimeStep: time_passed: %ds\n", time_passed);
-  //   last_clock_ = current_clock;
-  //   return true;
-  // }
   return false;
 }
 
