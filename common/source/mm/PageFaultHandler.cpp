@@ -106,7 +106,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       ArchMemory& archmemory = currentThread->loader_->arch_memory_;
       size_t disk_offset = archmemory.getDiskLocation(vpn);
 
-      // should be fine to release, because we still holding orders_lock_, so same threads doing same swap still has to wait for each other
+      // should be fine to release, because we still holding swap_in_lock_, so same threads doing same swap still has to wait for each other
       // must release because thread must hold only orders lock before using CV
       arch_lock->release();     
       ipt_lock->release(); 
@@ -118,7 +118,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       }
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
     }
-    //Page needs to be loader from binary
+    //Page needs to be loaded from binary
     else
     {
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page is not present and not swapped out -> Loading page\n");

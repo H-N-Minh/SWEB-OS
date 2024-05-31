@@ -79,7 +79,7 @@ void SwappingThread::swapIn()
 
   if (!swap_in_map_.empty())
   {
-    // Swap in multiple pages at a time, until either the map is empty or max swap-in amount is reached
+    // Swap in multiple pages at a time, until either no more swap-in requests or max swap-in amount at a time is reached
     for (int i = 0; i < SWAP_IN_AMOUNT; i++)
     {
       if (swap_in_map_.empty())
