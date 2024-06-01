@@ -17,7 +17,7 @@ class SwappingManager
     ~SwappingManager();
 
     void swapOutPage(size_t ppn);
-    int swapInPage(size_t vpn, ustl::vector<uint32>& preallocated_pages);
+    int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
 
     void swapOutPageAsynchronous(size_t ppn);
     int swapInPageAsynchronous(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
@@ -58,4 +58,9 @@ class SwappingManager
     void printDebugInfos(ustl::vector<IPTEntry*>& virtual_page_infos, size_t ppn, size_t disk_offset);
 
     void writeToDisk(ustl::vector<IPTEntry*>& virtual_page_infos, size_t disk_offset);
+
+    void updatePageTableEntriesForSwapOut(ustl::vector<IPTEntry*>& virtual_page_infos, size_t disk_offset);
+    void updatePageTableEntriesForSwapIn(ustl::vector<IPTEntry*>& virtual_page_infos, size_t ppn, size_t disk_offset);
+
+    void readFromDisk(size_t disk_offset, size_t ppn);
 };

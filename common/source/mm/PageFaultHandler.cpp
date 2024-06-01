@@ -96,16 +96,16 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     {
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
       size_t vpn = address / PAGE_SIZE;
+      size_t disk_offset = current_archmemory.getDiskLocation(vpn);
       if(DIRECT_SWAPPING)
       {
-        SwappingManager::instance()->swapInPage(vpn, preallocated_pages);
+        SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
         current_archmemory.archmemory_lock_.release();
         IPTManager::instance()->IPT_lock_.release();
       }
       else if(ASYNCHRONOUS_SWAPPING)
       {
         SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
-        size_t disk_offset = current_archmemory.getDiskLocation(vpn);
         current_archmemory.archmemory_lock_.release();  //TODOs: we need to check if ipt entry still exist and page is still swapped out !!!
         IPTManager::instance()->IPT_lock_.release();
 
@@ -152,7 +152,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page is not present anymore we need to swap it in -> do nothing so it gets swapped in on the next pagefault
     if(!current_archmemory.isPresent(address))
     {
-      //SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);       //TODOs: check if it better with or without comment out
+      //SwappingManager::instance()->swapInPage(..., preallocated_pages);       //TODOs: check if it better with or without comment out
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
     else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
