@@ -34,7 +34,8 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 // COPY CONSTRUCTOR
 ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated_pages):archmemory_lock_("archmemory_lock_")
 {
-  assert(src.archmemory_lock_.heldBy() == currentThread);
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
+  assert(src.archmemory_lock_.heldBy() == currentThread && "Parent archmemory need to be locked");
   assert(PageManager::instance()->heldBy() != currentThread);
   archmemory_lock_.acquire();
   
@@ -100,9 +101,7 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
                   CHILD_pt[pti].cow = 1;
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  PageManager::instance()->ref_count_lock_.acquire();
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
-                  PageManager::instance()->ref_count_lock_.release();
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
@@ -115,9 +114,7 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
                   CHILD_pt[pti].cow = 1;
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  PageManager::instance()->ref_count_lock_.acquire();
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::DISK_MAP);
-                  PageManager::instance()->ref_count_lock_.release();
                 }
               }
             }
@@ -160,18 +157,14 @@ ArchMemory::~ArchMemory()
               {
                 if (pt[pti].present)  //TODOs: what if swapped out
                 {
-                  PageManager::instance()->ref_count_lock_.acquire();
                   pt[pti].present = 0;
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
-                  PageManager::instance()->ref_count_lock_.release();
                 }
                 else if(pt[pti].swapped_out)
                 {
-                  PageManager::instance()->ref_count_lock_.acquire();
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, IPTMapType::DISK_MAP);
-                  PageManager::instance()->ref_count_lock_.release();
                 }
               }
               pd[pdi].pt.present = 0;
@@ -223,6 +216,7 @@ bool ArchMemory::checkAndRemove(pointer map_ptr, uint64 index)
 
 bool ArchMemory::unmapPage(uint64 virtual_page)
 {
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   assert(archmemory_lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
 
@@ -233,19 +227,13 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
 
   IPTMapType maptype = getMapType((m.pt[m.pti]));
 
-  PageManager::instance()->ref_count_lock_.acquire();
   PageManager::instance()->decrementReferenceCount(m.page_ppn, virtual_page, this, maptype);
   debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
   
   if(PageManager::instance()->getReferenceCount(m.page_ppn) > 0)
   {
-    PageManager::instance()->ref_count_lock_.release();
     return true;
   }
-
-  PageManager::instance()->ref_count_lock_.release();
-
-
 
   ((uint64*)m.pt)[m.pti] = 0; // for easier debugging
   bool empty = checkAndRemove<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti);
@@ -321,13 +309,11 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
   {
     insert<PageTableEntry>(getIdentAddressOfPPN(m.pt_ppn), m.pti, physical_page, 0, 0, user_access, 1);
     uint64 page_ppn = ((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti].page_ppn;
-    PageManager::instance()->ref_count_lock_.acquire();
 
     IPTMapType maptype = getMapType(((PageTableEntry*)getIdentAddressOfPPN(m.pt_ppn))[m.pti]);
     PageManager::instance()->incrementReferenceCount(page_ppn, virtual_page, this, maptype);
 
     debug(FORK, "getReferenceCount in mappage %d %ld \n", PageManager::instance()->getReferenceCount(page_ppn), (page_ppn));
-    PageManager::instance()->ref_count_lock_.release();
 
     return true;
   }
@@ -500,14 +486,11 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                 {
                   if(m.page_ppn != pt[pti].page_ppn)
                   {
-                    PageManager::instance()->ref_count_lock_.acquire();
-
                     size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                     IPTMapType maptype = getMapType(pt[pti]);
                     PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
                     debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                     ((uint64*)pt)[pti] = 0;
-                    PageManager::instance()->ref_count_lock_.release();
                   }
                 }
               }
@@ -563,6 +546,7 @@ bool ArchMemory::isCOW(size_t virtual_addr)
 
 void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages)
 {
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   assert(archmemory_lock_.heldBy() == currentThread);
 
   PageManager* pm = PageManager::instance();
@@ -572,7 +556,6 @@ void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocate
   PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
   assert(pml1_entry && pml1_entry->cow && !pml1_entry->writeable && "Page is not COW or not set to writable.\n");
 
-  pm->ref_count_lock_.acquire();
   size_t reference_count = pm->getReferenceCount(pml1_entry->page_ppn);
   
   if (reference_count > 1)
@@ -602,8 +585,6 @@ void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocate
     debug(FORK, "ArchMemory::copyPage: Error! Refcount is %d.\n", pm->getReferenceCount(pml1_entry->page_ppn));
     assert(0 && "Reference count is 0.\n");
   }
-  pm->ref_count_lock_.release();
-
 }
 
 bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)

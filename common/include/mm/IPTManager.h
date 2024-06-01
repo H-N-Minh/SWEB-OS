@@ -34,7 +34,6 @@ public:
 };
 
 
-// TODO: IPT Manger must be made singleton and be initialized somewhere
 class IPTManager {
 public:
   // locking order: Ipt_lock -> disk_lock -> archmem_lock
@@ -105,14 +104,9 @@ public:
   size_t findPageToSwapOut();
 
   /**
-   * @return find all the values of a given key in the disk_map_ and put them into a vector
+   * @return find all the values of a given key in the specified map and put them into a vector
   */
-  ustl::vector<IPTEntry*> getDiskEntriesFromKey(size_t disk_offset);
-
-  /**
-   * @return find all the values of a given key in the ram_map_ and put them into a vector
-  */
-  ustl::vector<IPTEntry*> getRamEntriesFromKey(size_t ppn);
+  ustl::vector<IPTEntry*> getIptEntriesFromKey(size_t offset, IPTMapType maptype);
 
   /**
    * Debug func, check if ppn of all archmem matches the key of ram_map_.

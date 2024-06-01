@@ -51,4 +51,11 @@ class SwappingManager
 
     void lockArchmemoriesInRightOrder(ustl::vector<IPTEntry*> &virtual_page_infos);
     void unlockArchmemories(ustl::vector<IPTEntry*> &virtual_page_infos);
+
+    void lockArchmemorys(ustl::vector<IPTEntry*>& virtual_page_infos);
+    void unlockArchmemorys(ustl::vector<IPTEntry*>& virtual_page_infos);
+
+    void printDebugInfos(ustl::vector<IPTEntry*>& virtual_page_infos, size_t ppn, size_t disk_offset);
+
+    void writeToDisk(ustl::vector<IPTEntry*>& virtual_page_infos, size_t disk_offset);
 };

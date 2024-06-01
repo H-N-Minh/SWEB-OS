@@ -6,7 +6,7 @@
 #include "Mutex.h"
 #include "IPTManager.h"
 #include "SwappingManager.h"
-
+#include "PageFaultHandler.h"
 
 
 #include "umap.h"
@@ -76,7 +76,6 @@ class PageManager
 
     // COW
     ustl::map<uint32, uint32> page_reference_counts_;
-    Mutex ref_count_lock_;
 
     void incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype);
     void decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype);

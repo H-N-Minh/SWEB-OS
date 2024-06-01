@@ -41,9 +41,7 @@ PageManager* PageManager::instance()
  * The lock is created in the constructor and is passed a name to uniquely identify it.
  * This allows for easier debugging and tracking of locks.
  */
-PageManager::PageManager() 
-    : ref_count_lock_("PageManager::ref_count_lock_"),
-      page_manager_lock_("PageManager::page_manager_lock_")
+PageManager::PageManager():page_manager_lock_("PageManager::page_manager_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -259,28 +257,44 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
   if (found == 0)
   {
-    debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
-    // SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+    size_t ppn = 0;
+    if(DIRECT_SWAPPING)
+    {
+      debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
+      IPTManager::instance()->IPT_lock_.acquire();
+      ppn = findPageToSwapOut(); //TODOs!!!!!!!!!
+      SwappingManager::instance()->swapOutPage(ppn);
+      IPTManager::instance()->IPT_lock_.release();
 
-    // // wait for the swapping thread to be give a free page        //TODO !!!
-    // swapper->swap_out_lock_.acquire();
-    // while (!swapper->isFreePageAvailable())
-    // {
-    //   swapper->swap_out_cond_.wait();
-    // }
-    // size_t ppn = swapper->getFreePage();
-    // swapper->swap_out_lock_.release();
+      // clear the new page and return it
+      memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
+      debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
+    }
+    else if(ASYNCHRONOUS_SWAPPING)
+    {
+      debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
+      SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
 
-    IPTManager::instance()->IPT_lock_.acquire();
-    size_t ppn = findPageToSwapOut(); //TODOs!!!!!!!!!
-    SwappingManager::instance()->swapOutPage(ppn);
-    IPTManager::instance()->IPT_lock_.release();
+      // wait for the swapping thread to be give a free page
+      swapper->swap_out_lock_.acquire();
+      while (!swapper->isFreePageAvailable())
+      {
+        swapper->swap_out_cond_.wait();
+      }
+      ppn = swapper->getFreePage();
+      swapper->swap_out_lock_.release();
 
-    // clear the new page and return it
-    memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
-    debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
+      // clear the new page and return it
+      memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
+      debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
+
+    }
+    else
+    {
+      assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
+    }
+    assert(ppn != 0);
     return ppn;
-    // assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
   }
 
   const char* page_ident_addr = (const char*)ArchMemory::getIdentAddressOfPPN(found);
@@ -353,7 +367,7 @@ uint32 PageManager::getNumPagesForUser() const
 void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype)
 {
   debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
-  assert(ref_count_lock_.heldBy() == currentThread);
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
 
   IPTManager::instance()->insertEntryIPT(maptype, offset, vpn, archmemory);
 
@@ -380,7 +394,7 @@ void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype)
 {
   debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
-  assert(ref_count_lock_.heldBy() == currentThread);
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
 
   IPTManager::instance()->removeEntryIPT(maptype, offset, vpn, archmemory);
 
@@ -407,13 +421,13 @@ void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 
 void PageManager::setReferenceCount(uint64 page_number, uint32 reference_count)
 {
-  assert(ref_count_lock_.heldBy() == currentThread);
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   page_reference_counts_[page_number] = reference_count;
 }
 
 uint32 PageManager::getReferenceCount(uint64 page_number)
 {
-  assert(ref_count_lock_.heldBy() == currentThread);
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   // Check if the page number is in the map
   auto it = page_reference_counts_.find(static_cast<uint32>(page_number));
   if (it != page_reference_counts_.end())

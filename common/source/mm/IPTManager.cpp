@@ -350,7 +350,7 @@ ustl::vector<IPTEntry*> IPTManager::moveEntryNew(IPTMapType source, size_t ppn_s
 
   if (source == IPTMapType::RAM_MAP)
   {
-    ipt_entries = getRamEntriesFromKey(ppn_source);
+    ipt_entries = getIptEntriesFromKey(ppn_source, IPTMapType::RAM_MAP);
     if (swap_meta_data_.find(ppn_source) == swap_meta_data_.end())
     {
       debug(SWAPPING, "IPTManager::moveEntry: Entry %zu to be moved does not exist in the swap_meta_data\n", ppn_source);
@@ -359,7 +359,7 @@ ustl::vector<IPTEntry*> IPTManager::moveEntryNew(IPTMapType source, size_t ppn_s
   }
   else
   {
-    ipt_entries = getDiskEntriesFromKey(ppn_source);
+    ipt_entries = getIptEntriesFromKey(ppn_source, IPTMapType::DISK_MAP);
     if (swap_meta_data_.find(ppn_destination) != swap_meta_data_.end())
     {
       debug(SWAPPING, "IPTManager::moveEntry: Entry %zu to be moved already exists in the swap_meta_data\n", ppn_source);
@@ -460,28 +460,18 @@ IPTManager::~IPTManager()
   disk_map_.clear();
 }
 
-ustl::vector<IPTEntry*> IPTManager::getRamEntriesFromKey(size_t ppn)
-{
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getRamEntriesFromKey called but IPT not locked\n");
-  ustl::vector<IPTEntry*> ram_entries;
-  auto range = ram_map_.equal_range(ppn);
-  for (auto it = range.first; it != range.second; ++it)
-  {
-    ram_entries.push_back(it->second);
-  }
-  return ram_entries;
-}
 
-ustl::vector<IPTEntry*> IPTManager::getDiskEntriesFromKey(size_t disk_offset)
+ustl::vector<IPTEntry*> IPTManager::getIptEntriesFromKey(size_t offset, IPTMapType maptype)
 {
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getDiskEntriesFromKey called but IPT not locked\n");
-  ustl::vector<IPTEntry*> disk_entries;
-  auto range = disk_map_.equal_range(disk_offset);
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getIptEntriesFromKey called but IPT not locked\n");
+  auto& map = (maptype == IPTMapType::RAM_MAP ? ram_map_ : disk_map_);
+  ustl::vector<IPTEntry*> ipt_entries;
+  auto range = map.equal_range(offset);
   for (auto it = range.first; it != range.second; ++it)
   {
-    disk_entries.push_back(it->second);
+    ipt_entries.push_back(it->second);
   }
-  return disk_entries;
+  return ipt_entries;
 }
 
 void IPTManager::checkRamMapConsistency()
