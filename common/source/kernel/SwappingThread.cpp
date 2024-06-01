@@ -173,7 +173,7 @@ void SwappingThread::updateMetaData()
           entry->archmem_->resetAccessDirtyBits(entry->vpn_);
           ipt->swap_meta_data_[key]++;
           archmem->archmemory_lock_.release();
-          debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
+          // debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
           hit_count_++;
           break;
         }

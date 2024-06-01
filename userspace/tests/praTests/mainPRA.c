@@ -11,12 +11,15 @@ extern int pra1();
 extern int pra2();
 extern int pra3();
 extern int random1();
+extern int pra4();
+extern int pra5();
 
 int PRA1 = 0;  
 int PRA2 = 0; 
 int PRA3 = 0;  
 int RANDOM1 = 0;
-
+int PRA4 = 0;
+int PRA5 = 0;
 // @problem: currently pra1 and pra2 cant be run together
 
 
@@ -26,9 +29,11 @@ int childMain()
 
     // comment out the tests you don't want to run
     // PRA1 = 1;   // Test Random PRA
-    PRA2 = 1;   // Test NFU PRA
+    // PRA2 = 1;   // Test NFU PRA
     // PRA3 = 1;      // Test switching PRA every 100 pages using syscall
     // RANDOM1 = 1;  // Test Random PRA is actually random
+    // PRA4 = 1;       // double pagefault => double swap (still single thread) (not fully working yet, doesnt end)
+    PRA5 = 1;       // 64 threads  writting to array at same time
 
     if (PRA1)
     {
@@ -60,6 +65,22 @@ int childMain()
         retval = random1();
         if (retval == 0)                      { printf("===> random1 successful!\n"); }
         else                                  { printf("===> random1 failed!\n");  return -1;}
+    }
+
+    if (PRA4)
+    {
+        printf("\nTesting pra4: testing double pagefault => double swap...\n");
+        retval = pra4();
+        if (retval == 0)                      { printf("===> pra4 successful!\n"); }
+        else                                  { printf("===> pra4 failed!\n");  return -1;}
+    }
+
+    if (PRA5)
+    {
+        printf("\nTesting pra5: testing 64 threads writing to array in parallel...\n");
+        retval = pra5();
+        if (retval == 0)                      { printf("===> pra5 successful!\n"); }
+        else                                  { printf("===> pra5 failed!\n");  return -1;}
     }
 
 

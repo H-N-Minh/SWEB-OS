@@ -238,7 +238,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   }
   
   
-  debug(IPT, "IPTManager::removeEntryIPT: Entry found in map %s, seems valid. Removing\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
+  // debug(IPT, "IPTManager::removeEntryIPT: Entry found in map %s, seems valid. Removing\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   
   // Actually remove the pte from the entry
   auto range = map->equal_range(ppn);
@@ -246,7 +246,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   {
     if (it->second->vpn_ == vpn && it->second->archmem_ == archmem)
     {
-      debug(IPT, "IPTManager::removeEntryFromRAM: Entry found and removed from RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
+      // debug(IPT, "IPTManager::removeEntryFromRAM: Entry found and removed from RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
       delete it->second;    // delete the pointer created using "new"
       it = map->erase(it);  // erase the value, the key still exists if theres other values mapped to it
       break;
