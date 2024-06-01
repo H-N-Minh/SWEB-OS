@@ -8,6 +8,7 @@
 extern int ipt1();
 extern int ipt2();
 extern int ipt3();
+extern int ipt4();
 
 // void printDebugInfo()
 // {
@@ -25,11 +26,14 @@ int main()
 
     // ipt1();
     // printf("first done\n");
-    ipt2();
-    printf("second done\n");
-    ipt3();
-    printf("third done\n");
+    // ipt2();
+    // printf("second done\n");
+    // ipt3();
+    // printf("third done\n");
+   ipt4(); //ipt4 is too big i think
+   printf("fourth done\n");
 
 
     // printf("\n\nipt testcases successful\n");
 }
+

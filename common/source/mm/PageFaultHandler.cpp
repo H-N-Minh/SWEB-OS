@@ -18,8 +18,7 @@ extern "C" void arch_contextSwitch();
 
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
 
-inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
-                                                    bool present, bool switch_to_us)
+inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user, bool present, bool switch_to_us)
 {
   assert((user == switch_to_us) && "Thread is in user mode even though is should not be.");
   assert(!(address < USER_BREAK && currentThread->loader_ == 0) && "Thread accesses the user space, but has no loader.");
@@ -77,35 +76,63 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   //   assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
   // }
 
-  ustl::vector<size_t> ppns = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
+  
+    // SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;    //TODO !!!
+    // Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
+    // Mutex* arch_lock = &current_archmemory.archmemory_lock_;
+
+    // swapper->swap_in_lock_.acquire();
+    // ipt_lock->acquire();
+    // arch_lock->acquire();
+
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
 
-    //Page got set to present in the meantime
+    //Page got set to present in the meantime, so no need to do anything anymore
     if(current_archmemory.isPresent(address))
     {
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected, but another thread already swap this page in. Do nothing\n"); 
     }
     //Page is swapped out
     else if(current_archmemory.isSwapped(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);
+
+      // size_t vpn = address / PAGE_SIZE;
+      // ArchMemory& archmemory = currentThread->loader_->arch_memory_;
+      // size_t disk_offset = archmemory.getDiskLocation(vpn);
+
+      // // should be fine to release, because we still holding swap_in_lock_, so same threads doing same swap still has to wait for each other
+      // // must release because thread must hold only orders lock before using CV
+      // arch_lock->release();     
+      // ipt_lock->release(); 
+
+      // swapper->addSwapIn(disk_offset, &preallocated_pages);
+      // while (swapper->isOffsetInMap(disk_offset))
+      // {
+      //   swapper->swap_in_cond_.wait();
+      // }
+      // debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
     }
     //Page is on heap
     else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)  //TODOs needs to be locked
     {
-      size_t ppn = PageManager::instance()->getPreAlocatedPage(ppns);
+      size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
       size_t vpn = address / PAGE_SIZE;
-      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, ppns);
+      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
       assert(rv == true);
     }
     //Page needs to be loader from binary 
     else
     {
-      currentThread->loader_->loadPage(address, ppns);
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page is not present and not swapped out -> Loading page\n");
+      currentThread->loader_->loadPage(address, preallocated_pages);
     }
     current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
@@ -117,12 +144,12 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page is not present anymore we need to swap it in
     if(!current_archmemory.isPresent(address))
     {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, ppns);
+      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
     else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
     {
-      current_archmemory.copyPage(address, ppns);
+      current_archmemory.copyPage(address, preallocated_pages);
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
     else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
@@ -134,43 +161,20 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     {
       current_archmemory.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
-      PageManager::instance()-> releaseNotNeededPages(ppns);
+      PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
       errorInPageFaultKillProcess();
     }
     
     current_archmemory.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
   }
-  // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
-  // {
-    // IPTManager::instance()->IPT_lock_.acquire();
-    // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
-    // int retval = checkGrowingStack(address);
-    // currentThread->loader_->arch_memory_.archmemory_lock_.release();
-    //  IPTManager::instance()->IPT_lock_.release();
-    // if (retval == GROWING_STACK_FAILED)
-    // {
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
-    //   errorInPageFaultKillProcess();
-    // }
-    // else if(retval == NOT_RELATED_TO_GROWING_STACK)
-    // {
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
-    //   currentThread->loader_->loadPage(address);
-    // }
-    // else
-    // {
-    //   assert(retval == GROWING_STACK_VALID);
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
-    // }
-  // }
   else  //status INVALID
   {
-    PageManager::instance()-> releaseNotNeededPages(ppns);
+    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
     errorInPageFaultKillProcess();
   }
 
-  PageManager::instance()->releaseNotNeededPages(ppns);
+  PageManager::instance()->releaseNotNeededPages(preallocated_pages);
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 
@@ -225,4 +229,30 @@ void PageFaultHandler::errorInPageFaultKillProcess()
       currentThread->kill();
     }   
 }
+
+//Code for growing stack:
+
+  // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
+  // {
+    // IPTManager::instance()->IPT_lock_.acquire();
+    // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    // int retval = checkGrowingStack(address);
+    // currentThread->loader_->arch_memory_.archmemory_lock_.release();
+    //  IPTManager::instance()->IPT_lock_.release();
+    // if (retval == GROWING_STACK_FAILED)
+    // {
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
+    //   errorInPageFaultKillProcess();
+    // }
+    // else if(retval == NOT_RELATED_TO_GROWING_STACK)
+    // {
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
+    //   currentThread->loader_->loadPage(address);
+    // }
+    // else
+    // {
+    //   assert(retval == GROWING_STACK_VALID);
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
+    // }
+  // }
 

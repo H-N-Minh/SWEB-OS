@@ -54,3 +54,8 @@
 #define sc_dup 112
 
 #define sc_getIPTInfos 401
+#define sc_assertIPT 402
+
+#define sc_setPRA 403
+#define sc_getPRAstats 404
+#define sc_checkRandomPRA 405
