@@ -36,33 +36,24 @@ int pra4()
   printf("NFU PRA: Hit: %d, Miss: %d (before test)\n", hit, miss);
 
   size_t top_page = getTopOfThisPage((size_t) big_array4);
-
-  // printf("last in page %zu\n", (size_t) &big_array4[PAGESIZE/4 - 1]);
-  // size_t* last_int_in_page = (size_t*) &big_array4[PAGESIZE/4 - 1];
-  // *last_int_in_page = 11111111111111112; // cast to size_t to overflow into next page
-  // printf("last in page2 %zu\n", *last_int_in_page);
-  // printf("last in page3 %d\n", big_array4[PAGESIZE/4 - 1]);
-  // printf("last in page4 %d\n", big_array4[PAGESIZE/4]);
-  // printf("last in page5 %d\n", big_array4[PAGESIZE/4 + 1]);
-  // printf("last in page6 %d\n", big_array4[PAGESIZE/4 - 2]);
-  // return 0;
-
-  for(int i = 0; i < PAGES_IN_ARRAY4; i++)
+  
+  size_t* temp = (size_t*) top_page;
+  for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
   {
-    size_t* temp = (size_t*) (top_page + i * PAGESIZE4);
-    *temp = i * 11111111111 + (i + 1);      // cast to size_t to overflow into next page
-    i++;
+    *temp = (size_t) (i * 10000000000 + (i + 1));      // cast to size_t to overflow into next page
+    temp = (size_t*) ((size_t) temp + PAGESIZE4 * 2);
   }
 
   printf("done writing phew!\n ");
 
-  for(int i = 0; i < PAGES_IN_ARRAY4; i++)
+  temp = (size_t*) top_page;
+  for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
   {
-    size_t* temp = (size_t*) (top_page + i * PAGESIZE4);
-    assert(*temp == i * 11111111111 + (i + 1));
-    i++;
-    printf("i: %d\n", i);
-    
+    if (*temp != (size_t) (i * 10000000000 + (i + 1)))
+    {
+      printf("Error: Expected %zu, got %zu. At index %zu\n", (size_t) (i * 10000000000 + (i + 1)), *temp, i);
+    }
+    temp = (size_t*) ((size_t) temp + PAGESIZE4 * 2);
   }
 
   getPRAstats(&hit, &miss);

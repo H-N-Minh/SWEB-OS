@@ -150,6 +150,12 @@ size_t IPTManager::findPageToSwapOut()
     debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
     if (min_ppns.size() > 1)
     {
+      // DEBUGMINH (delete this)
+      // for (auto ppn : min_ppns)
+      // {
+      //   debug(MINH, "IPTManager::findPageToSwapOut: candidate=%d, counter=%d\n", ppn, swap_meta_data_[ppn]);
+      // }
+
       debug(IPT, "IPTManager::findPageToSwapOut: Multiple pages with the minimum counter. Randomly selecting one\n");
       size_t random_num = randomNumGenerator();
       size_t random_index = random_num % min_ppns.size();

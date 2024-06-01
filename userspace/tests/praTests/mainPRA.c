@@ -32,8 +32,8 @@ int childMain()
     // PRA2 = 1;   // Test NFU PRA
     // PRA3 = 1;      // Test switching PRA every 100 pages using syscall
     // RANDOM1 = 1;  // Test Random PRA is actually random
-    // PRA4 = 1;       // double pagefault => double swap (still single thread) (not fully working yet, doesnt end)
-    PRA5 = 1;       // 64 threads  writting to array at same time
+    PRA4 = 1;       // double pagefault => double swap (still single thread) (doesnt work with pra NFU: endless loop)
+    // PRA5 = 1;       // 64 threads  writting to array at same time
 
     if (PRA1)
     {
