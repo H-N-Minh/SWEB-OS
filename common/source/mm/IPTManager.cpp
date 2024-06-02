@@ -111,6 +111,8 @@ size_t IPTManager::findPageToSwapOut()
   
   int ppn_retval = INVALID_PPN;
 
+  checkSwapMetaDataConsistency();
+
   if (pra_type_ == PRA_TYPE::RANDOM)
   {
     debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
@@ -129,6 +131,11 @@ size_t IPTManager::findPageToSwapOut()
     debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
     uint32 min_counter = UINT32_MAX;
     ustl::vector<uint32> min_ppns;    // vector of all pages with the minimum counter
+
+    checkRamMapConsistency();
+    checkDiskMapConsistency();
+    checkSwapMetaDataConsistency();
+    
 
     assert(swap_meta_data_.size() > 0 && "IPTManager::findPageToSwapOut: swap_meta_data_ is empty. Cant do PRA NFU without it\n");
     for(auto& pair : swap_meta_data_)
@@ -199,8 +206,10 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     assert(0 && "IPTManager::insertEntryIPT: Entry already exists in map\n");
   }
 
-  // checking is swap_meta_data_ is in sync with the ram_map_. This is not necessary and slow down the system, but it is good for debugging
-  checkSwapMetaDataConsistency();
+  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
+  // checkRamMapConsistency();
+  // checkDiskMapConsistency();
+  // checkSwapMetaDataConsistency();
   
   debug(IPT, "IPTManager::insertEntryIPT: Entry does not exist in %s yet, seems valid. Inserting\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   // update debugging info, also update the swap_meta_data
@@ -223,10 +232,6 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
 
   debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
 
-  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
-  checkRamMapConsistency();
-  checkDiskMapConsistency();
-  checkSwapMetaDataConsistency();
 }
 
 void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
@@ -253,8 +258,9 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     if (it->second->vpn_ == vpn && it->second->archmem_ == archmem)
     {
       // debug(IPT, "IPTManager::removeEntryFromRAM: Entry found and removed from RAM: ppn=%zu, vpn=%zu\n", ppn, vpn);
-      delete it->second;    // delete the pointer created using "new"
+      IPTEntry* entry = it->second;
       it = map->erase(it);  // erase the value, the key still exists if theres other values mapped to it
+      delete entry;    // delete the pointer created using "new"
       break;
     }
     else
@@ -280,9 +286,9 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
 
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
-  checkRamMapConsistency();
-  checkDiskMapConsistency();
-  checkSwapMetaDataConsistency();
+  // checkRamMapConsistency();
+  // checkDiskMapConsistency();
+  // checkSwapMetaDataConsistency();
 }
 
 ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
@@ -295,6 +301,13 @@ ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_sour
 
   auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
+
+
+  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
+  // checkRamMapConsistency();
+  // checkDiskMapConsistency();
+  // checkSwapMetaDataConsistency();
+
 
   // Check if the entry already exists in the destination map
   // also check if the archmem are locked
