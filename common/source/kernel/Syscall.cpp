@@ -158,7 +158,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       checkRandomPRA();
       break;
     case sc_mmap:
-      return_value = mmap(arg1);
+      return_value = mmap(arg1, arg2);
       break;
     default:
       return_value = -1;
@@ -167,10 +167,10 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
-int Syscall::mmap(size_t arg1)
+int Syscall::mmap(size_t para, size_t retval)
 {
-  assert(arg1 && "Syscall::mmap: arg1 is null\n");
-  mmap_params_t* params = (mmap_params_t*) arg1;
+  assert(para && "Syscall::mmap: arg1 is null\n");
+  mmap_params_t* params = (mmap_params_t*) para;
   void* start = params->start;
   size_t length = params->length;
   int prot = params->prot;
@@ -191,8 +191,9 @@ int Syscall::mmap(size_t arg1)
   }
   
   SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_;
-  smm->mmap(params);
-
+  void* ret = smm->mmap(params);
+  *(size_t*) retval = (size_t) ret;
+  debug(MINH, "Syscall::mmap: return value: %p\n", ret);
 
   return 0;
 }

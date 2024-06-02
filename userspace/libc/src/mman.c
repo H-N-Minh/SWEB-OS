@@ -21,8 +21,10 @@ typedef struct mmap_params {
 void* mmap(void* start, size_t length, int prot, int flags, int fd,
            off_t offset)
 {
+  size_t retval;
   mmap_params_t params = {start, length, prot, flags, fd, offset};
-  return (void*) __syscall(sc_mmap, (size_t) &params, 0, 0, 0, 0);
+  __syscall(sc_mmap, (size_t) &params, (size_t) &retval, 0, 0, 0);
+  return (void*) retval;
 }
 
 /**

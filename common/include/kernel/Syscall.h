@@ -92,7 +92,7 @@ public:
   */
   static void checkRandomPRA();
 
-  static int mmap(size_t arg1);
+  static int mmap(size_t para, size_t retval);
 };
 
 

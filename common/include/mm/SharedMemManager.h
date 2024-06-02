@@ -1,6 +1,7 @@
 
 #pragma once
 #include "types.h"
+#include "umultimap.h"
 
 typedef struct mmap_params {
   void* start;
@@ -15,9 +16,14 @@ typedef struct mmap_params {
 class SharedMemManager
 {
 public:
+  ustl::multimap<int, size_t> shared_map_;  // <fd, ppn>
+
+  
   SharedMemManager();
   // TODOMINH: add copy constructor so it works with fork() (maybe also add cpy ctor for UserSpaceMemManager)
   ~SharedMemManager();
+
+
   void* mmap(mmap_params_t* params);
   int munmap(void* addr, size_t length);
   void* getAddr();

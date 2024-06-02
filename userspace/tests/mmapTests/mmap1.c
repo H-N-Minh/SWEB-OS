@@ -19,11 +19,13 @@ int main()
     }
     close(fd);
 
-
+    printf("Memory mapped at address %p\n", addr);
+    *(size_t*)addr = 69;
+    printf("Value at address %p: %zu\n", addr, *(size_t*)addr);
 
     // write to the memory
-    // const char* st = "Hello, world!";  // String to write to the mapped memory
-    // memcpy(addr, st, strlen(st));  // Copy the string to the mapped memory
+    const char* st = "Hello, world!";  // String to write to the mapped memory
+    memcpy(addr, st, strlen(st));  // Copy the string to the mapped memory
 
 
 
