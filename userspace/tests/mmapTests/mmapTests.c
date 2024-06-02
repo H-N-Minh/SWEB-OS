@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 
-int main2() {
+int main1() {
     int fd = open("usr/testmmn.txt", O_WRONLY | O_CREAT , 0644);
 
 
@@ -22,7 +22,7 @@ int main2() {
     // Read the content of the file
     char buffer[100];
     ssize_t bytes_read = read(fd, buffer, 20);
-
+    printf("Bytes read: %ld\n", bytes_read);
     buffer[bytes_read] = '\0';
 
     // Close the file

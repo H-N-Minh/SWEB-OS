@@ -7,6 +7,9 @@
 #include "UserThread.h"
 #include "UserProcess.h"
 #include "IPTManager.h"
+#include "Syscall.h"
+
+
 
 SharedMemManager::SharedMemManager()
 {
@@ -38,13 +41,29 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     shared_map_.insert(ustl::make_pair(fd, ppn));
 
     // map the page to the given address
-    size_t vpn = MAX_HEAP_SIZE / PAGE_SIZE;
+    size_t vpn = MAX_HEAP_SIZE * 3 / PAGE_SIZE;
 
     bool stat = ((UserThread*) currentThread)->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
     assert(stat && "SharedMemManager::mmap: mapPage failed\n");
+
+    // Read the data from the file into the page with the given ppn
+    char buffer[100];
+    size_t bytes_read = Syscall::read(fd, (pointer) buffer, 20);
+    debug(MINH, "SharedMemManager::mmap: bytesRead: %zu\n", bytes_read);
+    buffer[bytes_read] = '\0';
+    // if (bytesRead == -1) {
+    //     // Handle read error
+    //     debug(ERROR_DEBUG, "SharedMemManager::mmap: read failed\n");
+    //     return nullptr;
+    // }
+    if (bytes_read < (size_t) length) {
+        // Handle incomplete read
+        debug(ERROR_DEBUG, "SharedMemManager::mmap: incomplete read\n");
+        return nullptr;
+    }
     
     arch->archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
-    return (void*) MAX_HEAP_SIZE;
+    return (void*) (MAX_HEAP_SIZE * 3);
 }
 

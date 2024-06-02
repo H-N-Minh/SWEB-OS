@@ -19,22 +19,19 @@ int main()
     }
     close(fd);
 
+    // goal: read the content of the file through a virtual pointer addr
     printf("Memory mapped at address %p\n", addr);
-    *(size_t*)addr = 69;
-    printf("Value at address %p: %zu\n", addr, *(size_t*)addr);
+    printf("content of the memory: %s\n", (char*)addr);
 
     // write to the memory
     const char* st = "Hello, world!";  // String to write to the mapped memory
     memcpy(addr, st, strlen(st));  // Copy the string to the mapped memory
 
+    printf("String written to memory: %s\n", (char*)addr);
 
 
     // check if the data was written to the memory
     fd = open("usr/testmmn.txt", O_RDONLY);
-    char buffer[100];
-    ssize_t bytes_read = read(fd, buffer, 20);
-    buffer[bytes_read] = '\0';
-    printf("Content of the file: %s\n", buffer);
     close(fd);
 
 
