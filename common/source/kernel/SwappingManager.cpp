@@ -44,12 +44,13 @@ void SwappingManager::swapOutPage(size_t ppn)
   ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
 
   // for debuging
-  for(IPTEntry* virtual_page_info : virtual_page_infos)
-  {
-    ArchMemory* archmemory = virtual_page_info->archmem_;
-    size_t vpn = virtual_page_info->vpn_;
-    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset_counter_);
-  }
+  // for(IPTEntry* virtual_page_info : virtual_page_infos)
+  // {
+  //   ArchMemory* archmemory = virtual_page_info->archmem_;
+  //   size_t vpn = virtual_page_info->vpn_;
+  //   debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset_counter_);
+  // }
+  
   // take 1 archmem, any is fine, they should all point to same ppn
   ArchMemory* archmemory = virtual_page_infos[0]->archmem_;
   size_t vpn = virtual_page_infos[0]->vpn_;

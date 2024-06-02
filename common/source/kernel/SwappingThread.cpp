@@ -70,6 +70,15 @@ void SwappingThread::swapOut()
       swap_out_cond_.signal();
     }
   }
+  else if (!free_pages_.empty())    // no swap out needed => free_pages_ not needed => release them
+  {
+    for (uint32 ppn : free_pages_)
+    {
+      PageManager::instance()->freePPN(ppn);
+      debug(MINH, "SwappingThread::swapOut: free page %u\n", ppn);
+    }
+    free_pages_.clear();
+  }
   swap_out_lock_.release();
 }
 
@@ -155,6 +164,7 @@ void SwappingThread::updateMetaData()
     ipt->checkSwapMetaDataConsistency();
 
     // go through all archmem of each page and check if page was accessed
+    assert(ipt->swap_meta_data_.size() > 0 && "SwappingThread::updateMetaData: swap_meta_data_ is empty, it should be in sync with ram map\n");
     for (const auto& pair : ipt->swap_meta_data_)
     {
       size_t key = (size_t) pair.first;

@@ -181,12 +181,12 @@ int Syscall::mmap(size_t para, size_t retval)
   // error checking the para
   if (start != (void*) 0 || offset != 0)
   {
-    debug(ERROR, "Syscall::mmap: start and offset is not implemented\n");
+    debug(ERROR_DEBUG, "Syscall::mmap: start and offset is not implemented\n");
     return -1;
   }
   if (fd < 0)
   {
-    debug(ERROR, "Syscall::mmap: invalid fd\n");
+    debug(ERROR_DEBUG, "Syscall::mmap: invalid fd\n");
     return -1;
   }
   

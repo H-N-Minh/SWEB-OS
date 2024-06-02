@@ -133,35 +133,58 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   }
   else if (status == PRESENT)
   {
+    SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+    Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
+    Mutex* arch_lock = &current_archmemory.archmemory_lock_;
+
     ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(1);  // copyPage() and swapInPage each only needs 1 alloc
-    IPTManager::instance()->IPT_lock_.acquire();
-    current_archmemory.archmemory_lock_.acquire();
+    
+    swapper->swap_in_lock_.acquire();
+    ipt_lock->acquire();
+    arch_lock->acquire();
     //Page is not present anymore we need to swap it in
     if(!current_archmemory.isPresent(address))
-    {
-      SwappingManager::instance()->swapInPage(address / PAGE_SIZE, preallocated_pages);  //TODOs: maybe cow
+    { // TODOMINH: this is dubplicated code with above. Refactor it
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
+      size_t vpn = address / PAGE_SIZE;
+      ArchMemory& archmemory = currentThread->loader_->arch_memory_;
+      size_t disk_offset = archmemory.getDiskLocation(vpn);
+
+      // should be fine to release, because we still holding swap_in_lock_, so same threads doing same swap still has to wait for each other
+      // must release because thread must hold only orders lock before using CV
+      arch_lock->release();     
+      ipt_lock->release(); 
+
+      swapper->addSwapIn(disk_offset, &preallocated_pages);
+      while (swapper->isOffsetInMap(disk_offset))
+      {
+        swapper->swap_in_cond_.wait();
+      }
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
     else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
     {
       current_archmemory.copyPage(address, preallocated_pages);
+      arch_lock->release();     
+      ipt_lock->release(); 
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
     else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
     {
-
+      arch_lock->release();     
+      ipt_lock->release(); 
     }
     //We want to write to a page that is readable and not cow -> error
     else
     {
-      current_archmemory.archmemory_lock_.release();
-      IPTManager::instance()->IPT_lock_.release();
+      arch_lock->release();
+      ipt_lock->release();
       PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
       errorInPageFaultKillProcess();
     }
 
-    current_archmemory.archmemory_lock_.release();
-    IPTManager::instance()->IPT_lock_.release();
+    swapper->swap_in_lock_.release();
 
     PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   }

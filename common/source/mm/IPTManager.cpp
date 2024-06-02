@@ -130,6 +130,7 @@ size_t IPTManager::findPageToSwapOut()
     uint32 min_counter = UINT32_MAX;
     ustl::vector<uint32> min_ppns;    // vector of all pages with the minimum counter
 
+    assert(swap_meta_data_.size() > 0 && "IPTManager::findPageToSwapOut: swap_meta_data_ is empty. Cant do PRA NFU without it\n");
     for(auto& pair : swap_meta_data_)
     {
       ppn_t key = pair.first;
@@ -145,7 +146,6 @@ size_t IPTManager::findPageToSwapOut()
       {
         min_ppns.push_back(key);
       }
-      
     }
     debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
     if (min_ppns.size() > 1)
@@ -224,9 +224,9 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
 
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
-  // checkRamMapConsistency();
-  // checkDiskMapConsistency();
-  // checkSwapMetaDataConsistency();
+  checkRamMapConsistency();
+  checkDiskMapConsistency();
+  checkSwapMetaDataConsistency();
 }
 
 void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
@@ -280,9 +280,9 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
 
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
-  // checkRamMapConsistency();
-  // checkDiskMapConsistency();
-  // checkSwapMetaDataConsistency();
+  checkRamMapConsistency();
+  checkDiskMapConsistency();
+  checkSwapMetaDataConsistency();
 }
 
 ustl::vector<IPTEntry*> IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)

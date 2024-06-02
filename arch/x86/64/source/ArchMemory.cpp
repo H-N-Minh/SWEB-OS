@@ -88,6 +88,8 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
               memcpy((void*) CHILD_pt, (void*) PARENT_pt, PAGE_SIZE);
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
 
+
+
               // loop through pt to get each pageT
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
