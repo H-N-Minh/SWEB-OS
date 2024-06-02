@@ -22,6 +22,8 @@
 #include "types.h"
 #include "sys/syscall.h"
 #include "../../../common/include/kernel/syscall-definitions.h"
+#include "pthread.h"
+#include "unistd.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -39,6 +41,15 @@ extern "C" {
  *
  */
 #define NULL 0
+
+struct MemoryBlock
+{
+  int is_free_;
+  size_t size_;
+  void* address_;
+  struct MemoryBlock* next_;
+};
+typedef struct MemoryBlock MemoryBlock;
 
 
 /**
@@ -84,6 +95,12 @@ extern void *calloc(size_t nmemb, size_t size);
 extern void *realloc(void *ptr, size_t size);
 
 extern void free(void *ptr);
+
+extern size_t bytesNeededForMemoryBlock(size_t size);
+extern int allocateMemoryWithSbrk(size_t bytes_needed);
+extern void createNewMemoryBlock(MemoryBlock* memory_block, size_t size, int is_free, void* address, MemoryBlock* next);
+extern void addOverflowProtection(MemoryBlock* memory_block);
+extern int checkOverflowProtection(MemoryBlock* memory_block);
 
 #ifdef __cplusplus
 }

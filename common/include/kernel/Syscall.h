@@ -72,9 +72,6 @@ public:
 
   static void getIPTInfos();
 
-  static void* malloc(size_t size);
-  static void free(void* ptr);
-  static void* calloc(size_t nmemb, size_t size);
   /**
    * debug syscall check if the ppn of all archmem matches the IPT, and opposite
   */

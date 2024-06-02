@@ -286,234 +286,234 @@ int UserSpaceMemoryManager::checkGuardValid(size_t top_current_stack)
 
 
 
-size_t UserSpaceMemoryManager::bytesNeededForMemoryBlock(size_t size)
-{
-  return size + sizeof(MemoryBlock) + sizeof(char);
-}
+// size_t UserSpaceMemoryManager::bytesNeededForMemoryBlock(size_t size)
+// {
+//   return size + sizeof(MemoryBlock) + sizeof(char);
+// }
 
-int UserSpaceMemoryManager::allocateMemoryWithSbrk(size_t bytes_needed)
-{
-  size_t pages_needed = (bytes_needed / (PAGE_SIZE + 1)) + 1;
-  free_bytes_left_on_page_ =  PAGE_SIZE - (bytes_needed % PAGE_SIZE);
+// int UserSpaceMemoryManager::allocateMemoryWithSbrk(size_t bytes_needed)
+// {
+//   size_t pages_needed = (bytes_needed / (PAGE_SIZE + 1)) + 1;
+//   free_bytes_left_on_page_ =  PAGE_SIZE - (bytes_needed % PAGE_SIZE);
 
-  if(free_bytes_left_on_page_ == PAGE_SIZE)
-  {
-    free_bytes_left_on_page_ = 0;
-  }
+//   if(free_bytes_left_on_page_ == PAGE_SIZE)
+//   {
+//     free_bytes_left_on_page_ = 0;
+//   }
 
-  void* rv = (void*)sbrk((ssize_t)(pages_needed * PAGE_SIZE));
-  if(rv == (void*)-1)
-  {
-    return -1;
-  }
-  return 0;
-}
+//   void* rv = (void*)sbrk((ssize_t)(pages_needed * PAGE_SIZE));
+//   if(rv == (void*)-1)
+//   {
+//     return -1;
+//   }
+//   return 0;
+// }
 
-void UserSpaceMemoryManager::createNewMemoryBlock(MemoryBlock* memory_block, size_t size, bool is_free, void* address, MemoryBlock* next)
-{
-  memory_block->size_ = size;
-  memory_block->is_free_ = is_free;
-  memory_block->address_ = address;
-  memory_block->next_ = next;
-}
+// void UserSpaceMemoryManager::createNewMemoryBlock(MemoryBlock* memory_block, size_t size, bool is_free, void* address, MemoryBlock* next)
+// {
+//   memory_block->size_ = size;
+//   memory_block->is_free_ = is_free;
+//   memory_block->address_ = address;
+//   memory_block->next_ = next;
+// }
 
-void UserSpaceMemoryManager::addOverflowProtection(MemoryBlock* memory_block)
-{
-  *((char*)((size_t)memory_block->address_ + memory_block->size_)) = '|';
-}
+// void UserSpaceMemoryManager::addOverflowProtection(MemoryBlock* memory_block)
+// {
+//   *((char*)((size_t)memory_block->address_ + memory_block->size_)) = '|';
+// }
 
-bool UserSpaceMemoryManager::checkOverflowProtection(MemoryBlock* memory_block)
-{
-  if(*((char*)((size_t)memory_block->address_ + memory_block->size_)) == '|')
-  {
-    return true;
-  }
-  else
-  {
-    return false;
-  }
-}
+// bool UserSpaceMemoryManager::checkOverflowProtection(MemoryBlock* memory_block)
+// {
+//   if(*((char*)((size_t)memory_block->address_ + memory_block->size_)) == '|')
+//   {
+//     return true;
+//   }
+//   else
+//   {
+//     return false;
+//   }
+// }
 
-size_t free_bytes_left_on_page_ = 0;
+// size_t free_bytes_left_on_page_ = 0;
 
-MemoryBlock* first_memory_block_ = NULL;
-MemoryBlock* heap_start__;
+// MemoryBlock* first_memory_block_ = NULL;
+// MemoryBlock* heap_start__;
 
 
-void* UserSpaceMemoryManager::malloc(size_t size)
-{
-  if(size == 0)
-  {
-    return NULL;
-  }
+// void* UserSpaceMemoryManager::malloc(size_t size)
+// {
+//   if(size == 0)
+//   {
+//     return NULL;
+//   }
 
-  current_break_lock_.acquire();
-  if(first_malloc_call) //TODOs make check atomic
-  {
-    heap_start__ = (MemoryBlock*)sbrk(0);
-    first_malloc_call = false;
-  }
+//   current_break_lock_.acquire();
+//   if(first_malloc_call) //TODOs make check atomic
+//   {
+//     heap_start__ = (MemoryBlock*)sbrk(0);
+//     first_malloc_call = false;
+//   }
 
-  if(!first_memory_block_)
-  {
-    size_t bytes_needed = bytesNeededForMemoryBlock(size);
-    int rv = allocateMemoryWithSbrk(bytes_needed);
-    if(rv == -1)
-    {
-      current_break_lock_.release();
-      return NULL;
-    }
+//   if(!first_memory_block_)
+//   {
+//     size_t bytes_needed = bytesNeededForMemoryBlock(size);
+//     int rv = allocateMemoryWithSbrk(bytes_needed);
+//     if(rv == -1)
+//     {
+//       current_break_lock_.release();
+//       return NULL;
+//     }
 
-    first_memory_block_ = heap_start__;
-    createNewMemoryBlock(first_memory_block_, size, false, first_memory_block_ + 1, NULL);
-    addOverflowProtection(first_memory_block_);
-    used_block_counts_++;
-    current_break_lock_.release();
-    return first_memory_block_->address_;
-  }
-  else
-  {
-    MemoryBlock* next_memory_block = first_memory_block_;
-    while(1)
-    {
-      if(!checkOverflowProtection(next_memory_block))
-      {
-        current_break_lock_.release();
-        Syscall::exit(-1);
-      }
-      if(next_memory_block->is_free_ && next_memory_block->size_ >= size)
-      {
-        if(next_memory_block->size_ >= bytesNeededForMemoryBlock(size) + bytesNeededForMemoryBlock(0))
-        {
-          MemoryBlock* new_unused_memory_block = (MemoryBlock*)((size_t)next_memory_block + bytesNeededForMemoryBlock(size));
-          createNewMemoryBlock(new_unused_memory_block, next_memory_block->size_ - bytesNeededForMemoryBlock(size), true, new_unused_memory_block + 1, next_memory_block->next_);
+//     first_memory_block_ = heap_start__;
+//     createNewMemoryBlock(first_memory_block_, size, false, first_memory_block_ + 1, NULL);
+//     addOverflowProtection(first_memory_block_);
+//     used_block_counts_++;
+//     current_break_lock_.release();
+//     return first_memory_block_->address_;
+//   }
+//   else
+//   {
+//     MemoryBlock* next_memory_block = first_memory_block_;
+//     while(1)
+//     {
+//       if(!checkOverflowProtection(next_memory_block))
+//       {
+//         current_break_lock_.release();
+//         Syscall::exit(-1);
+//       }
+//       if(next_memory_block->is_free_ && next_memory_block->size_ >= size)
+//       {
+//         if(next_memory_block->size_ >= bytesNeededForMemoryBlock(size) + bytesNeededForMemoryBlock(0))
+//         {
+//           MemoryBlock* new_unused_memory_block = (MemoryBlock*)((size_t)next_memory_block + bytesNeededForMemoryBlock(size));
+//           createNewMemoryBlock(new_unused_memory_block, next_memory_block->size_ - bytesNeededForMemoryBlock(size), true, new_unused_memory_block + 1, next_memory_block->next_);
 
-          next_memory_block->next_ = new_unused_memory_block;
-          next_memory_block->size_ = size;
-          addOverflowProtection(next_memory_block);
+//           next_memory_block->next_ = new_unused_memory_block;
+//           next_memory_block->size_ = size;
+//           addOverflowProtection(next_memory_block);
 
-          if(new_unused_memory_block->next_ && new_unused_memory_block->next_->is_free_)
-          {
-            new_unused_memory_block->size_ = new_unused_memory_block->size_ + bytesNeededForMemoryBlock(new_unused_memory_block->next_->size_);
-            new_unused_memory_block->next_ = new_unused_memory_block->next_->next_;
-          }
-        }
-        next_memory_block->is_free_ = false;
-        used_block_counts_++;
-        current_break_lock_.release();
-        return next_memory_block->address_;
-      }
-      //last element of linked list reached
-      else if(next_memory_block->next_ == NULL)
-      {
-        if(bytesNeededForMemoryBlock(size) <= free_bytes_left_on_page_)
-        {
-          free_bytes_left_on_page_ -=  bytesNeededForMemoryBlock(size);
-        }
-        else
-        {
-          size_t bytes_needed = bytesNeededForMemoryBlock(size) - free_bytes_left_on_page_;
-          int rv = allocateMemoryWithSbrk(bytes_needed);
-          if(rv == -1)
-          {
-            current_break_lock_.release();
-            return NULL;
-          }
-        }
-        MemoryBlock* memory_block_new = (MemoryBlock*)((size_t)next_memory_block + bytesNeededForMemoryBlock(next_memory_block->size_));
-        createNewMemoryBlock(memory_block_new, size, false, memory_block_new + 1, NULL);
-        addOverflowProtection(memory_block_new);
-        used_block_counts_++;
-        next_memory_block->next_ = memory_block_new;
+//           if(new_unused_memory_block->next_ && new_unused_memory_block->next_->is_free_)
+//           {
+//             new_unused_memory_block->size_ = new_unused_memory_block->size_ + bytesNeededForMemoryBlock(new_unused_memory_block->next_->size_);
+//             new_unused_memory_block->next_ = new_unused_memory_block->next_->next_;
+//           }
+//         }
+//         next_memory_block->is_free_ = false;
+//         used_block_counts_++;
+//         current_break_lock_.release();
+//         return next_memory_block->address_;
+//       }
+//       //last element of linked list reached
+//       else if(next_memory_block->next_ == NULL)
+//       {
+//         if(bytesNeededForMemoryBlock(size) <= free_bytes_left_on_page_)
+//         {
+//           free_bytes_left_on_page_ -=  bytesNeededForMemoryBlock(size);
+//         }
+//         else
+//         {
+//           size_t bytes_needed = bytesNeededForMemoryBlock(size) - free_bytes_left_on_page_;
+//           int rv = allocateMemoryWithSbrk(bytes_needed);
+//           if(rv == -1)
+//           {
+//             current_break_lock_.release();
+//             return NULL;
+//           }
+//         }
+//         MemoryBlock* memory_block_new = (MemoryBlock*)((size_t)next_memory_block + bytesNeededForMemoryBlock(next_memory_block->size_));
+//         createNewMemoryBlock(memory_block_new, size, false, memory_block_new + 1, NULL);
+//         addOverflowProtection(memory_block_new);
+//         used_block_counts_++;
+//         next_memory_block->next_ = memory_block_new;
         
-        current_break_lock_.release();
-        return memory_block_new->address_;
-      }
-      else
-      {
-        next_memory_block = next_memory_block->next_;
-      }
-    }
-    current_break_lock_.release();
-  }
-}
+//         current_break_lock_.release();
+//         return memory_block_new->address_;
+//       }
+//       else
+//       {
+//         next_memory_block = next_memory_block->next_;
+//       }
+//     }
+//     current_break_lock_.release();
+//   }
+// }
 
 
-void UserSpaceMemoryManager::free(void *ptr)
-{
-  if(ptr == NULL) //TODOs (check pointer)
-  {
-    return;
-  }
+// void UserSpaceMemoryManager::free(void *ptr)
+// {
+//   if(ptr == NULL) //TODOs (check pointer)
+//   {
+//     return;
+//   }
 
-  current_break_lock_.acquire();
-  MemoryBlock* element_to_free = (MemoryBlock*)ptr - 1;
-  MemoryBlock* next = first_memory_block_;
-  if(next == NULL)
-  {
-    current_break_lock_.release();
-    Syscall::exit(-1);
-  }
-  MemoryBlock* element_before;
-  while(next->next_ != NULL)
-  {
-    if(*((char*)((size_t)next->address_ + next->size_)) != '|')
-    {
-      current_break_lock_.release();
-      Syscall::exit(-1);
-    }
-    if(next->next_ == element_to_free)
-    {
-      element_before = next;
-    }
-    next = next->next_;
-  }
-  if(!element_before && element_to_free != first_memory_block_) //Check if element can be found in list
-  {
-    current_break_lock_.release();
-    Syscall::exit(-1);
-  }
-  if(element_to_free->is_free_) //check if element is already free
-  {
-    current_break_lock_.release();
-    Syscall::exit(-1);
-  }
-  used_block_counts_--;
-  if(used_block_counts_ == 0)
-  {
-    free_bytes_left_on_page_ = 0;
-    int rv = brk((size_t)first_memory_block_);
-    if(rv != 0)
-    {
-      current_break_lock_.release();
-      Syscall::exit(-1);
-    }
-    first_memory_block_ = NULL;
-    current_break_lock_.release();
-    return;
-  }
-  element_to_free->is_free_ = true;
+//   current_break_lock_.acquire();
+//   MemoryBlock* element_to_free = (MemoryBlock*)ptr - 1;
+//   MemoryBlock* next = first_memory_block_;
+//   if(next == NULL)
+//   {
+//     current_break_lock_.release();
+//     Syscall::exit(-1);
+//   }
+//   MemoryBlock* element_before;
+//   while(next->next_ != NULL)
+//   {
+//     if(*((char*)((size_t)next->address_ + next->size_)) != '|')
+//     {
+//       current_break_lock_.release();
+//       Syscall::exit(-1);
+//     }
+//     if(next->next_ == element_to_free)
+//     {
+//       element_before = next;
+//     }
+//     next = next->next_;
+//   }
+//   if(!element_before && element_to_free != first_memory_block_) //Check if element can be found in list
+//   {
+//     current_break_lock_.release();
+//     Syscall::exit(-1);
+//   }
+//   if(element_to_free->is_free_) //check if element is already free
+//   {
+//     current_break_lock_.release();
+//     Syscall::exit(-1);
+//   }
+//   used_block_counts_--;
+//   if(used_block_counts_ == 0)
+//   {
+//     free_bytes_left_on_page_ = 0;
+//     int rv = brk((size_t)first_memory_block_);
+//     if(rv != 0)
+//     {
+//       current_break_lock_.release();
+//       Syscall::exit(-1);
+//     }
+//     first_memory_block_ = NULL;
+//     current_break_lock_.release();
+//     return;
+//   }
+//   element_to_free->is_free_ = true;
 
-  if(element_to_free->next_ && element_to_free->next_->is_free_)
-  {
-    element_to_free->size_ = element_to_free->size_ + element_to_free->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
-    element_to_free->next_ = element_to_free->next_->next_;
-  }
-  if(element_to_free != first_memory_block_ &&element_before->is_free_)
-  {
-    element_before->size_ = element_before->size_ + element_before->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
-    element_before->next_ = element_before->next_->next_;
-  }
-  current_break_lock_.release();
-}
+//   if(element_to_free->next_ && element_to_free->next_->is_free_)
+//   {
+//     element_to_free->size_ = element_to_free->size_ + element_to_free->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
+//     element_to_free->next_ = element_to_free->next_->next_;
+//   }
+//   if(element_to_free != first_memory_block_ &&element_before->is_free_)
+//   {
+//     element_before->size_ = element_before->size_ + element_before->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
+//     element_before->next_ = element_before->next_->next_;
+//   }
+//   current_break_lock_.release();
+// }
 
 
-void* UserSpaceMemoryManager::calloc(size_t num_memb, size_t size_each)
-{
-  void* temp = malloc(num_memb * size_each);
-  memset(temp, 0, num_memb * size_each);
-  return temp; 
-}
+// void* UserSpaceMemoryManager::calloc(size_t num_memb, size_t size_each)
+// {
+//   void* temp = malloc(num_memb * size_each);
+//   memset(temp, 0, num_memb * size_each);
+//   return temp; 
+// }
 
 
 
