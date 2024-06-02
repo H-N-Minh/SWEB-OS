@@ -89,7 +89,7 @@ public:
   /**
    * helper for insert, remove, moveEntry. This checks if an entry is already in the map
   */
-  bool isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem);
+  bool isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem, size_t vpn);
 
   // ustl::vector<IPTEntry*> getPageInfosForPPN(size_t ppn); //TODOs
 

@@ -99,8 +99,8 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       size_t disk_offset = current_archmemory.getDiskLocation(vpn);
       if(DIRECT_SWAPPING)
       {
-        SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
         current_archmemory.archmemory_lock_.release();
+        SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
         IPTManager::instance()->IPT_lock_.release();
       }
       else if(ASYNCHRONOUS_SWAPPING)

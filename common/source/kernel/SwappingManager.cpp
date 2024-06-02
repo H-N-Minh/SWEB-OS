@@ -186,15 +186,16 @@ void SwappingManager::swapOutPage(size_t ppn)
 //Only works if the page i want to swap in is in the archmemory of current thread
 int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages)
 {
-  ArchMemory& archmemory = currentThread->loader_->arch_memory_; //TODOs Select the right archmemory not nessessary the one of the current thread
-  
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
-  assert(archmemory.archmemory_lock_.heldBy() == currentThread); //Todo remove
 
-  //TODOs check if data is still swappped out or in ipt lock then return
+  if(!ipt_->isKeyInMap(disk_offset, DISK_MAP))
+  {
+    //At this offset is nothing in the IPT-Map somebody else was faster
+    return -1;
+  }
 
   ustl::vector<IPTEntry*> virtual_page_infos = ipt_->getIptEntriesFromKey(disk_offset, IPTMapType::DISK_MAP);
-  lockArchmemoriesInRightOrder(virtual_page_infos);
+  lockArchmemorys(virtual_page_infos);
  
  //Get new ppn
   size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
@@ -211,41 +212,11 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   readFromDisk(disk_offset, ppn);
   disk_lock_.release();
 
-  unlockArchmemories(virtual_page_infos);
+  unlockArchmemorys(virtual_page_infos);
 
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in from disk_offset %ld finished", disk_offset);
   return 0;
 }
-
-
-
-//TODOs: Does not lock them in the right order yet and does not lock current thread
-void SwappingManager::lockArchmemoriesInRightOrder(ustl::vector<IPTEntry*>& virtual_page_infos)
-{
-  for(IPTEntry* virtual_page_info : virtual_page_infos)
-  {
-    ArchMemory* archmemory = virtual_page_info->archmem_;
-    if(archmemory != &currentThread->loader_->arch_memory_)
-    {
-      archmemory->archmemory_lock_.acquire();
-    }
-  }
-}
-
-
-//TODOs: Does at the moment not unlock the current thread
-void SwappingManager::unlockArchmemories(ustl::vector<IPTEntry*>& virtual_page_infos)
-{
-  for(IPTEntry* virtual_page_info : virtual_page_infos)
-  {
-    ArchMemory* archmemory = virtual_page_info->archmem_;
-    if(archmemory != &currentThread->loader_->arch_memory_)
-    {
-      archmemory->archmemory_lock_.release();
-    }
-  }
-}
-
 
 void SwappingManager::lockArchmemorys(ustl::vector<IPTEntry*>& virtual_page_infos)
 {

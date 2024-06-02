@@ -49,8 +49,6 @@ class SwappingManager
     int total_disk_reads_ = 0;
     int total_disk_writes_ = 0;
 
-    void lockArchmemoriesInRightOrder(ustl::vector<IPTEntry*> &virtual_page_infos);
-    void unlockArchmemories(ustl::vector<IPTEntry*> &virtual_page_infos);
 
     void lockArchmemorys(ustl::vector<IPTEntry*>& virtual_page_infos);
     void unlockArchmemorys(ustl::vector<IPTEntry*>& virtual_page_infos);

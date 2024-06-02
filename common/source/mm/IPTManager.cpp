@@ -187,7 +187,7 @@ void IPTManager::insertEntryIPTNew(IPTMapType map_type, size_t ppn, size_t vpn, 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   
   // Error checking: entry should not already exist
-  if (isEntryInMap(ppn, map_type, archmem))
+  if (isEntryInMap(ppn, map_type, archmem, vpn))
   {
     debug(IPT, "IPTManager::insertEntryIPT: Entry (ppn: %zu, archmem: %p) already exists in %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
     assert(0 && "IPTManager::insertEntryIPT: Entry already exists in map\n");
@@ -231,7 +231,7 @@ void IPTManager::removeEntryIPTNew(IPTMapType map_type, size_t ppn, size_t vpn, 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   
   // Error checking that the entry does exist in the map before removing
-  if (!isEntryInMap(ppn, map_type, archmem))
+  if (!isEntryInMap(ppn, map_type, archmem, vpn))
   {
     debug(IPT, "IPTManager::removeEntryIPT Entry (ppn %zu, archmem %p) not found in the map %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
     assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in map\n");
@@ -371,7 +371,7 @@ ustl::vector<IPTEntry*> IPTManager::moveEntryNew(IPTMapType source, size_t ppn_s
   {
     assert(entry->archmem_->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
     IPTMapType destination_map_type = (source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP);
-    assert(!isEntryInMap(ppn_destination, destination_map_type, entry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
+    assert(!isEntryInMap(ppn_destination, destination_map_type, entry->archmem_, entry->vpn_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
   }
   debug(SWAPPING, "IPTManager::moveEntry: Entry to be moved seems valid, moving now\n");
 
@@ -400,14 +400,14 @@ ustl::vector<IPTEntry*> IPTManager::moveEntryNew(IPTMapType source, size_t ppn_s
   return ipt_entries;
 }
 
-bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem)
+bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem, size_t vpn)
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::isEntryInMap called but IPT not locked\n");
   auto* map = (maptype == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   auto range = map->equal_range(ppn);
   for (auto it = range.first; it != range.second; ++it)
   {
-    if (it->second->archmem_ == archmem)
+    if (it->second->archmem_ == archmem && it->second->vpn_ == vpn)
     {
       return true;
     }
