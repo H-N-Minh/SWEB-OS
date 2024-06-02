@@ -1,18 +1,20 @@
-#include "Loader.h" //
+#include "Loader.h" 
 #include "UserThread.h"
 #include "PageManager.h"
 #include "SwappingManager.h"
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
+#include "SwappingThread.h"
 
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
 
-SwappingManager::SwappingManager() : disk_lock_("disk_lock_"), pre_swap_lock_("pre_swap_lock_")
+SwappingManager::SwappingManager() : disk_lock_("disk_lock_"), pre_swap_lock_("pre_swap_lock_"), 
+swapping_thread_finished_lock_("swapping_thread_finished_lock_"), 
+swapping_thread_finished_(&swapping_thread_finished_lock_, "swapping_thread_finished_")
 {
   assert(!instance_);
   instance_ = this;
-   //TODOs needs to be deleted at some point
   ipt_ = new IPTManager();          
   bd_device_ = BDManager::getInstance()->getDeviceByNumber(3);
   bd_device_->setBlockSize(PAGE_SIZE);
@@ -26,8 +28,16 @@ SwappingManager* SwappingManager::instance()
 
 SwappingManager::~SwappingManager()
 {
+  SwappingThread::should_be_killed_ = true;
+  swapping_thread_finished_lock_.acquire();
+  while(SwappingThread::user_initialized_flag_)
+  {
+    swapping_thread_finished_.wait();
+  }
+  swapping_thread_finished_lock_.release();
   delete ipt_;
 }
+
 
 
 //does only work if the page to swap out is also in the archmemory of the current thread

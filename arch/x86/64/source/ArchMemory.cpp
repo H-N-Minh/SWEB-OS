@@ -40,7 +40,7 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
   archmemory_lock_.acquire();
   
   debug(FORK, "ArchMemory::copy-constructor starts \n");
-  page_map_level_4_ = PageManager::instance()->getPreAlocatedPage(preallocated_pages);;
+  page_map_level_4_ = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
   memcpy((void*) CHILD_pml4, (void*) PARENT_pml4, PAGE_SIZE);
@@ -155,7 +155,7 @@ ArchMemory::~ArchMemory()
               PageTableEntry* pt = (PageTableEntry*) getIdentAddressOfPPN(pd[pdi].pt.page_ppn);
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
-                if (pt[pti].present)  //TODOs: what if swapped out
+                if (pt[pti].present)
                 {
                   pt[pti].present = 0;
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);

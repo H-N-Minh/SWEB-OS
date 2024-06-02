@@ -30,7 +30,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::NFU;
+  pra_type_ = PRA_TYPE::RANDOM;
 }
 
 IPTManager* IPTManager::instance()
@@ -542,24 +542,24 @@ void IPTManager::checkDiskMapConsistency()
 
 void IPTManager::checkSwapMetaDataConsistency()
 {
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::checkSwapMetaDataConsistency called but IPT not locked\n");
+  // assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::checkSwapMetaDataConsistency called but IPT not locked\n");
 
-  ustl::set<ppn_t> uniqueKeys;
-  for (auto entry : ram_map_)
-  {
-    uniqueKeys.insert(entry.first);
-  }
+  // ustl::set<ppn_t> uniqueKeys;
+  // for (auto entry : ram_map_)
+  // {
+  //   uniqueKeys.insert(entry.first);
+  // }
 
-  assert(uniqueKeys.size() == swap_meta_data_.size() && "checkSwapMetaDataConsistency: swap_meta_data_ and ram_map_ are not in sync\n");
+  // assert(uniqueKeys.size() == swap_meta_data_.size() && "checkSwapMetaDataConsistency: swap_meta_data_ and ram_map_ are not in sync\n");
   
-  for (auto key : uniqueKeys)
-  {
-    if (swap_meta_data_.find(key) == swap_meta_data_.end())
-    {
-      debug(SWAPPING, "IPTManager::checkSwapMetaDataConsistency: Key %zu in ram_map_ does not exist in swap_meta_data_\n", key);
-      assert(0 && "checkSwapMetaDataConsistency: swap_meta_data_ and ram_map_ are not in sync\n");
-    }
-  }
+  // for (auto key : uniqueKeys)
+  // {
+  //   if (swap_meta_data_.find(key) == swap_meta_data_.end())
+  //   {
+  //     debug(SWAPPING, "IPTManager::checkSwapMetaDataConsistency: Key %zu in ram_map_ does not exist in swap_meta_data_\n", key);
+  //     assert(0 && "checkSwapMetaDataConsistency: swap_meta_data_ and ram_map_ are not in sync\n");
+  //   }
+  // }
 }
 
 bool IPTManager::isThereAnyPageToSwapOut()

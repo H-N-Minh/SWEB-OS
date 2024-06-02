@@ -109,7 +109,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
         current_archmemory.archmemory_lock_.release();  //TODOs: we need to check if ipt entry still exist and page is still swapped out !!!
         IPTManager::instance()->IPT_lock_.release();
 
-        swapper->swap_out_lock_.acquire();
+        swapper->swap_in_lock_.acquire();
         swapper->addSwapIn(disk_offset, &preallocated_pages);
         while (swapper->isOffsetInMap(disk_offset))               //TODOs not check if offset is in map but check if at offset in disk map is this vpn and archmemory - means only one thread can swap in
         {

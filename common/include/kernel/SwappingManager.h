@@ -6,6 +6,8 @@
 #include "IPTManager.h"
 #include "uqueue.h"
 
+#include "Condition.h"
+
 class IPTEntry;
 class SwappingManager
 {
@@ -35,6 +37,10 @@ class SwappingManager
   void performPreSwap();
   size_t getPreSwapQueueSize();
   void swapOutPageContent(size_t ppn);
+  Mutex pre_swap_lock_;
+
+  Mutex swapping_thread_finished_lock_;
+  Condition swapping_thread_finished_;
 
   private:
     static SwappingManager* instance_;
@@ -43,8 +49,9 @@ class SwappingManager
     BDVirtualDevice* bd_device_;
 
     ustl::queue<size_t> pre_swap_queue_;
-    Mutex pre_swap_lock_;
+    
     static size_t disk_offset_counter_;    //TODO? this only goes up, so disk page is never reused
+
 
     int total_disk_reads_ = 0;
     int total_disk_writes_ = 0;

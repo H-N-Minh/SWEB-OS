@@ -11,6 +11,7 @@ class SwappingThread : public Thread
 {
   public:
     static int user_initialized_flag_;    // 0: not initialized, 1: initialized. Only UserThread can change this flag.
+    static bool should_be_killed_;
   
     SwappingThread();
     virtual ~SwappingThread();

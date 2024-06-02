@@ -13,6 +13,7 @@
 #define SWAP_IN_AMOUNT 10     // max number of pages to swap in at a time
 
 int SwappingThread::user_initialized_flag_ = 0;
+bool SwappingThread::should_be_killed_ = false;
 
 
 SwappingThread::SwappingThread() 
@@ -120,6 +121,23 @@ void SwappingThread::Run()
   {
     if (user_initialized_flag_)
     {
+      if (should_be_killed_ && swap_in_map_.empty())   //should be locked
+      {
+        swap_out_lock_.acquire();
+        while(!free_pages_.empty())
+        {
+          size_t ppn = getFreePage();
+          PageManager::instance()->freePPN(ppn);
+        }
+        swap_out_lock_.release();
+
+        user_initialized_flag_ = false;
+
+        SwappingManager::instance()->swapping_thread_finished_lock_.acquire();
+        SwappingManager::instance()->swapping_thread_finished_.signal();
+        SwappingManager::instance()->swapping_thread_finished_lock_.release();
+        continue;
+      }
       // 1. Updating Meta data for PRA NFU every 2 seconds
       if (isOneTimeStep())
       {
@@ -132,6 +150,7 @@ void SwappingThread::Run()
       // 3. Swap in if needed
       swapIn();
     }
+
 
     // 4. Yield
     Scheduler::instance()->yield();
