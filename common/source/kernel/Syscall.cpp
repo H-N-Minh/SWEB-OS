@@ -20,7 +20,7 @@
 #include "ProcessRegistry.h"
 #include "ScopeLock.h"
 #include "SwappingManager.h"
-#include "SharedMem.h"
+#include "SharedMemManager.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -169,8 +169,30 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 int Syscall::mmap(size_t arg1)
 {
+  assert(arg1 && "Syscall::mmap: arg1 is null\n");
   mmap_params_t* params = (mmap_params_t*) arg1;
-  debug(MINH, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",params->start, params->length, params->prot, params->flags, params->fd, params->offset);
+  void* start = params->start;
+  size_t length = params->length;
+  int prot = params->prot;
+  int flags = params->flags;
+  int fd  = params->fd;
+  off_t offset = params->offset;
+  debug(MINH, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
+  // error checking the para
+  if (start != (void*) 0 || offset != 0)
+  {
+    debug(ERROR, "Syscall::mmap: start and offset is not implemented\n");
+    return -1;
+  }
+  if (fd < 0)
+  {
+    debug(ERROR, "Syscall::mmap: invalid fd\n");
+    return -1;
+  }
+  
+  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_;
+  smm->mmap(params);
+
 
   return 0;
 }

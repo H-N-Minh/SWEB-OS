@@ -8,6 +8,7 @@
 #include "SpinLock.h"
 #include "UserThread.h"
 #include "PageFaultHandler.h"
+#include "SharedMemManager.h"
 
 
 #define MAX_HEAP_SIZE (USER_BREAK / 4)
@@ -18,12 +19,15 @@ class UserSpaceMemoryManager
 {
   public:
     UserSpaceMemoryManager(Loader* loader);
+    ~UserSpaceMemoryManager();
 
     size_t current_break_;
     size_t heap_start_;
     Loader* loader_;
 
     SpinLock current_break_lock_;   // used to protect current_break_
+
+    SharedMemManager* shared_mem_;
 
     size_t totalUsedHeap();
 
