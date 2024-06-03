@@ -109,11 +109,11 @@ void SwappingThread::swapIn()
       {
         if (it2->first == disk_offset)
         {
-          swap_in_map_.erase(it);
+          swap_in_map_.erase(it2);
         }
         else
         {
-          ++it;
+          ++it2;
         }
       }
     }
@@ -128,7 +128,7 @@ void SwappingThread::Run()
   {
     if (user_initialized_flag_)
     {
-      // 1. Updating Meta data for PRA NFU every 2 seconds
+      // 1. Updating Meta data every 1 seconds
       if (isOneTimeStep())
       {
         updateMetaData();
