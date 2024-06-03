@@ -83,26 +83,17 @@ void SwappingThread::swapIn()
     // Swap in multiple pages at a time, until either no more swap-in requests or max swap-in amount at a time is reached
     for (int i = 0; i < SWAP_IN_AMOUNT; i++)
     {
-      kprintf("1\n");
       if (swap_in_map_.empty())
       {
-        kprintf("2\n");
         break;
       }
-      kprintf("3\n");
       // get the first page in the map and swap it in
       auto it = swap_in_map_.begin();
-      kprintf("4\n");
       size_t disk_offset = it->first;
-      kprintf("5\n");
       ustl::vector<uint32>* preallocated_pages = it->second;
-      kprintf("6\n");
       IPTManager* ipt = IPTManager::instance();
-      kprintf("7\n");
       ipt->IPT_lock_.acquire();
-      kprintf("8\n");
       SwappingManager::instance()->swapInPage(disk_offset, *preallocated_pages);
-      kprintf("9\n");
       ipt->IPT_lock_.release();
 
       // erase that page and all its values from the map
@@ -111,16 +102,14 @@ void SwappingThread::swapIn()
         if (it2->first == disk_offset)
         {
           swap_in_map_.erase(it2);
-          break;
         }
         else
         {
-          ++it;
+          ++it2;
         }
       }
     }
     swap_in_cond_.broadcast();
-    kprintf("10\n");
   }
   swap_in_lock_.release();
 }
