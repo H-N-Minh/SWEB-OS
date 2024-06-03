@@ -57,7 +57,7 @@ class SwappingThread : public Thread
      * If the memory is almost full and we dont have enough free pages in free_pages_, we need to swap out some pages.
      * This satisfies both preswap and swap out on demand.
     */
-    bool isTimeToSwapOut();
+    bool isMemoryAlmostFull();
 
     /**
      * check if free_pages_ is empty or not

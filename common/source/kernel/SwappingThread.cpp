@@ -34,7 +34,7 @@ void SwappingThread::kill()
 }
 
 
-bool SwappingThread::isTimeToSwapOut()
+bool SwappingThread::isMemoryAlmostFull()
 {
   PageManager* pm = PageManager::instance();
   // TODO ? lock pagemanager ? but the lock is private
@@ -43,18 +43,17 @@ bool SwappingThread::isTimeToSwapOut()
   uint32_t usedNumPages = totalNumPages - pm->getNumFreePages();
   uint32_t usedMemoryRatio = (usedNumPages * 100) / totalNumPages;
 
-  // 80% is the threshold for swapping -> can be changed
-  bool isMemoryNearLimit = usedMemoryRatio > PRESWAP_THRESHOLD;
-
-  // if memory is near limit AND our free_pages_ vector is not full -> swap out
-  return isMemoryNearLimit && (free_pages_.size() < MAX_PRESWAP_PAGES);
+  // 80% is the threshold for swapping -> if > threshold then memory is low
+  return usedMemoryRatio > PRESWAP_THRESHOLD;
 }
 
 void SwappingThread::swapOut()
 {
   swap_out_lock_.acquire();
 
-  if (isTimeToSwapOut())
+  bool almost_full_memory = isMemoryAlmostFull();
+
+  if (almost_full_memory && free_pages_.size() < MAX_PRESWAP_PAGES)    // if in low memory zone && vector is not full => swap out
   {
     // Swap out multiple pages at a time, until either the vector is full or max swap out amount is reached
     for (int i = 0; i < SWAP_OUT_AMOUNT; i++)
@@ -70,7 +69,7 @@ void SwappingThread::swapOut()
       swap_out_cond_.signal();
     }
   }
-  else if (!free_pages_.empty())    // no swap out needed => free_pages_ not needed => release them
+  else if (!almost_full_memory)    // no longer in low memory zone => free the pages
   {
     for (uint32 ppn : free_pages_)
     {

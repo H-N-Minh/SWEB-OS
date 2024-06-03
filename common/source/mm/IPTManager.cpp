@@ -132,12 +132,13 @@ size_t IPTManager::findPageToSwapOut()
     uint32 min_counter = UINT32_MAX;
     ustl::vector<uint32> min_ppns;    // vector of all pages with the minimum counter
 
-    checkRamMapConsistency();
-    checkDiskMapConsistency();
-    checkSwapMetaDataConsistency();
+    // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
+    // checkRamMapConsistency();
+    // checkDiskMapConsistency();
+    // checkSwapMetaDataConsistency();
     
 
-    assert(swap_meta_data_.size() > 0 && "IPTManager::findPageToSwapOut: swap_meta_data_ is empty. Cant do PRA NFU without it\n");
+    assert(swap_meta_data_.size() > 0 && "IPTManager::findPageToSwapOut: swap_meta_data_ is empty. this should never happen\n");
     for(auto& pair : swap_meta_data_)
     {
       ppn_t key = pair.first;
