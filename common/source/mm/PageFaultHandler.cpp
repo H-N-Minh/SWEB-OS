@@ -70,11 +70,11 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
    UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
   assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
-  // if (currentThread->holding_lock_list_)
-  // {
-  //   debug(PAGEFAULT, "PageFaultHandler::handlePageFault: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
-  //   assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
-  // }
+  if (currentThread->holding_lock_list_)
+  {
+    debug(PAGEFAULT, "PageFaultHandler::handlePageFault: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
+    assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
+  }
 
   ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
 

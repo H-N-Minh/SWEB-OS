@@ -7,7 +7,7 @@
 #include "Mutex.h"
 
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
-enum PRA_TYPE {RANDOM, NFU};
+enum PRA_TYPE {RANDOM, NFU, SIMPLE};
 
 #include "ArchMemory.h"
 
