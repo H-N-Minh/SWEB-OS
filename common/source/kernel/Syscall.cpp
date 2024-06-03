@@ -902,7 +902,6 @@ void Syscall::assertIPT()
   debug(SYSCALL, "Syscall::assertIPT: Checking validity of ram map, disk map, swap metadata\n");
   ipt->checkRamMapConsistency();
   ipt->checkDiskMapConsistency();
-  ipt->checkSwapMetaDataConsistency();
   debug(SYSCALL, "Syscall::assertIPT: All IPT looks good\n");
 
   ipt->IPT_lock_.release();

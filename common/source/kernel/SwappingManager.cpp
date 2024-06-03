@@ -4,6 +4,7 @@
 #include "SwappingManager.h"
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
+#include "IPTEntry.h"
 
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
@@ -36,7 +37,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   // lock in order IPT -> disk -> archmem
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   disk_lock_.acquire();
-  ustl::vector<IPTEntry*> virtual_page_infos = ipt_->getRamEntriesFromKey(ppn);
+  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   lock_archmemories_in_right_order(virtual_page_infos);   // lock archmem before moveEntry, because moveEntry checks for this
 
   //Move Page infos from ipt_map_ram to ipt_map_disk
@@ -44,7 +45,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
 
   // for debuging
-  // for(IPTEntry* virtual_page_info : virtual_page_infos)
+  // for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   // {
   //   ArchMemory* archmemory = virtual_page_info->archmem_;
   //   size_t vpn = virtual_page_info->vpn_;
@@ -63,7 +64,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   total_disk_writes_++;
 
   // updating all archmem to point to disk
-  for(IPTEntry* virtual_page_info : virtual_page_infos)
+  for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     archmemory = virtual_page_info->archmem_;
     vpn = virtual_page_info->vpn_;
@@ -89,7 +90,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 
   // lock the disk and all archmemories
-  ustl::vector<IPTEntry*> virtual_page_infos = ipt_->getDiskEntriesFromKey(disk_offset);
+  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->disk_map_[disk_offset]->getArchmemIPTs();
   disk_lock_.acquire();
   lock_archmemories_in_right_order(virtual_page_infos);   // lock archmem before moveEntry, because moveEntry checks for this
 
@@ -98,7 +99,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   ipt_->moveEntry(IPTMapType::DISK_MAP, disk_offset, ppn);
   
   // update all the archmem to point to RAM
-  for(IPTEntry* virtual_page_info : virtual_page_infos)
+  for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
@@ -124,13 +125,13 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
 }
 
 
-void SwappingManager::lock_archmemories_in_right_order(ustl::vector<IPTEntry*> &virtual_page_infos)
+void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos)
 {
   debug(SWAPPING, "SwappingManager::unlock_archmemories: locking archmem in order of lowest ArchMemory* address to highest\n");
   ustl::vector<ArchMemory*> archmemories;
-  for (IPTEntry* virtual_page_info : virtual_page_infos)
+  for (ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
-    assert(virtual_page_info && "unlock_archmemories(): IPTEntry* is null");
+    assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
     assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
     archmemories.push_back(virtual_page_info->archmem_);
   }
@@ -143,13 +144,13 @@ void SwappingManager::lock_archmemories_in_right_order(ustl::vector<IPTEntry*> &
 }
 
 
-void SwappingManager::unlock_archmemories(ustl::vector<IPTEntry*> &virtual_page_infos)
+void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos)
 {
   debug(SWAPPING, "SwappingManager::unlock_archmemories: unlocking archmem in order of highest ArchMemory* to lowest ArchMemory*\n");
   ustl::vector<ArchMemory*> archmemories;
-  for (IPTEntry* virtual_page_info : virtual_page_infos)
+  for (ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
-    assert(virtual_page_info && "unlock_archmemories(): IPTEntry* is null");
+    assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
     assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
     archmemories.push_back(virtual_page_info->archmem_);
   }

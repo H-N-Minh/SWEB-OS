@@ -4,6 +4,8 @@
 #include "Syscall.h"
 #include "ArchMemory.h"
 #include "PageManager.h"
+#include "IPTEntry.h"
+
 
 #define TIME_STEP 1 // in seconds
 #define TICKS_PER_SEC 18
@@ -158,27 +160,28 @@ void SwappingThread::updateMetaData()
 
 
   // debug(SWAPTHREAD, "SwappingThread::updateMetaData: updating meta data for PRA NFU\n");
-  // check validity of swap_meta_data_ and ram_map_
-  ipt->checkSwapMetaDataConsistency();
 
   // go through all archmem of each page and check if page was accessed
-  for (const auto& pair : ipt->swap_meta_data_)
+  for (const auto& pair : ipt->ram_map_)
   {
-    size_t key = (size_t) pair.first;
-    ustl::vector<IPTEntry*> entries = ipt->getRamEntriesFromKey(key);
-    assert(entries.size() > 0 && "SwappingThread::updateMetaData: key %zu is mapped to no IPTEntries in ram_map_\n");
+    IPTEntry* ipt_entry = pair.second;
+    assert(ipt_entry && "SwappingThread::updateMetaData: ipt_entry is nullptr\n");
+    ustl::vector<ArchmemIPT*> archmem_vector = ipt_entry->getArchmemIPTs();
+    assert(archmem_vector.size() > 0 && "SwappingThread::updateMetaData: key %zu is mapped to no archmem in ram_map_\n");
     
-    for (IPTEntry* entry : entries)
+    for (ArchmemIPT* entry : archmem_vector)
     {
       ArchMemory* archmem = entry->archmem_;
+      size_t vpn = entry->vpn_;
+
       assert(archmem && "SwappingThread::updateMetaData: archmem is nullptr\n");
       archmem->archmemory_lock_.acquire();
 
-      if (entry->archmem_->isPageAccessed(entry->vpn_))
+      if (archmem->isPageAccessed(vpn))
       {
         // Page was accessed, reset the bits, update data then break the loop to check next ppn
-        entry->archmem_->resetAccessDirtyBits(entry->vpn_);
-        ipt->swap_meta_data_[key]++;
+        archmem->resetAccessDirtyBits(vpn);
+        ipt_entry->access_counter_++;
         archmem->archmemory_lock_.release();
         // debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
         hit_count_++;

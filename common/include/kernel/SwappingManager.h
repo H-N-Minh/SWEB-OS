@@ -6,7 +6,7 @@
 #include "IPTManager.h"
 #include "uqueue.h"
 
-class IPTEntry;
+class ArchmemIPT;
 class SwappingManager
 {
   public:
@@ -19,8 +19,8 @@ class SwappingManager
     void swapOutPage(size_t ppn);
     int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
 
-    void lock_archmemories_in_right_order(ustl::vector<IPTEntry*> &virtual_page_infos);
-    void unlock_archmemories(ustl::vector<IPTEntry*> &virtual_page_infos);
+    void lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos);
+    void unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
     int getDiskWrites();
     int getDiskReads();

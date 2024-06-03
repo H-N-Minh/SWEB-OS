@@ -1,4 +1,4 @@
-#include "IPTManager.h"
+
 #include "ArchMemory.h"
 #include "ArchInterrupts.h"
 #include "kprintf.h"
@@ -645,7 +645,7 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
     return pt_entry->page_ppn; //ppn is used to store disk location
   }
 
-  return true;
+  return 0;
 }
 
 
