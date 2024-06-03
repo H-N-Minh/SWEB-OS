@@ -5,7 +5,7 @@
 #include "ArchMemory.h"
 #include "PageManager.h"
 
-#define TIME_STEP 2 // in seconds
+#define TIME_STEP 1 // in seconds
 #define TICKS_PER_SEC 18
 #define PRESWAP_THRESHOLD 80  // in percentage (start pre-swapping when memory usage is above 80%)
 #define MAX_PRESWAP_PAGES 20  // maximum total number of pages to pre-swap
@@ -162,7 +162,6 @@ void SwappingThread::updateMetaData()
   ipt->checkSwapMetaDataConsistency();
 
   // go through all archmem of each page and check if page was accessed
-  assert(ipt->swap_meta_data_.size() > 0 && "SwappingThread::updateMetaData: swap_meta_data_ is empty, it should be in sync with ram map\n");
   for (const auto& pair : ipt->swap_meta_data_)
   {
     size_t key = (size_t) pair.first;

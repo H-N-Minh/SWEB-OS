@@ -29,6 +29,10 @@ void* thread_function5(void* arg)
   {
     big_array5[i * (PAGESIZE / 8)] = (size_t)i;
   }
+  for(int i = start; i < end; i++)
+  {
+    assert((big_array5[i * (PAGESIZE / 8)]) == (size_t)i);
+  }
   // printf("Thread %d finished\n", thread_id);
   return NULL;
 }

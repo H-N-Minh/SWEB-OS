@@ -13,6 +13,7 @@ extern int pra3();
 extern int random1();
 extern int pra4();
 extern int pra5();
+extern int pra6();
 
 int PRA1 = 0;  
 int PRA2 = 0; 
@@ -20,6 +21,7 @@ int PRA3 = 0;
 int RANDOM1 = 0;
 int PRA4 = 0;
 int PRA5 = 0;
+int PRA6 = 0;
 // @problem: currently pra1 and pra2 cant be run together
 
 
@@ -34,6 +36,7 @@ int childMain()
     // RANDOM1 = 1;  // Test Random PRA is actually random
     // PRA4 = 1;       // double pagefault => double swap (still single thread) (doesnt work with pra NFU: endless loop)
     PRA5 = 1;       // 64 threads  writting to array at same time
+    // PRA6 = 1;       // similar to pra5, but use fork instead of pthread_create
 
     if (PRA1)
     {
@@ -78,6 +81,14 @@ int childMain()
     if (PRA5)
     {
         printf("\nTesting pra5: testing 64 threads writing to array in parallel...\n");
+        retval = pra5();
+        if (retval == 0)                      { printf("===> pra5 successful!\n"); }
+        else                                  { printf("===> pra5 failed!\n");  return -1;}
+    }
+
+    if (PRA6)
+    {
+        printf("\nTesting pra6: testing swapping in combination with fork...\n");
         retval = pra5();
         if (retval == 0)                      { printf("===> pra5 successful!\n"); }
         else                                  { printf("===> pra5 failed!\n");  return -1;}

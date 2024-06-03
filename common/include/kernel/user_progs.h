@@ -7,6 +7,10 @@ char const *user_progs[] = {
 //mmap-----------------------------------------------------------------------
                             // "/usr/mmapTests.sweb", 
 
+//Swapping-----------------------------------------------------------------------
+                            // "/usr/iptTests.sweb", 
+                            "/usr/praTests.sweb", 
+
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",
                             // "/usr/pthreadJoinDetachTests.sweb", 
@@ -22,7 +26,7 @@ char const *user_progs[] = {
 
 //Fork/Exec -------------------------------------------------------------------
                             // "/usr/waitpidTests.sweb",                
-                            "/usr/forkTests.sweb",
+                            // "/usr/forkTests.sweb",
 
                             // "/usr/fork7.sweb",
                             // "/usr/fork8.sweb",
@@ -54,10 +58,6 @@ char const *user_progs[] = {
                             //  "/usr/dupTest.sweb",
                             // "/usr/dupInvalidTest.sweb",
                             // "/usr/no_test.sweb",
-
-//Swapping-----------------------------------------------------------------------
-                            // "/usr/iptTests.sweb", 
-                            // "/usr/praTests.sweb", 
 
   
 
