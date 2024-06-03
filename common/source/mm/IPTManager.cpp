@@ -111,7 +111,7 @@ size_t IPTManager::findPageToSwapOut()
   
   int ppn_retval = INVALID_PPN;
 
-  checkSwapMetaDataConsistency();
+  // checkSwapMetaDataConsistency();
 
   if (pra_type_ == PRA_TYPE::RANDOM)
   {

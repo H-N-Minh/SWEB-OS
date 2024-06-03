@@ -22,7 +22,7 @@ char const *user_progs[] = {
 
 //Fork/Exec -------------------------------------------------------------------
                             // "/usr/waitpidTests.sweb",                
-                            // "/usr/forkTests.sweb",
+                            "/usr/forkTests.sweb",
 
                             // "/usr/fork7.sweb",
                             // "/usr/fork8.sweb",
@@ -57,7 +57,7 @@ char const *user_progs[] = {
 
 //Swapping-----------------------------------------------------------------------
                             // "/usr/iptTests.sweb", 
-                            "/usr/praTests.sweb", 
+                            // "/usr/praTests.sweb", 
 
   
 
