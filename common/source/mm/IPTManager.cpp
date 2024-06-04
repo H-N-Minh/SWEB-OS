@@ -262,23 +262,23 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
     debug(IPT, "IPTManager::moveEntry: Entry to be moved (ppn %zu) not found in source map %s\n", ppn_source, source_as_string);
     assert(0 && "IPTManager::moveEntry: Entry to be moved not found in source map\n");
   }
-  
-  IPTEntry* entry = (*source_map)[ppn_source];
-  assert(entry && "IPTManager::moveEntry: entry is null");
-  ustl::vector<ArchmemIPT*> archmemIPTs_vector = entry->getArchmemIPTs();
-  assert(archmemIPTs_vector.size() > 0 && "IPTManager::moveEntry: archmemIPTs_vector is empty even tho the IPTentry exists\n");
 
-  for (auto entry : archmemIPTs_vector)
+  IPTEntry* iptEntry = (*source_map)[ppn_source];
+  assert(iptEntry && "IPTManager::moveEntry: entry is null");
+  ustl::vector<ArchmemIPT*> archmemIPTs_vector = iptEntry->getArchmemIPTs();
+  assert(!archmemIPTs_vector.empty() && "IPTManager::moveEntry: archmemIPTs_vector is empty even tho the IPTEntry exists\n");
+
+  for (auto subEntry : archmemIPTs_vector)
   {
-    assert(entry->isLockedByUs() && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
-    assert(!isEntryInMap(ppn_destination, destination_map_type, entry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
+    assert(subEntry->isLockedByUs() && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
+    assert(!isEntryInMap(ppn_destination, destination_map_type, subEntry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
   }
   debug(SWAPPING, "IPTManager::moveEntry: Entry to be moved seems valid, moving now\n");
 
   // Moving entries
-  (*destination_map)[ppn_destination] = entry;
+  (*destination_map)[ppn_destination] = iptEntry;
   source_map->erase(ppn_source);
-  entry->access_counter_ = 0;
+  iptEntry->access_counter_ = 0;
 }
 
 bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem)
