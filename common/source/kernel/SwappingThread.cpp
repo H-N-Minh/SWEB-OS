@@ -73,12 +73,16 @@ void SwappingThread::swapOut()
   }
   else if (!almost_full_memory)    // no longer in low memory zone => free the pages
   {
-    for (uint32 ppn : free_pages_)
+    if (!free_pages_.empty())
     {
-      PageManager::instance()->freePPN(ppn);
-      debug(MINH, "SwappingThread::swapOut: free page %u\n", ppn);
+      for (uint32 ppn : free_pages_)
+      {
+        PageManager::instance()->freePPN(ppn);
+        debug(MINH, "SwappingThread::swapOut: free page %u\n", ppn);
+      }
+      free_pages_.clear();
     }
-    free_pages_.clear();
+    
   }
   swap_out_lock_.release();
 }
@@ -169,6 +173,8 @@ void SwappingThread::updateMetaData()
     ustl::vector<ArchmemIPT*> archmem_vector = ipt_entry->getArchmemIPTs();
     assert(archmem_vector.size() > 0 && "SwappingThread::updateMetaData: key %zu is mapped to no archmem in ram_map_\n");
     
+    bool hit = false;
+    // reset the accessed bit for all archmem of same ppn
     for (ArchmemIPT* entry : archmem_vector)
     {
       ArchMemory* archmem = entry->archmem_;
@@ -179,16 +185,19 @@ void SwappingThread::updateMetaData()
 
       if (archmem->isPageAccessed(vpn))
       {
-        // Page was accessed, reset the bits, update data then break the loop to check next ppn
+        // Page was accessed, reset the bits
         archmem->resetAccessDirtyBits(vpn);
-        ipt_entry->access_counter_++;
-        archmem->archmemory_lock_.release();
         // debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
-        hit_count_++;
-        break;
+        hit = true;
       }
       archmem->archmemory_lock_.release();
     }
+    if (hit)
+    {
+      ipt_entry->access_counter_++;
+      hit_count_++;
+    }
+    
   }
   ipt->IPT_lock_.release();
 }
