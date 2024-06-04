@@ -81,6 +81,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
+    heap_manager->current_break_lock_.acquire();
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
 
@@ -90,10 +91,12 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected, but another thread already swap this page in. Do nothing\n"); 
       current_archmemory.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
+      heap_manager->current_break_lock_.release();
     }
     //Page is swapped out
     else if(current_archmemory.isSwapped(address))
     {
+      heap_manager->current_break_lock_.release();
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
       size_t vpn = address / PAGE_SIZE;
       size_t disk_offset = current_archmemory.getDiskLocation(vpn);
@@ -127,7 +130,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       }
     }
     //Page is on heap
-    else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)  //TODOs needs to be locked
+    else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)
     {
       size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
       size_t vpn = address / PAGE_SIZE;
@@ -135,10 +138,13 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       assert(rv == true);
       current_archmemory.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
+      heap_manager->current_break_lock_.release();
     }
     //Page needs to be loader from binary 
     else
     {
+      debug(PAGEFAULT, "%18zx: heapstart, %18zx: current_break %18zx: max heap address\n",heap_manager->heap_start_, heap_manager->current_break_, (size_t)MAX_HEAP_ADDRESS);
+      heap_manager->current_break_lock_.release();
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page is not present and not swapped out -> Loading page\n");
       currentThread->loader_->loadPage(address, preallocated_pages);
       current_archmemory.archmemory_lock_.release();
@@ -152,7 +158,6 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page is not present anymore we need to swap it in -> do nothing so it gets swapped in on the next pagefault
     if(!current_archmemory.isPresent(address))
     {
-      //SwappingManager::instance()->swapInPage(..., preallocated_pages);       //TODOs: check if it better with or without comment out
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
     else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
@@ -160,7 +165,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       current_archmemory.copyPage(address, preallocated_pages);
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
-    else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
+    else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))  //TODOs dont reset cowbit
     {
 
     }

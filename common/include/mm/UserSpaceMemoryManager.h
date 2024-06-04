@@ -11,17 +11,10 @@
 #include "Syscall.h"
 
 
-#define MAX_HEAP_SIZE (USER_BREAK / 4)
+#define MAX_HEAP_ADDRESS (USER_BREAK / 4)
 #define MAX_STACK_AMOUNT 5    // if this is changed then update the define in pthread.h in userspace 
 #define GUARD_MARKER 0xbadcafe00000ULL  
 
-// struct MemoryBlock
-// {
-//   bool is_free_;
-//   size_t size_;
-//   void* address_;
-//   MemoryBlock* next_;
-// };
 
 class UserSpaceMemoryManager
 {

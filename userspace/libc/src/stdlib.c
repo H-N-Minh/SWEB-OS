@@ -1,15 +1,16 @@
 #include "stdlib.h"
 #include "string.h"
+#include "stdio.h"
 
 
-int malloc_counter = 0;
+int first_malloc_call = 1;
 size_t used_block_counts_ = 0;
 size_t free_bytes_left_on_page_ = 0;
 
 MemoryBlock* first_memory_block_ = NULL;
 MemoryBlock* heap_start__;
 
-pthread_spinlock_t memory_lock;
+pthread_spinlock_t memory_lock = PTHREAD_SPIN_INITIALIZER;
 
 
 
@@ -20,14 +21,14 @@ void* malloc(size_t size)
     return NULL;
   }
 
-  malloc_counter++;  //TODOs make this atomic
-  if(malloc_counter == 1) 
+  pthread_spin_lock(&memory_lock);
+  if(first_malloc_call) 
   {
+    first_malloc_call = 0;
     heap_start__ = (MemoryBlock*)sbrk(0);
-    pthread_spin_init(&memory_lock, 0);
   }
 
-  pthread_spin_lock(&memory_lock);
+  
   if(!first_memory_block_)
   {
     size_t bytes_needed = bytesNeededForMemoryBlock(size);
@@ -208,15 +209,18 @@ size_t bytesNeededForMemoryBlock(size_t size)
 
 int allocateMemoryWithSbrk(size_t bytes_needed)
 {
-  int buffer_size = 4096;
-  size_t pages_needed = (bytes_needed / (buffer_size + 1)) + 1;
-  free_bytes_left_on_page_ =  buffer_size - (bytes_needed % buffer_size);
-
-  if(free_bytes_left_on_page_ == buffer_size)
+  size_t buffer_size = 4096;
+  size_t pages_needed = bytes_needed/buffer_size;
+  if((bytes_needed % buffer_size) != 0)
+  {
+    pages_needed++;
+    free_bytes_left_on_page_ = buffer_size - (bytes_needed % buffer_size);
+  }
+  else
   {
     free_bytes_left_on_page_ = 0;
   }
-
+  // printf("bytes needed: %ld, pages_needed %ld, free_bytes_left %ld\n", bytes_needed, pages_needed, free_bytes_left_on_page_);
   void* rv = (void*)sbrk((ssize_t)(pages_needed * buffer_size));
   if(rv == (void*)-1)
   {
