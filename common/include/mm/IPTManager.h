@@ -101,4 +101,10 @@ public:
 
   // tobe removed
   bool isThereAnyPageToSwapOut();
+
+
+private:
+
+  int pages_in_ram_ = 0;  //TODOs: at the moment also increases when shared
+  int pages_on_disk_ = 0;
 };

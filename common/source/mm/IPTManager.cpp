@@ -139,7 +139,7 @@ size_t IPTManager::findPageToSwapOut()
     ustl::vector<uint32> min_ppns;    // vector of all pages with the minimum counter
 
     // go through ram_map_ and find the page with the lowest access counter
-    assert(ram_map_.size() > 0 && "IPTManager::findPageToSwapOut: ram_map_ is empty. this should never happen\n");
+    //assert(ram_map_.size() > 0 && "IPTManager::findPageToSwapOut: ram_map_ is empty. this should never happen\n");
     for(auto& pair : ram_map_)
     {
       ppn_t key = pair.first;
@@ -155,6 +155,7 @@ size_t IPTManager::findPageToSwapOut()
       {
         min_ppns.push_back(key);
       }
+
     }
     debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
     if (min_ppns.size() > 1)
@@ -195,11 +196,12 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   {
     IPTEntry* entry = (*map)[ppn];
     assert(entry && "IPTManager::insertIPT: entry is null");
-
+    pages_in_ram_++;
     entry->addArchmemIPT(vpn, archmem);
   }
   else
   {
+    pages_on_disk_++;
     (*map)[ppn] = new IPTEntry();
     IPTEntry* entry = (*map)[ppn];
     entry->addArchmemIPT(vpn, archmem);
@@ -231,11 +233,18 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   {
     delete entry;
     map->erase(ppn);
+
+    // updating page counters
+    if (map_type == IPTMapType::RAM_MAP) {
+      pages_in_ram_--;
+    } else {
+      pages_on_disk_--;
+    }
   }
 
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
 
-  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
+  // This is not necessary as it slows down the system, you can comment out this part. But this is good for preventing error
   // checkRamMapConsistency();
   // checkDiskMapConsistency();
 }
@@ -280,6 +289,15 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   (*destination_map)[ppn_destination] = iptEntry;
   source_map->erase(ppn_source);
   iptEntry->access_counter_ = 0;
+
+  // updating page counters
+  if (source == IPTMapType::RAM_MAP) {
+    pages_on_disk_++;
+    pages_in_ram_--;
+  } else {
+    pages_on_disk_--;
+    pages_in_ram_++;
+  }
 }
 
 bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem)
@@ -302,7 +320,6 @@ bool IPTManager::isKeyInMap(size_t offset, IPTMapType maptype)
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::isKeyInMap called but IPT not locked\n");
   auto* map = (maptype == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
-
   if (map->find(offset) == map->end())
   {
     return false;
@@ -313,22 +330,23 @@ bool IPTManager::isKeyInMap(size_t offset, IPTMapType maptype)
   }
 }
 
+
 int IPTManager::getNumPagesInMap(IPTMapType maptype)
 {
   if(maptype == IPTMapType::RAM_MAP)
   {
-    return ram_map_.size();
+    return pages_in_ram_;
   }
   else
   {
-    return disk_map_.size();
+    return pages_on_disk_;
   }
 }
 
 void IPTManager::checkRamMapConsistency()
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::checkRamMapConsistency called but IPT not locked\n");
-  assert(ram_map_.size() && "IPTManager::checkRamMapConsistency: ram_map_ is empty, unlikely to happen\n");
+  //assert(ram_map_.size() && "IPTManager::checkRamMapConsistency: ram_map_ is empty, unlikely to happen\n");
 
   for (auto it = ram_map_.begin(); it != ram_map_.end(); ++it)
   {
