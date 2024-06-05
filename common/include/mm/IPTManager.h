@@ -99,7 +99,7 @@ public:
    * Debug func, check if random generator is actually random
   */
   static void debugRandomGenerator();
-  
+
 
   // tobe removed
   bool isThereAnyPageToSwapOut();

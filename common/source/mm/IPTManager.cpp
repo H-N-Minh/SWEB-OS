@@ -335,7 +335,7 @@ int IPTManager::getNumPagesInMap(IPTMapType maptype)
 void IPTManager::checkRamMapConsistency()
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::checkRamMapConsistency called but IPT not locked\n");
-  assert(ram_map_.size() && "IPTManager::checkRamMapConsistency: ram_map_ is empty, unlikely to happen\n");
+  assert(!ram_map_.empty() && "IPTManager::checkRamMapConsistency: ram_map_ is empty, unlikely to happen\n");
 
   for (auto it = ram_map_.begin(); it != ram_map_.end(); ++it)
   {
@@ -343,7 +343,7 @@ void IPTManager::checkRamMapConsistency()
     IPTEntry* ipt_entry = it->second;
     assert(ipt_entry && "checkRampMapConsistency: No IPTEntry");
     ustl::vector<ArchmemIPT*> archmemIPTs_vector = ipt_entry->getArchmemIPTs();
-    assert(archmemIPTs_vector.size() && "checkRampMapConsistency: No ArchmemIPT (empty archmem vector), but IPTEntry still exists in ram_map_");
+    assert(!archmemIPTs_vector.empty() && "checkRampMapConsistency: No ArchmemIPT (empty archmem vector), but IPTEntry still exists in ram_map_");
 
     for (auto archmemIPT : archmemIPTs_vector)
     {
@@ -385,13 +385,13 @@ void IPTManager::checkDiskMapConsistency()
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::checkDiskMapConsistency called but IPT not locked\n");
 
-  for (auto it = disk_map_.begin(); it != disk_map_.end(); ++it)
+  for (auto & it : disk_map_)
   {
-    ppn_t key = it->first;
-    IPTEntry* ipt_entry = it->second;
+    ppn_t key = it.first;
+    IPTEntry* ipt_entry = it.second;
     assert(ipt_entry && "checkRampMapConsistency: No IPTEntry");
     ustl::vector<ArchmemIPT*> archmemIPTs_vector = ipt_entry->getArchmemIPTs();
-    assert(archmemIPTs_vector.size() && "checkRampMapConsistency: No ArchmemIPT (empty archmem vector), but IPTEntry still exist in diskmap");
+    assert(!archmemIPTs_vector.empty() && "checkRampMapConsistency: No ArchmemIPT (empty archmem vector), but IPTEntry still exist in diskmap");
 
     for (auto archmemIPT : archmemIPTs_vector)
     {
@@ -407,7 +407,7 @@ void IPTManager::checkDiskMapConsistency()
         locked_by_us = 1;
       }
       
-      ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(vpn);
+      auto disk_offset = (ppn_t) entry_arch->getDiskLocation(vpn);
       assert(disk_offset && "checkRampMapConsistency: disk_offset is 0\n");
       assert(key == disk_offset && "checkRampMapConsistency: ppn in disk_map_ (key) does not match disk offset in ArchMemory\n");
       if (locked_by_us)
