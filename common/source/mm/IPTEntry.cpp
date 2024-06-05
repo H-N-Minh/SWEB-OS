@@ -29,11 +29,11 @@ IPTEntry::~IPTEntry()
 }
 
 
-bool IPTEntry::isArchmemExist(ArchMemory* archmem)
+bool IPTEntry::isArchmemExist(ArchMemory* archmem, size_t vpn)
 {
     for (auto& archmemIPT : archmemIPTs_)
     {
-        if (archmemIPT->archmem_ == archmem)
+        if (archmemIPT->archmem_ == archmem && archmemIPT->vpn_ == vpn)
         {
         return true;
         }

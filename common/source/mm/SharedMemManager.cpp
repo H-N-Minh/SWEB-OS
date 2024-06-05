@@ -41,7 +41,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     shared_map_.insert(ustl::make_pair(fd, ppn));
 
     // map the page to the given address
-    size_t vpn = MAX_HEAP_SIZE * 3 / PAGE_SIZE;
+    size_t vpn = MAX_HEAP_ADDRESS * 3 / PAGE_SIZE;
 
     bool stat = ((UserThread*) currentThread)->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
     assert(stat && "SharedMemManager::mmap: mapPage failed\n");
@@ -64,6 +64,6 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     
     arch->archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
-    return (void*) (MAX_HEAP_SIZE * 3);
+    return (void*) (MAX_HEAP_ADDRESS * 3);
 }
 

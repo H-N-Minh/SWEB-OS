@@ -198,7 +198,7 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
   
   // Error checking: entry should not already exist
-  if (isEntryInMap(ppn, map_type, archmem))
+  if (isEntryInMap(ppn, map_type, archmem, vpn))
   {
     debug(IPT, "IPTManager::insertEntryIPT: Entry (ppn: %zu, archmem: %p) already exists in %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
     assert(0 && "IPTManager::insertEntryIPT: Entry already exists in map\n");
@@ -235,7 +235,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
 
   // Error checking that the entry does exist in the map before removing
-  if (!isEntryInMap(ppn, map_type, archmem))
+  if (!isEntryInMap(ppn, map_type, archmem, vpn))
   {
     debug(IPT, "IPTManager::removeEntryIPT Entry (ppn %zu, archmem %p) not found in the map %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
     assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in map\n");
@@ -291,7 +291,7 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   for (auto entry : archmemIPTs_vector)
   {
     assert(entry->isLockedByUs() && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
-    assert(!isEntryInMap(ppn_destination, destination_map_type, entry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
+    assert(!isEntryInMap(ppn_destination, destination_map_type, entry->archmem_,  entry->vpn_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
   }
   debug(SWAPPING, "IPTManager::moveEntry: Entry to be moved seems valid, moving now\n");
 
@@ -314,7 +314,7 @@ bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archme
   }
   else
   {
-    return it->second->isArchmemExist(archmem);            //TODO: it->second->vpn_ == vpn VPN!!!!!!!!!!!!!
+    return it->second->isArchmemExist(archmem, vpn);            //TODO: it->second->vpn_ == vpn VPN!!!!!!!!!!!!!
   }
 }
 
@@ -430,6 +430,7 @@ void IPTManager::checkDiskMapConsistency()
     }
   }
 }
+
 
 
 // TODOMINH: delete this func

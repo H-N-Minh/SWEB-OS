@@ -84,7 +84,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
     return -1;
   }
 
-  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->getIptEntriesFromKey(disk_offset, IPTMapType::DISK_MAP);
+  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->disk_map_[disk_offset]->getArchmemIPTs();
   lockArchmemorys(virtual_page_infos);
  
  //Get new ppn
