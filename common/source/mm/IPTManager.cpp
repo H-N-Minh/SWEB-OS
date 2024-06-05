@@ -16,6 +16,7 @@
 class ArchmemIPT;
 
 ////////////////////// IPTManager //////////////////////
+
 IPTManager* IPTManager::instance_ = nullptr;
 
 IPTManager::IPTManager() 
