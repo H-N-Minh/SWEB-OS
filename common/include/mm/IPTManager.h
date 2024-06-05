@@ -17,12 +17,12 @@ typedef size_t diskoffset_t;
 class ArchMemory;
 
 
-class IPTEntry {
+class ArchmemIPT {
 public:
   size_t vpn_;
   ArchMemory* archmem_;
 
-  IPTEntry(size_t vpn, ArchMemory* archmem);
+  ArchmemIPT(size_t vpn, ArchMemory* archmem);
 
   /**
    * check if the archmem of this entry is locked
@@ -38,8 +38,8 @@ class IPTManager {
 public:
   // locking order: Ipt_lock -> disk_lock -> archmem_lock
   Mutex IPT_lock_;          // responsible for: ram_map_, disk_map_, pra_type_, swap_meta_data_
-  ustl::multimap<ppn_t, IPTEntry*> ram_map_;
-  ustl::multimap<diskoffset_t, IPTEntry*> disk_map_;
+  ustl::multimap<ppn_t, ArchmemIPT*> ram_map_;
+  ustl::multimap<diskoffset_t, ArchmemIPT*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
   // key: ppn, value: counter for how often the page is used.
   // Key is managed by IPTManager, must be in sync with ram_map_.
@@ -51,7 +51,7 @@ public:
 
   static IPTManager *instance();
 
-  IPTEntry* lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
+  ArchmemIPT* lookupEntryInRAM(ppn_t ppn, size_t vpn, ArchMemory* archmem);
 
   /**
    * Insert the PTE to the entry (at key == ppn) of the Inverted Page Table or the Swapped Page Map.
@@ -61,7 +61,7 @@ public:
    * @param vpn the virtual page that will be used to locate the right PTE
   */
   void insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
-  void insertEntryIPTNew(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
+
 
   /**
    * Remove a pte from an entry from the Inverted Page Table or the Swapped Page Map.
@@ -71,7 +71,7 @@ public:
    * @param vpn the virtual page that will be used to locate the right PTE
   */
   void removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
-  void removeEntryIPTNew(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
+
 
   /**
    * Remove an entry from the source map and insert it to the destination map.
@@ -79,8 +79,7 @@ public:
    * @param ppn_source The location of the entry currently
    * @param ppn_destination Location of the new entry in the destination map. This new entry must be empty.
   */
-  ustl::vector<IPTEntry*> moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
-  ustl::vector<IPTEntry*> moveEntryNew(IPTMapType source, size_t ppn_source, size_t ppn_destination);
+  void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
   int getNumPagesInMap(IPTMapType maptype);
 
@@ -91,7 +90,7 @@ public:
   */
   bool isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem, size_t vpn);
 
-  // ustl::vector<IPTEntry*> getPageInfosForPPN(size_t ppn); //TODOs
+  // ustl::vector<ArchmemIPT*> getPageInfosForPPN(size_t ppn); //TODOs
 
   /**
    * @return a vector of all unique keys in the ram_map_
@@ -106,7 +105,7 @@ public:
   /**
    * @return find all the values of a given key in the specified map and put them into a vector
   */
-  ustl::vector<IPTEntry*> getIptEntriesFromKey(size_t offset, IPTMapType maptype);
+  ustl::vector<ArchmemIPT*> getIptEntriesFromKey(size_t offset, IPTMapType maptype);
 
   /**
    * Debug func, check if ppn of all archmem matches the key of ram_map_.

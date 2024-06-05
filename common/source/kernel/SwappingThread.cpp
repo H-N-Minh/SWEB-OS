@@ -175,10 +175,10 @@ void SwappingThread::updateMetaData()
     for (const auto& pair : ipt->swap_meta_data_)
     {
       size_t key = (size_t) pair.first;
-      ustl::vector<IPTEntry*> entries = ipt->getIptEntriesFromKey(key, IPTMapType::RAM_MAP);
+      ustl::vector<ArchmemIPT*> entries = ipt->getIptEntriesFromKey(key, IPTMapType::RAM_MAP);
       assert(entries.size() > 0 && "SwappingThread::updateMetaData: key %zu is mapped to no IPTEntries in ram_map_\n");
       
-      for (IPTEntry* entry : entries)
+      for (ArchmemIPT* entry : entries)
       {
         ArchMemory* archmem = entry->archmem_;
         assert(archmem && "SwappingThread::updateMetaData: archmem is nullptr\n");

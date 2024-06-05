@@ -8,7 +8,7 @@
 
 #include "Condition.h"
 
-class IPTEntry;
+class ArchmemIPT;
 class SwappingManager
 {
   public:
@@ -21,11 +21,8 @@ class SwappingManager
     void swapOutPage(size_t ppn);
     int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
 
-    void swapOutPageAsynchronous(size_t ppn);
-    int swapInPageAsynchronous(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
-
-    void lock_archmemories_in_right_order(ustl::vector<IPTEntry*> &virtual_page_infos);
-    void unlock_archmemories(ustl::vector<IPTEntry*> &virtual_page_infos);
+    // void lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos);  //TODOs //maybe use this
+    // void unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
     int getDiskWrites();
     int getDiskReads();
@@ -57,15 +54,15 @@ class SwappingManager
     int total_disk_writes_ = 0;
 
 
-    void lockArchmemorys(ustl::vector<IPTEntry*>& virtual_page_infos);
-    void unlockArchmemorys(ustl::vector<IPTEntry*>& virtual_page_infos);
+    void lockArchmemorys(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+    void unlockArchmemorys(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 
-    void printDebugInfos(ustl::vector<IPTEntry*>& virtual_page_infos, size_t ppn, size_t disk_offset);
+    void printDebugInfos(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn, size_t disk_offset);
 
-    void writeToDisk(ustl::vector<IPTEntry*>& virtual_page_infos, size_t disk_offset);
+    void writeToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset);
 
-    void updatePageTableEntriesForSwapOut(ustl::vector<IPTEntry*>& virtual_page_infos, size_t disk_offset);
-    void updatePageTableEntriesForSwapIn(ustl::vector<IPTEntry*>& virtual_page_infos, size_t ppn, size_t disk_offset);
+    void updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset);
+    void updatePageTableEntriesForSwapIn(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn, size_t disk_offset);
 
     void readFromDisk(size_t disk_offset, size_t ppn);
 };
