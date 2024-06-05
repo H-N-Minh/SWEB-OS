@@ -5,6 +5,7 @@
 #include "BDVirtualDevice.h"
 #include "BDManager.h"
 #include "SwappingThread.h"
+#include "IPTEntry.h"
 
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
@@ -47,7 +48,7 @@ void SwappingManager::swapOutPage(size_t ppn)
 {
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
 
-  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->getIptEntriesFromKey(ppn, IPTMapType::RAM_MAP);
+  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
 
   //Find free disk_offset (TODOs)
@@ -164,6 +165,7 @@ void SwappingManager::updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>
 
 void SwappingManager::updatePageTableEntriesForSwapIn(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn, size_t disk_offset)
 {
+  // update all the archmem to point to RAM
   for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
@@ -174,42 +176,42 @@ void SwappingManager::updatePageTableEntriesForSwapIn(ustl::vector<ArchmemIPT*>&
 }
 
 
-// void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos)
-// {
-//   debug(SWAPPING, "SwappingManager::unlock_archmemories: locking archmem in order of lowest ArchMemory* address to highest\n");
-//   ustl::vector<ArchMemory*> archmemories;
-//   for (ArchmemIPT* virtual_page_info : virtual_page_infos)
-//   {
-//     assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
-//     assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
-//     archmemories.push_back(virtual_page_info->archmem_);
-//   }
-//   ustl::sort(archmemories.begin(), archmemories.end(), ustl::less<ArchMemory*>());
+void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos)
+{
+  debug(SWAPPING, "SwappingManager::unlock_archmemories: locking archmem in order of lowest ArchMemory* address to highest\n");
+  ustl::vector<ArchMemory*> archmemories;
+  for (ArchmemIPT* virtual_page_info : virtual_page_infos)
+  {
+    assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
+    assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
+    archmemories.push_back(virtual_page_info->archmem_);
+  }
+  ustl::sort(archmemories.begin(), archmemories.end(), ustl::less<ArchMemory*>());
 
-//   for(ArchMemory* archmemory : archmemories)
-//   {
-//     archmemory->archmemory_lock_.acquire();
-//   }
-// }
+  for(ArchMemory* archmemory : archmemories)
+  {
+    archmemory->archmemory_lock_.acquire();
+  }
+}
 
 
-// void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos)
-// {
-//   debug(SWAPPING, "SwappingManager::unlock_archmemories: unlocking archmem in order of highest ArchMemory* to lowest ArchMemory*\n");
-//   ustl::vector<ArchMemory*> archmemories;
-//   for (ArchmemIPT* virtual_page_info : virtual_page_infos)
-//   {
-//     assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
-//     assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
-//     archmemories.push_back(virtual_page_info->archmem_);
-//   }
-//   ustl::sort(archmemories.begin(), archmemories.end(), ustl::greater<ArchMemory*>());
+void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos)
+{
+  debug(SWAPPING, "SwappingManager::unlock_archmemories: unlocking archmem in order of highest ArchMemory* to lowest ArchMemory*\n");
+  ustl::vector<ArchMemory*> archmemories;
+  for (ArchmemIPT* virtual_page_info : virtual_page_infos)
+  {
+    assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
+    assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
+    archmemories.push_back(virtual_page_info->archmem_);
+  }
+  ustl::sort(archmemories.begin(), archmemories.end(), ustl::greater<ArchMemory*>());
 
-//   for(ArchMemory* archmemory : archmemories)
-//   {
-//     archmemory->archmemory_lock_.release();
-//   }
-// }
+  for(ArchMemory* archmemory : archmemories)
+  {
+    archmemory->archmemory_lock_.release();
+  }
+}
 
 
 int SwappingManager::getDiskWrites()

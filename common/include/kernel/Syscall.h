@@ -91,6 +91,8 @@ public:
    * debug syscall print the result of random PRA
   */
   static void checkRandomPRA();
+
+  static int mmap(size_t para, size_t retval);
 };
 
 

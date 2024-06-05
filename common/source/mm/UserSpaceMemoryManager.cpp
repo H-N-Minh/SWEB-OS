@@ -18,6 +18,13 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
   heap_start_ = (size_t) loader->getBrkStart();
   current_break_ = heap_start_;
   loader_ = loader;
+  shared_mem_ = new SharedMemManager();
+
+}
+
+UserSpaceMemoryManager::~UserSpaceMemoryManager()
+{
+  delete shared_mem_;
 }
 
 

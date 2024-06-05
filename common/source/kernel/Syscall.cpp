@@ -20,6 +20,7 @@
 #include "ProcessRegistry.h"
 #include "ScopeLock.h"
 #include "SwappingManager.h"
+#include "SharedMemManager.h"
 
 #define BIGGEST_UNSIGNED_INT 4294967295
 
@@ -156,11 +157,45 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_checkRandomPRA:
       checkRandomPRA();
       break;
+    case sc_mmap:
+      return_value = mmap(arg1, arg2);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
   return return_value;
+}
+
+int Syscall::mmap(size_t para, size_t retval)
+{
+  assert(para && "Syscall::mmap: arg1 is null\n");
+  mmap_params_t* params = (mmap_params_t*) para;
+  void* start = params->start;
+  size_t length = params->length;
+  int prot = params->prot;
+  int flags = params->flags;
+  int fd  = params->fd;
+  off_t offset = params->offset;
+  debug(MINH, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
+  // error checking the para
+  if (start != (void*) 0 || offset != 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: start and offset is not implemented\n");
+    return -1;
+  }
+  if (fd < 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: invalid fd\n");
+    return -1;
+  }
+  
+  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_;
+  void* ret = smm->mmap(params);
+  *(size_t*) retval = (size_t) ret;
+  debug(MINH, "Syscall::mmap: return value: %p\n", ret);
+
+  return 0;
 }
 
 l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence) {
@@ -836,7 +871,6 @@ void Syscall::assertIPT()
   debug(SYSCALL, "Syscall::assertIPT: Checking validity of ram map, disk map, swap metadata\n");
   ipt->checkRamMapConsistency();
   ipt->checkDiskMapConsistency();
-  ipt->checkSwapMetaDataConsistency();
   debug(SYSCALL, "Syscall::assertIPT: All IPT looks good\n");
 
   ipt->IPT_lock_.release();
