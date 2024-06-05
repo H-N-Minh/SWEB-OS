@@ -137,7 +137,7 @@ void SwappingThread::Run()
       // 1. Updating Meta data every 1 seconds
       if (isOneTimeStep())
       {
-        updateMetaData();
+//        updateMetaData();
       }
 
       // 2. Swap out if needed

@@ -81,6 +81,8 @@ public:
    * @return the ppn of the page that will be swapped out. This is where the PRA is used
   */
   size_t findPageToSwapOut();
+  size_t findPageToSwapOutRandom();
+  size_t findPageToSwapOutNFU();
 
 
   /**
@@ -96,7 +98,7 @@ public:
   /**
    * Debug func, check if random generator is actually random
   */
-  void debugRandomGenerator();
+  static void debugRandomGenerator();
   
 
   // tobe removed
@@ -105,6 +107,6 @@ public:
 
 private:
 
-  int pages_in_ram_ = 0;  //TODOs: at the moment also increases when shared
+  int pages_in_ram_ = 0;
   int pages_on_disk_ = 0;
 };
