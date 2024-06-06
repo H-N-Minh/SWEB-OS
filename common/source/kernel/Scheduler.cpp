@@ -36,7 +36,8 @@ Scheduler::Scheduler()
   addNewThread(&idle_thread_);
 
   if(ASYNCHRONOUS_SWAPPING)
-  {  addNewThread(&swapping_thread_);
+  {  
+    addNewThread(&swapping_thread_);
   }
 
 }

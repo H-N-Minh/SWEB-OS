@@ -67,7 +67,8 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   ArchThreads::printThreadRegisters(currentThread, false);
 
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
-   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+  SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
   assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
   if (currentThread->holding_lock_list_)
@@ -81,6 +82,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
+    swapper->swap_in_lock_.acquire();
     heap_manager->current_break_lock_.acquire();
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
@@ -92,6 +94,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       current_archmemory.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
       heap_manager->current_break_lock_.release();
+      swapper->swap_in_lock_.release();
     }
     //Page is swapped out
     else if(current_archmemory.isSwapped(address))
@@ -102,22 +105,32 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       size_t disk_offset = current_archmemory.getDiskLocation(vpn);
       if(DIRECT_SWAPPING)
       {
+        swapper->swap_in_lock_.release();
         current_archmemory.archmemory_lock_.release();
         SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
         IPTManager::instance()->IPT_lock_.release();
       }
       else if(ASYNCHRONOUS_SWAPPING)
       {
-        SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+        swapper->addSwapIn(disk_offset, &preallocated_pages);
         current_archmemory.archmemory_lock_.release();  //TODOs: we need to check if ipt entry still exist and page is still swapped out !!!
         IPTManager::instance()->IPT_lock_.release();
 
-        swapper->swap_in_lock_.acquire();
-        swapper->addSwapIn(disk_offset, &preallocated_pages);
-        while (swapper->isOffsetInMap(disk_offset))               //TODOs not check if offset is in map but check if at offset in disk map is this vpn and archmemory - means only one thread can swap in
+        while (swapper->isOffsetInMap(disk_offset))
         {
           swapper->swap_in_cond_.wait();
         }
+        IPTManager::instance()->IPT_lock_.acquire();
+        current_archmemory.archmemory_lock_.acquire();
+        ArchMemoryMapping mapping = current_archmemory.resolveMapping(vpn);
+        PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+        size_t ppn = pt_entry->page_ppn;
+        if(!IPTManager::instance()->isEntryInMap(ppn, RAM_MAP, &current_archmemory, vpn))
+        {
+          assert(0);
+        }
+        current_archmemory.archmemory_lock_.release();
+        IPTManager::instance()->IPT_lock_.release();
         swapper->swap_in_lock_.release();
         debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
       }
@@ -126,12 +139,15 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
         debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Try to swap in page even though swapping is disabled.\n");
         current_archmemory.archmemory_lock_.release();
         IPTManager::instance()->IPT_lock_.release();
+        swapper->swap_in_lock_.release();
+         swapper->swap_in_lock_.release();
         assert(0);
       }
     }
     //Page is on heap
     else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)
     {
+      swapper->swap_in_lock_.release();
       size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
       size_t vpn = address / PAGE_SIZE;
       bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
@@ -143,6 +159,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page needs to be loader from binary 
     else
     {
+      swapper->swap_in_lock_.release();
       debug(PAGEFAULT, "%18zx: heapstart, %18zx: current_break %18zx: max heap address\n",heap_manager->heap_start_, heap_manager->current_break_, (size_t)MAX_HEAP_ADDRESS);
       heap_manager->current_break_lock_.release();
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page is not present and not swapped out -> Loading page\n");

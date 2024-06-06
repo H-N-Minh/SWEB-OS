@@ -94,8 +94,5 @@ class SwappingThread : public Thread
 
 
 
-    ////////////////////// 
-    void swap10PagesOut();
-
 };
 

@@ -48,7 +48,7 @@ void SwappingManager::swapOutPage(size_t ppn)
 {
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
 
-  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
+  ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
 
   //Find free disk_offset (TODOs)
@@ -84,7 +84,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
     return -1;
   }
 
-  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->disk_map_[disk_offset]->getArchmemIPTs();
+  ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->disk_map_[disk_offset]->getArchmemIPTs();
   lockArchmemorys(virtual_page_infos);
  
  //Get new ppn
