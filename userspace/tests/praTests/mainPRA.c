@@ -70,7 +70,7 @@ int childMain()
     {
         printf("\nTesting random1: testing Random PRA is actually random...\n");
         retval = random1();
-        if (retval == 0)                      { printf("===> random1 successful!\n"); }
+        if (retval == 0)                      { printf("===> random1 completed, check Log for result!\n"); }
         else                                  { printf("===> random1 failed!\n");  return -1;}
     }
 
@@ -93,9 +93,9 @@ int childMain()
     if (PRA6)
     {
         printf("\nTesting pra6: testing swapping in combination with fork...\n");
-        retval = pra5();
-        if (retval == 0)                      { printf("===> pra5 successful!\n"); }
-        else                                  { printf("===> pra5 failed!\n");  return -1;}
+        retval = pra6();
+        if (retval == 0)                      { printf("===> pra6 successful!\n"); }
+        else                                  { printf("===> pra6 failed!\n");  return -1;}
     }
 
 
