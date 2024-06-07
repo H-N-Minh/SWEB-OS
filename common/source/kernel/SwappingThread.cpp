@@ -228,31 +228,6 @@ size_t SwappingThread::swapPageOut()
   return ppn;
 }
 
-void SwappingThread::swap10PagesOut()
-{
-  IPTManager* ipt_manager = IPTManager::instance();
-  ipt_manager->IPT_lock_.acquire();
-
-  for(int i=0; i<10; i++)
-  {
-    if(free_pages_.size() >= 20)
-    {
-      // if free_pages_ already has 20 pages, we break the loop early
-      break;
-    }
-    bool thereAnyPageToSwapOut = ipt_manager->isThereAnyPageToSwapOut();
-    if (thereAnyPageToSwapOut)
-    {
-      size_t ppn = ipt_manager->findPageToSwapOut();
-      SwappingManager::instance()->swapOutPage(ppn);
-      free_pages_.push_back(ppn);
-      miss_count_++;
-    }
-  }
-
-  ipt_manager->IPT_lock_.release();
-}
-
 uint32 SwappingThread::getHitCount()
 {
   IPTManager* ipt_manager = IPTManager::instance();

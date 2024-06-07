@@ -92,10 +92,5 @@ class SwappingThread : public Thread
     */
     bool isOffsetInMap(size_t disk_offset);
 
-
-
-    ////////////////////// 
-    void swap10PagesOut();
-
 };
 
