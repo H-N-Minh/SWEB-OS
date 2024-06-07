@@ -18,6 +18,8 @@ class SwappingManager
 
     void swapOutPage(size_t ppn);
     int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
+    size_t preSwapPageToDisk(const char* page_content);
+    void handlePreSwap();
 
     static void lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos);
     static void unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos);
@@ -31,7 +33,6 @@ class SwappingManager
   private:
     static SwappingManager* instance_;
     IPTManager* ipt_;
-
     BDVirtualDevice* bd_device_;
 
     ustl::queue<size_t> pre_swap_queue_;

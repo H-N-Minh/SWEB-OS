@@ -9,15 +9,14 @@
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
 
-SwappingManager::SwappingManager() : disk_lock_("disk_lock_"), pre_swap_lock_("pre_swap_lock_")
+SwappingManager::SwappingManager()
+    : disk_lock_("disk_lock_"), pre_swap_lock_("pre_swap_lock_")
 {
   assert(!instance_);
   instance_ = this;
-   //TODOs needs to be deleted at some point
-  ipt_ = new IPTManager();          
+  ipt_ = new IPTManager();
   bd_device_ = BDManager::getInstance()->getDeviceByNumber(3);
   bd_device_->setBlockSize(PAGE_SIZE);
-  debug(SWAPPING, "Block size %d.\n", bd_device_->getBlockSize());
 }
 
 SwappingManager* SwappingManager::instance()
@@ -183,4 +182,31 @@ int SwappingManager::getDiskWrites() const
 int SwappingManager::getDiskReads() const
 {
   return total_disk_reads_;
+}
+
+void SwappingManager::handlePreSwap()
+{
+  if (IPTManager::ENABLE_PRE_SWAP) {
+    if (!IPTManager::instance()->checkMemoryThreshold()) return;
+
+    IPTManager* ipt = IPTManager::instance();
+    ustl::vector<size_t> pagesToPreSwap = ipt->getPagesToPreSwap();
+    for (size_t ppn : pagesToPreSwap)
+    {
+      ipt->preSwapPage(ppn);
+    }
+  }
+}
+
+size_t SwappingManager::preSwapPageToDisk(const char* page_content)
+{
+  static size_t disk_offset_counter = 0;
+  bool write_status = bd_device_->writeData(disk_offset_counter * bd_device_->getBlockSize(), PAGE_SIZE, const_cast<char *>(page_content));
+
+  if (!write_status) {
+    kprintf("SwappingManager::preSwapPageToDisk: Failed to write data to disk.\n");
+    return -1;
+  }
+
+  return disk_offset_counter++;
 }

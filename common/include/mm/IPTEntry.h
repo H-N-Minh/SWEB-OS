@@ -27,6 +27,8 @@ class IPTEntry
 private:
   // use Getter func instead
   ustl::vector<ArchmemIPT*> archmemIPTs_;
+  bool pre_swapped_{};
+  size_t disk_offset_{};
 
 public:
   // for PRA, keep track of how many times this PPN is accessed
@@ -52,4 +54,8 @@ public:
   void removeArchmemIPT(size_t vpn, ArchMemory* archmem);
 
   ustl::vector<ArchmemIPT*>& getArchmemIPTs();
+
+  void setPreSwapped(size_t disk_offset);
+  bool isPreSwapped() const;
+  size_t getDiskOffset() const;
 };

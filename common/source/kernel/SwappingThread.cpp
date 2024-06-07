@@ -54,35 +54,31 @@ void SwappingThread::swapOut()
   swap_out_lock_.acquire();
 
   bool almost_full_memory = isMemoryAlmostFull();
-
-  if (almost_full_memory && free_pages_.size() < MAX_PRESWAP_PAGES)    // if in low memory zone && vector is not full => swap out
+  if (almost_full_memory && free_pages_.size() < MAX_PRESWAP_PAGES)
   {
-    // Swap out multiple pages at a time, until either the vector is full or max swap out amount is reached
     for (int i = 0; i < SWAP_OUT_AMOUNT; i++)
     {
-      if (free_pages_.size() >= MAX_PRESWAP_PAGES)
-      {
-        break;
-      }
-      
+      if (free_pages_.size() >= MAX_PRESWAP_PAGES) break;
+
       size_t ppn = swapPageOut();
       free_pages_.push_back(ppn);
       miss_count_++;
       swap_out_cond_.signal();
     }
+    if (IPTManager::ENABLE_PRE_SWAP) {
+      SwappingManager::instance()->handlePreSwap();
+    }
   }
-  else if (!almost_full_memory)    // no longer in low memory zone => free the pages
+  else if (!almost_full_memory)
   {
     if (!free_pages_.empty())
     {
       for (uint32 ppn : free_pages_)
       {
         PageManager::instance()->freePPN(ppn);
-        debug(MINH, "SwappingThread::swapOut: free page %u\n", ppn);
       }
       free_pages_.clear();
     }
-    
   }
   swap_out_lock_.release();
 }

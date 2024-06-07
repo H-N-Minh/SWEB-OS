@@ -7,7 +7,8 @@
 #include "Mutex.h"
 #include "IPTEntry.h"
 
-
+#define PRESWAPTHRESHOLD 80 //80%
+#define MAX_PRESWAP_PAGES 20
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
 enum PRA_TYPE {RANDOM, NFU};
 
@@ -21,6 +22,7 @@ class IPTManager
 {
 private:
   static IPTManager* instance_;
+  size_t pre_swap_threshold_;
 
 public:
   // locking order: Ipt_lock -> disk_lock -> archmem_lock
@@ -104,9 +106,9 @@ public:
   // tobe removed
   bool isThereAnyPageToSwapOut();
 
-
-private:
-
-  int pages_in_ram_ = 0;
-  int pages_on_disk_ = 0;
+  //preswapping
+  static bool ENABLE_PRE_SWAP; //true = used, false = not used
+  bool checkMemoryThreshold() const;
+  void preSwapPage(size_t ppn);
+  ustl::vector<size_t> getPagesToPreSwap();
 };

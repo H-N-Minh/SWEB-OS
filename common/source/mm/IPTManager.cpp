@@ -1,21 +1,19 @@
 #include "IPTManager.h"
-#include "debug.h"
+#include "ArchMemory.h"
+#include "PageManager.h"
+#include "SwappingManager.h"
+#include "SwappingThread.h"
+#include "Syscall.h"
+#include "Thread.h"
 #include "assert.h"
 #include "debug.h"
-#include "Thread.h"
-#include "Syscall.h"
-#include "uset.h"
-#include "SwappingManager.h"
-#include "ArchMemory.h"
-#include "SwappingThread.h"
 #include "ulimits.h"
-
-
+#include "uset.h"
 
 
 //#define INVALID_PPN -1
 #define UINT32_MAX 0xFFFFFFFF
-const size_t INVALID_PPN = ustl::numeric_limits<size_t>::max();
+const size_t INVALID_PPN = ustl::numeric_limits<size_t>::max(); //not sure, suggestion by clang-tidy
 
 class ArchmemIPT;
 
@@ -23,7 +21,7 @@ class ArchmemIPT;
 IPTManager* IPTManager::instance_ = nullptr;
 
 IPTManager::IPTManager()
-    : IPT_lock_("IPTManager::IPT_lock_")
+    : pre_swap_threshold_(PRESWAPTHRESHOLD), IPT_lock_("IPTManager::IPT_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -454,3 +452,49 @@ bool IPTManager::isThereAnyPageToSwapOut()
   return false;
 }
 
+
+//////PRESWAPPING
+
+bool IPTManager::ENABLE_PRE_SWAP = false;
+
+bool IPTManager::checkMemoryThreshold() const
+{
+  PageManager* pm = PageManager::instance();
+  uint32_t totalNumPages = pm->getTotalNumPages();
+  uint32_t usedNumPages = totalNumPages - pm->getNumFreePages();
+  uint32_t usedMemoryRatio = (usedNumPages * 100) / totalNumPages;
+  return usedMemoryRatio > pre_swap_threshold_;
+}
+
+ustl::vector<size_t> IPTManager::getPagesToPreSwap()
+{
+  ustl::vector<size_t> pages_to_pre_swap;
+  for (const auto& entry : ram_map_)
+  {
+    pages_to_pre_swap.push_back(entry.first);
+    if (pages_to_pre_swap.size() >= MAX_PRESWAP_PAGES)
+      break;
+  }
+  return pages_to_pre_swap;
+}
+
+void IPTManager::preSwapPage(size_t ppn)
+{
+  if (ENABLE_PRE_SWAP) {
+    IPTEntry* entry = ram_map_[ppn];
+
+    if (entry->isPreSwapped()) {
+      debug(PRESWAPPING, "Page with ppn %zu is already pre-swapped to disk offset %zu.\n", ppn, entry->getDiskOffset());
+      return;
+    }
+
+    char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(ppn);
+
+    // Write to disk
+    size_t disk_offset = SwappingManager::instance()->preSwapPageToDisk(page_content);
+
+    // Track the page as pre-swapped
+    entry->setPreSwapped(disk_offset);
+    debug(PRESWAPPING, "Page with ppn %zu pre-swapped to disk offset %zu.\n", ppn, disk_offset);
+  }
+}
