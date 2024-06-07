@@ -144,6 +144,8 @@ class VfsSyscall
      */
     static FileDescriptor* getFileDescriptor(uint32 fd);
 
+    static int32 shm_open(const char* pathname, uint32 flags, uint32 mode);
+
   private:
     VfsSyscall();
     ~VfsSyscall();

@@ -91,6 +91,8 @@ public:
    * debug syscall print the result of random PRA
   */
   static void checkRandomPRA();
+
+  static size_t shm_open(size_t path, size_t flags, size_t mode);
 };
 
 
