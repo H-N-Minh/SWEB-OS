@@ -15,7 +15,7 @@ class SwappingThread : public Thread
     SwappingThread();
     virtual ~SwappingThread();
     virtual void kill();
-    [[noreturn]] virtual void Run();
+    virtual void Run();
   
     /////////////////// PRA metadata
   private:

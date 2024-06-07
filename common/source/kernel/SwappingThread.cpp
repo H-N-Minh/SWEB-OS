@@ -128,7 +128,7 @@ void SwappingThread::swapIn()
   swap_in_lock_.release();
 }
 
-[[noreturn]] void SwappingThread::Run()
+void SwappingThread::Run()
 {
   while (true)
   {
