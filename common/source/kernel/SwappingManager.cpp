@@ -17,7 +17,7 @@ SwappingManager::SwappingManager() : disk_lock_("disk_lock_"), pre_swap_lock_("p
   ipt_ = new IPTManager();          
   bd_device_ = BDManager::getInstance()->getDeviceByNumber(3);
   bd_device_->setBlockSize(PAGE_SIZE);
-  debug(SWAPPING, "Blocksize %d.\n", bd_device_->getBlockSize());
+  debug(SWAPPING, "Block size %d.\n", bd_device_->getBlockSize());
 }
 
 SwappingManager* SwappingManager::instance()
@@ -44,7 +44,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
   ipt_-> moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
 
-  // for debuging
+  // for debugging
   // for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   // {
   //   ArchMemory* archmemory = virtual_page_info->archmem_;
@@ -59,8 +59,13 @@ void SwappingManager::swapOutPage(size_t ppn)
   //write to disk
   ArchMemoryMapping m = ArchMemory::resolveMapping(archmemory->page_map_level_4_, vpn);
   char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
-  // kprintf("Pagecontent before: <%s>\n", page_content);
-  bd_device_->writeData(disk_offset_counter_ * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
+  // kprintf("Page content before: <%s>\n", page_content);
+  bool write_status = bd_device_->writeData(disk_offset_counter_ * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
+
+  if (!write_status) {
+    kprintf("SwappingManager::swapOutPage: Failed to write data on disk.\n");
+    return;
+  }
   total_disk_writes_++;
 
   // updating all archmem to point to disk
@@ -81,7 +86,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
 }
 
-//Only works if the page i want to swap in is in the archmemory of current thread
+//Only works if the page I want to swap in is in the archmemory of current thread
 int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages)
 {
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
@@ -113,8 +118,14 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
 
   // copying data from disk to ram
   char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(ppn);
-  bd_device_->readData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
-  // kprintf("Pagecontent after: <%s>\n", page_content);
+  bool read_status = bd_device_->readData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
+
+  if (!read_status) {
+    kprintf("SwappingManager::swapOutPage: Failed to write data on disk.\n");
+    return -1;
+  }
+
+  // kprintf("Page content after: <%s>\n", page_content);
   total_disk_reads_++;
   unlock_archmemories(virtual_page_infos);
   disk_lock_.release();
