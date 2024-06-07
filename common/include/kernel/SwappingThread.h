@@ -15,11 +15,11 @@ class SwappingThread : public Thread
     SwappingThread();
     virtual ~SwappingThread();
     virtual void kill();
-    virtual void Run();
+    [[noreturn]] virtual void Run();
   
     /////////////////// PRA metadata
   private:
-    uint32 last_tick_;
+    uint32 last_tick_{};
   public:
     bool isOneTimeStep();
     void updateMetaData();
@@ -29,11 +29,11 @@ class SwappingThread : public Thread
     ////////////////// PRA stats
   private:
     // both are protected by IPT lock
-    uint32 hit_count_;    // the number of times a page is marked either dirty or accessed
-    uint32 miss_count_;   // the number of times a page is swapped out
+    uint32 hit_count_{};    // the number of times a page is marked either dirty or accessed
+    uint32 miss_count_{};   // the number of times a page is swapped out
   public:
-    uint32 getHitCount();
-    uint32 getMissCount();
+    uint32 getHitCount() const;
+    uint32 getMissCount() const;
 
 
 
@@ -52,13 +52,13 @@ class SwappingThread : public Thread
     /**
      * swap out a page based on the current PRA, then return the ppn of the page that is now free
     */
-    size_t swapPageOut();
+    static size_t swapPageOut();
 
     /**
      * If the memory is almost full and we dont have enough free pages in free_pages_, we need to swap out some pages.
      * This satisfies both preswap and swap out on demand.
     */
-    bool isMemoryAlmostFull();
+    static bool isMemoryAlmostFull();
 
     /**
      * check if free_pages_ is empty or not

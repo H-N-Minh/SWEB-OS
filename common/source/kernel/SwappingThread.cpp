@@ -18,7 +18,7 @@ int SwappingThread::user_initialized_flag_ = 0;
 
 
 SwappingThread::SwappingThread() 
-  : Thread(0, "SwappingThread", Thread::KERNEL_THREAD), 
+  : Thread(nullptr, "SwappingThread", Thread::KERNEL_THREAD),
     swap_out_lock_("swap_out_lock_"), swap_out_cond_(&swap_out_lock_, "swap_out_cond_"),
     swap_in_lock_("swap_in_lock_"), swap_in_cond_(&swap_in_lock_, "swap_in_cond_")
 {
@@ -39,7 +39,7 @@ void SwappingThread::kill()
 bool SwappingThread::isMemoryAlmostFull()
 {
   PageManager* pm = PageManager::instance();
-  // TODO ? lock pagemanager ? but the lock is private
+  // TODO ? lock page manager ? but the lock is private
 
   uint32_t totalNumPages = pm->getTotalNumPages();
   uint32_t usedNumPages = totalNumPages - pm->getNumFreePages();
@@ -128,9 +128,9 @@ void SwappingThread::swapIn()
   swap_in_lock_.release();
 }
 
-void SwappingThread::Run()
+[[noreturn]] void SwappingThread::Run()
 {
-  while (1)
+  while (true)
   {
     if (user_initialized_flag_)
     {
@@ -228,7 +228,7 @@ size_t SwappingThread::swapPageOut()
   return ppn;
 }
 
-uint32 SwappingThread::getHitCount()
+uint32 SwappingThread::getHitCount() const
 {
   IPTManager* ipt_manager = IPTManager::instance();
   ipt_manager->IPT_lock_.acquire();
@@ -237,7 +237,7 @@ uint32 SwappingThread::getHitCount()
   return hit_count;
 }
 
-uint32 SwappingThread::getMissCount()
+uint32 SwappingThread::getMissCount() const
 {
   IPTManager* ipt_manager = IPTManager::instance();
   ipt_manager->IPT_lock_.acquire();
