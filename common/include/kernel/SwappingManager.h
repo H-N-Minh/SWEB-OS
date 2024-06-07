@@ -19,19 +19,14 @@ class SwappingManager
     void swapOutPage(size_t ppn);
     int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
 
-    void lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos);
-    void unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos);
+    static void lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos);
+    static void unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
-    int getDiskWrites();
-    int getDiskReads();
+    int getDiskWrites() const;
+    int getDiskReads() const;
 
     // locking order: Ipt -> disk -> archmem
     Mutex disk_lock_;
-
-  void enqueuePageForPreSwap(size_t ppn);
-  void performPreSwap();
-  size_t getPreSwapQueueSize();
-  void swapOutPageContent(size_t ppn);
 
   private:
     static SwappingManager* instance_;
