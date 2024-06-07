@@ -31,9 +31,9 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     debug(MINH, "SharedMemManager::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
     
 
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // mapPage needs 3 and ppn needs 1
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAllocatePages(4);  // mapPage needs 3 and ppn needs 1
 
-    size_t ppn =  PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 
     ArchMemory* arch = &((UserThread*) currentThread)->loader_->arch_memory_;
     IPTManager::instance()->IPT_lock_.acquire();

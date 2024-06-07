@@ -87,7 +87,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   
   // get a free page to swap into
-  size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+  size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 
   // lock the disk and all archmemories
   ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->disk_map_[disk_offset]->getArchmemIPTs();

@@ -81,7 +81,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // loadPage() needs 4 and swapInPage needs 1.
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAllocatePages(4);  // loadPage() needs 4 and swapInPage needs 1.
 
     SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
     Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
@@ -137,7 +137,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
     Mutex* arch_lock = &current_archmemory.archmemory_lock_;
 
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(1);  // copyPage() and swapInPage each only needs 1 alloc
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAllocatePages(1);  // copyPage() and swapInPage each only needs 1 alloc
     
     swapper->swap_in_lock_.acquire();
     ipt_lock->acquire();

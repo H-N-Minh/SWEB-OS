@@ -23,7 +23,7 @@ UserThread::UserThread(FileSystemInfo* working_dir, ustl::string name, Thread::T
 {
     tid_ = ArchThreads::atomic_add(UserProcess::tid_counter_, 1);
 
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(3); // for mapPage later
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAllocatePages(3); // for mapPage later
     ppn_stack = PageManager::instance()->allocPPN();   
     IPTManager::instance()->IPT_lock_.acquire();
     loader->arch_memory_.archmemory_lock_.acquire();

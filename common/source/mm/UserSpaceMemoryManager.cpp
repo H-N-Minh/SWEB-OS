@@ -71,7 +71,7 @@ ustl::vector<uint32> UserSpaceMemoryManager::preallocate_pages_for_sbrk(ssize_t 
   loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
   
-  return PageManager::instance()->preAlocatePages(counter + 5);   // +5 for safty, but not a guarantee this will be enough
+  return PageManager::instance()->preAllocatePages(counter + 5);   // +5 for safty, but not a guarantee this will be enough
 }
 
 
@@ -310,7 +310,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   // TODO MINH: growing stack  now has broken locking because of new allocPPN rule
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
   uint32 new_ppn = PageManager::instance()->allocPPN(); //TODO MINH: this alloc and the prealloc below should be put outside locks
-  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(3); // for mapPage later
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAllocatePages(3); // for mapPage later
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true, preallocated_pages);
   PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 
