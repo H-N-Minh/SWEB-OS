@@ -23,6 +23,7 @@ class SwappingThread : public Thread
   public:
     bool isOneTimeStep();
     void updateMetaData();
+    static void resetAccessedPages(IPTEntry *ipt_entry, bool &hit);
 
 
     ////////////////// PRA stats

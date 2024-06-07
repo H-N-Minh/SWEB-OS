@@ -152,6 +152,28 @@ void SwappingThread::Run()
   }
 }
 
+void SwappingThread::resetAccessedPages(IPTEntry* ipt_entry, bool& hit)
+{
+  ustl::vector<ArchmemIPT*> &archmem_vector = ipt_entry->getArchmemIPTs();
+  assert(!archmem_vector.empty() && "SwappingThread::updateMetaData: key %zu is mapped to no archmem in ram_map_\n");
+
+  // reset the accessed bit for all archmem of same ppn
+  for (ArchmemIPT* entry : archmem_vector)
+  {
+    ArchMemory* archmem = entry->archmem_;
+    size_t vpn = entry->vpn_;
+    assert(archmem && "SwappingThread::updateMetaData: archmem is nullptr\n");
+    archmem->archmemory_lock_.acquire();
+    if (archmem->isPageAccessed(vpn))
+    {
+      // Page was accessed, reset the bits
+      archmem->resetAccessDirtyBits(vpn);
+      // debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
+      hit = true;
+    }
+    archmem->archmemory_lock_.release();
+  }
+}
 
 void SwappingThread::updateMetaData()
 {
@@ -162,42 +184,19 @@ void SwappingThread::updateMetaData()
   IPTManager* ipt = IPTManager::instance();
   ipt->IPT_lock_.acquire();
 
-
   // debug(SWAPTHREAD, "SwappingThread::updateMetaData: updating meta data for PRA NFU\n");
-
   // go through all archmem of each page and check if page was accessed
   for (const auto& pair : ipt->ram_map_)
   {
     IPTEntry* ipt_entry = pair.second;
     assert(ipt_entry && "SwappingThread::updateMetaData: ipt_entry is nullptr\n");
-    ustl::vector<ArchmemIPT*> &archmem_vector = ipt_entry->getArchmemIPTs();
-    assert(archmem_vector.size() > 0 && "SwappingThread::updateMetaData: key %zu is mapped to no archmem in ram_map_\n");
-    
     bool hit = false;
-    // reset the accessed bit for all archmem of same ppn
-    for (ArchmemIPT* entry : archmem_vector)
-    {
-      ArchMemory* archmem = entry->archmem_;
-      size_t vpn = entry->vpn_;
-
-      assert(archmem && "SwappingThread::updateMetaData: archmem is nullptr\n");
-      archmem->archmemory_lock_.acquire();
-
-      if (archmem->isPageAccessed(vpn))
-      {
-        // Page was accessed, reset the bits
-        archmem->resetAccessDirtyBits(vpn);
-        // debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
-        hit = true;
-      }
-      archmem->archmemory_lock_.release();
-    }
+    resetAccessedPages(ipt_entry, hit);
     if (hit)
     {
       ipt_entry->access_counter_++;
       hit_count_++;
     }
-    
   }
   ipt->IPT_lock_.release();
 }
