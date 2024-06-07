@@ -23,7 +23,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::NFU;
+  pra_type_ = PRA_TYPE::RANDOM;
 }
 
 IPTManager::~IPTManager()
@@ -126,8 +126,11 @@ size_t IPTManager::findPageToSwapOut()
     {
       unique_keys.push_back(pair.first);
     }
+    if(unique_keys.size() == 0)
+    {
+      assert(0 && "No page in ram");
+    }
     size_t random_ipt_index = random_num % unique_keys.size();
-    
     ppn_retval = (size_t) (unique_keys[random_ipt_index]);
     debug(IPT, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%d\n", ppn_retval);
   }
@@ -299,6 +302,25 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   (*destination_map)[ppn_destination] = entry;
   source_map->erase(ppn_source);
   entry->access_counter_ = 0;
+}
+
+void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)
+{
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntry called but IPT not locked\n");
+
+  if (!isKeyInMap(ppn, map_type))
+  {
+    assert(0 && "IPTManager::removeEntry: PPN not found in map\n");
+  }
+  auto& map = (map_type == IPTMapType::RAM_MAP ? ram_map_ : disk_map_);
+
+  map.erase(ppn);
+
+  if (isKeyInMap(ppn, map_type))
+  {
+    assert(0 && "IPTManager::removeEntry: PPN after removing still in map\n");
+  }
+
 }
 
 

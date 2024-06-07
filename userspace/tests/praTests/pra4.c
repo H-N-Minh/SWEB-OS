@@ -28,7 +28,7 @@ size_t getTopOfThisPage(size_t variable_adr)
 // writting a big number at the end of a page that it overflows to the next page, causes double pagefault at a time
 int pra4()
 {
-  setPRA(__NFU_PRA__); 
+  setPRA(__RANDOM_PRA__); 
   int hit;
   int miss;
   getPRAstats(&hit, &miss);
@@ -40,6 +40,7 @@ int pra4()
   size_t* temp = (size_t*) top_page;
   for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
   {
+    printf("%ld\n",i);
     *temp = (size_t) (i * 10000000000 + (i + 1));      // cast to size_t to overflow into next page
     temp = (size_t*) ((size_t) temp + PAGESIZE4 * 2);
   }

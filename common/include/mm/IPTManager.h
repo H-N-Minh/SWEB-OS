@@ -64,6 +64,9 @@ public:
   */
   void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
+
+  void removeEntry(IPTMapType map_type, size_t ppn);
+
   /**
    * Getter for debugging info, doesnt use any lock but who cares
   */

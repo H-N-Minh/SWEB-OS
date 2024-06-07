@@ -51,7 +51,16 @@ void SwappingManager::swapOutPage(size_t ppn)
   ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
 
-  //Find free disk_offset (TODOs)
+  if(isPageUnchanged(virtual_page_infos))
+  {
+    ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);             //TODOs: entries should get deleted but should still be possible to unlock
+    PageManager::instance()->setReferenceCount(ppn, 0);
+    updatePageTableEntriesForWriteBackToDisk(virtual_page_infos);
+    unlockArchmemorys(virtual_page_infos);
+    return;
+  }
+
+  //Find free disk_offset
   size_t disk_offset = disk_offset_counter_;
   disk_offset_counter_++;
 
@@ -226,6 +235,32 @@ int SwappingManager::getDiskReads()
 }
 
 
+bool SwappingManager::isPageUnchanged(ustl::vector<ArchmemIPT*> &virtual_page_infos)
+{
+  for(ArchmemIPT* virtual_page_info : virtual_page_infos)
+  {
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
+    
+    if(archmemory->isPageDirty(vpn))
+    {
+      return false;
+    }
+  }
+  return true;
+}
+
+
+
+void SwappingManager::updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos)
+{
+  for(ArchmemIPT* virtual_page_info : virtual_page_infos)
+  {
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
+    archmemory->updatePageTableEntryForWriteBackToDisk(vpn);
+  }
+}
 
 
 

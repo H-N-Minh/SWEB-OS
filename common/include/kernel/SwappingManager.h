@@ -65,4 +65,8 @@ class SwappingManager
     void updatePageTableEntriesForSwapIn(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn, size_t disk_offset);
 
     void readFromDisk(size_t disk_offset, size_t ppn);
+
+    bool isPageUnchanged(ustl::vector<ArchmemIPT*> &virtual_page_infos);
+
+    void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 };

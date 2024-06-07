@@ -65,11 +65,23 @@ void SwappingThread::swapOut()
       {
         break;
       }
+
+      IPTManager* ipt = IPTManager::instance();
+      ipt->IPT_lock_.acquire();
       
-      size_t ppn = swapPageOut();
-      free_pages_.push_back(ppn);
-      miss_count_++;
-      swap_out_cond_.signal();
+      if(!ipt->ram_map_.empty())
+      {
+        size_t ppn = swapPageOut();
+        ipt->IPT_lock_.release();
+        free_pages_.push_back(ppn);
+        miss_count_++;
+        swap_out_cond_.signal();
+      }
+      else
+      {
+        ipt->IPT_lock_.release();
+      }
+
     }
   }
   else if (!almost_full_memory)    // no longer in low memory zone => free the pages
@@ -124,7 +136,7 @@ void SwappingThread::swapIn()
         }
       }
     }
-    updateMetaData();        //TODOs: adding this makes pra4 work !!!!!!!(maybe bad though)
+    // updateMetaData();        //TODOs: adding this makes pra4 work !!!!!!!(maybe bad though) ?????
     swap_in_cond_.broadcast();
   }
   swap_in_lock_.release();
@@ -207,7 +219,7 @@ void SwappingThread::updateMetaData()
       if (archmem->isPageAccessed(vpn))
       {
         // Page was accessed, reset the bits
-        archmem->resetAccessDirtyBits(vpn);
+        archmem->resetAccessBits(vpn);
         // debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
         hit = true;
       }
@@ -241,12 +253,9 @@ bool SwappingThread::isOneTimeStep()
 size_t SwappingThread::swapPageOut()
 {
   IPTManager* ipt = IPTManager::instance();
-  ipt->IPT_lock_.acquire();
-
   size_t ppn = ipt->findPageToSwapOut();
   SwappingManager::instance()->swapOutPage(ppn);
 
-  ipt->IPT_lock_.release();
   return ppn;
 }
 

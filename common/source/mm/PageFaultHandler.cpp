@@ -120,17 +120,17 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
         {
           swapper->swap_in_cond_.wait();
         }
-        IPTManager::instance()->IPT_lock_.acquire();
-        current_archmemory.archmemory_lock_.acquire();
-        ArchMemoryMapping mapping = current_archmemory.resolveMapping(vpn);
-        PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
-        size_t ppn = pt_entry->page_ppn;
-        if(!IPTManager::instance()->isEntryInMap(ppn, RAM_MAP, &current_archmemory, vpn))
-        {
-          // assert(0);
-        }
-        current_archmemory.archmemory_lock_.release();
-        IPTManager::instance()->IPT_lock_.release();
+        // IPTManager::instance()->IPT_lock_.acquire();
+        // current_archmemory.archmemory_lock_.acquire();
+        // ArchMemoryMapping mapping = current_archmemory.resolveMapping(vpn);
+        // PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+        // size_t ppn = pt_entry->page_ppn;
+        // if(!IPTManager::instance()->isEntryInMap(ppn, RAM_MAP, &current_archmemory, vpn))
+        // {
+        //   // assert(0);
+        // }
+        // current_archmemory.archmemory_lock_.release();
+        // IPTManager::instance()->IPT_lock_.release();
         swapper->swap_in_lock_.release();
         debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
       }
