@@ -17,7 +17,7 @@ public:
   /**
    * check if the archmem of this entry is locked
   */
-  bool isLockedByUs();
+  bool isLockedByUs() const;
 
 };
 
@@ -38,9 +38,9 @@ public:
 
 
   /**
-   * check if the given archmem is part of the vector
+   * check if the given searchArchmem is part of the vector
   */
-  bool isArchmemExist(ArchMemory* archmem);
+  bool isArchmemExist(ArchMemory*searchArchmem);
 
   /**
    * check if the vector is empty
