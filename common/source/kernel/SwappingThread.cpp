@@ -137,7 +137,7 @@ void SwappingThread::Run()
       // 1. Updating Meta data every 1 seconds
       if (isOneTimeStep())
       {
-//        updateMetaData();
+        updateMetaData();
       }
 
       // 2. Swap out if needed
@@ -170,7 +170,7 @@ void SwappingThread::updateMetaData()
   {
     IPTEntry* ipt_entry = pair.second;
     assert(ipt_entry && "SwappingThread::updateMetaData: ipt_entry is nullptr\n");
-    ustl::vector<ArchmemIPT*> archmem_vector = ipt_entry->getArchmemIPTs();
+    ustl::vector<ArchmemIPT*> &archmem_vector = ipt_entry->getArchmemIPTs();
     assert(archmem_vector.size() > 0 && "SwappingThread::updateMetaData: key %zu is mapped to no archmem in ram_map_\n");
     
     bool hit = false;
