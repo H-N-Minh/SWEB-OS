@@ -466,19 +466,23 @@ uint32 VfsSyscall::getFileSize(uint32 fd)
 
 int32 VfsSyscall::shm_open(const char* pathname, uint32 flags, uint32 mode)
 {
-    if (!pathname)
-    {
-        debug(VFSSYSCALL, "(shm_open) Invalid pathname\n");
-        return -1;
-    }
+  if (!pathname)
+  {
+      debug(VFSSYSCALL, "(shm_open) Invalid pathname\n");
+      return -1;
+  }
 
-    debug(VFSSYSCALL, "(shm_open) Opening shared memory object %s with flags %u and mode %u\n", pathname, flags, mode);
-    //
-    // if (flags & ~(O_RDONLY | O_WRONLY | O_CREAT | O_RDWR))
-    // {
-    //     debug(VFSSYSCALL, "(shm_open) Invalid flag parameter\n");
-    //     return -1;
-    // }
+  debug(VFSSYSCALL, "(shm_open) Opening shared memory object %s with flags %u and mode %u\n", pathname, flags, mode);
+
+  if (flags & ~(O_RDONLY | O_WRONLY | O_CREAT | O_RDWR))
+  {
+    debug(VFSSYSCALL, "(shm_open) Invalid flag parameter\n");
+    return -1;
+  }
+
+  open(pathname, flags);
+
+
     //
     // FileSystemInfo *fs_info = getcwd();
     //
