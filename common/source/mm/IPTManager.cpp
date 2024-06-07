@@ -455,7 +455,7 @@ bool IPTManager::isThereAnyPageToSwapOut()
 
 //////PRESWAPPING
 
-bool IPTManager::ENABLE_PRE_SWAP = false;
+bool IPTManager::ENABLE_PRE_SWAP = true;
 
 bool IPTManager::checkMemoryThreshold() const
 {
