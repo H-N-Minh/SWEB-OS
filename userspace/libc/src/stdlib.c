@@ -131,7 +131,7 @@ void free(void *ptr)
   MemoryBlock* element_before;
   while(next->next_ != NULL)
   {
-    if(*((char*)((size_t)next->address_ + next->size_)) != '|')
+    if(checkOverflowProtection(next) == -1)
     {
       pthread_spin_unlock(&memory_lock);
       exit(-1);
@@ -170,12 +170,12 @@ void free(void *ptr)
 
   if(element_to_free->next_ && element_to_free->next_->is_free_)
   {
-    element_to_free->size_ = element_to_free->size_ + element_to_free->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
+    element_to_free->size_ += bytesNeededForMemoryBlock(element_to_free->next_->size_);
     element_to_free->next_ = element_to_free->next_->next_;
   }
   if(element_to_free != first_memory_block_ &&element_before->is_free_)
   {
-    element_before->size_ = element_before->size_ + element_before->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
+    element_before->size_ += bytesNeededForMemoryBlock(element_before->next_->size_);
     element_before->next_ = element_before->next_->next_;
   }
   pthread_spin_unlock(&memory_lock);
@@ -194,8 +194,127 @@ void* calloc(size_t nmemb, size_t size)
 
 }
 
-void *realloc(void *ptr, size_t size)
+void* realloc(void *ptr, size_t size)
 {
+  if(ptr == NULL)
+  {
+    return malloc(size);
+  }
+  else if(size == 0)
+  {
+    free(ptr);
+  }
+
+  pthread_spin_lock(&memory_lock);
+  MemoryBlock* block_to_realloc = (MemoryBlock*)ptr - 1;
+  MemoryBlock* next = first_memory_block_;
+
+  if(next == NULL)
+  {
+    pthread_spin_unlock(&memory_lock);
+    exit(-1);
+  }
+  MemoryBlock* element_before;
+  while(next->next_ != NULL)
+  {
+    if(checkOverflowProtection(next) == -1)
+    {
+      pthread_spin_unlock(&memory_lock);
+      exit(-1);
+    }
+    if(next->next_ == block_to_realloc)
+    {
+      element_before = next;
+    }
+    next = next->next_;
+  }
+  if(!element_before && block_to_realloc != first_memory_block_) //block not found
+  {
+    pthread_spin_unlock(&memory_lock);
+    exit(-1);
+  }
+  if(block_to_realloc->is_free_) //block was freed
+  {
+    pthread_spin_unlock(&memory_lock);
+    exit(-1);
+  }
+
+  ////////////////////////////////////////////////////////////////
+  //Case 1: Reduce size of memoryblock
+  if(block_to_realloc->size_ > size)
+  {
+    block_to_realloc->size_ = size;
+    addOverflowProtection(block_to_realloc);
+
+    //Todo check space after this memory block and make it smaller or concatenate or whatever
+  }
+  //Case 2: Size of memory block stays the same
+  else if(block_to_realloc->size_ == size)
+  {
+    return ptr;
+  }
+  //Case 3: Increase the size of the memoryblock
+  else
+  {
+    //Last Block in linked list
+    if(block_to_realloc->next_ == NULL)
+    {
+      memory_block->size_ = size;
+      return memory_block->address;
+    }
+    else
+    {
+    //Not enough space after this memory block
+
+
+    //Enough space after this memory block
+    }
+
+
+  }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  /////////////////////////////////////////////////////////////////////
+  used_block_counts_--;
+  if(used_block_counts_ == 0)
+  {
+    free_bytes_left_on_page_ = 0;
+    int rv = brk((void*)first_memory_block_);
+    if(rv != 0)
+    {
+      pthread_spin_unlock(&memory_lock);
+      exit(-1);
+    }
+    first_memory_block_ = NULL;
+    pthread_spin_unlock(&memory_lock);
+    return;
+  }
+  block_to_realloc->is_free_ = 1;
+
+  if(block_to_realloc->next_ && block_to_realloc->next_->is_free_)
+  {
+    block_to_realloc->size_ += bytesNeededForMemoryBlock(block_to_realloc->next_->size_);
+    block_to_realloc->next_ = block_to_realloc->next_->next_;
+  }
+  if(block_to_realloc != first_memory_block_ &&element_before->is_free_)
+  {
+    element_before->size_ += bytesNeededForMemoryBlock(element_before->next_->size_);
+    element_before->next_ = element_before->next_->next_;
+  }
+  pthread_spin_unlock(&memory_lock);
   return 0;
 }
 
