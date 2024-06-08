@@ -321,12 +321,6 @@ void UserThread::exitThread(void* value_ptr)
     debug(USERTHREAD, "UserThread::exitThread: last thread alive\n");
     last_thread_alive_ = true;
     process_->thread_retval_map_.clear();
-
-    // for waitpid: if its the last thread of process then process dying, wake the waiting processes
-    ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
-    ProcessRegistry::instance()->process_exit_status_map_[process_->pid_] = (size_t)value_ptr;
-    ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
-    ProcessRegistry::instance()->process_exit_status_map_lock_.release();
   }
 
   // if its not last thread alive, store the return value
@@ -351,6 +345,16 @@ void UserThread::exitThread(void* value_ptr)
   // unmap its stack
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
   process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+
+  if(last_thread_alive_)
+  {
+      // for waitpid: if its the last thread of process then process dying, wake the waiting processes
+    ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
+    ProcessRegistry::instance()->process_exit_status_map_[process_->pid_] = (size_t)value_ptr;
+    ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
+    ProcessRegistry::instance()->process_exit_status_map_lock_.release();
+  }
+
 
 
   user_stack_ptr_ = 0;

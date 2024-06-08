@@ -12,6 +12,10 @@
 #define NOT_RELATED_TO_GROWING_STACK 17
 #define GROWING_STACK_FAILED 18
 
+
+#define DIRECT_SWAPPING 0
+#define ASYNCHRONOUS_SWAPPING 1
+
 class PageFaultHandler
 {
 private:

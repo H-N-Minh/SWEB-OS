@@ -7,7 +7,7 @@
 #define MEGABYTE 1048576
 #define PAGESIZE 4096
 
-#define N 200
+#define N 7
 #define N_MEGABYTE N * MEGABYTE
 
 #define ELEMENTS_IN_ARRAY N_MEGABYTE / 8

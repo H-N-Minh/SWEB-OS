@@ -39,7 +39,6 @@ void* thread_function5(void* arg)
 
 int pra5()
 {
-  setPRA(__NFU_PRA__); 
   int hit;
   int miss;
   getPRAstats(&hit, &miss);

@@ -9,7 +9,7 @@
 
 
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
-enum PRA_TYPE {RANDOM, NFU};
+enum PRA_TYPE {RANDOM, NFU, SIMPLE};
 
 // class IPTEntry;
 class ArchMemory;
@@ -45,6 +45,7 @@ public:
   */
   void insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
 
+
   /**
    * Remove an entry from the ram map or disk map
    * This does not accept removing an entry that does not exist in the map. (asserts if this happens)
@@ -54,6 +55,7 @@ public:
   */
   void removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
 
+
   /**
    * Remove an entry from the source map and insert it to the destination map.
    * @param source the map that the entry is in currently. Destination is then automatically the other map
@@ -61,6 +63,9 @@ public:
    * @param ppn_destination Location of the new entry in the destination map. This new entry must be empty.
   */
   void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
+
+
+  void removeEntry(IPTMapType map_type, size_t ppn);
 
   /**
    * Getter for debugging info, doesnt use any lock but who cares
@@ -75,7 +80,7 @@ public:
   /**
    * helper for insert, remove, moveEntry. This checks if an entry with exact Archmem and ppn is already in the map
   */
-  bool isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem);
+  bool isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem, size_t vpn);
 
   /**
    * @return the ppn of the page that will be swapped out. This is where the PRA is used
@@ -101,4 +106,10 @@ public:
 
   // tobe removed
   bool isThereAnyPageToSwapOut();
+
+
+  private:
+
+    int pages_in_ram_ = 0;  //TODOs: not used at the moment
+    int pages_on_disk_ = 0;  //TODOs: not used at the moment
 };

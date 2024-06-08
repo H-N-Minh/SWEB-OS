@@ -18,10 +18,7 @@ extern "C" void arch_contextSwitch();
 
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
 
-
-
-inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user,
-                                                    bool present, bool switch_to_us)
+inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user, bool present, bool switch_to_us)
 {
   assert((user == switch_to_us) && "Thread is in user mode even though is should not be.");
   assert(!(address < USER_BREAK && currentThread->loader_ == 0) && "Thread accesses the user space, but has no loader.");
@@ -70,152 +67,144 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   ArchThreads::printThreadRegisters(currentThread, false);
 
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
+  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
+  SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+  assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
   if (currentThread->holding_lock_list_)
   {
     debug(PAGEFAULT, "PageFaultHandler::handlePageFault: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
     assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
   }
-  // assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
+
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
   if (status == VALID)
   {
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // loadPage() needs 4 and swapInPage needs 1.
-
-    SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
-    Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
-    Mutex* arch_lock = &current_archmemory.archmemory_lock_;
-
     swapper->swap_in_lock_.acquire();
-    ipt_lock->acquire();
-    arch_lock->acquire();
+    heap_manager->current_break_lock_.acquire();
+    IPTManager::instance()->IPT_lock_.acquire();
+    current_archmemory.archmemory_lock_.acquire();
 
     //Page got set to present in the meantime, so no need to do anything anymore
     if(current_archmemory.isPresent(address))
     {
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected, but another thread already swap this page in. Do nothing\n");
-      arch_lock->release();
-      ipt_lock->release(); 
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected, but another thread already swap this page in. Do nothing\n"); 
+      current_archmemory.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
+      heap_manager->current_break_lock_.release();
+      swapper->swap_in_lock_.release();
     }
     //Page is swapped out
     else if(current_archmemory.isSwapped(address))
     {
+      heap_manager->current_break_lock_.release();
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
       size_t vpn = address / PAGE_SIZE;
-      ArchMemory& archmemory = currentThread->loader_->arch_memory_;
-      size_t disk_offset = archmemory.getDiskLocation(vpn);
-
-      // should be fine to release, because we still holding swap_in_lock_, so same threads doing same swap still has to wait for each other
-      // must release because thread must hold only orders lock before using CV
-      arch_lock->release();     
-      ipt_lock->release(); 
-
-      swapper->addSwapIn(disk_offset, &preallocated_pages);
-      while (swapper->isOffsetInMap(disk_offset))
+      size_t disk_offset = current_archmemory.getDiskLocation(vpn);
+      if(DIRECT_SWAPPING)
       {
-        swapper->swap_in_cond_.wait();
+        swapper->swap_in_lock_.release();
+        current_archmemory.archmemory_lock_.release();
+        SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
+        IPTManager::instance()->IPT_lock_.release();
       }
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
+      else if(ASYNCHRONOUS_SWAPPING)
+      {
+        swapper->addSwapIn(disk_offset, &preallocated_pages);
+        current_archmemory.archmemory_lock_.release();  //TODOs: we need to check if ipt entry still exist and page is still swapped out !!!
+        IPTManager::instance()->IPT_lock_.release();
+
+        while (swapper->isOffsetInMap(disk_offset))
+        {
+          swapper->swap_in_cond_.wait();
+        }
+        // IPTManager::instance()->IPT_lock_.acquire();
+        // current_archmemory.archmemory_lock_.acquire();
+        // ArchMemoryMapping mapping = current_archmemory.resolveMapping(vpn);
+        // PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+        // size_t ppn = pt_entry->page_ppn;
+        // if(!IPTManager::instance()->isEntryInMap(ppn, RAM_MAP, &current_archmemory, vpn))
+        // {
+        //   // assert(0);
+        // }
+        // current_archmemory.archmemory_lock_.release();
+        // IPTManager::instance()->IPT_lock_.release();
+        swapper->swap_in_lock_.release();
+        debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
+      }
+      else
+      {
+        debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Try to swap in page even though swapping is disabled.\n");
+        current_archmemory.archmemory_lock_.release();
+        IPTManager::instance()->IPT_lock_.release();
+        swapper->swap_in_lock_.release();
+         swapper->swap_in_lock_.release();
+        assert(0);
+      }
     }
-    //Page needs to be loaded from binary
+    //Page is on heap
+    else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)
+    {
+      swapper->swap_in_lock_.release();
+      size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+      size_t vpn = address / PAGE_SIZE;
+      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
+      assert(rv == true);
+      current_archmemory.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
+      heap_manager->current_break_lock_.release();
+    }
+    //Page needs to be loader from binary 
     else
     {
+      swapper->swap_in_lock_.release();
+      debug(PAGEFAULT, "%18zx: heapstart, %18zx: current_break %18zx: max heap address\n",heap_manager->heap_start_, heap_manager->current_break_, (size_t)MAX_HEAP_ADDRESS);
+      heap_manager->current_break_lock_.release();
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page is not present and not swapped out -> Loading page\n");
       currentThread->loader_->loadPage(address, preallocated_pages);
-      arch_lock->release();
-      ipt_lock->release();
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page loaded successful\n");
+      current_archmemory.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
     }
-    swapper->swap_in_lock_.release();
-
-    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
   }
   else if (status == PRESENT)
   {
-    SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
-    Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
-    Mutex* arch_lock = &current_archmemory.archmemory_lock_;
-
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(1);  // copyPage() and swapInPage each only needs 1 alloc
-    
-    swapper->swap_in_lock_.acquire();
-    ipt_lock->acquire();
-    arch_lock->acquire();
-    //Page is not present anymore we need to swap it in
+    IPTManager::instance()->IPT_lock_.acquire();
+    current_archmemory.archmemory_lock_.acquire();
+    //Page is not present anymore we need to swap it in -> do nothing so it gets swapped in on the next pagefault
     if(!current_archmemory.isPresent(address))
-    { // TODOMINH: this is dubplicated code with above. Refactor it
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
-      size_t vpn = address / PAGE_SIZE;
-      ArchMemory& archmemory = currentThread->loader_->arch_memory_;
-      size_t disk_offset = archmemory.getDiskLocation(vpn);
-
-      // should be fine to release, because we still holding swap_in_lock_, so same threads doing same swap still has to wait for each other
-      // must release because thread must hold only orders lock before using CV
-      arch_lock->release();     
-      ipt_lock->release(); 
-
-      swapper->addSwapIn(disk_offset, &preallocated_pages);
-      while (swapper->isOffsetInMap(disk_offset))
-      {
-        swapper->swap_in_cond_.wait();
-      }
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
+    {
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
     else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
     {
       current_archmemory.copyPage(address, preallocated_pages);
-      arch_lock->release();     
-      ipt_lock->release(); 
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
-    else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))
+    else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))  //TODOs dont reset cowbit
     {
-      arch_lock->release();     
-      ipt_lock->release(); 
+
     }
     //We want to write to a page that is readable and not cow -> error
     else
     {
-      arch_lock->release();
-      ipt_lock->release();
+      current_archmemory.archmemory_lock_.release();
+      IPTManager::instance()->IPT_lock_.release();
       PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
       errorInPageFaultKillProcess();
     }
-
-    swapper->swap_in_lock_.release();
-
-    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
+    
+    current_archmemory.archmemory_lock_.release();
+    IPTManager::instance()->IPT_lock_.release();
   }
-  // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
-  // {
-    // IPTManager::instance()->IPT_lock_.acquire();
-    // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
-    // int retval = checkGrowingStack(address);
-    // currentThread->loader_->arch_memory_.archmemory_lock_.release();
-    //  IPTManager::instance()->IPT_lock_.release();
-    // if (retval == GROWING_STACK_FAILED)
-    // {
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
-    //   errorInPageFaultKillProcess();
-    // }
-    // else if(retval == NOT_RELATED_TO_GROWING_STACK)
-    // {
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
-    //   currentThread->loader_->loadPage(address);
-    // }
-    // else
-    // {
-    //   assert(retval == GROWING_STACK_VALID);
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
-    // }
-  // }
   else  //status INVALID
   {
+    PageManager::instance()->releaseNotNeededPages(preallocated_pages);
     errorInPageFaultKillProcess();
   }
 
+  PageManager::instance()->releaseNotNeededPages(preallocated_pages);
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 
@@ -270,4 +259,30 @@ void PageFaultHandler::errorInPageFaultKillProcess()
       currentThread->kill();
     }   
 }
+
+//Code for growing stack:
+
+  // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
+  // {
+    // IPTManager::instance()->IPT_lock_.acquire();
+    // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    // int retval = checkGrowingStack(address);
+    // currentThread->loader_->arch_memory_.archmemory_lock_.release();
+    //  IPTManager::instance()->IPT_lock_.release();
+    // if (retval == GROWING_STACK_FAILED)
+    // {
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
+    //   errorInPageFaultKillProcess();
+    // }
+    // else if(retval == NOT_RELATED_TO_GROWING_STACK)
+    // {
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
+    //   currentThread->loader_->loadPage(address);
+    // }
+    // else
+    // {
+    //   assert(retval == GROWING_STACK_VALID);
+    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
+    // }
+  // }
 

@@ -8,12 +8,14 @@
 #include "SpinLock.h"
 #include "UserThread.h"
 #include "PageFaultHandler.h"
+#include "Syscall.h"
 #include "SharedMemManager.h"
 
 
-#define MAX_HEAP_SIZE (USER_BREAK / 4)
+#define MAX_HEAP_ADDRESS (USER_BREAK / 4)
 #define MAX_STACK_AMOUNT 5    // if this is changed then update the define in pthread.h in userspace 
 #define GUARD_MARKER 0xbadcafe00000ULL  
+
 
 class UserSpaceMemoryManager
 {
@@ -25,7 +27,7 @@ class UserSpaceMemoryManager
     size_t heap_start_;
     Loader* loader_;
 
-    SpinLock current_break_lock_;   // used to protect current_break_
+    Mutex current_break_lock_;   // used to protect current_break_
 
     SharedMemManager* shared_mem_;
 
@@ -35,21 +37,15 @@ class UserSpaceMemoryManager
     /**
      * adjust the brk by size amount 
      * @param size the amount to adjust the brk by (can be positive or negative)
-     * @param new_break_addr set a fix address for the break, if this is not 0 then para "size" is ignored
      * @return pointer to the reserved space, else return 0 on failure
     */
-    pointer sbrk(ssize_t size, size_t new_break_addr = 0);
+    void* sbrk(ssize_t size);
 
     /**
      * set the address of brk to a fixed address
      * @return 0 on success, else return -1
     */
     int brk(size_t new_break_addr);
-
-    /**
-     * helper func for sbrk
-    */
-    ustl::vector<uint32> preallocate_pages_for_sbrk(ssize_t size, size_t new_break_addr = 0);
 
     /**
      * check if the address is a valid growing stack address
@@ -94,3 +90,5 @@ class UserSpaceMemoryManager
     size_t getTopOfThisStack(size_t address);
 
 };
+
+

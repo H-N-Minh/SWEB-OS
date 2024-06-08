@@ -40,7 +40,7 @@ public:
   /**
    * check if the given archmem is part of the vector
   */
-  bool isArchmemExist(ArchMemory* archmem);
+  bool isArchmemExist(ArchMemory* archmem, size_t vpn);
 
   /**
    * check if the vector is empty
