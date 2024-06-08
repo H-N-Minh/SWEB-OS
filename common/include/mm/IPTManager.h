@@ -9,7 +9,7 @@
 
 
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
-enum PRA_TYPE {RANDOM, NFU, SIMPLE};
+enum PRA_TYPE {RANDOM, NFU, SECOND_CHANGE, SIMPLE};
 
 // class IPTEntry;
 class ArchMemory;
@@ -28,6 +28,8 @@ public:
   ustl::map<ppn_t, IPTEntry*> ram_map_;
   ustl::map<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
+
+  ustl::vector<uint32> fifo_ppns;
 
 
   IPTManager();
@@ -103,13 +105,4 @@ public:
   */
   void debugRandomGenerator();
   
-
-  // tobe removed
-  bool isThereAnyPageToSwapOut();
-
-
-  private:
-
-    int pages_in_ram_ = 0;  //TODOs: not used at the moment
-    int pages_on_disk_ = 0;  //TODOs: not used at the moment
 };

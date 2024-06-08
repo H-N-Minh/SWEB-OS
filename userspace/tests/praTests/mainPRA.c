@@ -30,8 +30,8 @@ int childMain()
     int retval = 0;
 
     // comment out the tests you don't want to run
-    // PRA1 = 1;   // Test Random PRA
-    // PRA2 = 1;   // Test NFU PRA
+    PRA1 = 1;   // Test PRA
+    // PRA2 = 1;   // Test PRA
     // PRA3 = 1;      // Test switching PRA every 100 pages using syscall
     // RANDOM1 = 1;  // Test Random PRA is actually random
 
@@ -41,6 +41,9 @@ int childMain()
     PRA6 = 1;       // similar to pra5, but use fork instead of pthread_create
 
     // @todo add test that shows NFU is better than Random
+    // setPRA(__RANDOM_PRA__); 
+    // setPRA(__NFU_PRA__); 
+    setPRA(__SECOND_CHANCE_PRA__); 
 
     if (PRA1)
     {
@@ -50,13 +53,13 @@ int childMain()
         else                                  { printf("===> pra1 failed!\n");  return -1;}
     }
 
-    if (PRA2)
-    {
-        printf("\nTesting pra2: testing NFU-PRA...\n");
-        retval = pra2();
-        if (retval == 0)                      { printf("===> pra2 successful!\n"); }
-        else                                  { printf("===> pra2 failed!\n");  return -1;}
-    }
+    // if (PRA2)
+    // {
+    //     printf("\nTesting pra2: testing NFU-PRA...\n");
+    //     retval = pra2();
+    //     if (retval == 0)                      { printf("===> pra2 successful!\n"); }
+    //     else                                  { printf("===> pra2 failed!\n");  return -1;}
+    // }
 
     if (PRA3)
     {

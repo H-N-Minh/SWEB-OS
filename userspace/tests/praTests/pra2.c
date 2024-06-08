@@ -23,7 +23,6 @@ size_t big_array2[ELEMENTS_IN_ARRAY];  //5 Megabyes
 //Trigger out of memory
 int pra2()
 {
-  setPRA(__NFU_PRA__); 
   int hit;
   int miss;
   getPRAstats(&hit, &miss);

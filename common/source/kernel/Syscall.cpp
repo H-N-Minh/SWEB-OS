@@ -453,9 +453,9 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
   if (fd == fd_stdout)
   {
+    lfdTable.lfds_lock_.release();
     debug(SYSCALL, "Syscall::write: Writing to stdout\n");
     kprintf("%.*s", (int)size, (char*) buffer);
-    lfdTable.lfds_lock_.release();
     return size;
   }
   else if (localFileDescriptor != nullptr) {
@@ -881,7 +881,18 @@ void Syscall::setPraType(size_t type)
   debug(SYSCALL, "Syscall::setPraType: Setting PRA type to %s\n", type == 0 ? "RANDOM" : "NFU");
   IPTManager* ipt = IPTManager::instance();
   ipt->IPT_lock_.acquire();
-  ipt->pra_type_ = type? PRA_TYPE::NFU : PRA_TYPE::RANDOM;
+  if(type == PRA_TYPE::NFU)
+  {
+    ipt->pra_type_ = PRA_TYPE::NFU;
+  }
+  else if(type == PRA_TYPE::RANDOM)
+  {
+    ipt->pra_type_ = PRA_TYPE::RANDOM;
+  }
+  else if(type == PRA_TYPE::SECOND_CHANGE)
+  {
+    ipt->pra_type_ = PRA_TYPE::SECOND_CHANGE;
+  }
   ipt->IPT_lock_.release();
 }
 

@@ -28,7 +28,6 @@ size_t getTopOfThisPage(size_t variable_adr)
 // writting a big number at the end of a page that it overflows to the next page, causes double pagefault at a time
 int pra4()
 {
-  setPRA(__RANDOM_PRA__); 
   int hit;
   int miss;
   getPRAstats(&hit, &miss);

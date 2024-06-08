@@ -12,6 +12,7 @@ extern "C" {
 
 #define __RANDOM_PRA__ 0
 #define __NFU_PRA__ 1
+#define __SECOND_CHANCE_PRA__ 2
 
 /**
  * Creates a new process.
