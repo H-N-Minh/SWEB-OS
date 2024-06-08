@@ -169,7 +169,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 
 int Syscall::mmap(size_t para, size_t retval)
 {
-  assert(para && "Syscall::mmap: arg1 is null\n");
+  assert(para && retval && "Syscall::mmap: arg1 is null, retval is null\n");
   mmap_params_t* params = (mmap_params_t*) para;
   void* start = params->start;
   size_t length = params->length;
@@ -177,23 +177,27 @@ int Syscall::mmap(size_t para, size_t retval)
   int flags = params->flags;
   int fd  = params->fd;
   off_t offset = params->offset;
-  debug(MINH, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
+  debug(SYSCALL, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
+  
   // error checking the para
+  // TODOMINH add error handling for prot, flags, length
   if (start != (void*) 0 || offset != 0)
   {
     debug(ERROR_DEBUG, "Syscall::mmap: start and offset is not implemented\n");
     return -1;
   }
-  if (fd < 0)
+  if (fd != -1)
   {
-    debug(ERROR_DEBUG, "Syscall::mmap: invalid fd\n");
+    debug(ERROR_DEBUG, "Syscall::mmap: mmap is not yet implemented to work with fd\n");
     return -1;
   }
   
   SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_;
-  void* ret = smm->mmap(params);
-  *(size_t*) retval = (size_t) ret;
+  void* ret = MAP_FAILED;
+  ret = smm->mmap(params);
+  
   debug(MINH, "Syscall::mmap: return value: %p\n", ret);
+  *(size_t*) retval = (size_t) ret;
 
   return 0;
 }
