@@ -215,6 +215,17 @@ size_t IPTManager::findPageToSwapOut()
         if(not_accessed)
         {
           ppn_retval = ppn;
+
+
+          auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn);
+          if (it != fifo_ppns.end())
+          {
+            fifo_ppns.erase(it);
+          }
+          else
+          {
+            assert(0 && "PPN not found in fifo_ppns vector");
+          }
           break;
         }
       }
@@ -255,8 +266,10 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     (*map)[ppn] = new IPTEntry();
     IPTEntry* entry = (*map)[ppn];
     entry->addArchmemIPT(vpn, archmem);
-
-    fifo_ppns.push_back(ppn);
+    if(map_type == IPTMapType::RAM_MAP)
+    {
+      fifo_ppns.push_back(ppn);
+    }
   }
 
   debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
@@ -286,15 +299,19 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     delete entry;
     map->erase(ppn);
 
-    auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn);
-    if (it != fifo_ppns.end())
+    if(map_type == IPTMapType::RAM_MAP)
     {
-      fifo_ppns.erase(it);
+      auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn);
+      if (it != fifo_ppns.end())
+      {
+        fifo_ppns.erase(it);
+      }
+      else
+      {
+        assert(0 && "PPN not found in fifo_ppns vector");
+      }
     }
-    else
-    {
-      assert(0 && "PPN not found in fifo_ppns vector");
-    }
+
   }
 
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
@@ -346,13 +363,13 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   source_map->erase(ppn_source);
   entry->access_counter_ = 0;
 
-  if(ppn_destination == IPTMapType::RAM_MAP)
+  if(source != IPTMapType::RAM_MAP)
   {
     fifo_ppns.push_back(ppn_destination);
   }
 }
 
-void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)
+void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)         //Todos does not delete but dont know where because i need it after remove
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntry called but IPT not locked\n");
 

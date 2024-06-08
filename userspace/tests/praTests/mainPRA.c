@@ -1,4 +1,4 @@
-#include "stdio.h" //
+#include "stdio.h"
 #include "pthread.h"
 #include "assert.h"
 #include "unistd.h"
@@ -31,11 +31,6 @@ int childMain()
 
     // comment out the tests you don't want to run
     PRA1 = 1;   // Test PRA
-    // PRA2 = 1;   // Test PRA
-    // PRA3 = 1;      // Test switching PRA every 100 pages using syscall
-    // RANDOM1 = 1;  // Test Random PRA is actually random
-
-    // currently our PRA is not passing these 3 tests
     PRA4 = 1;       // double pagefault => double swap (still single thread)
     PRA5 = 1;       // 64 threads  writting to array at same time
     PRA6 = 1;       // similar to pra5, but use fork instead of pthread_create
