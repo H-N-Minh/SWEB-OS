@@ -3,10 +3,10 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                            // "/usr/shell.sweb", //
-                            // "/usr/shell.sweb",
+                            "/usr/shell.sweb",
+                            
 //mmap-----------------------------------------------------------------------
-                            // "/usr/mmapTests.sweb", 
+                            "/usr/mmapTests.sweb", 
 
 //Swapping-----------------------------------------------------------------------
                             // "/usr/iptTests.sweb", 
@@ -60,9 +60,6 @@ char const *user_progs[] = {
                             // "/usr/dupInvalidTest.sweb",
                             // "/usr/no_test.sweb",
 
-//Swapping-----------------------------------------------------------------------
-                            // "/usr/iptTests.sweb", 
-                            "/usr/praTests.sweb", 
   
 
                             0
