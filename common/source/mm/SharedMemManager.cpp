@@ -131,7 +131,7 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     }
     
     SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset);
-    shared_map_[last_free_vpn_] = entry;
+    shared_map_.push_back(entry);
 
     void* start_addr = (void*) (start * PAGE_SIZE);
     last_free_vpn_ += size;
@@ -148,9 +148,9 @@ bool SharedMemManager::isAddressValid(size_t address)
     vpn_t vpn = address / PAGE_SIZE;
     if (address >= MIN_SHARED_MEM_ADDRESS && address < MAX_SHARED_MEM_ADDRESS)
     {
-        for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
+        for (auto it : shared_map_)
         {
-            if (it->second->isInBlockRange(vpn))
+            if (it->isInBlockRange(vpn))
             {
                 return true;
             }
@@ -227,11 +227,11 @@ SharedMemEntry* SharedMemManager::getSharedMemEntry(size_t address)
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::getSharedMemEntry: shared_mem_lock_ not held\n");
 
     vpn_t vpn = address / PAGE_SIZE;
-    for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
+    for (auto it : shared_map_)
     {
-        if (it->second->isInBlockRange(vpn))
+        if (it->isInBlockRange(vpn))
         {
-            return it->second;
+            return it;
         }
     }
     return nullptr;
@@ -242,19 +242,41 @@ int SharedMemManager::munmap(void* start, size_t length)
 {
     debug(MMAP, "SharedMemManager::munmap: start: %p, length: %zu\n", start, length);
     
-    assert(start && "SharedMemManager::munmap: invalid start\n");
-    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::munmap: shared_mem_lock_ not held\n");
+    // assert(start && "SharedMemManager::munmap: invalid start\n");
+    // assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::munmap: shared_mem_lock_ not held\n");
 
-    vpn_t vpn = (size_t) start / PAGE_SIZE;
-    for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
-    {
-        if (it->second->isInBlockRange(vpn))
-        {
-            debug(MMAP, "SharedMemManager::munmap: removing shared block (start: %p, size: %zu pages) from process %d\n", start, it->second->getSize(), ((UserThread*) currentThread)->process_->pid_);
-            delete it->second;
-            shared_map_.erase(it);
-            return 0;
-        }
-    }
-    return -1;
+    // vpn_t vpn = (size_t) start / PAGE_SIZE;
+    // for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
+    // {
+    //     if (it->second->isInBlockRange(vpn))
+    //     {
+    //         debug(MMAP, "SharedMemManager::munmap: removing shared block (start: %p, size: %zu pages) from process %d\n", start, it->second->getSize(), ((UserThread*) currentThread)->process_->pid_);
+    //         delete it->second;
+    //         shared_map_.erase(it);
+    //         return 0;
+    //     }
+    // }
+    return 0;
 }
+
+
+// int SharedMemManager::unmapOnePage(vpn_t vpn)
+// {
+//     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::unmapOnePage: shared_mem_lock_ not held\n");
+//     assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: IPT need to be locked");
+//     debug(MMAP, "SharedMemManager::unmapOnePage: vpn: %zu\n", vpn);
+
+//     for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
+//     {
+//         if (it->second->isInBlockRange(vpn))
+//         {
+
+//             debug(MMAP, "SharedMemManager::unmapOnePage: removing shared block (start: %p, size: %zu pages) from process %d\n", (void*) (vpn * PAGE_SIZE), it->second->getSize(), ((UserThread*) currentThread)->process_->pid_);
+//             delete it->second;
+//             shared_map_.erase(it);
+//             return;
+//         }
+//     }
+//     debug(ERROR_DEBUG, "SharedMemManager::unmapOnePage: vpn not found in shared_map_\n");
+//     return -1;
+// }

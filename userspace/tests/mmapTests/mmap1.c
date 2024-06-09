@@ -27,8 +27,9 @@ int mmap1() {
     printf("%s\n", region);
 
     // Unmap the memory region
-    if (munmap(region, size) == -1)
+    if (munmap(region, size))
     {
+        printf("munmap didnt return with code 0\n");
         return -1;
     }
 

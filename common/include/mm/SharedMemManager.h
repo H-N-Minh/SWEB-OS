@@ -57,7 +57,7 @@ public:
 class SharedMemManager
 {
 private:
-  ustl::map<vpn_t, SharedMemEntry*> shared_map_;
+  ustl::vector<SharedMemEntry*> shared_map_;
   vpn_t last_free_vpn_;
 
 public:
