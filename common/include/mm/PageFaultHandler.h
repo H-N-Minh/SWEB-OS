@@ -67,4 +67,23 @@ public:
   static int checkGrowingStack(size_t address);
   static void errorInPageFaultKillProcess();
 
+  /**
+   * Helper for handlePageFault. handles all valid pagefaults including: swap in page, load page from binary, heap pages
+  */
+  static void handleValidPageFault(ustl::vector<uint32>& preallocated_pages, size_t address);
+
+  /**
+   * Helper for handleValidPageFault. Hanldes the case of a heap page fault
+  */
+  static void handleHeapPF(ustl::vector<uint32>& preallocated_pages, size_t address);
+
+  /**
+   * Helper for handleValidPageFault. Hanldes the case of loading page from binary
+  */
+  static void handleLoadPF(ustl::vector<uint32>& preallocated_pages, size_t address);
+
+  /**
+   * Helper for handleValidPageFault. Hanldes the case of swapping in asynchronously
+  */
+  static void handleAsynSwapIn(size_t disk_offset);
 };
