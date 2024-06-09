@@ -1,5 +1,6 @@
 #include "stdlib.h"
 #include "string.h"
+#include "assert.h"
 #include "stdio.h"
 
 
@@ -249,10 +250,30 @@ void* realloc(void *ptr, size_t size)
   //Case 1: Reduce size of memoryblock
   if(block_to_realloc->size_ > size)
   {
+    int size_left = block_to_realloc->size_ - size;
     block_to_realloc->size_ = size;
     addOverflowProtection(block_to_realloc);
 
-    //Todo check space after this memory block and make it smaller or concatenate or whatever
+    //block after is free
+    if(block_to_realloc->next_ && block_to_realloc->next_->is_free_ == 1)       
+    {
+      MemoryBlock* new_block =  (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
+      size_t new_size = size_left + block_to_realloc->next_->size_;                          //TODOs - check for unallocated space in between
+      createNewMemoryBlock(new_block, new_size, 0, new_block + 1, block_to_realloc->next_);
+      addOverflowProtection(new_block);
+      block_to_realloc->next_ = new_block;
+    }
+    //block after is not free - check if enough space for new block
+    else
+    {
+      if(size_left >= bytesNeededForMemoryBlock(0))
+      {
+        MemoryBlock* new_block = (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
+        createNewMemoryBlock(new_block, size_left - bytesNeededForMemoryBlock(0), 0, new_block + 1, block_to_realloc->next_);
+        addOverflowProtection(new_block);
+        block_to_realloc->next_ = new_block;
+      }
+    }
   }
   //Case 2: Size of memory block stays the same
   else if(block_to_realloc->size_ == size)
@@ -299,64 +320,23 @@ void* realloc(void *ptr, size_t size)
       //Enough space after this memory block and not last block
       else
       {
+        size_t size_left = size - (block_to_realloc->size_ + block_to_realloc->next_->size_);
         block_to_realloc->size_ = size;
-        block_to_realloc->next_ = block_to_realloc->next_->next_;
 
-        //TODOs - make the rest of next block usefull again (probably next is than not accurate anymore)
+        if(size_left >= bytesNeededForMemoryBlock(0))
+        {
+          MemoryBlock* new_block = (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
+          createNewMemoryBlock(new_block, size_left - bytesNeededForMemoryBlock(0), 0, new_block + 1, block_to_realloc->next_->next_);
+          addOverflowProtection(new_block);
+          block_to_realloc->next_ = new_block;
+        }
+
         pthread_spin_unlock(&memory_lock);
         return block_to_realloc->address_;     //TODOs: i should probably store this in tmp variable before releasing lock and also check for the others
-  
       }
-
-
-    
-    }
-
-    
+    } 
   }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-  /////////////////////////////////////////////////////////////////////
-  used_block_counts_--;
-  if(used_block_counts_ == 0)
-  {
-    free_bytes_left_on_page_ = 0;
-    int rv = brk((void*)first_memory_block_);
-    if(rv != 0)
-    {
-      pthread_spin_unlock(&memory_lock);
-      exit(-1);
-    }
-    first_memory_block_ = NULL;
-    pthread_spin_unlock(&memory_lock);
-    return 0;
-  }
-  block_to_realloc->is_free_ = 1;
-
-  if(block_to_realloc->next_ && block_to_realloc->next_->is_free_)
-  {
-    block_to_realloc->size_ += bytesNeededForMemoryBlock(block_to_realloc->next_->size_);
-    block_to_realloc->next_ = block_to_realloc->next_->next_;
-  }
-  if(block_to_realloc != first_memory_block_ &&element_before->is_free_)
-  {
-    element_before->size_ += bytesNeededForMemoryBlock(element_before->next_->size_);
-    element_before->next_ = element_before->next_->next_;
-  }
-  pthread_spin_unlock(&memory_lock);
+  assert(0);
   return 0;
 }
 
@@ -418,3 +398,9 @@ int checkOverflowProtection(MemoryBlock* memory_block)
 
 
 //TODOs if i free check if there is space "free" before (not in the size of previous), if so add this to the freed space
+
+
+
+
+
+
