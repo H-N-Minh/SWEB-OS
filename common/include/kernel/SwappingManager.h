@@ -30,14 +30,17 @@ class SwappingManager
     // locking order: Ipt -> disk -> archmem
     Mutex disk_lock_;
 
-  void enqueuePageForPreSwap(size_t ppn);
-  void performPreSwap();
-  size_t getPreSwapQueueSize();
-  void swapOutPageContent(size_t ppn);
-  Mutex pre_swap_lock_;
+    void enqueuePageForPreSwap(size_t ppn);
+    void performPreSwap();
+    size_t getPreSwapQueueSize();
+    void swapOutPageContent(size_t ppn);
+    Mutex pre_swap_lock_;
 
-  Mutex swapping_thread_finished_lock_;
-  Condition swapping_thread_finished_;
+    Mutex swapping_thread_finished_lock_;
+    Condition swapping_thread_finished_;
+
+    int discard_unchanged_page_ = 0;
+    int reuse_same_disk_location_ = 0;
 
   private:
     static SwappingManager* instance_;

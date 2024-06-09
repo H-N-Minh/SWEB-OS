@@ -61,6 +61,8 @@ void SwappingManager::swapOutPage(size_t ppn)
       PageManager::instance()->setReferenceCount(ppn, 0);
       updatePageTableEntriesForWriteBackToDisk(virtual_page_infos);
       unlockArchmemorys(virtual_page_infos);
+
+      discard_unchanged_page_++;
       return;
     }
     else
@@ -76,6 +78,8 @@ void SwappingManager::swapOutPage(size_t ppn)
       updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset);
       PageManager::instance()->setReferenceCount(ppn, 0);
       unlockArchmemorys(virtual_page_infos);
+
+      reuse_same_disk_location_++;
       return;
     }
 
