@@ -66,8 +66,6 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-  ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
-  assert(current_archmemory.archmemory_lock_.heldBy() != currentThread && "Archmemory lock should not be held on pagefault");
 
   if (currentThread->holding_lock_list_)
   {
@@ -75,50 +73,21 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
   }
 
-  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
-
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
+
   if (status == VALID)
   {
-    handleValidPageFault(preallocated_pages, address);
+    handleValidPageFault(address);
   }
   else if (status == PRESENT)
   {
-    IPTManager::instance()->IPT_lock_.acquire();
-    current_archmemory.archmemory_lock_.acquire();
-    //Page is not present anymore we need to swap it in -> do nothing so it gets swapped in on the next pagefault
-    if(!current_archmemory.isPresent(address))
-    {
-    }
-    //Page is set readonly we want to write and cow-bit is set -> copy page
-    else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
-    {
-      current_archmemory.copyPage(address, preallocated_pages);
-    }
-    //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
-    else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))  //TODOs dont reset cowbit
-    {
-
-    }
-    //We want to write to a page that is readable and not cow -> error
-    else
-    {
-      current_archmemory.archmemory_lock_.release();
-      IPTManager::instance()->IPT_lock_.release();
-      PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
-      errorInPageFaultKillProcess();
-    }
-    
-    current_archmemory.archmemory_lock_.release();
-    IPTManager::instance()->IPT_lock_.release();
+    handlePresentPageFault(address, writing);
   }
   else  //status INVALID
   {
-    PageManager::instance()->releaseNotNeededPages(preallocated_pages);
     errorInPageFaultKillProcess();
   }
 
-  PageManager::instance()->releaseNotNeededPages(preallocated_pages);
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 
@@ -175,7 +144,7 @@ void PageFaultHandler::errorInPageFaultKillProcess()
 }
 
 
-void PageFaultHandler::handleValidPageFault(ustl::vector<uint32>& preallocated_pages, size_t address)
+void PageFaultHandler::handleValidPageFault(size_t address)
 {
   debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Handling valid page fault\n");
 
@@ -186,6 +155,11 @@ void PageFaultHandler::handleValidPageFault(ustl::vector<uint32>& preallocated_p
   Mutex* heap_lock = &heap_manager->current_break_lock_;
   Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
   Mutex* archmem_lock = &current_archmemory.archmemory_lock_;
+
+  // swap-in needs 1 page
+  // heap needs 3 pages (for mapPage)
+  // load from binary needs 4 pages (for loadPage)
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  //TODOs make sure that it gets freed in all cases
 
   swap_lock->acquire();
   heap_lock->acquire();
@@ -199,8 +173,6 @@ void PageFaultHandler::handleValidPageFault(ustl::vector<uint32>& preallocated_p
     ipt_lock->release();
     heap_lock->release();
     swap_lock->release();
-
-    return;
   }
   else if(current_archmemory.isSwapped(address))
   {
@@ -246,7 +218,6 @@ void PageFaultHandler::handleValidPageFault(ustl::vector<uint32>& preallocated_p
     ipt_lock->release();
     heap_lock->release();
     debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Handling pf in Heap completed\n");
-    return;
   }
   else
   {
@@ -260,6 +231,8 @@ void PageFaultHandler::handleValidPageFault(ustl::vector<uint32>& preallocated_p
     ipt_lock->release();
     debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page loaded from binary\n");
   }
+
+  PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 }
 
 void PageFaultHandler::handleHeapPF(ustl::vector<uint32>& preallocated_pages, size_t address)
@@ -292,7 +265,48 @@ void PageFaultHandler::handleAsynSwapIn(size_t disk_offset)
   debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
 }
 
+void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
+{
+  debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Handling present page fault\n");
 
+  ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
+  Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
+  Mutex* archmem_lock = &current_archmemory.archmemory_lock_;
+  PageManager* pm = PageManager::instance();
+
+  // copyPage needs 1 page
+  ustl::vector<uint32> preallocated_pages = pm->preAlocatePages(1);  //TODOs make sure that it gets freed in all cases
+
+  ipt_lock->acquire();
+  archmem_lock->acquire();
+
+  if(!current_archmemory.isPresent(address))
+  {
+    debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is not present anymore (swapped out). Do nothing\n");
+  }
+  else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
+  {
+    debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW and we want to write. Copy page\n");
+    current_archmemory.copyPage(address, preallocated_pages);
+  }
+  else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))  //TODOs dont reset cowbit
+  {
+    debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW but writeable bit is set => Somebody else was faster with COW. Do nothing\n");
+  }
+  else
+  {
+    debug(ERROR_DEBUG, "PageFaultHandler::handlePresentPageFault: Page is not COW (read-only) and we want to write => Error\n");
+    archmem_lock->release();
+    ipt_lock->release();
+    pm-> releaseNotNeededPages(preallocated_pages);
+    errorInPageFaultKillProcess();
+  }
+  
+  archmem_lock->release();
+  ipt_lock->release();
+
+  pm->releaseNotNeededPages(preallocated_pages);
+}
 
 
 

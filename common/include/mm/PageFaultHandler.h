@@ -70,7 +70,12 @@ public:
   /**
    * Helper for handlePageFault. handles all valid pagefaults including: swap in page, load page from binary, heap pages
   */
-  static void handleValidPageFault(ustl::vector<uint32>& preallocated_pages, size_t address);
+  static void handleValidPageFault(size_t address);
+
+  /**
+   * Helper for handlePageFault. handles all present pagefaults including: COW, writing to read-only pages
+  */
+  static void handlePresentPageFault(size_t address, bool writing);
 
   /**
    * Helper for handleValidPageFault. Hanldes the case of a heap page fault
@@ -86,4 +91,5 @@ public:
    * Helper for handleValidPageFault. Hanldes the case of swapping in asynchronously
   */
   static void handleAsynSwapIn(size_t disk_offset);
+
 };
