@@ -51,6 +51,8 @@ void SwappingManager::swapOutPage(size_t ppn)
   ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
 
+  setPagesToNotPresent(virtual_page_infos);
+
   if(isPageUnchanged(virtual_page_infos))
   {
     ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);             //TODOs: entries should get deleted but should still be possible to unlock
@@ -259,6 +261,16 @@ void SwappingManager::updatePageTableEntriesForWriteBackToDisk(ustl::vector<Arch
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
     archmemory->updatePageTableEntryForWriteBackToDisk(vpn);
+  }
+}
+
+void SwappingManager::setPagesToNotPresent(ustl::vector<ArchmemIPT*>& virtual_page_infos)
+{
+  for(ArchmemIPT* virtual_page_info : virtual_page_infos)
+  {
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
+    archmemory->setPageTableEntryToNotPresent(vpn);
   }
 }
 

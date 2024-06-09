@@ -599,7 +599,7 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
   assert(pt_entry && "No pagetable entry");
 
-  pt_entry->present = 0;
+  assert(pt_entry->present == 0);
   pt_entry->swapped_out = 1;
 
   pt_entry->page_ppn = disk_offset;
@@ -851,14 +851,27 @@ bool ArchMemory::updatePageTableEntryForWriteBackToDisk(size_t vpn)
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
   assert(pt_entry && "No pagetable entry");
   assert(pt_entry->dirty == 0);
-  assert(pt_entry->present == 1);
+  assert(pt_entry->present == 0);
 
-  
-  pt_entry->present = 0;
   pt_entry->cow = 0;
   pt_entry->accessed = 0;
   pt_entry->page_ppn = 0;
 
   return true;
+}
+
+void ArchMemory::setPageTableEntryToNotPresent(size_t vpn)
+{
+  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
+  assert(archmemory_lock_.heldBy() == currentThread);
+
+  debug(A_MEMORY, "ArchMemory::setPageTableEntryToNotPresent: Update vpn %ld in archmemory %p.\n", vpn, this);
+  ArchMemoryMapping mapping = resolveMapping(vpn);
+  
+  PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+  assert(pt_entry && "No pagetable entry");
+  assert(pt_entry->present == 1);
+
+  pt_entry->present = 0;
 }
 

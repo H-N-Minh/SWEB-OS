@@ -69,4 +69,6 @@ class SwappingManager
     bool isPageUnchanged(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
     void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+
+    void setPagesToNotPresent(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 };
