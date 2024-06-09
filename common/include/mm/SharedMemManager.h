@@ -71,14 +71,6 @@ public:
 
   void* mmap(mmap_params_t* params);
   int munmap(void* addr, size_t length);
-  void* getAddr();
-  size_t getLength();
-  int getProt();
-  int getFlags();
-  int getFd();
-  ssize_t getOffset();
-
-  void* fakeMalloc(void* start, size_t length, int prot);
 
   /**
    * add an entry to the shared memory map

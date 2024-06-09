@@ -52,6 +52,7 @@
 #define sc_checkRandomPRA 705
 
 #define sc_mmap 800
+#define sc_munmap 801
 
 
 

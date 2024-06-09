@@ -209,6 +209,10 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
         write = 1;
         execute = 1;
     }
+    else if (entry->prot_ == PROT_NONE)
+    {
+        debug(MMAP, "SharedMemManager::handleSharedPF: PROT_NONE => no protection\n");
+    }
     else
     {
         assert(false && "SharedMemManager::handleSharedPF: invalid protection bits\n");
@@ -231,4 +235,26 @@ SharedMemEntry* SharedMemManager::getSharedMemEntry(size_t address)
         }
     }
     return nullptr;
+}
+
+
+int SharedMemManager::munmap(void* start, size_t length)
+{
+    debug(MMAP, "SharedMemManager::munmap: start: %p, length: %zu\n", start, length);
+    
+    assert(start && "SharedMemManager::munmap: invalid start\n");
+    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::munmap: shared_mem_lock_ not held\n");
+
+    vpn_t vpn = (size_t) start / PAGE_SIZE;
+    for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
+    {
+        if (it->second->isInBlockRange(vpn))
+        {
+            debug(MMAP, "SharedMemManager::munmap: removing shared block (start: %p, size: %zu pages) from process %d\n", start, it->second->getSize(), ((UserThread*) currentThread)->process_->pid_);
+            delete it->second;
+            shared_map_.erase(it);
+            return 0;
+        }
+    }
+    return -1;
 }

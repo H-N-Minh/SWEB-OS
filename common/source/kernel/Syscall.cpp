@@ -160,11 +160,40 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_mmap:
       return_value = mmap(arg1, arg2);
       break;
+    case sc_munmap:
+      return_value = munmap(arg1, arg2);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
   }
   return return_value;
+}
+
+int Syscall::munmap(size_t start, size_t length)
+{
+  debug(SYSCALL, "Syscall::munmap: start: %p, length: %zu\n", (void*)start, length);
+  if ((start % PAGE_SIZE) != 0 || length == 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::munmap: start is not multiple of page size or length is 0\n");
+    return -1;
+  }
+  int pages = length / PAGE_SIZE;
+  if (length % PAGE_SIZE != 0)
+  {
+    pages++;
+  }
+  size_t end = (size_t) start + pages * PAGE_SIZE;
+  if (end > MAX_SHARED_MEM_ADDRESS || start < MIN_SHARED_MEM_ADDRESS)
+  {
+    debug(ERROR_DEBUG, "Syscall::munmap: range is not within shared memory range\n");
+    return -1;
+  }
+
+  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_;
+  int rv = smm->munmap((void*) start, length);
+  debug(SYSCALL, "Syscall::munmap: finished with return value: %d\n", rv);
+  return rv;
 }
 
 int Syscall::mmap(size_t para, size_t retval)

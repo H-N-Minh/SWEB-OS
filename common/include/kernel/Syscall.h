@@ -93,6 +93,8 @@ public:
   static void checkRandomPRA();
 
   static int mmap(size_t para, size_t retval);
+
+  static int munmap(size_t start, size_t length);
 };
 
 

@@ -12,6 +12,7 @@
 #include "SharedMemManager.h"
 
 
+// if any of these are changed, update mman.h in userspace
 #define MAX_HEAP_ADDRESS (USER_BREAK / 4)
 
 #define MIN_SHARED_MEM_ADDRESS (MAX_HEAP_ADDRESS + (1000 * PAGE_SIZE))

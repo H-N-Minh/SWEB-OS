@@ -4,6 +4,7 @@
 #include "sys/syscall.h"
 #include "../../../common/include/kernel/syscall-definitions.h"
 
+#define __PAGE_SIZE__ 4096
 #define __USER_BREAK__ 0x0000800000000000ULL
 
 // CHANGES TO THESE DEFINE MUST ALSO BE CHANGED IN KERNEL!!
