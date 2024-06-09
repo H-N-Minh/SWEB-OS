@@ -144,6 +144,13 @@ void PageFaultHandler::errorInPageFaultKillProcess()
 }
 
 
+bool allLockRealeased(Mutex* shared_mem_lock, Mutex* heap_lock, Mutex* swap_lock, Mutex* archmem_lock, Mutex* ipt_lock)
+{
+  return !shared_mem_lock->isHeldBy(currentThread) && !heap_lock->isHeldBy(currentThread) && !swap_lock->isHeldBy(currentThread) && 
+         !archmem_lock->isHeldBy(currentThread) && !ipt_lock->isHeldBy(currentThread);
+}
+
+
 void PageFaultHandler::handleValidPageFault(size_t address)
 {
   debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Handling valid page fault\n");
@@ -151,11 +158,12 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
   SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+  SharedMemManager* smm = heap_manager->shared_mem_;
   Mutex* swap_lock = &swapper->swap_in_lock_;
   Mutex* heap_lock = &heap_manager->current_break_lock_;
   Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
   Mutex* archmem_lock = &current_archmemory.archmemory_lock_;
-  SharedMemManager* smm = heap_manager->shared_mem_;
+  Mutex* shared_mem_lock = &smm->shared_mem_lock_;
 
   // swap-in needs 1 page
   // heap needs 3 pages (for mapPage)
@@ -166,10 +174,12 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   heap_lock->acquire();
   ipt_lock->acquire();
   archmem_lock->acquire();
+  shared_mem_lock->acquire();
 
   if(current_archmemory.isPresent(address))
   {
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Another thread already solved this pagefault. Do nothing\n"); 
+    shared_mem_lock->release();
     archmem_lock->release();
     ipt_lock->release();
     heap_lock->release();
@@ -177,6 +187,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   }
   else if(current_archmemory.isSwapped(address))
   {
+    shared_mem_lock->release();
     heap_lock->release();
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Swapped out detected. Requesting a swap in\n");
     size_t vpn = address / PAGE_SIZE;
@@ -210,6 +221,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)
   {
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Handling pf in Heap\n");
+    shared_mem_lock->release();
     swap_lock->release();
 
     handleHeapSharedPF(preallocated_pages, address);
@@ -221,17 +233,19 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   else if(smm->isAddressValid(address))
   {
     debug(MMAP, "PageFaultHandler::handleValidPageFault: Handling pf in shared memory\n");
+    heap_lock->release();
     swap_lock->release();
 
     handleHeapSharedPF(preallocated_pages, address);
 
+    shared_mem_lock->release();
     archmem_lock->release();
     ipt_lock->release();
-    heap_lock->release();
   }
   else
   {
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Page needs to be loaded from binary\n");
+    shared_mem_lock->release();
     heap_lock->release();
     swap_lock->release();
 
@@ -241,6 +255,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     ipt_lock->release();
   }
 
+  assert(allLockRealeased(shared_mem_lock, heap_lock, swap_lock, archmem_lock, ipt_lock) && "PageFaultHandler::handleValidPageFault: Not all locks are released\n");
   PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 }
 

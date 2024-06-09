@@ -31,6 +31,7 @@ size_t SharedMemEntry::getSize()
 
 
 SharedMemManager::SharedMemManager()
+    : shared_mem_lock_("shared_mem_lock_")
 {
     last_free_vpn_ = (vpn_t) MIN_SHARED_MEM_VPN;
 }
@@ -51,6 +52,8 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     debug(MMAP, "SharedMemManager::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
     
     void* retval = MAP_FAILED;
+
+    shared_mem_lock_.acquire();
 
     if ((flags == (MAP_ANONYMOUS | MAP_PRIVATE)) && fd == -1)
     {
@@ -95,12 +98,16 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     {
         debug(MMAP, "SharedMemManager::mmap: failed\n");
     }
+
+    shared_mem_lock_.release();
     
     return retval;
 }
 
 void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset)
 {
+    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::addEntry: shared_mem_lock_ not held\n");
+
     debug(MMAP, "SharedMemManager::addEntry: adding entry to shared_map_ addr: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",addr, length, prot, flags, fd, offset);
     if (last_free_vpn_ > MAX_SHARED_MEM_VPN)
     {
@@ -129,6 +136,9 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
 
 bool SharedMemManager::isAddressValid(size_t address)
 {
+    assert(address && "SharedMemManager::isAddressValid: invalid address\n");
+    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::isAddressValid: shared_mem_lock_ not held\n");
+
     vpn_t vpn = address / PAGE_SIZE;
     if (address >= MIN_SHARED_MEM_ADDRESS && address < MAX_SHARED_MEM_ADDRESS)
     {

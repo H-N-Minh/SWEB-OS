@@ -2,6 +2,7 @@
 #pragma once
 #include "types.h"
 #include "umultimap.h"
+#include "Mutex.h"
 
 
 #define PROT_NONE     0x00000000  // 00..00
@@ -60,6 +61,7 @@ private:
   vpn_t last_free_vpn_;
 
 public:
+  Mutex shared_mem_lock_;
 
   
   SharedMemManager();
