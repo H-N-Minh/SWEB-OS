@@ -15,40 +15,40 @@
 
 #define MAP_FAILED	((void *) -1)
 
+typedef size_t vpn_t;
 
+// struct to store parameters for mmap
 typedef struct mmap_params {
   void* start;
   size_t length;
   int prot;
-  int flags;
+  uint32 flags;
   int fd;
   ssize_t offset;
 }mmap_params_t;
 
+
+// struct to store all information of each shared memory entry within a process
 class SharedMemEntry
 {
 public:
-  int length_;    // in pages
+  int size_;    // in pages
   int prot_;
   int flags_;
   int fd_;
   ssize_t offset_;
 
-  SharedMemEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset)
-  {
-    addr_ = addr;
-    length_ = length;
-    prot_ = prot;
-    flags_ = flags;
-    fd_ = fd;
-    offset_ = offset;
-  }
+  SharedMemEntry(size_t size, int prot, int flags, int fd, ssize_t offset);
 };
+
 
 class SharedMemManager
 {
+private:
+  ustl::map<vpn_t, SharedMemEntry*> shared_map_;
+  vpn_t last_free_vpn_;
+
 public:
-  ustl::multimap<int, size_t> shared_map_;  // <fd, vpn>
 
   
   SharedMemManager();
@@ -67,4 +67,10 @@ public:
 
   void* fakeMalloc(void* start, size_t length, int prot);
 
+  /**
+   * add an entry to the shared memory map
+   * @return the starting address of the shared memory region
+   * @return MAP_FAILED if the shared memory region is full
+  */
+  void* addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset);
 };

@@ -65,9 +65,9 @@ const size_t CPU_ERROR          = Ansi_Red     | OUTPUT_ENABLED;
 const size_t KMM                = Ansi_Yellow;
 const size_t SBRK               = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t GROW_STACK         = Ansi_Green;
-const size_t IPT                = Ansi_Green | OUTPUT_ENABLED;
-const size_t SWAPPING           = Ansi_Magenta | OUTPUT_ENABLED;
-const size_t PRESWAPPING        = Ansi_Magenta | OUTPUT_ENABLED;
+const size_t IPT                = Ansi_Green;// | OUTPUT_ENABLED;
+const size_t SWAPPING           = Ansi_Magenta;// | OUTPUT_ENABLED;
+const size_t PRESWAPPING        = Ansi_Magenta;// | OUTPUT_ENABLED;
 const size_t MMAP               = Ansi_Yellow | OUTPUT_ENABLED;
 
 //group driver

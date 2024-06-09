@@ -9,10 +9,16 @@
 #include "IPTManager.h"
 #include "Syscall.h"
 
+SharedMemEntry::SharedMemEntry(size_t size, int prot, int flags, int fd, ssize_t offset)
+    : size_(size), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
+{
+}
+
 
 
 SharedMemManager::SharedMemManager()
 {
+    last_free_vpn_ = (vpn_t) MIN_SHARED_MEM_VPN;
 }
 
 SharedMemManager::~SharedMemManager()
@@ -25,16 +31,16 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     void* start = params->start;
     size_t length = params->length;
     int prot = params->prot;
-    int flags = params->flags;
+    uint32 flags = params->flags;
     int fd  = params->fd;
     ssize_t offset = params->offset;
     debug(MMAP, "SharedMemManager::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
     
     void* retval = MAP_FAILED;
 
-    if ((flags == MAP_ANONYMOUS | MAP_PRIVATE) && fd == -1)
+    if ((flags == (MAP_ANONYMOUS | MAP_PRIVATE)) && fd == -1)
     {
-        retval = fakeMalloc(start, length, prot);
+        retval = addEntry(start, length, prot, flags, fd, offset);
     }
     
 
@@ -76,7 +82,32 @@ void* SharedMemManager::mmap(mmap_params_t* params)
         debug(MMAP, "SharedMemManager::mmap: failed\n");
     }
     
-    return (void*) 0;
+    return retval;
+}
+
+void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset)
+{
+    debug(MMAP, "SharedMemManager::addEntry: adding entry to shared_map_ addr: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",addr, length, prot, flags, fd, offset);
+    if (last_free_vpn_ > MAX_SHARED_MEM_VPN)
+    {
+        debug(MMAP, "SharedMemManager::addEntry: failed, out of shared memory\n");
+        return MAP_FAILED;
+    }
+
+
+    int size = length / PAGE_SIZE;
+    if (length % PAGE_SIZE != 0)
+    {
+        size++;
+    }
+    
+    SharedMemEntry* entry = new SharedMemEntry(size, prot, flags, fd, offset);
+    shared_map_[last_free_vpn_] = entry;
+
+    size_t start_addr = last_free_vpn_ * PAGE_SIZE;
+    last_free_vpn_ += size;
+    debug(MMAP, "SharedMemManager::addEntry: added shared block (start: %p) to process %d\n", (void*) start_addr, ((UserThread*) currentThread)->process_->pid_);
+    return (void*) start_addr;
 }
 
 void* SharedMemManager::fakeMalloc(void* start, size_t length, int prot)
@@ -84,9 +115,9 @@ void* SharedMemManager::fakeMalloc(void* start, size_t length, int prot)
     debug(MMAP, "SharedMemManager::fakeMalloc: start: %p, length: %zu, prot: %d\n",start, length, prot);
 
 
-    // map the page to the given address
-    size_t vpn = MAX_HEAP_ADDRESS * 3 / PAGE_SIZE;
-    shared_map_.insert(ustl::make_pair(fd, vpn));
+    // // map the page to the given address
+    // size_t vpn = MAX_HEAP_ADDRESS * 3 / PAGE_SIZE;
+    // shared_map_.insert(ustl::make_pair(fd, vpn));
 
     return (void*) (MAX_HEAP_ADDRESS * 3);
 }
