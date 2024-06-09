@@ -862,3 +862,37 @@ bool ArchMemory::updatePageTableEntryForWriteBackToDisk(size_t vpn)
   return true;
 }
 
+
+void ArchMemory::setProtectionBits(size_t vpn, int read, int write, int execute)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+  debug(A_MEMORY, "ArchMemory::setProtectionBits: with vpn %zu: read %d, write %d, exec %d\n", vpn, read, write, execute); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->present)
+  {
+    if (write)
+    {
+      pt_entry->writeable = 1;
+    }
+    else
+    {
+      pt_entry->writeable = 0;
+    }
+
+    if (execute)
+    {
+      pt_entry->execution_disabled = 0;
+    }
+    else
+    {
+      pt_entry->execution_disabled = 1;
+    }
+  }
+  else
+  {
+    debug(A_MEMORY, "ArchMemory::setProtectionBits: vpn %p is not present\n", (void*)vpn);
+    assert(0 && "ArchMemory::setProtectionBits: page is not present.\n");
+  }
+}

@@ -138,6 +138,8 @@ class ArchMemory
     */
     void resetAccessBits(size_t vpn);
 
+    void setProtectionBits(size_t vpn, int read, int write, int execute);
+
 
   private:
     /**

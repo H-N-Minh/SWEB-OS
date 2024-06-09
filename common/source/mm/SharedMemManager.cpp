@@ -111,10 +111,9 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     debug(MMAP, "SharedMemManager::addEntry: adding entry to shared_map_ addr: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",addr, length, prot, flags, fd, offset);
     if (last_free_vpn_ > MAX_SHARED_MEM_VPN)
     {
-        debug(MMAP, "SharedMemManager::addEntry: failed, out of shared memory\n");
+        debug(ERROR_DEBUG, "SharedMemManager::addEntry: failed, out of shared memory\n");
         return MAP_FAILED;
     }
-
 
     int size = length / PAGE_SIZE;
     if (length % PAGE_SIZE != 0)
@@ -123,6 +122,13 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     }
     vpn_t start = last_free_vpn_;
     vpn_t end = start + size - 1;
+
+    assert(start >= MIN_SHARED_MEM_VPN && end >= MIN_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
+    if (last_free_vpn_ > MAX_SHARED_MEM_VPN)
+    {
+        debug(ERROR_DEBUG, "SharedMemManager::addEntry: failed, size required is bigger than the available free pages \n");
+        return MAP_FAILED;
+    }
     
     SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset);
     shared_map_[last_free_vpn_] = entry;
@@ -153,4 +159,76 @@ bool SharedMemManager::isAddressValid(size_t address)
     return false;
 }
 
+void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, size_t address)
+{
+    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::handleSharedPF: shared_mem_lock_ not held\n");
+    assert(currentThread->loader_->arch_memory_.archmemory_lock_.isHeldBy(currentThread) && "SharedMemManager::handleSharedPF: archmemory_lock_ not held\n");
 
+    size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    size_t vpn = address / PAGE_SIZE;
+    bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
+    assert(rv == true);
+
+    debug(MMAP, "SharedMemManager::handleSharedPF: setting protection for the new page\n");
+    // Set the read bit to false
+    int read = 0;
+    int write = 0;
+    int execute = 0;
+
+    SharedMemEntry* entry = getSharedMemEntry(address);
+    if (entry->prot_ == PROT_READ)
+    {
+        read = 1;
+    }
+    else if (entry->prot_ == PROT_WRITE)
+    {
+        write = 1;
+    }
+    else if (entry->prot_ == PROT_EXEC)
+    {
+        execute = 1;
+    }
+    else if (entry->prot_ == (PROT_READ | PROT_WRITE))
+    {
+        read = 1;
+        write = 1;
+    }
+    else if (entry->prot_ == (PROT_READ | PROT_EXEC))
+    {
+        read = 1;
+        execute = 1;
+    }
+    else if (entry->prot_ == (PROT_WRITE | PROT_EXEC))
+    {
+        write = 1;
+        execute = 1;
+    }
+    else if (entry->prot_ == (PROT_READ | PROT_WRITE | PROT_EXEC))
+    {
+        read = 1;
+        write = 1;
+        execute = 1;
+    }
+    else
+    {
+        assert(false && "SharedMemManager::handleSharedPF: invalid protection bits\n");
+    }
+
+    currentThread->loader_->arch_memory_.setProtectionBits(vpn, read, write, execute);
+}
+
+
+SharedMemEntry* SharedMemManager::getSharedMemEntry(size_t address)
+{
+    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::getSharedMemEntry: shared_mem_lock_ not held\n");
+
+    vpn_t vpn = address / PAGE_SIZE;
+    for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
+    {
+        if (it->second->isInBlockRange(vpn))
+        {
+            return it->second;
+        }
+    }
+    return nullptr;
+}

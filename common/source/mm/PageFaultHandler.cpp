@@ -224,7 +224,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     shared_mem_lock->release();
     swap_lock->release();
 
-    handleHeapSharedPF(preallocated_pages, address);
+    handleHeapPF(preallocated_pages, address);
 
     archmem_lock->release();
     ipt_lock->release();
@@ -236,7 +236,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     heap_lock->release();
     swap_lock->release();
 
-    handleHeapSharedPF(preallocated_pages, address);
+    smm->handleSharedPF(preallocated_pages, address);
 
     shared_mem_lock->release();
     archmem_lock->release();
@@ -259,7 +259,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 }
 
-void PageFaultHandler::handleHeapSharedPF(ustl::vector<uint32>& preallocated_pages, size_t address)
+void PageFaultHandler::handleHeapPF(ustl::vector<uint32>& preallocated_pages, size_t address)
 {
   size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
   size_t vpn = address / PAGE_SIZE;

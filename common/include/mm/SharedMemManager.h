@@ -91,4 +91,16 @@ public:
    * check if the given address is within any shared memory block
   */
   bool isAddressValid(vpn_t vpn);
+
+  /**
+   * handle the page fault that is related to shared memory. also Setting the protections for the page
+  */
+  void handleSharedPF(ustl::vector<uint32>& preallocated_pages, size_t address);
+
+  /**
+   * get the shared memory entry that contains the given address
+  */
+  SharedMemEntry* getSharedMemEntry(size_t address);
 };
+
+
