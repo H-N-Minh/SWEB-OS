@@ -280,6 +280,13 @@ uint32 PageManager::allocPPN(uint32 page_size)
       while (!swapper->isFreePageAvailable())
       {
         swapper->swap_out_cond_.wait();
+
+        if(swapper->memory_full_try_alloc_again_)
+        {
+          swapper->memory_full_try_alloc_again_ = false;
+          swapper->swap_out_lock_.release();
+          return allocPPN(page_size);
+        }
       }
       ppn = swapper->getFreePage();
       swapper->swap_out_lock_.release();

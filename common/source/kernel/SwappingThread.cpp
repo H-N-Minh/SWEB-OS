@@ -52,6 +52,7 @@ bool SwappingThread::isMemoryAlmostFull()
 
 void SwappingThread::swapOut()
 {
+  debug(SWAPTHREAD, "SwappingThread::swapOut: Check if swap out nessessary.\n");
   swap_out_lock_.acquire();
 
   bool almost_full_memory = isMemoryAlmostFull();
@@ -65,7 +66,6 @@ void SwappingThread::swapOut()
       {
         break;
       }
-
       IPTManager* ipt = IPTManager::instance();
       ipt->IPT_lock_.acquire();
       
@@ -84,7 +84,7 @@ void SwappingThread::swapOut()
 
     }
   }
-  else if (!almost_full_memory)    // no longer in low memory zone => free the pages
+  else if(!almost_full_memory)    // no longer in low memory zone => free the pages
   {
     if (!free_pages_.empty())
     {
@@ -95,7 +95,8 @@ void SwappingThread::swapOut()
       }
       free_pages_.clear();
     }
-    
+    memory_full_try_alloc_again_ = true;
+    swap_out_cond_.signal();
   }
   swap_out_lock_.release();
 }

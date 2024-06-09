@@ -25,6 +25,8 @@ class SwappingThread : public Thread
     bool isOneTimeStep();
     void updateMetaData();
 
+    bool memory_full_try_alloc_again_ = false;
+
 
     ////////////////// PRA stats
   private:
