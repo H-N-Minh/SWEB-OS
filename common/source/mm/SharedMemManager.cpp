@@ -9,11 +9,25 @@
 #include "IPTManager.h"
 #include "Syscall.h"
 
-SharedMemEntry::SharedMemEntry(size_t size, int prot, int flags, int fd, ssize_t offset)
-    : size_(size), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
+
+/////////////////////// SharedMemEntry ///////////////////////
+
+SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
+    : start_(start),end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
 {
 }
 
+bool SharedMemEntry::isInBlockRange(vpn_t vpn)
+{
+    return vpn >= start_ && vpn <= end_;
+}
+
+size_t SharedMemEntry::getSize()
+{
+    return end_ - start_ + 1;
+}
+
+/////////////////////// SharedMemManager ///////////////////////
 
 
 SharedMemManager::SharedMemManager()
@@ -100,25 +114,33 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     {
         size++;
     }
+    vpn_t start = last_free_vpn_;
+    vpn_t end = start + size - 1;
     
-    SharedMemEntry* entry = new SharedMemEntry(size, prot, flags, fd, offset);
+    SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset);
     shared_map_[last_free_vpn_] = entry;
 
-    size_t start_addr = last_free_vpn_ * PAGE_SIZE;
+    void* start_addr = (void*) (start * PAGE_SIZE);
     last_free_vpn_ += size;
-    debug(MMAP, "SharedMemManager::addEntry: added shared block (start: %p) to process %d\n", (void*) start_addr, ((UserThread*) currentThread)->process_->pid_);
-    return (void*) start_addr;
+    debug(MMAP, "SharedMemManager::addEntry: added shared block (start: %p, size: %zu pages) to process %d\n", start_addr, entry->getSize(), ((UserThread*) currentThread)->process_->pid_);
+    return start_addr;
 }
 
-void* SharedMemManager::fakeMalloc(void* start, size_t length, int prot)
-{    
-    debug(MMAP, "SharedMemManager::fakeMalloc: start: %p, length: %zu, prot: %d\n",start, length, prot);
 
-
-    // // map the page to the given address
-    // size_t vpn = MAX_HEAP_ADDRESS * 3 / PAGE_SIZE;
-    // shared_map_.insert(ustl::make_pair(fd, vpn));
-
-    return (void*) (MAX_HEAP_ADDRESS * 3);
+bool SharedMemManager::isAddressValid(size_t address)
+{
+    vpn_t vpn = address / PAGE_SIZE;
+    if (address >= MIN_SHARED_MEM_ADDRESS && address < MAX_SHARED_MEM_ADDRESS)
+    {
+        for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
+        {
+            if (it->second->isInBlockRange(vpn))
+            {
+                return true;
+            }
+        }
+    }
+    return false;
 }
+
 

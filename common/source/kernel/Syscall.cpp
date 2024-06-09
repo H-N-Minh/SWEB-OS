@@ -196,7 +196,7 @@ int Syscall::mmap(size_t para, size_t retval)
   void* ret = MAP_FAILED;
   ret = smm->mmap(params);
   
-  debug(MINH, "Syscall::mmap: return value: %p\n", ret);
+  debug(SYSCALL, "Syscall::mmap: return value: %p\n", ret);
   *(size_t*) retval = (size_t) ret;
 
   return 0;

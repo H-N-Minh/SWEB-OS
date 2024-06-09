@@ -80,7 +80,7 @@ public:
   /**
    * Helper for handleValidPageFault. Hanldes the case of a heap page fault
   */
-  static void handleHeapPF(ustl::vector<uint32>& preallocated_pages, size_t address);
+  static void handleHeapSharedPF(ustl::vector<uint32>& preallocated_pages, size_t address);
 
   /**
    * Helper for handleValidPageFault. Hanldes the case of loading page from binary

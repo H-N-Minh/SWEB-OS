@@ -32,13 +32,24 @@ typedef struct mmap_params {
 class SharedMemEntry
 {
 public:
-  int size_;    // in pages
+  vpn_t start_;
+  vpn_t end_;
   int prot_;
   int flags_;
   int fd_;
   ssize_t offset_;
 
-  SharedMemEntry(size_t size, int prot, int flags, int fd, ssize_t offset);
+  SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset);
+
+  /**
+   * check if the given vpn is within this shared memory block
+  */
+  bool isInBlockRange(vpn_t vpn);
+
+  /**
+   * get the size of the mem block (in pages)
+  */
+  size_t getSize();
 };
 
 
@@ -73,4 +84,9 @@ public:
    * @return MAP_FAILED if the shared memory region is full
   */
   void* addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset);
+
+  /**
+   * check if the given address is within any shared memory block
+  */
+  bool isAddressValid(vpn_t vpn);
 };

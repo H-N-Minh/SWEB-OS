@@ -146,7 +146,7 @@ void PageFaultHandler::errorInPageFaultKillProcess()
 
 void PageFaultHandler::handleValidPageFault(size_t address)
 {
-  debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Handling valid page fault\n");
+  debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Handling valid page fault\n");
 
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
@@ -155,6 +155,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   Mutex* heap_lock = &heap_manager->current_break_lock_;
   Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
   Mutex* archmem_lock = &current_archmemory.archmemory_lock_;
+  SharedMemManager* smm = heap_manager->shared_mem_;
 
   // swap-in needs 1 page
   // heap needs 3 pages (for mapPage)
@@ -168,7 +169,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
 
   if(current_archmemory.isPresent(address))
   {
-    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Another thread already solved this pagefault. Do nothing\n"); 
+    debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Another thread already solved this pagefault. Do nothing\n"); 
     archmem_lock->release();
     ipt_lock->release();
     heap_lock->release();
@@ -177,7 +178,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   else if(current_archmemory.isSwapped(address))
   {
     heap_lock->release();
-    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
+    debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Swapped out detected. Requesting a swap in\n");
     size_t vpn = address / PAGE_SIZE;
     size_t disk_offset = current_archmemory.getDiskLocation(vpn);
 
@@ -200,28 +201,37 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     }
     else
     {
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Try to swap in page even though swapping is disabled.\n");
       archmem_lock->release();
       ipt_lock->release();
       swap_lock->release();
-      assert(0);
+      assert(0 && "PageFaultHandler::handleValidPageFault: Try to swap in page even though swapping is disabled.\n");
     }
   }
   else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)
   {
-    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Handling pf in Heap\n");
+    debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Handling pf in Heap\n");
     swap_lock->release();
 
-    handleHeapPF(preallocated_pages, address);
+    handleHeapSharedPF(preallocated_pages, address);
 
     archmem_lock->release();
     ipt_lock->release();
     heap_lock->release();
-    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Handling pf in Heap completed\n");
+  }
+  else if(smm->isAddressValid(address))
+  {
+    debug(MMAP, "PageFaultHandler::handleValidPageFault: Handling pf in shared memory\n");
+    swap_lock->release();
+
+    handleHeapSharedPF(preallocated_pages, address);
+
+    archmem_lock->release();
+    ipt_lock->release();
+    heap_lock->release();
   }
   else
   {
-    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page needs to be loaded from binary\n");
+    debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Page needs to be loaded from binary\n");
     heap_lock->release();
     swap_lock->release();
 
@@ -229,13 +239,12 @@ void PageFaultHandler::handleValidPageFault(size_t address)
 
     archmem_lock->release();
     ipt_lock->release();
-    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page loaded from binary\n");
   }
 
   PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 }
 
-void PageFaultHandler::handleHeapPF(ustl::vector<uint32>& preallocated_pages, size_t address)
+void PageFaultHandler::handleHeapSharedPF(ustl::vector<uint32>& preallocated_pages, size_t address)
 {
   size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
   size_t vpn = address / PAGE_SIZE;
