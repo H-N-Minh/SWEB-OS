@@ -66,9 +66,13 @@ class SwappingManager
 
     void readFromDisk(size_t disk_offset, size_t ppn);
 
-    bool isPageUnchanged(ustl::vector<ArchmemIPT*> &virtual_page_infos);
+    bool isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
     void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 
     void setPagesToNotPresent(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+
+    bool hasPageBeenDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos);
+
+    void resetDirtyBitSetBeenDirtyBits(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 };

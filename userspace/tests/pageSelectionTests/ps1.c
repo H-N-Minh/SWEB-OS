@@ -21,19 +21,17 @@ size_t big_array5[ELEMENTS_IN_ARRAY];  //5 Megabyes
 
 
 //Show that pages only get swapped out if the get changed - TODOs add disk writes
-int ipt5()
+int ps1()
 {
   size_t tmp;
-  setPRA(0);  // 0 for random pra, 1 for NFU
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    tmp = big_array5[i * (PAGESIZE / 8)];   
+    tmp = big_array5[i * (PAGESIZE / 8)];  
+    printf("i %d", i); 
   }
 
   tmp = 1;
   assert(tmp == 1);
-
-
 
   return 0;
 }

@@ -29,7 +29,7 @@ class SwappingThread : public Thread
     ////////////////// PRA stats
   private:
     // both are protected by IPT lock
-    uint32 hit_count_;    // the number of times a page is marked either dirty or accessed
+    uint32 hit_count_;    // the number of times a page is marked accessed
     uint32 miss_count_;   // the number of times a page is swapped out
   public:
     uint32 getHitCount();

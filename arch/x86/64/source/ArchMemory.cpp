@@ -778,7 +778,7 @@ bool ArchMemory::isWriteable(size_t virtual_addr)
   }
 }
 
-bool ArchMemory::isPageAccessed(size_t vpn)        //TODOs: I think only looking at access (and not dirty) is fine?
+bool ArchMemory::isPageAccessed(size_t vpn)      
 {
   assert(archmemory_lock_.heldBy() == currentThread);
  
@@ -798,7 +798,7 @@ bool ArchMemory::isPageAccessed(size_t vpn)        //TODOs: I think only looking
   return false;
 }
 
-void ArchMemory::resetAccessBits(size_t vpn)        //TODOs: I think only looking at access (and not dirty) is fine?          
+void ArchMemory::resetAccessBits(size_t vpn)        
 {
   assert(archmemory_lock_.heldBy() == currentThread);
  
@@ -815,7 +815,6 @@ void ArchMemory::resetAccessBits(size_t vpn)        //TODOs: I think only lookin
       return;
     }
   }
-  
   assert(0 && "ArchMemory::resetAccessBits: page is not accessed.\n");
 }
 
@@ -873,5 +872,42 @@ void ArchMemory::setPageTableEntryToNotPresent(size_t vpn)
   assert(pt_entry->present == 1);
 
   pt_entry->present = 0;
+}
+
+
+bool ArchMemory::hasPageBeenDirty(size_t vpn)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  debug(A_MEMORY, "ArchMemory::hasPageBeenDirty: with vpn %p.\n", (void*)vpn); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->been_dirty)
+  {
+    debug(A_MEMORY, "ArchMemory::hasPageBeenDirty: vpn %p has been dirty\n", (void*)vpn);
+    return true;
+  }
+  else
+  {
+    debug(A_MEMORY, "ArchMemory::hasPageBeenDirty: vpn %p has been not dirty\n", (void*)vpn);
+    return false;
+  }
+}
+
+void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)        
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  debug(A_MEMORY, "ArchMemory::resetDirtyBitSetBeenDirtyBits: with vpn %zu.\n", vpn); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if(pt_entry->dirty == 1)
+  {
+    pt_entry->been_dirty = 1;
+  }
+  
+  pt_entry->dirty = 0;
 }
 

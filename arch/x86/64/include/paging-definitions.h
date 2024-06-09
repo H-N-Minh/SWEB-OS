@@ -142,7 +142,7 @@ typedef struct
     uint64 dirty                     :1;
     uint64 size                      :1;
     uint64 global                    :1;
-    uint64 ignored_2                 :1;
+    uint64 been_dirty                :1;
     uint64 swapped_out               :1;
     uint64 cow                       :1;
     uint64 page_ppn                  :28;

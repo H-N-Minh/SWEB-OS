@@ -114,6 +114,7 @@ class ArchMemory
     bool isWriteable(size_t virtual_addr);
     bool isPageAccessed(size_t vpn);
     bool isPageDirty(size_t vpn);
+    bool hasPageBeenDirty(size_t vpn);
 
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
@@ -130,15 +131,15 @@ class ArchMemory
 
     int countArchmemPages();
 
-    /**
-     * if access or dirty bit is set, return true, else false
-    */
+
 
 
     /**
-     * Reset the access and dirty bits of a page to 0
+     * Reset the access bits of a page to 0
     */
     void resetAccessBits(size_t vpn);
+
+    void resetDirtyBitSetBeenDirtyBits(size_t vpn);
 
 
   private:
