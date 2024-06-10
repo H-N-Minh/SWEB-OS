@@ -937,43 +937,17 @@ void Syscall::checkRandomPRA()
 
 size_t Syscall::shm_open(size_t name, size_t oflag, size_t mode)
 {
-    // if (name >= USER_BREAK)
-    // {
-    //     return -1U;
-    // }
-    //
-     debug(SYSCALL, "Syscall::shm_open: Opening shared memory object: %s with flags: %zu and mode: %zu\n", (char*)name, oflag, mode);
+	debug(SYSCALL, "Syscall::shm_open: Opening shared memory object: %s with flags: %zu and mode: %zu\n", (char*)name, oflag, mode);
+	char* shm_name = (char*)(name);
+	SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
+	SharedMemObject* shm_entry = smm->shm_open(shm_name, oflag, mode);
 
-     int global_fd = VfsSyscall::shm_open((char*)name, oflag, mode);
+	if (shm_entry == nullptr)
+	{
+    debug(ERROR_DEBUG, "Syscall::shm_open: failed to open or create shared memory\n");
+    return -1;
+  }
 
-    if (global_fd < 0) {
-        debug(SYSCALL, "Syscall::shm_open: VfsSyscall::shm_open failed\n");
-        return -1U;
-    }
-
-    debug(SYSCALL, "Syscall::shm_open: Global file descriptor: %d\n", global_fd);
-
-    // UserThread& currentUserThread = *((UserThread*)currentThread);
-    // UserProcess& current_process = *currentUserThread.process_;
-    //
-    // LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
-    //
-    // lfdTable.lfds_lock_.acquire();
-    //
-    // FileDescriptor* globalFileDescriptor = VfsSyscall::getFileDescriptor(global_fd);
-    // LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.createLocalFileDescriptor(globalFileDescriptor, oflag, 0, ::FileType::SHARED_MEMORY);
-    //
-    // debug(SYSCALL, "Syscall::shm_open: Current Process: %s\n", current_process.str().c_str());
-    //
-    // if (localFileDescriptor == nullptr) {
-    //     debug(SYSCALL, "Syscall::shm_open: LocalFileDescriptor creation failed\n");
-    //     lfdTable.lfds_lock_.release();
-    //     return -1U;
-    // }
-    //
-    // debug(SYSCALL, "Syscall::shm_open: Local file descriptor: %zu\n",
-    //       localFileDescriptor->getLocalFD());
-    // size_t local_file_descriptor = localFileDescriptor->getLocalFD();
-    // lfdTable.lfds_lock_.release();
-    return 1;
+	debug(SYSCALL, "Syscall::shm_open: opened/created shared memory %s at address %p\n", shm_name, (void*)(shm_entry->start_ * PAGE_SIZE));
+  return shm_entry->start_ * PAGE_SIZE;
 }

@@ -4,7 +4,6 @@
 #include "Inode.h"
 #include "Dentry.h"
 
-
 class Dirent;
 class Dentry;
 class VfsMount;
@@ -13,14 +12,14 @@ class VfsSyscall;
 class Path;
 class FileSystemInfo;
 
-struct SharedMemoryObject {
-    ustl::string name;
-    void* address;
-    size_t size;
-    uint32 oflag;
-    Inode* inode;
-    Dentry* dentry;
-};
+// struct SharedMemoryObject {
+//     ustl::string name;
+//     void* address;
+//     size_t size;
+//     uint32 oflag;
+//     Inode* inode;
+//     Dentry* dentry;
+// };
 
 class VfsSyscall
 {
@@ -155,7 +154,13 @@ class VfsSyscall
      */
     static FileDescriptor* getFileDescriptor(uint32 fd);
 
-    static int32 shm_open(const char* pathname, uint32 flags, uint32 mode);
+    // SharedMemManager sharedMemManager;
+    // ustl::map<ustl::string, SharedMemoryObject> shared_memory_table;
+    //
+    // static int32 shm_open(const char* pathname, uint32 flags, uint32 mode);
+ 
+
+ 
 
   private:
     VfsSyscall();

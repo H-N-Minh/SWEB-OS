@@ -3,6 +3,7 @@
 #include "types.h"
 #include "umultimap.h"
 #include "Mutex.h"
+#include "ustring.h"
 
 
 #define PROT_NONE     0x00000000  // 00..00
@@ -16,6 +17,8 @@
 
 #define MAP_FAILED	((void *) -1)
 
+class SharedMemObject;
+
 typedef size_t vpn_t;
 
 // struct to store parameters for mmap
@@ -27,6 +30,8 @@ typedef struct mmap_params {
   int fd;
   ssize_t offset;
 }mmap_params_t;
+
+
 
 
 // struct to store all information of each shared memory entry within a process
@@ -59,6 +64,8 @@ class SharedMemManager
 private:
   ustl::vector<SharedMemEntry*> shared_map_;
   vpn_t last_free_vpn_;
+
+  ustl::map<ustl::string, SharedMemObject*> shm_objects_;
 
 public:
   Mutex shared_mem_lock_;
@@ -113,6 +120,17 @@ public:
   */
   void unmapAllPages();
 
+  SharedMemObject* shm_open(char* name, size_t oflag, mode_t mode);
+
+};
+
+// struct to store parameters for shared memory object
+class SharedMemObject : public SharedMemEntry {
+public:
+ ustl::string name_;
+
+ SharedMemObject(const ustl::string& name, vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
+   : SharedMemEntry(start, end, prot, flags, fd, offset), name_(name) {}
 };
 
 

@@ -9,6 +9,7 @@
 #include "IPTManager.h"
 #include "Syscall.h"
 
+#include "File.h"
 
 /////////////////////// SharedMemEntry ///////////////////////
 
@@ -407,5 +408,50 @@ void SharedMemManager::unmapAllPages()
     IPTManager::instance()->IPT_lock_.release();
     shared_mem_lock_.release();
     debug(MMAP, "SharedMemManager::unmapAllPages: done\n");
+}
+
+SharedMemObject* SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
+{
+  shared_mem_lock_.acquire();
+
+	debug(SHARE_MEMORY, "---------------(shm_open) Opening shared memory object %s with flags %zu and mode %lu\n", name, oflag, mode);
+
+  auto it = shm_objects_.find(name);
+  if (it != shm_objects_.end())
+  {
+    //object already exists
+    if (oflag & O_EXCL)
+    {
+      // O_EXCL is set and object exists, fail with error
+      shared_mem_lock_.release();
+      return nullptr;
+    }
+    // Return the existing object
+    shared_mem_lock_.release();
+    return it->second;
+  }
+
+  //object does not exist, create a new one if O_CREAT is set
+  if (oflag & O_CREAT)
+  {
+    //allocate a new shared memory object
+    size_t length = 4096;  // set to fix right now
+    int prot = PROT_READ | PROT_WRITE;  //default protection?
+    int flags = MAP_SHARED;  //default flags?
+    vpn_t start = last_free_vpn_;
+    vpn_t end = start + (length / PAGE_SIZE) - 1;
+
+    SharedMemObject* entry = new SharedMemObject(name, start, end, prot, flags, -1, 0);
+    shared_map_.push_back(entry);
+    shm_objects_[name] = entry;
+    last_free_vpn_ = end + 1;
+
+    shared_mem_lock_.release();
+    return entry;
+  }
+
+  //object does not exist and O_CREAT is not set
+  shared_mem_lock_.release();
+  return nullptr;
 }
 
