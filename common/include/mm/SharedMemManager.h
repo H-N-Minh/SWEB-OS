@@ -108,6 +108,11 @@ public:
   */
   void findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length);
 
+  /**
+   * unmap all active shared mem pages. Used for process termination
+  */
+  void unmapAllPages();
+
 };
 
 

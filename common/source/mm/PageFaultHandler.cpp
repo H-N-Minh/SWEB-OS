@@ -158,7 +158,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   ArchMemory& current_archmemory = currentThread->loader_->arch_memory_;
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
   SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
-  SharedMemManager* smm = heap_manager->shared_mem_;
+  SharedMemManager* smm = heap_manager->shared_mem_manager_;
   Mutex* swap_lock = &swapper->swap_in_lock_;
   Mutex* heap_lock = &heap_manager->current_break_lock_;
   Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;

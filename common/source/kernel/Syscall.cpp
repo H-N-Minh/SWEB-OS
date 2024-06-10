@@ -184,7 +184,7 @@ int Syscall::munmap(size_t start, size_t length)
     return -1;
   }
 
-  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_;
+  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
   int rv = smm->munmap((void*) start, length);
   debug(SYSCALL, "Syscall::munmap: finished with return value: %d\n", rv);
   return rv;
@@ -215,7 +215,7 @@ int Syscall::mmap(size_t para, size_t retval)
     return -1;
   }
   
-  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_;
+  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
   void* ret = MAP_FAILED;
   ret = smm->mmap(params);
   

@@ -130,6 +130,7 @@ UserThread::UserThread(UserThread& other, UserProcess* new_process)
 
 UserThread::~UserThread()
 {
+  assert(Scheduler::instance()->isCurrentlyCleaningUp() && "only the cleanupthread should do this\n");
   debug(USERTHREAD, "Thread with id %ld gets destroyed.\n", getTID());
   
   if(last_thread_alive_)
@@ -137,6 +138,7 @@ UserThread::~UserThread()
     assert(process_->threads_.size() == 0 && "Not all threads removed from threads_");
     assert(process_->thread_retval_map_.size() == 0 && "There are still values in retval map");
     debug(USERTHREAD, "Userprocess gets destroyed by thread with id %ld.\n", getTID());
+
     delete process_;
     process_ = 0;
   }
@@ -321,6 +323,9 @@ void UserThread::exitThread(void* value_ptr)
     debug(USERTHREAD, "UserThread::exitThread: last thread alive\n");
     last_thread_alive_ = true;
     process_->thread_retval_map_.clear();
+
+    debug(USERTHREAD, "UserThread::~UserThread: unmapping all shared mem pages (if theres any)\n");
+    process_->user_mem_manager_->shared_mem_manager_->unmapAllPages();
   }
 
   // if its not last thread alive, store the return value

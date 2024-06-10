@@ -381,3 +381,30 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
         arch_memory->unmapPage(vpn);
     }
 }
+
+
+void SharedMemManager::unmapAllPages()
+{
+    debug(MMAP, "SharedMemManager::unmapAllPages unmaping all shared mem pages\n");
+    ArchMemory* arch_memory = &((UserThread*) currentThread)->loader_->arch_memory_;
+
+    shared_mem_lock_.acquire();
+    IPTManager::instance()->IPT_lock_.acquire();
+    arch_memory->archmemory_lock_.acquire();
+
+    for (auto it : shared_map_)
+    {
+        for (vpn_t vpn = it->start_; vpn <= it->end_; vpn++)
+        {
+            if (arch_memory->checkAddressValid(vpn * PAGE_SIZE))
+            {
+                // debug(MMAP, "SharedMemManager::unmapAllPages: unmapping page vpn %zu\n", vpn);
+                arch_memory->unmapPage(vpn);
+            }
+        }
+    }
+    arch_memory->archmemory_lock_.release();
+    IPTManager::instance()->IPT_lock_.release();
+    shared_mem_lock_.release();
+    debug(MMAP, "SharedMemManager::unmapAllPages: done\n");
+}

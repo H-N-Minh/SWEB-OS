@@ -36,7 +36,7 @@ class UserSpaceMemoryManager
 
     Mutex current_break_lock_;   // used to protect current_break_
 
-    SharedMemManager* shared_mem_;
+    SharedMemManager* shared_mem_manager_;
 
     size_t totalUsedHeap();
 

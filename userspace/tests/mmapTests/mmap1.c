@@ -26,19 +26,19 @@ int mmap1() {
     memcpy(region, "Hello, mmap1!", strlen("Hello, mmap!") + 1);
     printf("%s\n", region);
 
-    // Unmap the memory region
-    if (munmap(region, 4096))
-    {
-        printf("munmap didnt return with code 0\n");
-        return -1;
-    }
-    printf("memory unmapped1\n");
-    if (munmap(region, 12))
-    {
-        printf("munmap didnt return with code 0\n");
-        return -1;
-    }
-    printf("memory unmapped2\n");
+    // // Unmap the memory region
+    // if (munmap(region, 4096))
+    // {
+    //     printf("munmap didnt return with code 0\n");
+    //     return -1;
+    // }
+    // printf("memory unmapped1\n");
+    // if (munmap(region, 12))
+    // {
+    //     printf("munmap didnt return with code 0\n");
+    //     return -1;
+    // }
+    // printf("memory unmapped2\n");
     
 
     return 0;
