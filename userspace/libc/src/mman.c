@@ -1,5 +1,8 @@
 #include "sys/mman.h"
 
+#include "../../../common/include/kernel/syscall-definitions.h"
+#include "sys/syscall.h"
+
 /**
  * function stub
  * posix compatible signature - do not change the signature!
@@ -25,7 +28,7 @@ int munmap(void* start, size_t length)
  */
 int shm_open(const char* name, int oflag, mode_t mode)
 {
-  return -1;
+	return __syscall(sc_shm_open, (long)name, oflag, mode, 0x00, 0x00);
 }
 
 /**

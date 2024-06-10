@@ -156,6 +156,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_checkRandomPRA:
       checkRandomPRA();
       break;
+		case sc_shm_open:
+		  shm_open(arg1, arg2, arg3);
+		  break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -902,45 +905,45 @@ void Syscall::checkRandomPRA()
   ipt->debugRandomGenerator();
 }
 
-size_t Syscall::shm_open(size_t path, size_t flags, size_t mode)
+size_t Syscall::shm_open(size_t name, size_t oflag, size_t mode)
 {
-    if (path >= USER_BREAK)
-    {
-        return -1U;
-    }
+    // if (name >= USER_BREAK)
+    // {
+    //     return -1U;
+    // }
+    //
+     debug(SYSCALL, "Syscall::shm_open: Opening shared memory object: %s with flags: %zu and mode: %zu\n", (char*)name, oflag, mode);
 
-    debug(SYSCALL, "Syscall::shm_open: Opening shared memory object: %s with flags: %zu and mode: %zu\n", (char*)path, flags, mode);
+    // int global_fd = VfsSyscall::shm_open((char*)name, oflag, mode);
+    //
+    // if (global_fd < 0) {
+    //     debug(SYSCALL, "Syscall::shm_open: VfsSyscall::shm_open failed\n");
+    //     return -1U;
+    // }
+    //
+    // debug(SYSCALL, "Syscall::shm_open: Global file descriptor: %d\n", global_fd);
 
-    int global_fd = VfsSyscall::shm_open((char*)path, flags, mode);
-
-    if (global_fd < 0) {
-        debug(SYSCALL, "Syscall::shm_open: VfsSyscall::shm_open failed\n");
-        return -1U;
-    }
-
-    debug(SYSCALL, "Syscall::shm_open: Global file descriptor: %d\n", global_fd);
-
-    UserThread& currentUserThread = *((UserThread*)currentThread);
-    UserProcess& current_process = *currentUserThread.process_;
-
-    LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
-
-    lfdTable.lfds_lock_.acquire();
-
-    FileDescriptor* globalFileDescriptor = VfsSyscall::getFileDescriptor(global_fd);
-    LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.createLocalFileDescriptor(globalFileDescriptor, flags, 0, ::FileType::SHARED_MEMORY);
-
-    debug(SYSCALL, "Syscall::shm_open: Current Process: %s\n", current_process.str().c_str());
-
-    if (localFileDescriptor == nullptr) {
-        debug(SYSCALL, "Syscall::shm_open: LocalFileDescriptor creation failed\n");
-        lfdTable.lfds_lock_.release();
-        return -1U;
-    }
-
-    debug(SYSCALL, "Syscall::shm_open: Local file descriptor: %zu\n",
-          localFileDescriptor->getLocalFD());
-    size_t local_file_descriptor = localFileDescriptor->getLocalFD();
-    lfdTable.lfds_lock_.release();
-    return local_file_descriptor;
+    // UserThread& currentUserThread = *((UserThread*)currentThread);
+    // UserProcess& current_process = *currentUserThread.process_;
+    //
+    // LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+    //
+    // lfdTable.lfds_lock_.acquire();
+    //
+    // FileDescriptor* globalFileDescriptor = VfsSyscall::getFileDescriptor(global_fd);
+    // LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.createLocalFileDescriptor(globalFileDescriptor, oflag, 0, ::FileType::SHARED_MEMORY);
+    //
+    // debug(SYSCALL, "Syscall::shm_open: Current Process: %s\n", current_process.str().c_str());
+    //
+    // if (localFileDescriptor == nullptr) {
+    //     debug(SYSCALL, "Syscall::shm_open: LocalFileDescriptor creation failed\n");
+    //     lfdTable.lfds_lock_.release();
+    //     return -1U;
+    // }
+    //
+    // debug(SYSCALL, "Syscall::shm_open: Local file descriptor: %zu\n",
+    //       localFileDescriptor->getLocalFD());
+    // size_t local_file_descriptor = localFileDescriptor->getLocalFD();
+    // lfdTable.lfds_lock_.release();
+    return 1;
 }

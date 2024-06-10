@@ -92,7 +92,7 @@ public:
   */
   static void checkRandomPRA();
 
-  static size_t shm_open(size_t path, size_t flags, size_t mode);
+  static size_t shm_open(size_t name, size_t oflag, size_t mode);
 };
 
 

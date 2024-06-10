@@ -55,3 +55,5 @@
 #define sc_setPRA 403
 #define sc_getPRAstats 404
 #define sc_checkRandomPRA 405
+
+#define sc_shm_open 100
