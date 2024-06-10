@@ -39,14 +39,22 @@ void SwappingThread::kill()
 bool SwappingThread::isMemoryAlmostFull()
 {
   PageManager* pm = PageManager::instance();
-  // TODO ? lock page manager ? but the lock is private
-
   uint32_t totalNumPages = pm->getTotalNumPages();
   uint32_t usedNumPages = totalNumPages - pm->getNumFreePages();
   uint32_t usedMemoryRatio = (usedNumPages * 100) / totalNumPages;
 
-  // 80% is the threshold for swapping -> if > threshold then memory is low
   return usedMemoryRatio > PRESWAP_THRESHOLD;
+}
+
+void SwappingThread::preSwap()
+{
+  if (isMemoryAlmostFull()) {
+    IPTManager* ipt = IPTManager::instance();
+    ipt->IPT_lock_.acquire();
+    size_t ppn = ipt->findPageToSwapOut();
+    SwappingManager::instance()->preSwapPage(ppn);
+    ipt->IPT_lock_.release();
+  }
 }
 
 void SwappingThread::swapOut()
@@ -59,22 +67,14 @@ void SwappingThread::swapOut()
     for (int i = 0; i < SWAP_OUT_AMOUNT; i++)
     {
       if (free_pages_.size() >= MAX_PRESWAP_PAGES) break;
-
       size_t ppn = swapPageOut();
       free_pages_.push_back(ppn);
       miss_count_++;
       swap_out_cond_.signal();
     }
-    if (IPTManager::ENABLE_PRE_SWAP) {
-      SwappingManager::instance()->handlePreSwap();
-    }
-  }
-  else if (!almost_full_memory)
-  {
-    if (!free_pages_.empty())
-    {
-      for (uint32 ppn : free_pages_)
-      {
+  } else if (!almost_full_memory) {
+    if (!free_pages_.empty()) {
+      for (uint32 ppn : free_pages_) {
         PageManager::instance()->freePPN(ppn);
       }
       free_pages_.clear();
@@ -126,31 +126,26 @@ void SwappingThread::swapIn()
 
 [[noreturn]] void SwappingThread::Run()
 {
-  while (true)
-  {
-    if (user_initialized_flag_)
-    {
-      // 1. Updating Meta data every 1 seconds
-      if (isOneTimeStep())
-      {
+  while (true) {
+    if (user_initialized_flag_) {
+      if (SwappingManager::pre_swap_enabled) {
+        preSwap();
+      }
+
+      if (isOneTimeStep()) {
         updateMetaData();
       }
 
-      // 2. Swap out if needed
       swapOut();
-      
-      // 3. Swap in if needed
       swapIn();
     }
-
-    // 4. Yield
     Scheduler::instance()->yield();
   }
 }
 
 void SwappingThread::resetAccessedPages(IPTEntry* ipt_entry, bool& hit)
 {
-  ustl::vector<ArchmemIPT*> &archmem_vector = ipt_entry->getArchmemIPTs();
+  ustl::vector<ArchmemIPT*>& archmem_vector = ipt_entry->getArchmemIPTs();
   assert(!archmem_vector.empty() && "SwappingThread::updateMetaData: key %zu is mapped to no archmem in ram_map_\n");
 
   // reset the accessed bit for all archmem of same ppn
@@ -164,7 +159,6 @@ void SwappingThread::resetAccessedPages(IPTEntry* ipt_entry, bool& hit)
     {
       // Page was accessed, reset the bits
       archmem->resetAccessDirtyBits(vpn);
-      // debug(SWAPTHREAD, "SwappingThread::updateMetaData: page %zu was accessed. Counter: %d\n", key, ipt->swap_meta_data_[key]);
       hit = true;
     }
     archmem->archmemory_lock_.release();
@@ -208,7 +202,6 @@ bool SwappingThread::isOneTimeStep()
     last_tick_ = current_ticks;
     return true;
   }
-  
   return false;
 }
 
@@ -216,10 +209,8 @@ size_t SwappingThread::swapPageOut()
 {
   IPTManager* ipt = IPTManager::instance();
   ipt->IPT_lock_.acquire();
-
   size_t ppn = ipt->findPageToSwapOut();
   SwappingManager::instance()->swapOutPage(ppn);
-
   ipt->IPT_lock_.release();
   return ppn;
 }
@@ -242,7 +233,6 @@ uint32 SwappingThread::getMissCount() const
   return miss_count;
 }
 
-
 void SwappingThread::addSwapIn(size_t disk_offset, ustl::vector<uint32>* preallocated_pages)
 {
   assert(swap_in_lock_.isHeldBy((Thread*) currentThread) && "SwappingThread::addSwapIn: swap_in_lock_ must be held by currentThread\n");
@@ -254,7 +244,6 @@ bool SwappingThread::isOffsetInMap(size_t disk_offset)
   assert(swap_in_lock_.isHeldBy((Thread*) currentThread) && "SwappingThread::isOffsetInMap: swap_in_lock_ must be held by currentThread\n");
   return swap_in_map_.find(disk_offset) != swap_in_map_.end();
 }
-
 
 bool SwappingThread::isFreePageAvailable()
 {

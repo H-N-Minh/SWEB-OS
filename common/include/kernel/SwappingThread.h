@@ -91,5 +91,6 @@ class SwappingThread : public Thread
      * check if the disk_offset is in the swap_in_map_. If not, that means the page has been swapped in.
     */
     bool isOffsetInMap(size_t disk_offset);
+    static void preSwap();
 };
 

@@ -14,7 +14,7 @@ bool ArchmemIPT::isLockedByUs() const
 
 ////////////////////// IPTEntry //////////////////////
 
-IPTEntry::IPTEntry() : pre_swapped_(false), disk_offset_(0), access_counter_(0) {}
+IPTEntry::IPTEntry() :  disk_offset_(0), access_counter_(0) {}
 
 
 IPTEntry::~IPTEntry()
@@ -68,18 +68,3 @@ ustl::vector<ArchmemIPT*>& IPTEntry::getArchmemIPTs()
   return archmemIPTs_;
 }
 
-void IPTEntry::setPreSwapped(size_t disk_offset)
-{
-  pre_swapped_ = true;
-  disk_offset_ = disk_offset;
-}
-
-bool IPTEntry::isPreSwapped() const
-{
-  return pre_swapped_;
-}
-
-size_t IPTEntry::getDiskOffset() const
-{
-  return disk_offset_;
-}

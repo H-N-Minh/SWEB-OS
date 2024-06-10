@@ -11,9 +11,9 @@
 #include "uset.h"
 
 
-//#define INVALID_PPN -1
+#define INVALID_PPN (-1)
 #define UINT32_MAX 0xFFFFFFFF
-const size_t INVALID_PPN = ustl::numeric_limits<size_t>::max(); //not sure, suggestion by clang-tidy
+//const size_t INVALID_PPN = ustl::numeric_limits<size_t>::max(); //not sure, suggestion by clang-tidy
 
 class ArchmemIPT;
 
@@ -21,7 +21,7 @@ class ArchmemIPT;
 IPTManager* IPTManager::instance_ = nullptr;
 
 IPTManager::IPTManager()
-    : pre_swap_threshold_(PRESWAPTHRESHOLD), IPT_lock_("IPTManager::IPT_lock_")
+    : IPT_lock_("IPTManager::IPT_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -117,7 +117,7 @@ size_t IPTManager::findPageToSwapOut() {
     ppn_retval = findPageToSwapOutNFU();
   }
 
-  assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
+//  assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
   return ppn_retval;
 }
 
@@ -453,59 +453,7 @@ bool IPTManager::isThereAnyPageToSwapOut()
 }
 
 
-//////PRESWAPPING
 
-bool IPTManager::ENABLE_PRE_SWAP = true;
 
-bool IPTManager::checkMemoryThreshold() const
-{
-  PageManager* pm = PageManager::instance();
-  uint32_t totalNumPages = pm->getTotalNumPages();
-  uint32_t usedNumPages = totalNumPages - pm->getNumFreePages();
-  uint32_t usedMemoryRatio = (usedNumPages * 100) / totalNumPages;
-  return usedMemoryRatio > pre_swap_threshold_;
-}
 
-ustl::vector<size_t> IPTManager::getPagesToPreSwap()
-{
-  ustl::vector<size_t> pages_to_pre_swap;
-  for (const auto& entry : ram_map_)
-  {
-    pages_to_pre_swap.push_back(entry.first);
-    if (pages_to_pre_swap.size() >= MAX_PRESWAP_PAGES)
-      break;
-  }
-  return pages_to_pre_swap;
-}
 
-void IPTManager::preSwapPage(size_t ppn)
-{
-  if (ENABLE_PRE_SWAP) {
-    IPT_lock_.acquire(); // Acquire the lock
-
-    IPTEntry* entry = ram_map_[ppn];
-
-    if (entry->isPreSwapped()) {
-      debug(PRESWAPPING, "Page with ppn %zu is already pre-swapped to disk offset %zu.\n", ppn, entry->getDiskOffset());
-      IPT_lock_.release(); // Release the lock if already pre-swapped
-      return;
-    }
-
-    char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(ppn);
-
-    // Write to disk
-    size_t disk_offset = SwappingManager::instance()->preSwapPageToDisk(page_content);
-
-    if (disk_offset == (size_t)-1) {
-      kprintf("IPTManager::preSwapPage: Failed to write page content to disk.\n");
-      IPT_lock_.release();
-      return;
-    }
-
-    // Track the page as pre-swapped
-    entry->setPreSwapped(disk_offset);
-    debug(PRESWAPPING, "Page with ppn %zu pre-swapped to disk offset %zu.\n", ppn, disk_offset);
-
-    IPT_lock_.release(); // Release the lock after operation
-  }
-}

@@ -22,7 +22,6 @@ class IPTManager
 {
 private:
   static IPTManager* instance_;
-  size_t pre_swap_threshold_;
 
 public:
   // locking order: Ipt_lock -> disk_lock -> archmem_lock
@@ -108,7 +107,4 @@ public:
 
   //preswapping
   static bool ENABLE_PRE_SWAP; //true = used, false = not used
-  bool checkMemoryThreshold() const;
-  void preSwapPage(size_t ppn);
-  ustl::vector<size_t> getPagesToPreSwap();
 };

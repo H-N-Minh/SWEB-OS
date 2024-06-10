@@ -27,7 +27,6 @@ class IPTEntry
 private:
   // use Getter func instead
   ustl::vector<ArchmemIPT*> archmemIPTs_;
-  bool pre_swapped_{};
   size_t disk_offset_{};
 
 public:
@@ -54,8 +53,4 @@ public:
   void removeArchmemIPT(size_t vpn, ArchMemory* archmem);
 
   ustl::vector<ArchmemIPT*>& getArchmemIPTs();
-
-  void setPreSwapped(size_t disk_offset);
-  bool isPreSwapped() const;
-  size_t getDiskOffset() const;
 };
