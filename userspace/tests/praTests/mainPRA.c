@@ -32,7 +32,7 @@ int childMain()
     // comment out the tests you don't want to run
     PRA1 = 1;   // Test PRA
     PRA4 = 1;       // double pagefault => double swap (still single thread)
-    PRA5 = 1;       // 64 threads  writting to array at same time
+    PRA5 = 1;       // 64 threads  writting to array at same time                //seems to fail - mayge caused by new fix ???
     PRA6 = 1;       // similar to pra5, but use fork instead of pthread_create
 
     // @todo add test that shows NFU is better than Random

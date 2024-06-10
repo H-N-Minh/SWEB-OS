@@ -169,25 +169,17 @@ size_t IPTManager::findPageToSwapOut()
 
     debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%d, counter=%d\n", ppn_retval, min_counter);
   }
-  else if(pra_type_ == PRA_TYPE::SIMPLE)
-  {
-    int counter = 0;
-    bool key_in_ipt = false;
-    while(!key_in_ipt)
-    {
-      counter++;
-      if(counter == 2000)
-      {
-        assert(0 && "No page to swap out\n");
-      }
-      ppn_retval++;    
-      if(ppn_retval > 2016)
-      {
-        ppn_retval = 1009;
-      }
-      key_in_ipt = isKeyInMap(ppn_retval, IPTMapType::RAM_MAP);
-    }
-  }
+  // else if(pra_type_ == PRA_TYPE::WORKING_SET)
+  // {
+  //   if(swappable_page)
+  //   {
+  //     //chose random page
+  //   }
+  //   else
+  //   {
+  //     //remove oldest page from every working set
+  //   }
+  // }
   else if(pra_type_ == PRA_TYPE::SECOND_CHANGE)
   {
     if(fifo_ppns.empty())

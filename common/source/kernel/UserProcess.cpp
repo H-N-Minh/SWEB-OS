@@ -232,6 +232,11 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
     }
     else
     {
+      ArchMemoryMapping m = arch_memory->resolveMapping(top_vpn);
+      if(IPTManager::instance()->isEntryInMap(m.page_ppn, IPTMapType::DISK_MAP, arch_memory, top_vpn))
+      {
+        IPTManager::instance()->removeEntryIPT(IPTMapType::DISK_MAP, m.page_ppn, top_vpn, arch_memory);
+      }
       continue;
     }
   }
