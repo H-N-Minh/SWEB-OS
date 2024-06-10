@@ -481,7 +481,7 @@ ustl::vector<size_t> IPTManager::getPagesToPreSwap()
 void IPTManager::preSwapPage(size_t ppn)
 {
   if (ENABLE_PRE_SWAP) {
-    IPT_lock_.acquire(); // Acquire the lock
+    IPT_lock_.acquire();
 
     IPTEntry* entry = ram_map_[ppn];
 
@@ -500,6 +500,6 @@ void IPTManager::preSwapPage(size_t ppn)
     entry->setPreSwapped(disk_offset);
     debug(PRESWAPPING, "Page with ppn %zu pre-swapped to disk offset %zu.\n", ppn, disk_offset);
 
-    IPT_lock_.release(); // Release the lock after operation
+    IPT_lock_.release();
   }
 }
