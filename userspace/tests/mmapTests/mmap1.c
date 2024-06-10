@@ -21,7 +21,7 @@ int mmap1() {
     if (region == MAP_FAILED) {
         return -1;
     }
-    // printf("region: %p\n", region);
+    printf("memory mapped at: %p\n", region);
     // Write to the memory region
     memcpy(region, "Hello, mmap1!", strlen("Hello, mmap!") + 1);
     printf("%s\n", region);

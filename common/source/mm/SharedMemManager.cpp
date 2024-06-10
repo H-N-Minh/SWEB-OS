@@ -241,6 +241,18 @@ SharedMemEntry* SharedMemManager::getSharedMemEntry(size_t address)
 int SharedMemManager::munmap(void* start, size_t length)
 {
     debug(MMAP, "SharedMemManager::munmap: start: %p, length: %zu\n", start, length);
+    Mutex* ipt_lock = &IPTManager::instance()->IPT_lock_;
+    Mutex* archmem_lock = &currentThread->loader_->arch_memory_.archmemory_lock_;
+
+    shared_mem_lock_.acquire();
+    ipt_lock->acquire();
+    archmem_lock->acquire();
+
+    
+    // check if the munmap is valid, or already unmapped
+
+    // unmapping each page
+    unmapOnePage((size_t) start / PAGE_SIZE, getSharedMemEntry((size_t) start));
     
     // assert(start && "SharedMemManager::munmap: invalid start\n");
     // assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::munmap: shared_mem_lock_ not held\n");
@@ -256,27 +268,60 @@ int SharedMemManager::munmap(void* start, size_t length)
     //         return 0;
     //     }
     // }
+
+    archmem_lock->release();
+    ipt_lock->release();
+    shared_mem_lock_.release();
+
     return 0;
 }
 
 
-// int SharedMemManager::unmapOnePage(vpn_t vpn)
-// {
-//     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::unmapOnePage: shared_mem_lock_ not held\n");
-//     assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: IPT need to be locked");
-//     debug(MMAP, "SharedMemManager::unmapOnePage: vpn: %zu\n", vpn);
-
-//     for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
-//     {
-//         if (it->second->isInBlockRange(vpn))
-//         {
-
-//             debug(MMAP, "SharedMemManager::unmapOnePage: removing shared block (start: %p, size: %zu pages) from process %d\n", (void*) (vpn * PAGE_SIZE), it->second->getSize(), ((UserThread*) currentThread)->process_->pid_);
-//             delete it->second;
-//             shared_map_.erase(it);
-//             return;
-//         }
-//     }
-//     debug(ERROR_DEBUG, "SharedMemManager::unmapOnePage: vpn not found in shared_map_\n");
-//     return -1;
-// }
+void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
+{
+    debug(MMAP, "SharedMemManager::unmapOnePage: vpn: %zu\n", vpn);
+    ArchMemory* arch_memory = &((UserThread*) currentThread)->loader_->arch_memory_;
+    assert(sm_entry && "SharedMemManager::unmapOnePage: invalid sm_entry\n");
+    auto it = ustl::find(shared_map_.begin(), shared_map_.end(), sm_entry);
+    assert(it != shared_map_.end() && "SharedMemManager::unmapOnePage: sm_entry not found in shared_map_\n");
+    if (sm_entry->start_ > vpn || sm_entry->end_ < vpn)
+    {
+        assert(false && "SharedMemManager::unmapOnePage: vpn not in range of sm_entry\n");
+    }
+    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::unmapOnePage: shared_mem_lock_ not held\n");
+    assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: IPT need to be locked");
+    assert(arch_memory->archmemory_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: archmemory_lock_ not held\n");
+    assert(sm_entry->getSize() > 0 && "SharedMemManager::unmapOnePage: sm_entry size is 0\n");
+    
+    // split the memory segment if necessary
+    if (sm_entry->getSize() == 1)
+    {
+        shared_map_.erase(it);
+        delete sm_entry;
+    }
+    else  // size > 1
+    {
+        if (vpn == sm_entry->start_)
+        {
+            sm_entry->start_++;
+        }
+        else if (vpn == sm_entry->end_)
+        {
+            sm_entry->end_--;
+        }
+        else
+        {
+            shared_map_.push_back(new SharedMemEntry(sm_entry->start_, vpn - 1, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
+            shared_map_.push_back(new SharedMemEntry(vpn + 1, sm_entry->end_, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
+            shared_map_.erase(it);
+            delete sm_entry;
+        }
+    }
+    
+    // upmap if necessary
+    if (arch_memory->checkAddressValid(vpn * PAGE_SIZE))
+    {
+        debug(MMAP, "SharedMemManager::unmapOnePage: unmapping page vpn %zu\n", vpn);
+        arch_memory->unmapPage(vpn);
+    }
+}

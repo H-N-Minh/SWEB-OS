@@ -170,25 +170,25 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   // load from binary needs 4 pages (for loadPage)
   ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  //TODOs make sure that it gets freed in all cases
 
+  shared_mem_lock->acquire();
   swap_lock->acquire();
   heap_lock->acquire();
   ipt_lock->acquire();
   archmem_lock->acquire();
-  shared_mem_lock->acquire();
 
   if(current_archmemory.isPresent(address))
   {
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Another thread already solved this pagefault. Do nothing\n"); 
-    shared_mem_lock->release();
     archmem_lock->release();
     ipt_lock->release();
     heap_lock->release();
     swap_lock->release();
+    shared_mem_lock->release();
   }
   else if(current_archmemory.isSwapped(address))
   {
-    shared_mem_lock->release();
     heap_lock->release();
+    shared_mem_lock->release();
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Swapped out detected. Requesting a swap in\n");
     size_t vpn = address / PAGE_SIZE;
     size_t disk_offset = current_archmemory.getDiskLocation(vpn);
@@ -221,8 +221,8 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)
   {
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Handling pf in Heap\n");
-    shared_mem_lock->release();
     swap_lock->release();
+    shared_mem_lock->release();
 
     handleHeapPF(preallocated_pages, address);
 
@@ -238,16 +238,16 @@ void PageFaultHandler::handleValidPageFault(size_t address)
 
     smm->handleSharedPF(preallocated_pages, address);
 
-    shared_mem_lock->release();
     archmem_lock->release();
     ipt_lock->release();
+    shared_mem_lock->release();
   }
   else
   {
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Page needs to be loaded from binary\n");
-    shared_mem_lock->release();
     heap_lock->release();
     swap_lock->release();
+    shared_mem_lock->release();
 
     handleLoadPF(preallocated_pages, address);
 

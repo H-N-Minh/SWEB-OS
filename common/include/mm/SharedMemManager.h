@@ -93,6 +93,11 @@ public:
    * get the shared memory entry that contains the given address
   */
   SharedMemEntry* getSharedMemEntry(size_t address);
+
+  /**
+   * unmap one page from the shared memory. The vpn should already be a valid page that can be remove
+  */
+  void unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry);
 };
 
 
