@@ -9,6 +9,8 @@ extern int ipt1();
 extern int ipt2();
 extern int ipt3();
 extern int ipt4();
+extern int ipt5();
+
 
 // void printDebugInfo()
 // {
@@ -24,14 +26,17 @@ int main()
     // pthread_t thread_id;
     // pthread_create(&thread_id, NULL, (void*)printDebugInfo, NULL);
 
-    ipt1();
-    printf("first done\n");
+    // ipt1();
+    // printf("first done\n");
     // ipt2();
     // printf("second done\n");
     // ipt3();
     // printf("third done\n");
 //    ipt4(); //ipt4 is too big i think
 //    printf("fourth done\n");
+    // printf("fifth start\n");
+    // ipt5();
+    // printf("fifth done\n");
 
 
     // printf("\n\nipt testcases successful\n");

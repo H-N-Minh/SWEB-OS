@@ -11,6 +11,7 @@ class SwappingThread : public Thread
 {
   public:
     static int user_initialized_flag_;    // 0: not initialized, 1: initialized. Only UserThread can change this flag.
+    static bool should_be_killed_;
   
     SwappingThread();
     virtual ~SwappingThread();
@@ -57,7 +58,7 @@ class SwappingThread : public Thread
      * If the memory is almost full and we dont have enough free pages in free_pages_, we need to swap out some pages.
      * This satisfies both preswap and swap out on demand.
     */
-    bool isTimeToSwapOut();
+    bool isMemoryAlmostFull();
 
     /**
      * check if free_pages_ is empty or not
@@ -92,9 +93,6 @@ class SwappingThread : public Thread
     bool isOffsetInMap(size_t disk_offset);
 
 
-
-    ////////////////////// 
-    void swap10PagesOut();
 
 };
 

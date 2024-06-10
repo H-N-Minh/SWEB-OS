@@ -21,6 +21,9 @@
 #define sc_trace 252
 
 #define sc_threadcount 260
+// Needed for test system Tortillas
+#define sc_tortillas_bootup 261
+#define sc_tortillas_finished 262
 
 #define sc_pthread_create 300
 #define sc_pthread_exit 301
@@ -37,23 +40,26 @@
 #define sc_sleep 500
 #define sc_clock 501
 
-// malloc
 #define sc_sbrk 600
 #define sc_brk 601
+#define sc_pipe 602
+#define sc_dup 603
+
+#define sc_getIPTInfos 701
+#define sc_assertIPT 702
+#define sc_setPRA 703
+#define sc_getPRAstats 704
+#define sc_checkRandomPRA 705
+
+#define sc_mmap 800
+#define sc_munmap 801
 
 
-// Needed for test system Tortillas
-#define sc_tortillas_bootup 1337
-#define sc_tortillas_finished 1338
 
-#define sc_pipe 111
-#define sc_dup 112
 
-#define sc_getIPTInfos 401
-#define sc_assertIPT 402
 
-#define sc_setPRA 403
-#define sc_getPRAstats 404
-#define sc_checkRandomPRA 405
+
+
+
 
 #define sc_shm_open 100
