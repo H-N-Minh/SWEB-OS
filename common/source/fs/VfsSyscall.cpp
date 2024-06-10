@@ -486,87 +486,12 @@ int32 VfsSyscall::shm_open(const char* name, uint32 oflag, uint32 mode)
 	  return -1;
 	}
 
-  FileSystemInfo *fs_info = getcwd();
+	ustl::string shm_name = "shm_dir/";
+	shm_name += name;
 
-  Path target_path;
-  Path parent_dir_path;
-  int32 path_walk_status = PathWalker::pathWalk(name, fs_info, target_path, &parent_dir_path);
-  debug(SHARE_MEMORY, "---------------(shm_open) path_walk_status: %d\n", path_walk_status);
-  debug(SHARE_MEMORY, "---------------(shm_open) Target path: %s\n", target_path.getAbsolutePath().c_str());
+	int32 file = open(shm_name.c_str(), oflag);
+	debug(SHARE_MEMORY, "---------------after call open in shm open %u\n", file);
 
-    // if (path_walk_status == PW_SUCCESS)
-    // {
-    //     debug(VFSSYSCALL, "(shm_open) Found target shared memory object: %s\n", target_path.dentry_->getName());
-    //     Inode* target_inode = target_path.dentry_->getInode();
-    //
-    //     if (target_inode->getType() != I_SHARED_MEMORY)
-    //     {
-    //         debug(VFSSYSCALL, "(shm_open) Error: This path is not a shared memory object\n");
-    //         return -1;
-    //     }
-    //
-    //     File* file = target_inode->open(target_path.dentry_, flags);
-    //     FileDescriptor* fd = file->openFd();
-    //     assert(!global_fd_list.add(fd));
-    //
-    //     debug(VFSSYSCALL, "(shm_open) Fd for new open shared memory object: %d, flags: %x\n", fd->getFd(), flags);
-    //     return fd->getFd();
-    // }
-    // else if ((path_walk_status == PW_ENOTFOUND) && (flags & O_CREAT))
-    // {
-    //     debug(VFSSYSCALL, "(shm_open) target does not exist, creating new shared memory object\n");
-    //     if (!parent_dir_path.dentry_)
-    //     {
-    //         debug(VFSSYSCALL, "(shm_open) ERROR: unable to create shared memory object, directory does not exist\n");
-    //         return -1;
-    //     }
-    //
-    //     debug(VFSSYSCALL, "(shm_open) target does not exist, creating new shared memory object\n");
-    //
-    //     ustl::string new_dentry_name = PathWalker::lastPathSegment(pathname);
-    //     if(new_dentry_name == "") // Path has trailing slashes
-    //     {
-    //         debug(VFSSYSCALL, "(shm_open) Error: last path segment is empty (trailing '/')\n");
-    //         return -1;
-    //     }
-    //
-    //     debug(VFSSYSCALL, "(shm_open) new shared memory object name: %s\n", new_dentry_name.c_str());
-    //
-    //     Inode* parent_dir_inode = parent_dir_path.dentry_->getInode();
-    //     Superblock* parent_dir_sb = parent_dir_inode->getSuperblock();
-    //
-    //     if (parent_dir_inode->getType() != I_DIR)
-    //     {
-    //         debug(VFSSYSCALL, "(shm_open) ERROR: This path is not a directory\n");
-    //         return -1;
-    //     }
-    //
-    //     debug(VFSSYSCALL, "(shm_open) Creating new shared memory Inode in superblock %p of type %s\n", parent_dir_sb, parent_dir_sb->getFSType()->getFSName());
-    //     Inode* new_shm_inode = parent_dir_sb->createInode(I_SHARED_MEMORY);
-    //     if (!new_shm_inode)
-    //     {
-    //         debug(VFSSYSCALL, "(shm_open) ERROR: Unable to create inode for new shared memory object\n");
-    //         return -1;
-    //     }
-    //
-    //     debug(VFSSYSCALL, "(shm_open) Creating new dentry: %s in parent dir %s\n", new_dentry_name.c_str(), parent_dir_path.dentry_->getName());
-    //     Dentry* new_shm_dentry = new Dentry(new_shm_inode, parent_dir_path.dentry_, new_dentry_name);
-    //     new_shm_inode->mkfile(new_shm_dentry);  // Assuming shared memory is created similarly to files
-    //
-    //     File* file = new_shm_inode->open(new_shm_dentry, flags);
-    //     FileDescriptor* fd = file->openFd();
-    //     assert(!global_fd_list.add(fd));
-    //
-    //     debug(VFSSYSCALL, "(shm_open) Fd for new open shared memory object: %d, flags: %x\n", fd->getFd(), flags);
-    //     return fd->getFd();
-    // }
-    // else if (path_walk_status == PW_EINVALID)
-    // {
-    //     debug(VFSSYSCALL, "(shm_open) Error: Invalid pathname\n");
-    // }
-    // else
-    // {
-    //     debug(VFSSYSCALL, "(shm_open) Error: Shared memory object not found\n");
-    // }
-  return -1;
+
+  return file;
 }

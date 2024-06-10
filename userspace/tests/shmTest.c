@@ -10,7 +10,8 @@
 #define SHM_NAME "/shmTest"
 #define SHM_SIZE 1024
 
-int main() {
+int main()
+{
     int shm_fd;
     // void *shm_ptr = (void *)0x60000000;
 

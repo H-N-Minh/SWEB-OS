@@ -914,14 +914,14 @@ size_t Syscall::shm_open(size_t name, size_t oflag, size_t mode)
     //
      debug(SYSCALL, "Syscall::shm_open: Opening shared memory object: %s with flags: %zu and mode: %zu\n", (char*)name, oflag, mode);
 
-    // int global_fd = VfsSyscall::shm_open((char*)name, oflag, mode);
-    //
-    // if (global_fd < 0) {
-    //     debug(SYSCALL, "Syscall::shm_open: VfsSyscall::shm_open failed\n");
-    //     return -1U;
-    // }
-    //
-    // debug(SYSCALL, "Syscall::shm_open: Global file descriptor: %d\n", global_fd);
+     int global_fd = VfsSyscall::shm_open((char*)name, oflag, mode);
+
+    if (global_fd < 0) {
+        debug(SYSCALL, "Syscall::shm_open: VfsSyscall::shm_open failed\n");
+        return -1U;
+    }
+
+    debug(SYSCALL, "Syscall::shm_open: Global file descriptor: %d\n", global_fd);
 
     // UserThread& currentUserThread = *((UserThread*)currentThread);
     // UserProcess& current_process = *currentUserThread.process_;
