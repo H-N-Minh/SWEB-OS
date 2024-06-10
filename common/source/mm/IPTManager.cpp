@@ -451,9 +451,3 @@ bool IPTManager::isThereAnyPageToSwapOut()
 
   return false;
 }
-
-
-
-
-
-

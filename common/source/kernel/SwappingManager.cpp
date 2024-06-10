@@ -8,7 +8,7 @@
 
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
-bool SwappingManager::pre_swap_enabled = false;  // true = enabled, false = disabled
+bool SwappingManager::pre_swap_enabled = true;  // true = enabled, false = disabled
 
 
 SwappingManager::SwappingManager()
@@ -33,7 +33,7 @@ SwappingManager::~SwappingManager()
 
 bool SwappingManager::preSwapPage(size_t ppn)
 {
-  if (!pre_swap_enabled) return false;  // Return immediately if pre-swapping is disabled
+  if (!pre_swap_enabled) return false;
 
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   disk_lock_.acquire();
@@ -151,7 +151,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   bool read_status = bd_device_->readData(disk_offset * bd_device_->getBlockSize(), PAGE_SIZE, page_content);
 
   if (!read_status) {
-    kprintf("SwappingManager::swapOutPage: Failed to read data from disk.\n");
+    kprintf("SwappingManager::swapInPage: Failed to read data from disk.\n");
     return -1;
   }
 
@@ -167,12 +167,12 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
 
 void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*>& virtual_page_infos)
 {
-  debug(SWAPPING, "SwappingManager::unlock_archmemories: locking archmem in order of lowest ArchMemory* address to highest\n");
+  debug(SWAPPING, "SwappingManager::lock_archmemories_in_right_order: locking archmem in order of lowest ArchMemory* address to highest\n");
   ustl::vector<ArchMemory*> archmemories;
   for (ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
-    assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
-    assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
+    assert(virtual_page_info && "lock_archmemories_in_right_order(): ArchmemIPT* is null");
+    assert(virtual_page_info->archmem_ && "lock_archmemories_in_right_order(): ArchMemory* is null");
     archmemories.push_back(virtual_page_info->archmem_);
   }
   ustl::sort(archmemories.begin(), archmemories.end(), ustl::less<ArchMemory*>());
@@ -182,7 +182,6 @@ void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*>
     archmemory->archmemory_lock_.acquire();
   }
 }
-
 
 void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*>& virtual_page_infos)
 {
