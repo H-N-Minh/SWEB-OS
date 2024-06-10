@@ -37,8 +37,8 @@ int childMain()
 
     // @todo add test that shows NFU is better than Random
     // setPRA(__RANDOM_PRA__); 
-    // setPRA(__NFU_PRA__); 
-    setPRA(__SECOND_CHANCE_PRA__); 
+    setPRA(__NFU_PRA__); 
+    // setPRA(__SECOND_CHANCE_PRA__); 
 
     if (PRA1)
     {

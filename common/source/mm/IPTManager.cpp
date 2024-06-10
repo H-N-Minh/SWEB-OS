@@ -23,7 +23,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::RANDOM;
+  pra_type_ = PRA_TYPE::NFU;
 }
 
 IPTManager::~IPTManager()
@@ -146,7 +146,7 @@ size_t IPTManager::findPageToSwapOut()
     {
       ppn_t key = pair.first;
       uint32 counter = pair.second->access_counter_;
-      if (counter < min_counter)
+      if (counter < min_counter && counter != 0)
       {
         min_counter = counter;
         min_ppns.clear();

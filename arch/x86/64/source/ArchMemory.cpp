@@ -652,8 +652,11 @@ bool ArchMemory::isSwapped(size_t virtual_addr)
 
 bool ArchMemory::updatePageTableEntryForSwapIn(size_t vpn, size_t ppn)
 {
+  debug(A_MEMORY, "1\n");
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
+  debug(A_MEMORY, "2\n");
   assert(archmemory_lock_.heldBy() == currentThread);
+  debug(A_MEMORY, "3\n");
 
   debug(A_MEMORY, "ArchMemory::updatePageTableEntryForSwapIn: Update vpn %ld in archmemory %p and set ppn %ld.\n", vpn, this, ppn);
 
