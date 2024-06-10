@@ -1,6 +1,8 @@
 #pragma once
 
 #include "types.h"
+#include "Inode.h"
+#include "Dentry.h"
 
 
 class Dirent;
@@ -10,6 +12,15 @@ class FileDescriptor;
 class VfsSyscall;
 class Path;
 class FileSystemInfo;
+
+struct SharedMemoryObject {
+    ustl::string name;
+    void* address;
+    size_t size;
+    uint32 oflag;
+    Inode* inode;
+    Dentry* dentry;
+};
 
 class VfsSyscall
 {

@@ -2,8 +2,6 @@
 #include "kstring.h"
 #include "assert.h"
 #include "Dirent.h"
-#include "Inode.h"
-#include "Dentry.h"
 #include "Superblock.h"
 #include "File.h"
 #include "FileDescriptor.h"
