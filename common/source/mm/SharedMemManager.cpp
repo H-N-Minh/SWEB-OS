@@ -124,6 +124,7 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     vpn_t end = start + size - 1;
 
     assert(start >= MIN_SHARED_MEM_VPN && end >= MIN_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
+    assert(start <= MAX_SHARED_MEM_VPN && end <= MAX_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
     if (last_free_vpn_ > MAX_SHARED_MEM_VPN)
     {
         debug(ERROR_DEBUG, "SharedMemManager::addEntry: failed, size required is bigger than the available free pages \n");
@@ -250,30 +251,85 @@ int SharedMemManager::munmap(void* start, size_t length)
 
     
     // check if the munmap is valid, or already unmapped
+    ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> relevant_pages;
+    findRevelantPages(relevant_pages, (size_t) start, length);
+    if (relevant_pages.empty())
+    {
+        debug(ERROR_DEBUG, "SharedMemManager::munmap: the given range includes pages that are not shared mem\n");
+        archmem_lock->release();
+        ipt_lock->release();
+        shared_mem_lock_.release();
+        return -1;
+    }
 
     // unmapping each page
-    unmapOnePage((size_t) start / PAGE_SIZE, getSharedMemEntry((size_t) start));
-    
-    // assert(start && "SharedMemManager::munmap: invalid start\n");
-    // assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::munmap: shared_mem_lock_ not held\n");
+    for (auto it : relevant_pages)
+    {
+        unmapOnePage(it.first, it.second);
+    }
 
-    // vpn_t vpn = (size_t) start / PAGE_SIZE;
-    // for (auto it = shared_map_.begin(); it != shared_map_.end(); ++it)
-    // {
-    //     if (it->second->isInBlockRange(vpn))
-    //     {
-    //         debug(MMAP, "SharedMemManager::munmap: removing shared block (start: %p, size: %zu pages) from process %d\n", start, it->second->getSize(), ((UserThread*) currentThread)->process_->pid_);
-    //         delete it->second;
-    //         shared_map_.erase(it);
-    //         return 0;
-    //     }
-    // }
 
     archmem_lock->release();
     ipt_lock->release();
     shared_mem_lock_.release();
 
     return 0;
+}
+
+void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length)
+{
+    debug(MMAP, "SharedMemManager::findRevelantPages: start: %zu, length: %zu. Looping through all shared mem and find relevant pages to unmap\n", start, length);
+    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::findRevelantPages: shared_mem_lock_ not held\n");
+    assert(start >= MIN_SHARED_MEM_ADDRESS && start < MAX_SHARED_MEM_ADDRESS && "SharedMemManager::findRevelantPages: start out of range\n");
+    assert(length > 0 && "SharedMemManager::findRevelantPages: invalid length\n");
+    assert(relevant_pages.empty() && "SharedMemManager::findRevelantPages: relevant_pages not empty\n");
+
+    vpn_t start_vpn = start / PAGE_SIZE;
+    vpn_t end_vpn = (start + length - 1) / PAGE_SIZE;
+
+    for (auto it : shared_map_)
+    {
+        if (it->isInBlockRange(start_vpn))
+        {
+            if (it->isInBlockRange(end_vpn))
+            {
+                // both start and end vpn is in the same mem block
+                for (vpn_t vpn = start_vpn; vpn <= end_vpn; vpn++)
+                {
+                    relevant_pages.push_back(ustl::make_pair(vpn, it));
+                }
+                return;
+            }
+            else
+            {
+                // start vpn is in the mem block, but end vpn is not
+                for (vpn_t vpn = start_vpn; vpn <= it->end_; vpn++)
+                {
+                    relevant_pages.push_back(ustl::make_pair(vpn, it));
+                }
+                start_vpn = it->end_ + 1;
+                assert(start_vpn <= end_vpn && "SharedMemManager::findRevelantPages: start_vpn > end_vpn\n");
+                assert(start_vpn >= MIN_SHARED_MEM_VPN && start_vpn <= MAX_SHARED_MEM_VPN && "SharedMemManager::findRevelantPages: start_vpn becomes out of range\n");
+            }
+        }
+        else
+        {
+            if (it->isInBlockRange(end_vpn))
+            {
+                // start vpn is not in the mem block, but end vpn is
+                for (vpn_t vpn = it->start_; vpn <= end_vpn; vpn++)
+                {
+                    relevant_pages.push_back(ustl::make_pair(vpn, it));
+                }
+                end_vpn = it->start_ - 1;
+                assert(start_vpn <= end_vpn && "SharedMemManager::findRevelantPages: start_vpn > end_vpn\n");
+                assert(end_vpn >= MIN_SHARED_MEM_VPN && end_vpn <= MAX_SHARED_MEM_VPN && "SharedMemManager::findRevelantPages: end_vpn becomes out of range\n");
+            }
+        
+        }
+    }
+    debug(ERROR_DEBUG, "SharedMemManager::findRevelantPages: this shouldnt be reached, the given range is invalid\n");
+    relevant_pages.clear();
 }
 
 

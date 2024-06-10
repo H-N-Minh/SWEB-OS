@@ -98,6 +98,16 @@ public:
    * unmap one page from the shared memory. The vpn should already be a valid page that can be remove
   */
   void unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry);
+
+  /**
+   * find all relevant pages that are within the given range and fill up the vector
+   * @param relevant_pages: an empty vector to be filled up
+   * @param start: the starting address of the range
+   * @param length: the length of the range (in bytes)
+   * @return: the vector filled up with all relevant pages. Vector is empty if error
+  */
+  void findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length);
+
 };
 
 

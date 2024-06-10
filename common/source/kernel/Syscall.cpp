@@ -178,13 +178,7 @@ int Syscall::munmap(size_t start, size_t length)
     debug(ERROR_DEBUG, "Syscall::munmap: start is not multiple of page size or length is 0\n");
     return -1;
   }
-  int pages = length / PAGE_SIZE;
-  if (length % PAGE_SIZE != 0)
-  {
-    pages++;
-  }
-  size_t end = (size_t) start + pages * PAGE_SIZE;
-  if (end > MAX_SHARED_MEM_ADDRESS || start < MIN_SHARED_MEM_ADDRESS)
+  if ((start + length) >= MAX_SHARED_MEM_ADDRESS || start < MIN_SHARED_MEM_ADDRESS)
   {
     debug(ERROR_DEBUG, "Syscall::munmap: range is not within shared memory range\n");
     return -1;
