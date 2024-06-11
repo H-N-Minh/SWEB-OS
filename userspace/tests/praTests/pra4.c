@@ -39,7 +39,7 @@ int pra4()
   size_t* temp = (size_t*) top_page;
   for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
   {
-    printf("%ld\n",i);
+    // printf("%ld\n",i);
     *temp = (size_t) (i * 10000000000 + (i + 1));      // cast to size_t to overflow into next page
     temp = (size_t*) ((size_t) temp + PAGESIZE4 * 2);
   }
@@ -49,7 +49,7 @@ int pra4()
   temp = (size_t*) top_page;
   for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
   {
-    printf("%ld\n",i);
+    // printf("%ld\n",i);
     if (*temp != (size_t) (i * 10000000000 + (i + 1)))
     {
       printf("Error: Expected %zu, got %zu. At index %zu\n", (size_t) (i * 10000000000 + (i + 1)), *temp, i);

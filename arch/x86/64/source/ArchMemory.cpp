@@ -619,14 +619,14 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
 
   if((!pt_entry->swapped_out) || pt_entry->present)
   {
-    assert(0 && "ArchMemory::getDiskLocation: Page was not swapped out yet ");
+    return 0;
   }
   else
   {
     return pt_entry->page_ppn; //ppn is used to store disk location
   }
 
-  return 0;
+  
 }
 
 

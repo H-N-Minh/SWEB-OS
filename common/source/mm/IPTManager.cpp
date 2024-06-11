@@ -169,18 +169,7 @@ size_t IPTManager::findPageToSwapOut()
 
     debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%d, counter=%d\n", ppn_retval, min_counter);
   }
-  // else if(pra_type_ == PRA_TYPE::WORKING_SET)
-  // {
-  //   if(swappable_page)
-  //   {
-  //     //chose random page
-  //   }
-  //   else
-  //   {
-  //     //remove oldest page from every working set
-  //   }
-  // }
-  else if(pra_type_ == PRA_TYPE::NFU)
+  else if(pra_type_ == PRA_TYPE::SECOND_CHANGE)
   {
     if(fifo_ppns.empty())
     {
@@ -502,6 +491,7 @@ void IPTManager::checkDiskMapConsistency()
       }
       
       ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(vpn);
+      assert(disk_offset != 0);
       assert(disk_offset && "checkRampMapConsistency: disk_offset is 0\n");
       assert(key == disk_offset && "checkRampMapConsistency: ppn in disk_map_ (key) does not match disk offset in ArchMemory\n");
       if (locked_by_us)

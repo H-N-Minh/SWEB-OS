@@ -103,6 +103,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
       size_t vpn = address / PAGE_SIZE;
       size_t disk_offset = current_archmemory.getDiskLocation(vpn);
+      assert(disk_offset != 0);
       if(DIRECT_SWAPPING)
       {
         swapper->swap_in_lock_.release();

@@ -232,11 +232,19 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
     }
     else
     {
-      ArchMemoryMapping m = arch_memory->resolveMapping(top_vpn);
-      if(IPTManager::instance()->isEntryInMap(m.page_ppn, IPTMapType::DISK_MAP, arch_memory, top_vpn))
-      {
-        IPTManager::instance()->removeEntryIPT(IPTMapType::DISK_MAP, m.page_ppn, top_vpn, arch_memory);
-      }
+      // debug(SYSCALL, "pthreadExit: Get disk location\n");
+      // size_t disk_location = arch_memory->getDiskLocation(top_vpn);
+      // debug(SYSCALL, "pthreadExit: Check disk location\n");
+      // if(disk_location && IPTManager::instance()->isEntryInMap(disk_location, IPTMapType::DISK_MAP, arch_memory, top_vpn))
+      // {
+      //   debug(SYSCALL, "pthreadExit: Case1\n");
+      //   assert(0);
+      //   IPTManager::instance()->removeEntryIPT(IPTMapType::DISK_MAP, disk_location, top_vpn, arch_memory);
+      // }
+      // else
+      // {
+      //   debug(SYSCALL, "pthreadExit: Case2\n");
+      // }
       continue;
     }
   }
