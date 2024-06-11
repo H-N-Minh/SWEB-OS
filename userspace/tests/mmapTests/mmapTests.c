@@ -21,8 +21,8 @@ int childMain()
     int retval = 0;
 
     // comment out the tests you don't want to run
-    MMAP1 = 1;   // MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)
-    // MMAP2 = 1;   // MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)
+    // MMAP1 = 1;   // MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)
+    MMAP2 = 1;   // MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)
     // MMAP3 = 1;   // (not worked on yet) MAP_PRIVATE (using mmap with fd)
     // MMAP4 = 1;   // (not worked on yet) MAP_SHARED (using mmap with fd, multiple processes)
 
@@ -38,7 +38,8 @@ int childMain()
  *      - test mapping 2 pages but then unmap 1 pages twice, should be possible
  *      - test mapping on unmapped page.
  *      - changes to the file shall not be visible for other processes (MAP_PRIVATE).
- *      for map p
+ *      - map private a page, then call fork. each process should now has its own version of the page. (cow)
+ *      
  *  
  *      
  * */

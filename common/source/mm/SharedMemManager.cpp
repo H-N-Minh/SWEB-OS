@@ -17,6 +17,17 @@ SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int 
 {
 }
 
+SharedMemEntry::SharedMemEntry(const SharedMemEntry& other)
+{
+    start_ = other.start_;
+    end_ = other.end_;
+    prot_ = other.prot_;
+    flags_ = other.flags_;
+    fd_ = other.fd_;
+    offset_ = other.offset_;
+    shared_ = other.shared_;
+}
+
 bool SharedMemEntry::isInBlockRange(vpn_t vpn)
 {
     return vpn >= start_ && vpn <= end_;
@@ -36,8 +47,22 @@ SharedMemManager::SharedMemManager()
     last_free_vpn_ = (vpn_t) MIN_SHARED_MEM_VPN;
 }
 
+SharedMemManager::SharedMemManager(const SharedMemManager& other)
+    : last_free_vpn_(other.last_free_vpn_), shared_mem_lock_("shared_mem_lock_")
+{
+    for (auto it : other.shared_map_)
+    {
+        shared_map_.push_back(new SharedMemEntry(*it));
+    }
+}
+
 SharedMemManager::~SharedMemManager()
 {
+    for (auto it : shared_map_)
+    {
+        delete it;
+    }
+    shared_map_.clear();
 }
 
 void* SharedMemManager::mmap(mmap_params_t* params)
@@ -79,6 +104,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
 
 void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset, bool shared)
 {
+    // error checking: lock shared_mem_, out of free shared mem, given length is too big
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::addEntry: shared_mem_lock_ not held\n");
 
     debug(MMAP, "SharedMemManager::addEntry: adding entry to shared_map_ addr: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",addr, length, prot, flags, fd, offset);
@@ -95,10 +121,7 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     }
     vpn_t start = last_free_vpn_;
     vpn_t end = start + size - 1;
-
-    assert(start >= MIN_SHARED_MEM_VPN && end >= MIN_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
-    assert(start <= MAX_SHARED_MEM_VPN && end <= MAX_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
-    if (last_free_vpn_ > MAX_SHARED_MEM_VPN)
+    if (end > MAX_SHARED_MEM_VPN)
     {
         debug(ERROR_DEBUG, "SharedMemManager::addEntry: failed, size required is bigger than the available free pages \n");
         return MAP_FAILED;
@@ -145,12 +168,25 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
     assert(rv == true);
 
     debug(MMAP, "SharedMemManager::handleSharedPF: setting protection for the new page\n");
-    // Set the read bit to false
+
+
+    SharedMemEntry* entry = getSharedMemEntry(address);
+
+    setProtectionBits(entry, vpn);
+
+    if (entry->shared_)
+    {
+        currentThread->loader_->arch_memory_.setSharedBit(vpn);
+    }
+    
+}
+
+
+void SharedMemManager::setProtectionBits(SharedMemEntry* entry, size_t vpn)
+{
     int read = 0;
     int write = 0;
     int execute = 0;
-
-    SharedMemEntry* entry = getSharedMemEntry(address);
     if (entry->prot_ == PROT_READ)
     {
         read = 1;
@@ -194,6 +230,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
     }
 
     currentThread->loader_->arch_memory_.setProtectionBits(vpn, read, write, execute);
+
 }
 
 
@@ -359,10 +396,9 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
 }
 
 
-void SharedMemManager::unmapAllPages()
+void SharedMemManager::unmapAllPages(ArchMemory* arch_memory)
 {
     debug(MMAP, "SharedMemManager::unmapAllPages unmaping all shared mem pages\n");
-    ArchMemory* arch_memory = &((UserThread*) currentThread)->loader_->arch_memory_;
 
     shared_mem_lock_.acquire();
     IPTManager::instance()->IPT_lock_.acquire();

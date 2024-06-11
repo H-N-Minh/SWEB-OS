@@ -28,6 +28,8 @@ class UserSpaceMemoryManager
 {
   public:
     UserSpaceMemoryManager(Loader* loader);
+    UserSpaceMemoryManager(const UserSpaceMemoryManager& other, Loader* loader);
+
     ~UserSpaceMemoryManager();
 
     size_t current_break_;

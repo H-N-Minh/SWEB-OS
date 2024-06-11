@@ -325,7 +325,7 @@ void UserThread::exitThread(void* value_ptr)
     process_->thread_retval_map_.clear();
 
     debug(USERTHREAD, "UserThread::~UserThread: unmapping all shared mem pages (if theres any)\n");
-    process_->user_mem_manager_->shared_mem_manager_->unmapAllPages();
+    process_->user_mem_manager_->shared_mem_manager_->unmapAllPages(&loader_->arch_memory_);
   }
 
   // if its not last thread alive, store the return value

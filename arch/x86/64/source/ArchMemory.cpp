@@ -96,11 +96,22 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
               {
                 if (PARENT_pt[pti].present)
                 {
-                  PARENT_pt[pti].writeable = 0;
-                  PARENT_pt[pti].cow = 1;
+                  if (PARENT_pt[pti].shared)
+                  {
+                    PARENT_pt[pti].writeable = 1;
+                    PARENT_pt[pti].cow = 0;
 
-                  CHILD_pt[pti].writeable = 0;
-                  CHILD_pt[pti].cow = 1;
+                    CHILD_pt[pti].writeable = 1;
+                    CHILD_pt[pti].cow = 0;
+                  }
+                  else
+                  {
+                    PARENT_pt[pti].writeable = 0;
+                    PARENT_pt[pti].cow = 1;
+
+                    CHILD_pt[pti].writeable = 0;
+                    CHILD_pt[pti].cow = 1;
+                  }
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
@@ -109,11 +120,22 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
                 }
                 else if(PARENT_pt[pti].swapped_out)
                 {
-                  PARENT_pt[pti].writeable = 0;
-                  PARENT_pt[pti].cow = 1;
+                  if (PARENT_pt[pti].shared)
+                  {
+                    PARENT_pt[pti].writeable = 1;
+                    PARENT_pt[pti].cow = 0;
 
-                  CHILD_pt[pti].writeable = 0;
-                  CHILD_pt[pti].cow = 1;
+                    CHILD_pt[pti].writeable = 1;
+                    CHILD_pt[pti].cow = 0;
+                  }
+                  else
+                  {
+                    PARENT_pt[pti].writeable = 0;
+                    PARENT_pt[pti].cow = 1;
+
+                    CHILD_pt[pti].writeable = 0;
+                    CHILD_pt[pti].cow = 1;
+                  }
 
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::DISK_MAP);
@@ -870,7 +892,7 @@ void ArchMemory::setProtectionBits(size_t vpn, int read, int write, int execute)
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
-  if (m.pt && pt_entry && pt_entry->present)
+  if (m.pt && pt_entry && (pt_entry->present || pt_entry->swapped_out))
   {
     if (write)
     {
@@ -896,3 +918,18 @@ void ArchMemory::setProtectionBits(size_t vpn, int read, int write, int execute)
     assert(0 && "ArchMemory::setProtectionBits: page is not present.\n");
   }
 }
+
+void ArchMemory::setSharedBit(size_t vpn)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+  debug(A_MEMORY, "ArchMemory::setSharedBit: with vpn %zu\n", vpn); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && (pt_entry->present || pt_entry->swapped_out))
+  {
+    assert(pt_entry->shared == 0 && "ArchMemory::setSharedBit: page is newly created so shared bit should not be set already\n");
+    pt_entry->shared = 1;
+  }
+}
+

@@ -22,6 +22,14 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
 
 }
 
+UserSpaceMemoryManager::UserSpaceMemoryManager(const UserSpaceMemoryManager& other, Loader* loader)
+  : current_break_(other.current_break_), heap_start_(other.heap_start_), loader_(loader),
+    current_break_lock_("UserSpaceMemoryManager::lock_")
+{
+  shared_mem_manager_ = new SharedMemManager(*other.shared_mem_manager_);
+}
+
+
 UserSpaceMemoryManager::~UserSpaceMemoryManager()
 {
   delete shared_mem_manager_;

@@ -9,13 +9,15 @@ int mmap2() {
     {
         exit(1);
     }
+    printf("mmap done, writting to mapped page\n");
 
     int *num = (int*) addr;
     *num = 10;
-
+    printf("done writting, forking now\n");
     if (fork() == 0)
     {
         // This is the child process.
+        printf("child starts\n");
         printf("Child sees *num = %d\n", *num);
         *num = 20;
         printf("Child changed *num to 20\n");
@@ -23,6 +25,7 @@ int mmap2() {
     } 
     else
     {
+        printf("parent starts\n");
         // This is the parent process.
         sleep(1);  // Sleep for a second to let the child run.
         if (*num != 20)
@@ -30,6 +33,7 @@ int mmap2() {
             printf("Error: Parent sees *num = %d, but it should be 20\n", *num);
             return -1;
         }
+        printf("Parent sees *num = %d\n", *num);
 
     }
 
