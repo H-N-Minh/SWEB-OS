@@ -197,12 +197,14 @@ size_t IPTManager::findPageToSwapOut()
         for(auto& archmem_ipt : entry->getArchmemIPTs())
         {
           ArchMemory* archmem = archmem_ipt->archmem_;
+          archmem->archmemory_lock_.acquire();
           size_t vpn = archmem_ipt->vpn_;
           if(archmem->isPageAccessed(vpn))
           {
             not_accessed = false;
             archmem->resetAccessBits(vpn);
           }
+          archmem->archmemory_lock_.release();
         }
         if(not_accessed)
         {

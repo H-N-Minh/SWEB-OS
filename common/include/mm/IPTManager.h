@@ -9,7 +9,7 @@
 
 
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
-enum PRA_TYPE {RANDOM, NFU, SECOND_CHANGE, SIMPLE};
+enum PRA_TYPE {RANDOM, NFU, SECOND_CHANGE};
 
 // class IPTEntry;
 class ArchMemory;

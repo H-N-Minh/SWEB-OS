@@ -28,7 +28,7 @@ int assertIPT()
 
 int setPRA(int pra)
 {
-  if (pra != 0 && pra != 1)
+  if (pra != 0 && pra != 1 && pra!= 2)
   {
     return -1;
   }
