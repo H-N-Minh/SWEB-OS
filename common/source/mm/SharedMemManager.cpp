@@ -10,11 +10,10 @@
 #include "Syscall.h"
 
 
-
 /////////////////////// SharedMemEntry ///////////////////////
 
-SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
-    : start_(start),end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
+SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset, bool shared)
+    : start_(start),end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset), shared_(shared)
 {
 }
 
@@ -58,46 +57,19 @@ void* SharedMemManager::mmap(mmap_params_t* params)
 
     if ((flags == (MAP_ANONYMOUS | MAP_PRIVATE)) && fd == -1)
     {
-        retval = addEntry(start, length, prot, flags, fd, offset);
+        retval = addEntry(start, length, prot, flags, fd, offset, false);
     }
     
+    else if ((flags == (MAP_ANONYMOUS | MAP_SHARED)) && fd == -1)
+    {
+        retval = addEntry(start, length, prot, flags, fd, offset, true);
+    }
 
-    // ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // mapPage needs 3 and ppn needs 1
 
-    // size_t ppn =  PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 
-    // ArchMemory* arch = &((UserThread*) currentThread)->loader_->arch_memory_;
-    // IPTManager::instance()->IPT_lock_.acquire();
-    // arch->archmemory_lock_.acquire();
-    // size_t vpn = MAX_HEAP_ADDRESS * 3 / PAGE_SIZE;
-    // shared_map_.insert(ustl::make_pair(fd, ppn));
-
-    // map the page to the given address
-
-    // bool stat = ((UserThread*) currentThread)->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
-    // assert(stat && "SharedMemManager::mmap: mapPage failed\n");
-
-    // // Read the data from the file into the page with the given ppn
-    // char buffer[100];
-    // size_t bytes_read = Syscall::read(fd, (pointer) buffer, 20);
-    // debug(MINH, "SharedMemManager::mmap: bytesRead: %zu\n", bytes_read);
-    // buffer[bytes_read] = '\0';
-    // if (bytesRead == -1) {
-    //     // Handle read error
-    //     debug(ERROR_DEBUG, "SharedMemManager::mmap: read failed\n");
-    //     return nullptr;
-    // }
-    // if (bytes_read < (size_t) length) {
-    //     // Handle incomplete read
-    //     debug(ERROR_DEBUG, "SharedMemManager::mmap: incomplete read\n");
-    //     return nullptr;
-    // }
-    
-    // arch->archmemory_lock_.release();
-    // IPTManager::instance()->IPT_lock_.release();
     if (retval == MAP_FAILED)
     {
-        debug(MMAP, "SharedMemManager::mmap: failed\n");
+        debug(ERROR_DEBUG, "SharedMemManager::mmap: failed\n");
     }
 
     shared_mem_lock_.release();
@@ -105,7 +77,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     return retval;
 }
 
-void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset)
+void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset, bool shared)
 {
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::addEntry: shared_mem_lock_ not held\n");
 
@@ -132,7 +104,8 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
         return MAP_FAILED;
     }
     
-    SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset);
+    // actually adding entry
+    SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset, shared);
     shared_map_.push_back(entry);
 
     void* start_addr = (void*) (start * PAGE_SIZE);
@@ -368,8 +341,10 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
         }
         else
         {
-            shared_map_.push_back(new SharedMemEntry(sm_entry->start_, vpn - 1, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
-            shared_map_.push_back(new SharedMemEntry(vpn + 1, sm_entry->end_, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
+            shared_map_.push_back(new SharedMemEntry(sm_entry->start_, vpn - 1, sm_entry->prot_, sm_entry->flags_, 
+                                                    sm_entry->fd_, sm_entry->offset_, sm_entry->shared_));
+            shared_map_.push_back(new SharedMemEntry(vpn + 1, sm_entry->end_, sm_entry->prot_, sm_entry->flags_, 
+                                                    sm_entry->fd_, sm_entry->offset_, sm_entry->shared_));
             shared_map_.erase(it);
             delete sm_entry;
         }
@@ -409,3 +384,4 @@ void SharedMemManager::unmapAllPages()
     shared_mem_lock_.release();
     debug(MMAP, "SharedMemManager::unmapAllPages: done\n");
 }
+
