@@ -21,24 +21,17 @@ int mmap1() {
     if (region == MAP_FAILED) {
         return -1;
     }
-    printf("memory mapped at: %p\n", region);
+    printf("memory mapped successfully at: %p\n", region);
     // Write to the memory region
-    memcpy(region, "Hello, mmap1!", strlen("Hello, mmap!") + 1);
-    printf("%s\n", region);
+    memcpy(region, "Hello, mmap1!", strlen("Hello, mmap1!") + 1);
+    printf("message wrote on the memory: %s (should be 'Hello, mmap1!')\n", region);
 
-    // // Unmap the memory region
-    // if (munmap(region, 4096))
-    // {
-    //     printf("munmap didnt return with code 0\n");
-    //     return -1;
-    // }
-    // printf("memory unmapped1\n");
-    // if (munmap(region, 12))
-    // {
-    //     printf("munmap didnt return with code 0\n");
-    //     return -1;
-    // }
-    // printf("memory unmapped2\n");
+    // Unmap the memory region
+    if (munmap(region, 4096))
+    {
+        printf("munmap didnt return with code 0\n");
+        return -1;
+    }
     
 
     return 0;
