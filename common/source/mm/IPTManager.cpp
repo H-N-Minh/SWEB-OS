@@ -23,7 +23,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::SECOND_CHANGE;
+  pra_type_ = PRA_TYPE::RANDOM;
 }
 
 IPTManager::~IPTManager()
@@ -180,7 +180,7 @@ size_t IPTManager::findPageToSwapOut()
   //     //remove oldest page from every working set
   //   }
   // }
-  else if(pra_type_ == PRA_TYPE::SECOND_CHANGE)
+  else if(pra_type_ == PRA_TYPE::NFU)
   {
     if(fifo_ppns.empty())
     {
