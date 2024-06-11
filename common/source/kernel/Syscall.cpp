@@ -214,6 +214,23 @@ int Syscall::mmap(size_t para, size_t retval)
     debug(ERROR_DEBUG, "Syscall::mmap: mmap is not yet implemented to work with fd\n");
     // return -1;
   }
+  uint32 __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS};
+  int flag_exists = 0;
+  for (int i : __VALID_FLAGS__) 
+  {
+    if (flags == i)
+    {
+      flag_exists = 1;
+      break;
+    }
+  }
+  if (!flag_exists)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: flags is not valid\n");
+    *(size_t*) retval = (size_t) MAP_FAILED;
+    return -1;
+  }
+
   
   SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
   void* ret = MAP_FAILED;

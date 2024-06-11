@@ -39,8 +39,9 @@ public:
   int flags_;
   int fd_;
   ssize_t offset_;
+  bool shared_;
 
-  SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset);
+  SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset, bool shared);
 
   /**
    * check if the given vpn is within this shared memory block
@@ -77,7 +78,7 @@ public:
    * @return the starting address of the shared memory region
    * @return MAP_FAILED if the shared memory region is full
   */
-  void* addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset);
+  void* addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset, bool shared);
 
   /**
    * check if the given address is within any shared memory block

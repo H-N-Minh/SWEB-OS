@@ -4,15 +4,13 @@
 #include <unistd.h>
 
 int mmap2() {
-    // void *addr = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
-    // if (addr == MAP_FAILED)
-    // {
-    //     exit(1);
-    // }
-    int a = 6;
-    int *addr = &a;
+    void *addr = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED | MAP_ANONYMOUS, -1, 0);
+    if (addr == MAP_FAILED)
+    {
+        exit(1);
+    }
 
-    int *num = addr;
+    int *num = (int*) addr;
     *num = 10;
 
     if (fork() == 0)
@@ -29,7 +27,7 @@ int mmap2() {
         sleep(1);  // Sleep for a second to let the child run.
         if (*num != 20)
         {
-            printf("Parent sees *num = %d, but it should be 20\n", *num);
+            printf("Error: Parent sees *num = %d, but it should be 20\n", *num);
             return -1;
         }
 
