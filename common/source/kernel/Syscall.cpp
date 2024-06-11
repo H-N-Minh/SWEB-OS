@@ -190,10 +190,9 @@ int Syscall::munmap(size_t start, size_t length)
   return rv;
 }
 
-int Syscall::mmap(size_t para, size_t retval)
+bool isMmapParamValid(mmap_params_t* params)
 {
-  assert(para && retval && "Syscall::mmap: arg1 is null, retval is null\n");
-  mmap_params_t* params = (mmap_params_t*) para;
+  assert(params && "params is null");
   void* start = params->start;
   size_t length = params->length;
   int prot = params->prot;
@@ -201,19 +200,45 @@ int Syscall::mmap(size_t para, size_t retval)
   int fd  = params->fd;
   off_t offset = params->offset;
   debug(SYSCALL, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
-  
-  // error checking the para
-  // TODOMINH add error handling for prot, flags, length
-  if (start != (void*) 0 || offset != 0)
+
+  // start
+  if (start != (void*) 0)
   {
-    debug(ERROR_DEBUG, "Syscall::mmap: start and offset is not implemented\n");
-    // return -1;
+    debug(ERROR_DEBUG, "Syscall::mmap: start is not yet implemented, this para will be ignored\n");
   }
-  if (fd != -1)
+  if ((size_t) start % PAGE_SIZE != 0)
   {
-    debug(ERROR_DEBUG, "Syscall::mmap: mmap is not yet implemented to work with fd\n");
-    // return -1;
+    debug(ERROR_DEBUG, "Syscall::mmap: start is not multiple of page size\n");
+    return false;
   }
+
+  // length
+  if (length == 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: length is 0\n");
+    return false;
+  }
+
+  //prots
+  uint32 valid_prots[] = {PROT_NONE, PROT_READ, PROT_WRITE, PROT_EXEC, 
+                          PROT_READ | PROT_WRITE, PROT_READ | PROT_EXEC, PROT_WRITE | PROT_EXEC, 
+                          PROT_READ | PROT_WRITE | PROT_EXEC};
+  int prot_exists = 0;
+  for (int i : valid_prots) 
+  {
+    if (prot == i)
+    {
+      prot_exists = 1;
+      break;
+    }
+  }
+  if (!prot_exists)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: prot is not valid\n");
+    return false;
+  }
+
+  // flags
   uint32 __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS};
   int flag_exists = 0;
   for (int i : __VALID_FLAGS__) 
@@ -227,13 +252,46 @@ int Syscall::mmap(size_t para, size_t retval)
   if (!flag_exists)
   {
     debug(ERROR_DEBUG, "Syscall::mmap: flags is not valid\n");
-    *(size_t*) retval = (size_t) MAP_FAILED;
-    return -1;
+    return false;
   }
 
+  // fd
+  if (fd < 0 && fd != -1)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: fd is not valid\n");
+    return false;
+  }
+
+  // offset
+  if (offset % PAGE_SIZE != 0 || offset < 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: offset is not multiple of page size or not positive\n");
+    return false;
+  }
   
+  return true;
+}
+
+int Syscall::mmap(size_t para, size_t retval)
+{
+  if (para == 0 || retval == 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: para or retval is null\n");
+    return -1;
+  }
+  mmap_params_t* params = (mmap_params_t*) para;
   SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
   void* ret = MAP_FAILED;
+
+  // error checking
+  if (!isMmapParamValid(params))
+  {
+    *(size_t*) retval = (size_t) ret;
+    return -1;
+  }
+  
+  
+  // done error checking, now do the mmap
   ret = smm->mmap(params);
   
   debug(SYSCALL, "Syscall::mmap: return value: %p\n", ret);
@@ -241,6 +299,7 @@ int Syscall::mmap(size_t para, size_t retval)
 
   return 0;
 }
+
 
 l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence) {
   debug(Fabi, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);

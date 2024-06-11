@@ -21,10 +21,16 @@ int mmap1() {
     if (region == MAP_FAILED) {
         return -1;
     }
-    printf("memory mapped successfully at: %p\n", region);
+    // printf("memory mapped successfully at: %p\n", region);
     // Write to the memory region
     memcpy(region, "Hello, mmap1!", strlen("Hello, mmap1!") + 1);
-    printf("message wrote on the memory: %s (should be 'Hello, mmap1!')\n", region);
+    // printf("message wrote on the memory: %s (should be 'Hello, mmap1!')\n", region);
+    if (memcmp(region, "Hello, mmap1!", strlen("Hello, mmap1!") + 1))
+    {
+        printf("Error: memory region does not contain the expected data\n");
+        return -1;
+    }
+    
 
     // Unmap the memory region
     if (munmap(region, 4096))
