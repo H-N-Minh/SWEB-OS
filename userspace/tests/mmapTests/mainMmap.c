@@ -22,8 +22,8 @@ int childMain()
 
     // comment out the tests you don't want to run
     // MMAP1 = 1;   // MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)
-    MMAP2 = 1;   // MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)
-    // MMAP3 = 1;   // (not worked on yet) MAP_PRIVATE (using mmap with fd)
+    // MMAP2 = 1;   // MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)
+    MMAP3 = 1;   // MAP_PRIVATE (using mmap with fd)
     // MMAP4 = 1;   // (not worked on yet) MAP_SHARED (using mmap with fd, multiple processes)
 
 
@@ -55,10 +55,18 @@ int childMain()
 
     if (MMAP2)
     {
-        printf("\nTesting mmap2: testing MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)...\n");
+        printf("\nTesting mmap2: testing MAP_SHARED | MAP_ANONYMOUS (using mmap with fork and IPC)...\n");
         retval = mmap2();
         if (retval == 0)                      { printf("===> mmap2 successful!\n"); }
         else                                  { printf("===> mmap2 failed!\n");  return -1;}
+    }
+    
+    if (MMAP3)
+    {
+        printf("\nTesting mmap3: testing MAP_PRIVATE (using mmap with open() and fd)...\n");
+        retval = mmap3();
+        if (retval == 0)                      { printf("===> mmap3 successful!\n"); }
+        else                                  { printf("===> mmap3 failed!\n");  return -1;}
     }
     
     printf("\n\n===  All mmap testcases successful  ===\n");

@@ -7,7 +7,7 @@
 int mmap3() 
 {
     // open and mmap
-    int fd = open("usr/testmmn.txt", O_WRONLY | O_CREAT , 0644);
+    int fd = open("usr/testmmn.txt", O_RDWR | O_CREAT , 0644);
     if (fd == -1) {
         printf("open failed\n");
         return 1;
@@ -32,9 +32,46 @@ int mmap3()
 
     // check if the data was written to the memory
     fd = open("usr/testmmn.txt", O_RDONLY);
+    char buffer[20];
+    ssize_t bytesRead = read(fd, buffer, 20);
+    if (bytesRead == -1) {
+        printf("read failed\n");
+        close(fd);
+        return 1;
+    }
+    buffer[25] = '\0';  // Null-terminate the string
     close(fd);
-
+    printf("Read from file: %s\n", buffer);
 
     munmap(addr, 4096);  // Unmap the memory
     return 0;
 }
+
+// int mmap3() {
+//     // open the file
+//     int fd = open("usr/testmmn.txt", O_RDWR | O_CREAT , 0644);
+//     if (fd == -1) {
+//         printf("open failed\n");
+//         return 1;
+//     }
+//     printf("File opened\n");
+    
+//     // read from the file
+//     char buffer[20];
+//     ssize_t bytesRead = read(fd, buffer, 20);
+//     if (bytesRead == -1) {
+//         printf("read failed\n");
+//         close(fd);
+//         return 1;
+//     }
+//     printf("file read successful\n");
+//     // buffer[25] = '\0';  // Null-terminate the string
+    
+//     // close the file
+//     close(fd);
+    
+//     printf("Read from file: %s\n", buffer);
+    
+//     return 0;
+
+// }
