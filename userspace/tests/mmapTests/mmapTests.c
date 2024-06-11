@@ -24,17 +24,21 @@ int childMain()
     // MMAP1 = 1;   // MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)
     MMAP2 = 1;   // MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)
     // MMAP3 = 1;   // (not worked on yet) MAP_PRIVATE (using mmap with fd)
+    // MMAP4 = 1;   // (not worked on yet) MAP_SHARED (using mmap with fd, multiple processes)
 
 
 /**
  *  TODO: for MAP_PRIVATE | MAP_ANONYMOUS:
  *      - test giving mmap & munmap invalid parameters (for munmap, length cant be 0, start must be multiple of page size, start must be in the range of mmaped memory)
  *      - test mapping then write, should be possible, then unmap then write again, should be error
+ *      - similar to the test above, but 1 threads calls munmap and another thread tries to read afterwards
  *      - test unmaping twice on same address
  *      - test mapping 2 pages then unmap both pages at once using 1 munmap call, this should be possible
  *      - test mapping 1 page but then unmap 2 pages, should be error
  *      - test mapping 2 pages but then unmap 1 pages twice, should be possible
  *      - test mapping on unmapped page.
+ *      - changes to the file shall not be visible for other processes (MAP_PRIVATE).
+ *      for map p
  *  
  *      
  * */

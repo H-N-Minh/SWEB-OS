@@ -207,12 +207,12 @@ int Syscall::mmap(size_t para, size_t retval)
   if (start != (void*) 0 || offset != 0)
   {
     debug(ERROR_DEBUG, "Syscall::mmap: start and offset is not implemented\n");
-    return -1;
+    // return -1;
   }
   if (fd != -1)
   {
     debug(ERROR_DEBUG, "Syscall::mmap: mmap is not yet implemented to work with fd\n");
-    return -1;
+    // return -1;
   }
   
   SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;

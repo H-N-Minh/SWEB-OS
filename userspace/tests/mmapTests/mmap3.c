@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <string.h>
 
-int mmap2() 
+int mmap3() 
 {
     // open and mmap
     int fd = open("usr/testmmn.txt", O_WRONLY | O_CREAT , 0644);
