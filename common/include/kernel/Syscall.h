@@ -67,7 +67,7 @@ public:
 
   static long int wait_pid(long int pid, int* status, size_t options);
 
-  static size_t sbrkMemory(size_t size_ptr, size_t return_ptr);
+  static size_t sbrkMemory(ssize_t size);
   static size_t brkMemory(size_t new_brk_addr);
 
   static void getIPTInfos();
@@ -91,6 +91,10 @@ public:
    * debug syscall print the result of random PRA
   */
   static void checkRandomPRA();
+
+  static int mmap(size_t para, size_t retval);
+
+  static int munmap(size_t start, size_t length);
 };
 
 

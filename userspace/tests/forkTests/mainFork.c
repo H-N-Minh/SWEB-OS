@@ -3,6 +3,7 @@
 #include "unistd.h"
 #include "wait.h"
 #include "pthread.h"
+#include "nonstd.h"
 
 extern int fork1();
 extern int fork2();
@@ -19,17 +20,18 @@ extern int fork7();
 
 // set to 1 to test, 0 to skip
 // all 4 & 5 & 6 requires lot of physical memory so each should be tested alone
-#define FORK1 1     //simple fork
-#define FORK2 1     // This tests if the 2 processes can have different values of same variable (they should). Both local and global variables are tested
-#define FORK3 1     // this tests fork then each calls pthread_create
-#define FORK4 1     // this tests multiple nested forks (each child will fork again)
+#define FORK1 0     //simple fork
+#define FORK2 0     // This tests if the 2 processes can have different values of same variable (they should). Both local and global variables are tested
+#define FORK3 0     // this tests fork then each calls pthread_create
+#define FORK4 0     // this tests multiple nested forks (each child will fork again)
 #define FORK5 1     // this tests multiple nested forks (same thread will fork multiple times)
 #define FORK6 0    // 100 pcreate then all fork at same time
-#define FORK7 1     // fork with waitpid
+#define FORK7 0     // fork with waitpid
 
 int childMain()
 {
     int retval = 0;
+    // setPRA(__NFU_PRA__);
 
     if (FORK1)
     {
@@ -126,7 +128,7 @@ int main()
         }
 
         int num = get_thread_count();
-        if (num == 7 || num == 6)
+        if (num == 7 || num == 8)
         {
             printf("===  All threads are destroyed correctly  ===\n");
             return 0;

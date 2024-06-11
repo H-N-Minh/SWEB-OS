@@ -4,6 +4,14 @@
 char const *user_progs[] = {
 // for reasons of automated testing
                             "/usr/shell.sweb",
+                            
+//mmap-----------------------------------------------------------------------
+                            "/usr/mmapTests.sweb", 
+
+//Swapping-----------------------------------------------------------------------
+                            // "/usr/iptTests.sweb", 
+                            // "/usr/praTests.sweb", 
+
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",
                             // "/usr/pthreadJoinDetachTests.sweb", 
@@ -52,9 +60,6 @@ char const *user_progs[] = {
                             // "/usr/dupInvalidTest.sweb",
                             // "/usr/no_test.sweb",
 
-//Swapping-----------------------------------------------------------------------
-                            // "/usr/iptTests.sweb", 
-                            "/usr/praTests.sweb", 
   
 
                             0
