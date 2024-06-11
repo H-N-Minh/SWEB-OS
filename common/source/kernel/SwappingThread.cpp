@@ -139,7 +139,6 @@ void SwappingThread::swapIn()
     }
     swap_in_cond_.broadcast();
   }
-  // updateMetaData();        //TODOs: adding this makes pra4 work !!!!!!!(maybe bad though) ?????
   swap_in_lock_.release();
 }
 
@@ -242,11 +241,15 @@ bool SwappingThread::isOneTimeStep()
 {
   size_t current_ticks = Scheduler::instance()->getTicks();
   assert(current_ticks >= last_tick_ && "SwappingThread::isOneTimeStep: current_ticks must be greater than last_tick_\n");
-  size_t time_passed = (current_ticks - last_tick_) / TICKS_PER_SEC;
-  if (time_passed >= TIME_STEP)
-  {    
-    // debug(MINH, "SwappingThread::isOneTimeStep: time_passed: %ds\n", time_passed);
-    last_tick_ = current_ticks;
+  // size_t time_passed = (current_ticks - last_tick_) / TICKS_PER_SEC;
+  // if (time_passed >= TIME_STEP)
+  // {    
+  //   // debug(MINH, "SwappingThread::isOneTimeStep: time_passed: %ds\n", time_passed);
+  //   last_tick_ = current_ticks;
+  //   return true;
+  // }
+  if((current_ticks - last_tick_)>5)
+  {
     return true;
   }
   
