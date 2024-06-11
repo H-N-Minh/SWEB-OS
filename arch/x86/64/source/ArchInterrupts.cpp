@@ -156,6 +156,7 @@ extern "C" void arch_saveThreadRegisters(uint64* base, uint64 error)
   info->rcx = registers->rcx;
   info->rax = registers->rax;
   info->rbp = registers->rbp;
+
   assert(!currentThread || currentThread->isStackCanaryOK());
 }
 

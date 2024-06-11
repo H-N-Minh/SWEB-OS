@@ -37,6 +37,9 @@ void* thread_function5(void* arg)
   return NULL;
 }
 
+pthread_t threads[THREAD_NUM5];
+int thread_ids[THREAD_NUM5];
+
 int pra5()
 {
   int hit;
@@ -44,8 +47,7 @@ int pra5()
   getPRAstats(&hit, &miss);
   printf("NFU PRA: Hit: %d, Miss: %d (before test)\n", hit, miss);
 
-  pthread_t threads[THREAD_NUM5];
-  int thread_ids[THREAD_NUM5];
+
 
   for(int i = 0; i < THREAD_NUM5; i++)
   {
