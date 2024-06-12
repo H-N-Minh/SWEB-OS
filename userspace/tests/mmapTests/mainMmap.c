@@ -12,10 +12,16 @@ extern int mmap2();
 extern int mmap3();
 extern int mmap4();
 
+extern int private1();
+extern int private1_anonym();
+
 int MMAP1 = 0;  
 int MMAP2 = 0;  
 int MMAP3 = 0;  
 int MMAP4 = 0;  
+
+int PRIVATE1 = 0;
+int PRIVATE1_ANONYM = 0;
 
 
 int childMain()
@@ -23,10 +29,16 @@ int childMain()
     int retval = 0;
 
     // comment out the tests you don't want to run
+
+//******* MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)********
+    PRIVATE1 = 1;   // Collection of bunch of basic tests for MAP_PRIVATE
+    PRIVATE1_ANONYM = 1;   // same as private1, but uses MAP_ANONYMOUS instead of a file descriptor.
+
+// **** completed tests, but still needs work
     // MMAP1 = 1;   // MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)
     // MMAP2 = 1;   // MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)
     // MMAP3 = 1;   // MAP_PRIVATE (using mmap with fd)
-    MMAP4 = 1;   // MAP_SHARED (using mmap with fd, multiple processes)
+    // MMAP4 = 1;   // MAP_SHARED (using mmap with fd, multiple processes)
 
 
 /** tests ideas:
@@ -54,6 +66,11 @@ int childMain()
  *      - mmap with wrong params
  *      - mmap with multiple pages
  *      - give a bullshit fd value
+ *     - test different protection flags
+ *      - test different flags
+ * 
+ *      - set readonly prot then write to it
+ *      - writting/reading after munmap
  *  
  *      
  * */
@@ -89,6 +106,22 @@ int childMain()
         retval = mmap4();
         if (retval == 0)                      { printf("===> mmap4 successful!\n"); }
         else                                  { printf("===> mmap4 failed!\n");  return -1;}
+    }
+    
+    if (PRIVATE1)
+    {
+        printf("\nTesting private1: testing bunch of basic tests for map_private...\n");
+        retval = private1();
+        if (retval == 0)                      { printf("===> private1 successful!\n"); }
+        else                                  { printf("===> private1 failed!\n");  return -1;}
+    }
+    
+    if (PRIVATE1_ANONYM)
+    {
+        printf("\nTesting private1_anonym: same as private1, but test with MAP_ANONYMOUS...\n");
+        retval = private1_anonym();
+        if (retval == 0)                      { printf("===> private1_anonym successful!\n"); }
+        else                                  { printf("===> private1_anonym failed!\n");  return -1;}
     }
     
     printf("\n\n===  All mmap testcases successful  ===\n");
