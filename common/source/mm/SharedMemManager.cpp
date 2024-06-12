@@ -421,12 +421,12 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
     {
         debug(MMAP, "SharedMemManager::unmapOnePage: unmapping page vpn %zu\n", vpn);
         
-        if (sm_entry->flags_ == MAP_PRIVATE && sm_entry->fd_ >= 0)
-        {
-            debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
-            ssize_t offset = sm_entry->getOffset(vpn);
-            writeBackToFile(vpn, sm_entry->fd_, offset, arch_memory);
-        }
+        // if (sm_entry->flags_ == MAP_SHARED && sm_entry->fd_ >= 0)
+        // {
+        //     debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
+        //     ssize_t offset = sm_entry->getOffset(vpn);
+        //     writeBackToFile(vpn, sm_entry->fd_, offset, arch_memory);
+        // }
         arch_memory->unmapPage(vpn);
     }
 
