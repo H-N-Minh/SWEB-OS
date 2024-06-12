@@ -602,7 +602,7 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
   lfdTable.lfds_lock_.acquire();
-  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+  LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(fd);
 
   if (fd == fd_stdin)
   {
@@ -630,6 +630,7 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
     } else {
       size_t global_fd = global_fd_obj->getFd();
       size_t num_read = VfsSyscall::read(global_fd, (char *) buffer, count);
+      debug(MINH, "read from file %s\n", buffer);
       debug(SYSCALL, "Syscall::read: Read %zu bytes from global fd: %zu\n", num_read, global_fd);
       lfdTable.lfds_lock_.release();
       return num_read;

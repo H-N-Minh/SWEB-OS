@@ -10,6 +10,7 @@
 #include "VfsSyscall.h"
 #include "Syscall.h"
 #include "File.h"
+#include "syscall-definitions.h"
 
 /////////////////////// SharedMemEntry ///////////////////////
 
@@ -197,38 +198,43 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
 void SharedMemManager::copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory)
 {
     debug(MMAP, "SharedMemManager::copyContentFromFD: with ppn %zu, fd %d, offset %ld\n", ppn, fd, offset);
-    pointer target = arch_memory->getIdentAddressOfPPN(ppn);
+    assert(fd != fd_stdin && "invalid fd for this operation");
+    
+    UserThread& currentUserThread = *((UserThread*)currentThread);
+    UserProcess& current_process = *currentUserThread.process_;
+    LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
-    if (VfsSyscall::lseek(fd, offset, SEEK_SET) == (l_off_t) -1)
+    lfdTable.lfds_lock_.acquire();
+
+    // read file
+    LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(fd);
+    assert(localFileDescriptor != nullptr && "SharedMemManager::copyContentFromFD: localFileDescriptor is null\n");
+    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+    assert(global_fd_obj->getType() != FileDescriptor::FileType::PIPE && "SharedMemManager::copyContentFromFD: cannot copy content from a pipe\n");
+
+    size_t global_fd = global_fd_obj->getFd();
+    if (VfsSyscall::lseek(global_fd, offset, SEEK_SET) == (l_off_t) -1)
     {
         assert(false && "SharedMemManager::copyContentFromFD: lseek failed\n");
     }
-    char buffer[PAGE_SIZE + 1];     // +1 for null terminator. is This needed?
-    int32 num_read = VfsSyscall::read(fd, buffer, PAGE_SIZE);
+
+    char buffer[PAGE_SIZE];
+    int32 num_read = VfsSyscall::read(global_fd, buffer, PAGE_SIZE);
     if (num_read == -1)
     {
         assert(false && "SharedMemManager::copyContentFromFD: read failed\n");
     }
-    buffer[PAGE_SIZE] = '\0';
-    
+    debug(FILEDESCRIPTOR, "SharedMemManager::copyContentFromFD: read %d bytes from fd %d (global fd %zu)\n", num_read, fd, global_fd);
+
+    lfdTable.lfds_lock_.release();
+
+
+    // write to ppn
+    pointer target = arch_memory->getIdentAddressOfPPN(ppn);
     memcpy((void*) target, (void*) buffer, PAGE_SIZE);
 
-    // // DEBUGMINH delete this
-    // char buffer[101];     // +1 for null terminator. is This needed?
-    // int32 num_read = VfsSyscall::read(fd, buffer, 100);
-    // if (num_read == -1)
-    // {
-    //     assert(false && "SharedMemManager::copyContentFromFD: read failed\n");
-    // }
-    // buffer[100] = '\0';
-    // debug(MINH, "SharedMemManager::copyContentFromFD: buffer: %s\n", buffer);
-    
-    // memcpy((void*) target, (void*) buffer, 100);
-    // // end debug
-
-
     debug(MMAP, "SharedMemManager::copyContentFromFD: copied %d bytes from fd (%d) to page (%zu)\n", num_read, fd, ppn);
-
 }
 
 void SharedMemManager::setProtectionBits(SharedMemEntry* entry, size_t vpn)
