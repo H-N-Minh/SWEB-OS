@@ -424,7 +424,7 @@ void PageManager::setReferenceCount(uint64 page_number, uint32 reference_count)
   page_reference_counts_[page_number] = reference_count;
 }
 
-uint32 PageManager::getReferenceCount(uint64 page_number)
+uint32 PageManager::getReferenceCount(uint64 page_number) // ppn
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   // Check if the page number is in the map

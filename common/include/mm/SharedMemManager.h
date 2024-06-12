@@ -139,6 +139,11 @@ public:
   */
   void writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchMemory* arch_memory);
 
+  /**
+   * check if the given page is a shared page and only 1 process left using it. If so, write back to the file before unmap
+  */
+  bool isTimeToWriteBack(SharedMemEntry* sm_entry, ArchMemory* arch_memory, size_t vpn);
+
 };
 
 

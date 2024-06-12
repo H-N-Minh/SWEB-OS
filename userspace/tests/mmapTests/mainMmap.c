@@ -10,10 +10,12 @@
 extern int mmap1();
 extern int mmap2();
 extern int mmap3();
+extern int mmap4();
 
 int MMAP1 = 0;  
 int MMAP2 = 0;  
 int MMAP3 = 0;  
+int MMAP4 = 0;  
 
 
 int childMain()
@@ -23,8 +25,8 @@ int childMain()
     // comment out the tests you don't want to run
     // MMAP1 = 1;   // MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)
     // MMAP2 = 1;   // MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)
-    MMAP3 = 1;   // MAP_PRIVATE (using mmap with fd)
-    // MMAP4 = 1;   // (not worked on yet) MAP_SHARED (using mmap with fd, multiple processes)
+    // MMAP3 = 1;   // MAP_PRIVATE (using mmap with fd)
+    MMAP4 = 1;   // MAP_SHARED (using mmap with fd, multiple processes)
 
 
 /** tests ideas:
@@ -51,6 +53,7 @@ int childMain()
  *     for general:
  *      - mmap with wrong params
  *      - mmap with multiple pages
+ *      - give a bullshit fd value
  *  
  *      
  * */
@@ -78,6 +81,14 @@ int childMain()
         retval = mmap3();
         if (retval == 0)                      { printf("===> mmap3 successful!\n"); }
         else                                  { printf("===> mmap3 failed!\n");  return -1;}
+    }
+    
+    if (MMAP4)
+    {
+        printf("\nTesting mmap4: testing MAP_PRIVATE (using mmap with open() and fd)...\n");
+        retval = mmap4();
+        if (retval == 0)                      { printf("===> mmap4 successful!\n"); }
+        else                                  { printf("===> mmap4 failed!\n");  return -1;}
     }
     
     printf("\n\n===  All mmap testcases successful  ===\n");

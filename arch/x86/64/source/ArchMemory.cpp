@@ -243,6 +243,7 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   assert(archmemory_lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
+  PageManager* pm = PageManager::instance();
 
   assert(m.page_ppn != 0);
   assert(m.page_size == PAGE_SIZE);
@@ -251,10 +252,11 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
 
   IPTMapType maptype = getMapType((m.pt[m.pti]));
 
-  PageManager::instance()->decrementReferenceCount(m.page_ppn, virtual_page, this, maptype);
-  debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+  pm->decrementReferenceCount(m.page_ppn, virtual_page, this, maptype);
+  uint32 ref_count = pm->getReferenceCount(m.page_ppn);
+  debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", ref_count, (m.page_ppn));
   
-  if(PageManager::instance()->getReferenceCount(m.page_ppn) > 0)
+  if(ref_count > 0)
   {
     return true;
   }
@@ -265,17 +267,17 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   if (empty)
   {
     empty = checkAndRemove<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi);
-    PageManager::instance()->freePPN(m.pt_ppn);
+    pm->freePPN(m.pt_ppn);
   }
   if (empty)
   {
     empty = checkAndRemove<PageDirPointerTablePageDirEntry>(getIdentAddressOfPPN(m.pdpt_ppn), m.pdpti);
-    PageManager::instance()->freePPN(m.pd_ppn);
+    pm->freePPN(m.pd_ppn);
   }
   if (empty)
   {
     checkAndRemove<PageMapLevel4Entry>(getIdentAddressOfPPN(m.pml4_ppn), m.pml4i);
-    PageManager::instance()->freePPN(m.pdpt_ppn);
+    pm->freePPN(m.pdpt_ppn);
   }
   return true;
 }

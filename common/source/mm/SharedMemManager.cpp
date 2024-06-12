@@ -89,12 +89,11 @@ void* SharedMemManager::mmap(mmap_params_t* params)
 
     shared_mem_lock_.acquire();
 
-    if ( ((flags == (MAP_ANONYMOUS | MAP_PRIVATE)) && fd == -1) ||
-          (flags == MAP_PRIVATE && fd >= 0) )
+    if ( (flags == (MAP_ANONYMOUS | MAP_PRIVATE)) || (flags == MAP_PRIVATE && fd >= 0) )
     {
         retval = addEntry(start, length, prot, flags, fd, offset, false);
     }
-    else if ((flags == (MAP_ANONYMOUS | MAP_SHARED)) && fd == -1)
+    else if ((flags == (MAP_ANONYMOUS | MAP_SHARED)) || (flags == MAP_SHARED && fd >= 0) )
     {
         retval = addEntry(start, length, prot, flags, fd, offset, true);
     }
@@ -174,7 +173,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
 
     size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
     size_t vpn = address / PAGE_SIZE;
-    debug(MINH, "vpn: %zu, ppn: %zu\n", vpn, ppn);  // TODOMINH delete this
+    
     bool rv = arch_memory->mapPage(vpn, ppn, 1, preallocated_pages);
     assert(rv == true);
 
@@ -185,7 +184,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
         arch_memory->setSharedBit(vpn);
     }
 
-    if (entry->fd_ != -1)
+    if ((entry->flags_ == MAP_PRIVATE || entry->flags_ == MAP_SHARED) && entry->fd_ >= 0)
     {
         debug(MMAP, "SharedMemManager::handleSharedPF: copying content from fd (%d) to page (%zu)\n", entry->fd_, ppn);
         ssize_t offset = entry->getOffset(vpn);
@@ -315,12 +314,12 @@ int SharedMemManager::munmap(void* start, size_t length)
     archmem_lock->acquire();
 
     
-    // check if the munmap is valid, or already unmapped
+    // check if the munmap is valid, or already unmapped by some faster thread
     ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> relevant_pages;
     findRevelantPages(relevant_pages, (size_t) start, length);
     if (relevant_pages.empty())
     {
-        debug(ERROR_DEBUG, "SharedMemManager::munmap: the given range includes pages that are not shared mem\n");
+        debug(ERROR_DEBUG, "SharedMemManager::munmap: the given range includes pages that are not shared mem, or pages were already unmaped by someone else\n");
         archmem_lock->release();
         ipt_lock->release();
         shared_mem_lock_.release();
@@ -416,17 +415,17 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
     assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: IPT need to be locked");
     assert(arch_memory->archmemory_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: archmemory_lock_ not held\n");
     
-    // upmap if necessary
+    // upmap and write to file if necessary
     if (arch_memory->checkAddressValid(vpn * PAGE_SIZE))
     {
         debug(MMAP, "SharedMemManager::unmapOnePage: unmapping page vpn %zu\n", vpn);
         
-        // if (sm_entry->flags_ == MAP_SHARED && sm_entry->fd_ >= 0)
-        // {
-        //     debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
-        //     ssize_t offset = sm_entry->getOffset(vpn);
-        //     writeBackToFile(vpn, sm_entry->fd_, offset, arch_memory);
-        // }
+        if (isTimeToWriteBack(sm_entry, arch_memory, vpn))
+        {
+            debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
+            ssize_t offset = sm_entry->getOffset(vpn);
+            writeBackToFile(vpn, sm_entry->fd_, offset, arch_memory);
+        }
         arch_memory->unmapPage(vpn);
     }
 
@@ -459,6 +458,17 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
     
 }
 
+bool SharedMemManager::isTimeToWriteBack(SharedMemEntry* sm_entry, ArchMemory* arch_memory, size_t vpn)
+{
+    bool shared_flag = (sm_entry->flags_ == MAP_SHARED && sm_entry->fd_ >= 0);
+
+    ArchMemoryMapping m = arch_memory->resolveMapping(vpn);
+    PageTableEntry* pte = &m.pt[m.pti];
+    size_t ppn = pte->page_ppn;
+    bool last_process = PageManager::instance()->getReferenceCount(ppn) == 1;
+
+    return shared_flag && last_process;
+}
 
 void SharedMemManager::unmapAllPages(ArchMemory* arch_memory)
 {
@@ -475,6 +485,12 @@ void SharedMemManager::unmapAllPages(ArchMemory* arch_memory)
             if (arch_memory->checkAddressValid(vpn * PAGE_SIZE))
             {
                 // debug(MMAP, "SharedMemManager::unmapAllPages: unmapping page vpn %zu\n", vpn);
+                if (isTimeToWriteBack(it, arch_memory, vpn))
+                {
+                    debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
+                    ssize_t offset = it->getOffset(vpn);
+                    writeBackToFile(vpn, it->fd_, offset, arch_memory);
+                }
                 arch_memory->unmapPage(vpn);
             }
         }
@@ -512,6 +528,7 @@ void SharedMemManager::writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchM
     assert(global_fd_obj->getType() != FileDescriptor::FileType::PIPE && "SharedMemManager::writeBackToFile: cannot write back to a pipe with this operation\n");
 
     size_t global_fd = global_fd_obj->getFd();
+    // size_t global_fd = 3;
     if (VfsSyscall::lseek(global_fd, offset, SEEK_SET) == (l_off_t) -1)
     {
         assert(false && "SharedMemManager::writeBackToFile: lseek failed\n");
