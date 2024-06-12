@@ -32,7 +32,7 @@ SwappingManager::~SwappingManager()
 
 bool SwappingManager::preSwapPage(size_t ppn)
 {
-  if (!pre_swap_enabled) return false;
+  if (!pre_swap_enabled) return false;  // Return immediately if pre-swapping is disabled
 
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   disk_lock_.acquire();
@@ -62,7 +62,12 @@ bool SwappingManager::preSwapPage(size_t ppn)
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
   }
 
-  ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
+  if (!ipt_->isEntryInMap(disk_offset_counter_, IPTMapType::DISK_MAP, archmemory)) {
+    ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
+  } else {
+    debug(PRESWAPPING,"SwappingManager::preSwapPage: Entry already exists in the disk map, skipping move.\n");
+  }
+
   disk_offset_counter_++;
 
   PageManager::instance()->ref_count_lock_.acquire();
@@ -74,6 +79,7 @@ bool SwappingManager::preSwapPage(size_t ppn)
   debug(SWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld finished", ppn);
   return true;
 }
+
 
 void SwappingManager::swapOutPage(size_t ppn)
 {

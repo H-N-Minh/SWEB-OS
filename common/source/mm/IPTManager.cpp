@@ -256,13 +256,8 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   IPTMapType destination_map_type   = (source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP);
 
   debug(SWAPPING, "IPTManager::moveEntry: moving entry at offset %zu in %s to offset %zu in %s\n", ppn_source, source_as_string, ppn_destination, destination_as_string);
-  // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
-  // checkRamMapConsistency();
-  // checkDiskMapConsistency();
 
-
-  // Check if the move is valid (entry to be moved exists in source map, and does not exist in destination map)
-  // also check if the archmem are locked
+  // Check if the move is valid (entry to be moved exists in source map)
   if (!isKeyInMap(ppn_source, source))
   {
     debug(IPT, "IPTManager::moveEntry: Entry to be moved (ppn %zu) not found in source map %s\n", ppn_source, source_as_string);
@@ -277,8 +272,19 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   for (auto subEntry : archmemIPTs_vector)
   {
     assert(subEntry->isLockedByUs() && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
-    assert(!isEntryInMap(ppn_destination, destination_map_type, subEntry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
+    if (!SwappingManager::pre_swap_enabled)
+    {
+      assert(!isEntryInMap(ppn_destination, destination_map_type, subEntry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
+    }
+    else if (isEntryInMap(ppn_destination, destination_map_type, subEntry->archmem_))
+    {
+      // If entry already exists in destination map due to pre-swapping, skip adding it again
+      debug(SWAPPING, "IPTManager::moveEntry: Entry already exists in destination map, skipping move\n");
+      source_map->erase(ppn_source);
+      return;
+    }
   }
+
   debug(SWAPPING, "IPTManager::moveEntry: Entry to be moved seems valid, moving now\n");
 
   // Moving entries
@@ -286,6 +292,7 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   source_map->erase(ppn_source);
   iptEntry->access_counter_ = 0;
 }
+
 
 bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem)
 {
