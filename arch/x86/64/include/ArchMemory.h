@@ -143,6 +143,8 @@ class ArchMemory
     void setSharedBit(size_t vpn);
 
 
+
+
   private:
     /**
      * Adds a PML4Entry, PDPTEntry, PDEntry or PTEntry to the given PML4, PDPT, PD or PT respectively.

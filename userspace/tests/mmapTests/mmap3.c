@@ -19,29 +19,36 @@ int mmap3()
     }
     close(fd);
 
+    printf("fd is %d, vpn is %zu\n", fd, (size_t)addr / 4096);
+
     // goal: read the content of the file through a virtual pointer addr
     printf("Memory mapped at address %p\n", addr);
-    printf("content of the memory: %s\n", (char*)addr);
+
+    char buffer[1001];
+    memcpy(buffer, addr, 1000);
+    buffer[1000] = '\0';
+    printf("content of the memory buffer: %s\n", buffer);
+    printf("content of the memory addr: %s\n", (char*)addr);
 
     // write to the memory
-    const char* st = "Hello, world!";  // String to write to the mapped memory
-    memcpy(addr, st, strlen(st));  // Copy the string to the mapped memory
+    // const char* st = "Hello, world!";  // String to write to the mapped memory
+    // memcpy(addr, st, strlen(st));  // Copy the string to the mapped memory
 
-    printf("String written to memory: %s\n", (char*)addr);
+    // printf("String written to memory: %s\n", (char*)addr);
 
 
-    // check if the data was written to the memory
-    fd = open("usr/testmmn.txt", O_RDONLY);
-    char buffer[20];
-    ssize_t bytesRead = read(fd, buffer, 20);
-    if (bytesRead == -1) {
-        printf("read failed\n");
-        close(fd);
-        return 1;
-    }
-    buffer[25] = '\0';  // Null-terminate the string
-    close(fd);
-    printf("Read from file: %s\n", buffer);
+    // // check if the data was written to the memory
+    // fd = open("usr/testmmn.txt", O_RDONLY);
+    // char buffer[20];
+    // ssize_t bytesRead = read(fd, buffer, 20);
+    // if (bytesRead == -1) {
+    //     printf("read failed\n");
+    //     close(fd);
+    //     return 1;
+    // }
+    // buffer[25] = '\0';  // Null-terminate the string
+    // close(fd);
+    // printf("Read from file: %s\n", buffer);
 
     munmap(addr, 4096);  // Unmap the memory
     return 0;

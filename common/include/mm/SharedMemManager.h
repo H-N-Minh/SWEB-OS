@@ -55,6 +55,12 @@ public:
    * get the size of the mem block (in pages)
   */
   size_t getSize();
+
+  /**
+   * get the offset of the given vpn from the start of the shared memory block. 
+   * @return in bytes. Assert if vpn is not within the block
+  */
+  ssize_t getOffset(size_t vpn);
 };
 
 
@@ -122,6 +128,11 @@ public:
    * helper for HandleSharedPF(), set the protection bits for the new vpn, based on the info from the shared memory entry
   */
   void setProtectionBits(SharedMemEntry* entry, size_t vpn);
+
+  /**
+   * read the fd file and copy content (1 page at the offset) to the given ppn
+  */
+  void copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory);
 };
 
 

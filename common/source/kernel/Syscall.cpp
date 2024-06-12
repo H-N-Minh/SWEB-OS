@@ -1007,3 +1007,4 @@ void Syscall::checkRandomPRA()
   IPTManager* ipt = IPTManager::instance();
   ipt->debugRandomGenerator();
 }
+

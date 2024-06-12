@@ -7,8 +7,9 @@
 #include "UserThread.h"
 #include "UserProcess.h"
 #include "IPTManager.h"
+#include "VfsSyscall.h"
 #include "Syscall.h"
-
+#include "File.h"
 
 /////////////////////// SharedMemEntry ///////////////////////
 
@@ -37,6 +38,13 @@ size_t SharedMemEntry::getSize()
 {
     return end_ - start_ + 1;
 }
+
+ssize_t SharedMemEntry::getOffset(size_t vpn)
+{
+    assert(isInBlockRange(vpn) && "SharedMemEntry::getOffset: vpn not in range\n");
+    return offset_ + (vpn - start_) * PAGE_SIZE;
+}
+
 
 /////////////////////// SharedMemManager ///////////////////////
 
@@ -80,17 +88,15 @@ void* SharedMemManager::mmap(mmap_params_t* params)
 
     shared_mem_lock_.acquire();
 
-    if ((flags == (MAP_ANONYMOUS | MAP_PRIVATE)) && fd == -1)
+    if ( ((flags == (MAP_ANONYMOUS | MAP_PRIVATE)) && fd == -1) ||
+          (flags == MAP_PRIVATE && fd >= 0) )
     {
         retval = addEntry(start, length, prot, flags, fd, offset, false);
     }
-    
     else if ((flags == (MAP_ANONYMOUS | MAP_SHARED)) && fd == -1)
     {
         retval = addEntry(start, length, prot, flags, fd, offset, true);
     }
-
-
 
     if (retval == MAP_FAILED)
     {
@@ -162,25 +168,68 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::handleSharedPF: shared_mem_lock_ not held\n");
     assert(currentThread->loader_->arch_memory_.archmemory_lock_.isHeldBy(currentThread) && "SharedMemManager::handleSharedPF: archmemory_lock_ not held\n");
 
-    size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
-    size_t vpn = address / PAGE_SIZE;
-    bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
-    assert(rv == true);
-
-    debug(MMAP, "SharedMemManager::handleSharedPF: setting protection for the new page\n");
-
-
+    ArchMemory* arch_memory = &currentThread->loader_->arch_memory_;
     SharedMemEntry* entry = getSharedMemEntry(address);
 
-    setProtectionBits(entry, vpn);
+    size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    size_t vpn = address / PAGE_SIZE;
+    debug(MINH, "vpn: %zu, ppn: %zu\n", vpn, ppn);  // TODOMINH delete this
+    bool rv = arch_memory->mapPage(vpn, ppn, 1, preallocated_pages);
+    assert(rv == true);
 
+    debug(MMAP, "SharedMemManager::handleSharedPF: Page mapped to ppn %zu, setting the bits for the new page\n", ppn);
+    setProtectionBits(entry, vpn);
     if (entry->shared_)
     {
-        currentThread->loader_->arch_memory_.setSharedBit(vpn);
+        arch_memory->setSharedBit(vpn);
+    }
+
+    if (entry->fd_ != -1)
+    {
+        debug(MMAP, "SharedMemManager::handleSharedPF: copying content from fd (%d) to page (%zu)\n", entry->fd_, ppn);
+        ssize_t offset = entry->getOffset(vpn);
+        copyContentFromFD(ppn, entry->fd_, offset, arch_memory);
+        
     }
     
 }
 
+void SharedMemManager::copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory)
+{
+    debug(MMAP, "SharedMemManager::copyContentFromFD: with ppn %zu, fd %d, offset %ld\n", ppn, fd, offset);
+    pointer target = arch_memory->getIdentAddressOfPPN(ppn);
+
+    if (VfsSyscall::lseek(fd, offset, SEEK_SET) == (l_off_t) -1)
+    {
+        assert(false && "SharedMemManager::copyContentFromFD: lseek failed\n");
+    }
+    char buffer[PAGE_SIZE + 1];     // +1 for null terminator. is This needed?
+    int32 num_read = VfsSyscall::read(fd, buffer, PAGE_SIZE);
+    if (num_read == -1)
+    {
+        assert(false && "SharedMemManager::copyContentFromFD: read failed\n");
+    }
+    buffer[PAGE_SIZE] = '\0';
+    
+    memcpy((void*) target, (void*) buffer, PAGE_SIZE);
+
+    // // DEBUGMINH delete this
+    // char buffer[101];     // +1 for null terminator. is This needed?
+    // int32 num_read = VfsSyscall::read(fd, buffer, 100);
+    // if (num_read == -1)
+    // {
+    //     assert(false && "SharedMemManager::copyContentFromFD: read failed\n");
+    // }
+    // buffer[100] = '\0';
+    // debug(MINH, "SharedMemManager::copyContentFromFD: buffer: %s\n", buffer);
+    
+    // memcpy((void*) target, (void*) buffer, 100);
+    // // end debug
+
+
+    debug(MMAP, "SharedMemManager::copyContentFromFD: copied %d bytes from fd (%d) to page (%zu)\n", num_read, fd, ppn);
+
+}
 
 void SharedMemManager::setProtectionBits(SharedMemEntry* entry, size_t vpn)
 {
