@@ -130,9 +130,15 @@ public:
   void setProtectionBits(SharedMemEntry* entry, size_t vpn);
 
   /**
-   * read the fd file and copy content (1 page at the offset) to the given ppn
+   * read the fd file and copy content (1 page, start from the offset) to the given ppn
   */
   void copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory);
+
+  /**
+   * write the content of the given vpn to the fd file (1 page, start from the offset)
+  */
+  void writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchMemory* arch_memory);
+
 };
 
 

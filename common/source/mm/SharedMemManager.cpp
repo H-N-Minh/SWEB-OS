@@ -199,14 +199,19 @@ void SharedMemManager::copyContentFromFD(size_t ppn, int fd, ssize_t offset, Arc
 {
     debug(MMAP, "SharedMemManager::copyContentFromFD: with ppn %zu, fd %d, offset %ld\n", ppn, fd, offset);
     assert(fd != fd_stdin && "invalid fd for this operation");
+    assert(arch_memory && "SharedMemManager::copyContentFromFD: arch_memory is null\n");
     
     UserThread& currentUserThread = *((UserThread*)currentThread);
     UserProcess& current_process = *currentUserThread.process_;
     LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
+    // get the pointer of the page we want to copy to
+    pointer target = arch_memory->getIdentAddressOfPPN(ppn);
+
+
     lfdTable.lfds_lock_.acquire();
 
-    // read file
+    // read file and write to page
     LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(fd);
     assert(localFileDescriptor != nullptr && "SharedMemManager::copyContentFromFD: localFileDescriptor is null\n");
     FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
@@ -219,8 +224,7 @@ void SharedMemManager::copyContentFromFD(size_t ppn, int fd, ssize_t offset, Arc
         assert(false && "SharedMemManager::copyContentFromFD: lseek failed\n");
     }
 
-    char buffer[PAGE_SIZE];
-    int32 num_read = VfsSyscall::read(global_fd, buffer, PAGE_SIZE);
+    int32 num_read = VfsSyscall::read(global_fd, (char *) target, PAGE_SIZE);
     if (num_read == -1)
     {
         assert(false && "SharedMemManager::copyContentFromFD: read failed\n");
@@ -228,11 +232,6 @@ void SharedMemManager::copyContentFromFD(size_t ppn, int fd, ssize_t offset, Arc
     debug(FILEDESCRIPTOR, "SharedMemManager::copyContentFromFD: read %d bytes from fd %d (global fd %zu)\n", num_read, fd, global_fd);
 
     lfdTable.lfds_lock_.release();
-
-
-    // write to ppn
-    pointer target = arch_memory->getIdentAddressOfPPN(ppn);
-    memcpy((void*) target, (void*) buffer, PAGE_SIZE);
 
     debug(MMAP, "SharedMemManager::copyContentFromFD: copied %d bytes from fd (%d) to page (%zu)\n", num_read, fd, ppn);
 }
@@ -402,8 +401,11 @@ void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMe
 void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
 {
     debug(MMAP, "SharedMemManager::unmapOnePage: vpn: %zu\n", vpn);
+
+    // error checking: sharedmem, ipt and archmem is lock. the given vpn and sm_entry exists and related to each other. 
     ArchMemory* arch_memory = &((UserThread*) currentThread)->loader_->arch_memory_;
     assert(sm_entry && "SharedMemManager::unmapOnePage: invalid sm_entry\n");
+    assert(sm_entry->getSize() > 0 && "SharedMemManager::unmapOnePage: sm_entry size is 0\n");
     auto it = ustl::find(shared_map_.begin(), shared_map_.end(), sm_entry);
     assert(it != shared_map_.end() && "SharedMemManager::unmapOnePage: sm_entry not found in shared_map_\n");
     if (sm_entry->start_ > vpn || sm_entry->end_ < vpn)
@@ -413,9 +415,22 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::unmapOnePage: shared_mem_lock_ not held\n");
     assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: IPT need to be locked");
     assert(arch_memory->archmemory_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: archmemory_lock_ not held\n");
-    assert(sm_entry->getSize() > 0 && "SharedMemManager::unmapOnePage: sm_entry size is 0\n");
     
-    // split the memory segment if necessary
+    // upmap if necessary
+    if (arch_memory->checkAddressValid(vpn * PAGE_SIZE))
+    {
+        debug(MMAP, "SharedMemManager::unmapOnePage: unmapping page vpn %zu\n", vpn);
+        
+        if (sm_entry->flags_ == MAP_PRIVATE && sm_entry->fd_ >= 0)
+        {
+            debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
+            ssize_t offset = sm_entry->getOffset(vpn);
+            writeBackToFile(vpn, sm_entry->fd_, offset, arch_memory);
+        }
+        arch_memory->unmapPage(vpn);
+    }
+
+    // remove entry from shared_map (split the memory segment if necessary)
     if (sm_entry->getSize() == 1)
     {
         shared_map_.erase(it);
@@ -442,12 +457,6 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
         }
     }
     
-    // upmap if necessary
-    if (arch_memory->checkAddressValid(vpn * PAGE_SIZE))
-    {
-        debug(MMAP, "SharedMemManager::unmapOnePage: unmapping page vpn %zu\n", vpn);
-        arch_memory->unmapPage(vpn);
-    }
 }
 
 
@@ -474,5 +483,48 @@ void SharedMemManager::unmapAllPages(ArchMemory* arch_memory)
     IPTManager::instance()->IPT_lock_.release();
     shared_mem_lock_.release();
     debug(MMAP, "SharedMemManager::unmapAllPages: done\n");
+}
+
+
+void SharedMemManager::writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchMemory* arch_memory)
+{
+    debug(MMAP, "SharedMemManager::writeBackToFile: vpn %zu, fd %d, offset %ld\n", vpn, fd, offset);
+    assert(arch_memory && "SharedMemManager::writeBackToFile: arch_memory is null\n");
+    assert(fd != fd_stdout && "invalid fd for this operation");
+
+    UserThread& currentUserThread = *((UserThread*)currentThread);
+    UserProcess& current_process = *currentUserThread.process_;
+    LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+
+    // get pointer to the source page we want to copy from
+    ArchMemoryMapping m = arch_memory->resolveMapping(vpn);
+    PageTableEntry* pte = &m.pt[m.pti];
+    size_t ppn = pte->page_ppn;
+    pointer source = arch_memory->getIdentAddressOfPPN(ppn);
+
+    // write to file
+    lfdTable.lfds_lock_.acquire();
+
+    LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+    assert(localFileDescriptor != nullptr && "SharedMemManager::writeBackToFile: localFileDescriptor is null\n");
+    FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+    assert(global_fd_obj->getType() != FileDescriptor::FileType::PIPE && "SharedMemManager::writeBackToFile: cannot write back to a pipe with this operation\n");
+
+    size_t global_fd = global_fd_obj->getFd();
+    if (VfsSyscall::lseek(global_fd, offset, SEEK_SET) == (l_off_t) -1)
+    {
+        assert(false && "SharedMemManager::writeBackToFile: lseek failed\n");
+    }
+
+    int32 num_written = VfsSyscall::write(global_fd, (char*) source, PAGE_SIZE);
+    if (num_written == -1)
+    {
+        assert(false && "SharedMemManager::writeBackToFile: write failed\n");
+    }
+
+    lfdTable.lfds_lock_.release();
+
+    debug(MMAP, "SharedMemManager::writeBackToFile: wrote %d bytes from vpn %zu (ppn %zu) to fd %d (global fd %zu)\n", num_written, vpn, ppn, fd, global_fd);
 }
 

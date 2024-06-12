@@ -27,7 +27,7 @@ int childMain()
     // MMAP4 = 1;   // (not worked on yet) MAP_SHARED (using mmap with fd, multiple processes)
 
 
-/**
+/** tests ideas:
  *  TODO: for MAP_PRIVATE | MAP_ANONYMOUS:
  *      - test giving mmap & munmap invalid parameters (for munmap, length cant be 0, start must be multiple of page size, start must be in the range of mmaped memory)
  *      - test mapping then write, should be possible, then unmap then write again, should be error
@@ -39,7 +39,18 @@ int childMain()
  *      - test mapping on unmapped page.
  *      - changes to the file shall not be visible for other processes (MAP_PRIVATE).
  *      - map private a page, then call fork. each process should now has its own version of the page. (cow)
+ * 
  *      
+ *      for MAP_PRIVATE:
+ *      - wrong params
+ *      - check writing back to file successfully with and without munmap
+ *      - open file that has 5 pages, mmap with offset 1 page, reading data from page 2 3 4 5 should be correct. Also try reading page 5 first then 2 then 4 then 3
+ *      - write to mem, unmap, check if the data still written to the file. Also try this with process termination instead of unmap
+ *      - mmap then fork, both process should have their own version of the page privately
+ *      
+ *     for general:
+ *      - mmap with wrong params
+ *      - mmap with multiple pages
  *  
  *      
  * */
