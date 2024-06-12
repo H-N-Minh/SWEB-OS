@@ -64,14 +64,14 @@ class SwappingManager
 
     void writeToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset);
 
-    void updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset);
+    void updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset, size_t ppn);
     void updatePageTableEntriesForSwapIn(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn, size_t disk_offset);
 
     void readFromDisk(size_t disk_offset, size_t ppn);
 
     bool isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
-    void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+    void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn);
 
     void setPagesToNotPresent(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 

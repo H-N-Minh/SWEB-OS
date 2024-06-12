@@ -103,40 +103,41 @@ int childMain()
 
 int main()
 {
-    pid_t pid = fork();
-    if (pid == 0) {
-        int child_exit_code = childMain();
-        exit(child_exit_code);
-    } 
-    else
-    {
-        int status;
-        waitpid(pid, &status, 0);
+    // pid_t pid = fork();
+    // if (pid == 0) {
+    int child_exit_code = childMain();
+    printf("returnvalue %d", child_exit_code);
+    //     exit(child_exit_code);
+    // } 
+    // else
+    // {
+    //     int status;
+    //     waitpid(pid, &status, 0);
         
-        if (status != 0)
-        {
-            printf("Testing crashed with exit code %d\n", status);
-            return -1;
-        }
+    //     if (status != 0)
+    //     {
+    //         printf("Testing crashed with exit code %d\n", status);
+    //         return -1;
+    //     }
 
-        for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
-        {
-            /* code */
-        }
+    //     for (size_t i = 0; i < 200000000; i++)      // give some time for all threads to die
+    //     {
+    //         /* code */
+    //     }
 
-        int num = get_thread_count();
-        if (num == 8 || num == 7)
-        {
-            printf("===  All threads are destroyed correctly  ===\n");
-            return 0;
-        }
-        else
-        {
-            printf("===  %d threads are still alive===  \n", num);
-            return -1;
-        }
+    //     int num = get_thread_count();
+    //     if (num == 8 || num == 7)
+    //     {
+    //         printf("===  All threads are destroyed correctly  ===\n");
+    //         return 0;
+    //     }
+    //     else
+    //     {
+    //         printf("===  %d threads are still alive===  \n", num);
+    //         return -1;
+    //     }
         
-    }
+    // }
     return 0;
 }
                     

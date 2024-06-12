@@ -23,7 +23,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::SECOND_CHANGE;
+  pra_type_ = PRA_TYPE::RANDOM;
 }
 
 IPTManager::~IPTManager()
@@ -214,6 +214,7 @@ size_t IPTManager::findPageToSwapOut()
       }
     }
   }
+  assert(isKeyInMap(ppn_retval, IPTMapType::RAM_MAP) && "selected page need to be in ram");
   assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
   return ppn_retval;
 }

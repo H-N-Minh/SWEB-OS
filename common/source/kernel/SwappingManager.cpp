@@ -59,13 +59,14 @@ void SwappingManager::swapOutPage(size_t ppn)
     {
       ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);             //TODOs: entries should get deleted but should still be possible to unlock
       PageManager::instance()->setReferenceCount(ppn, 0);
-      updatePageTableEntriesForWriteBackToDisk(virtual_page_infos);
+      // printDebugInfos(virtual_page_infos, ppn, 0);
+      updatePageTableEntriesForWriteBackToDisk(virtual_page_infos, ppn);
       unlockArchmemorys(virtual_page_infos);
 
       discard_unchanged_page_++;
       return;
     }
-    else
+    else 
     {
       size_t disk_offset = ipt_->ram_map_[ppn]->last_disk_offset_;
       if(disk_offset == 0)
@@ -74,8 +75,8 @@ void SwappingManager::swapOutPage(size_t ppn)
       }
          
       ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
-      printDebugInfos(virtual_page_infos, ppn, disk_offset);
-      updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset);
+      // printDebugInfos(virtual_page_infos, ppn, disk_offset);
+      updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset, ppn);
       PageManager::instance()->setReferenceCount(ppn, 0);
       unlockArchmemorys(virtual_page_infos);
 
@@ -94,13 +95,13 @@ void SwappingManager::swapOutPage(size_t ppn)
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset);
   ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
 
-  printDebugInfos(virtual_page_infos, ppn, disk_offset);
+  // printDebugInfos(virtual_page_infos, ppn, disk_offset);
 
   //write to disk
   disk_lock_.acquire();
   writeToDisk(virtual_page_infos, disk_offset);
   disk_lock_.release();
-  updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset);
+  updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset, ppn);
 
   PageManager::instance()->setReferenceCount(ppn, 0);
 
@@ -190,12 +191,13 @@ void SwappingManager::readFromDisk(size_t disk_offset, size_t ppn)
   total_disk_reads_++;
 }
 
-void SwappingManager::updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset)
+void SwappingManager::updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset, size_t ppn)
 {
   for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
+    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset);
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
   }
 }
@@ -280,12 +282,13 @@ bool SwappingManager::isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos)
 
 
 
-void SwappingManager::updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos)
+void SwappingManager::updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn)
 {
   for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
+    debug(SWAPPING, "SwappingManager::writeBackPage: vpn: %ld, archmemory: %p (ppn %ld).\n", vpn, archmemory, ppn);
     archmemory->updatePageTableEntryForWriteBackToDisk(vpn);
   }
 }

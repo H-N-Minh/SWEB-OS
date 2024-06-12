@@ -19,6 +19,11 @@
 
 size_t big_array5[ELEMENTS_IN_ARRAY];  //5 Megabytes
 
+
+pthread_t threads[THREAD_NUM5];
+int thread_ids[THREAD_NUM5];
+
+
 void* thread_function5(void* arg)
 {
   int thread_id = *(int*)arg;
@@ -36,9 +41,6 @@ void* thread_function5(void* arg)
   // printf("Thread %d finished\n", thread_id);
   return NULL;
 }
-
-pthread_t threads[THREAD_NUM5];
-int thread_ids[THREAD_NUM5];
 
 int pra5()
 {

@@ -7,10 +7,13 @@
 
 extern int ps1();
 extern int ps2();
+extern int ps3();
 
 //set the test you want to test to 1
-int PS1 = 1;
-int PS2 = 1;
+int PS1 = 0;
+int PS2 = 0;
+int PS3 = 1;
+
 
 
 
@@ -36,6 +39,14 @@ int main()
         retval = ps2();
         if (retval == 0)                      { printf("===> ps2 successful!\n"); }
         else                                  { printf("===> ps2 failed!\n");  assert(0);}
+    }
+
+    if (PS3)
+    {
+        printf("\nTesting ps3: Write to pages that got discarded to disk\n");
+        retval = ps3();
+        if (retval == 0)                      { printf("===> ps3 successful!\n"); }
+        else                                  { printf("===> ps3 failed!\n");  assert(0);}
     }
 
 

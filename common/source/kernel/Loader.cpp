@@ -87,8 +87,8 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<uint32>& preallocate
           const size_t   virt_offs_on_page = virt_start_addr - virt_page_start_addr;
           const l_off_t  bin_start_addr = (*it).p_offset + (virt_start_addr - (*it).p_vaddr);
           const size_t   bytes_to_load = ustl::min(virt_page_end_addr, (*it).p_vaddr + (*it).p_filesz) - virt_start_addr;
-          //debug(LOADER, "Loader::loadPage: Loading %d bytes from binary address %p to virtual address %p\n",
-          //      bytes_to_load, bin_start_addr, virt_start_addr);
+          // debug(LOADER, "Loader::loadPage: Loading %d bytes from binary address %p to virtual address %p, %p, %p\n",
+          //      bytes_to_load, bin_start_addr, virt_start_addr, virt_page_start_addr, virt_page_end_addr);
           if(readFromBinary((char *)ArchMemory::getIdentAddressOfPPN(ppn) + virt_offs_on_page, bin_start_addr, bytes_to_load))
           {
             program_binary_lock_.release();
@@ -111,6 +111,7 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<uint32>& preallocate
 
     if(!found_page_content)
     {
+      debug(LOADER, "Loader::loadPage: error: %p  %p\n", virt_page_start_addr, virt_page_end_addr);
       PageManager::instance()->freePPN(ppn);
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
       arch_memory_.archmemory_lock_.release();

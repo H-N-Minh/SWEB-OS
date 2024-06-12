@@ -129,7 +129,7 @@ void SwappingThread::swapIn()
       {
         if (it2->first == disk_offset)
         {
-          swap_in_map_.erase(it2);
+          it2 = swap_in_map_.erase(it2);
         }
         else
         {

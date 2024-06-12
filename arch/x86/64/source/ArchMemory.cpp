@@ -609,21 +609,26 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 
 size_t ArchMemory::getDiskLocation(size_t vpn)
 {
+  debug(A_MEMORY, "A\n");
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
+  debug(A_MEMORY, "B\n");
   assert(archmemory_lock_.heldBy() == currentThread);
-
+  debug(A_MEMORY, "C\n");
   ArchMemoryMapping mapping = resolveMapping(vpn);
-  
+  debug(A_MEMORY, "D\n");
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+  debug(A_MEMORY, "E\n");
   assert(pt_entry && "No pagetable entry");
-
-  if((!pt_entry->swapped_out) || pt_entry->present)
+  debug(A_MEMORY, "F\n");
+  if(mapping.pt && pt_entry && (pt_entry->swapped_out || !pt_entry->present))
   {
-    return 0;
+    debug(A_MEMORY, "G\n");
+    return pt_entry->page_ppn;
   }
   else
   {
-    return pt_entry->page_ppn; //ppn is used to store disk location
+    debug(A_MEMORY, "H\n");
+    return 0; //ppn is used to store disk location
   }
 
   
@@ -643,9 +648,14 @@ bool ArchMemory::isSwapped(size_t virtual_addr)
     debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p is swapped out (archmemory %p - vpn %ld)\n", (void*)virtual_addr, this, vpn);
     return true;
   }
-  else
+  else if(m.pt && pt_entry && !pt_entry->swapped_out)
   {
     debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p is swapped in (archmemory %p - vpn %ld)\n", (void*)virtual_addr, this, vpn);
+    return false;
+  }
+  else
+  {
+    debug(A_MEMORY, "ArchMemory::isSwapped: virtual address %p no pagetable (archmemory %p - vpn %ld)\n", (void*)virtual_addr, this, vpn);
     return false;
   }
 }
@@ -663,7 +673,7 @@ bool ArchMemory::updatePageTableEntryForSwapIn(size_t vpn, size_t ppn)
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
-  assert(pt_entry && "No pagetable entry");
+  assert(mapping.pt && pt_entry && "No pagetable entry");
 
   pt_entry->present = 1;
   pt_entry->swapped_out = 0;
@@ -785,7 +795,7 @@ bool ArchMemory::isPageAccessed(size_t vpn)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
  
-  debug(A_MEMORY, "ArchMemory::isPageAccessed: with vpn %zu.\n", vpn); 
+  //debug(A_MEMORY, "ArchMemory::isPageAccessed: with vpn %zu.\n", vpn); 
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
@@ -793,11 +803,11 @@ bool ArchMemory::isPageAccessed(size_t vpn)
   {
     if (pt_entry->accessed)
     {
-      debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu is accessed.\n", vpn);
+      //debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu is accessed.\n", vpn);
       return true;
     }
   }
-  debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu is NOT accessed.\n", vpn);
+  //debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu is NOT accessed.\n", vpn);
   return false;
 }
 
@@ -805,7 +815,7 @@ void ArchMemory::resetAccessBits(size_t vpn)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
  
-  debug(A_MEMORY, "ArchMemory::resetAccessBits: with vpn %zu.\n", vpn); 
+  // debug(A_MEMORY, "ArchMemory::resetAccessBits: with vpn %zu.\n", vpn); 
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
@@ -814,7 +824,7 @@ void ArchMemory::resetAccessBits(size_t vpn)
     if (pt_entry->accessed)
     {
       pt_entry->accessed = 0;
-      debug(A_MEMORY, "ArchMemory::isPageAccessed: ppn %zu reseted accessed bits\n", vpn);
+      // debug(A_MEMORY, "ArchMemory::resetAccessBits: ppn %zu reseted accessed bits\n", vpn);
       return;
     }
   }
