@@ -8,7 +8,7 @@
 
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
-bool SwappingManager::pre_swap_enabled = false;  // true = enabled, false = disabled
+bool SwappingManager::pre_swap_enabled = true;  // true = enabled, false = disabled
 
 SwappingManager::SwappingManager()
     : disk_lock_("disk_lock_")
@@ -32,7 +32,7 @@ SwappingManager::~SwappingManager()
 
 bool SwappingManager::preSwapPage(size_t ppn)
 {
-  if (!pre_swap_enabled) return false;  // Return immediately if pre-swapping is disabled
+  if (!pre_swap_enabled) return false;  // Return immediately if preswapping is disabled
 
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   disk_lock_.acquire();

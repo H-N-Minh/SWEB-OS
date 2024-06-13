@@ -124,6 +124,12 @@ size_t IPTManager::findPageToSwapOut() {
 size_t IPTManager::findPageToSwapOutRandom() {
   debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
 
+  if (ram_map_.empty())
+  {
+    debug(IPT, "IPTManager::findPageToSwapOutRandom: No pages found in the ram_map_ to swap out.\n");
+    return INVALID_PPN;
+  }
+
   size_t random_num = randomNumGenerator();
   ustl::vector<ppn_t> unique_keys;
 
