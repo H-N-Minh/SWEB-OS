@@ -130,7 +130,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       heap_manager->current_break_lock_.release();
     }
     //Page is on stack
-    else if(address > STACK_END && address < STACK_START)
+    else if(address > STACK_END && address < STACK_START && current_archmemory.isPageDiscarded(address / PAGE_SIZE))
     {
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", address);//todos check if page was ever mapped
       swapper->swap_in_lock_.release();

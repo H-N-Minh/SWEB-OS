@@ -866,7 +866,7 @@ bool ArchMemory::updatePageTableEntryForWriteBackToDisk(size_t vpn)
   assert(pt_entry->present == 0);
 
   pt_entry->cow = 0;
-  pt_entry->accessed = 0;
+  pt_entry->discarded = 0;
   pt_entry->page_ppn = 0;
 
   return true;
@@ -923,4 +923,26 @@ void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)
   
   pt_entry->dirty = 0;
 }
+
+
+bool ArchMemory::isPageDiscarded(size_t vpn)
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  debug(A_MEMORY, "ArchMemory::isPageDiscarded: with vpn %p.\n", (void*)vpn); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->discarded)
+  {
+    debug(A_MEMORY, "ArchMemory::isPageDiscarded: vpn %p is discarded\n", (void*)vpn);
+    return true;
+  }
+  else
+  {
+    debug(A_MEMORY, "ArchMemory::isPageDirty: vpn %p is not discarded\n", (void*)vpn);
+    return false;
+  }
+}
+
 

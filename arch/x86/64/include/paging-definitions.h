@@ -147,7 +147,8 @@ typedef struct
     uint64 cow                       :1;
     uint64 page_ppn                  :28;
     uint64 reserved_1                :12; // must be 0
-    uint64 ignored_1                 :11;
+    uint64 discarded                 :1;
+    uint64 ignored_1                 :10;
     uint64 execution_disabled        :1;
 } __attribute__((__packed__)) PageTableEntry;
 

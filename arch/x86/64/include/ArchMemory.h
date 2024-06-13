@@ -115,6 +115,8 @@ class ArchMemory
     bool isPageAccessed(size_t vpn);
     bool isPageDirty(size_t vpn);
     bool hasPageBeenDirty(size_t vpn);
+    bool isPageDiscarded(size_t vpn);
+
 
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
