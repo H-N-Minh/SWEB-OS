@@ -270,7 +270,7 @@ bool SwappingManager::isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos)
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
     
-    if(archmemory->isPageDirty(vpn))
+    if(archmemory->isBitSet(vpn, BitType::DIRTY, true))
     {
       return true;
     }
@@ -308,7 +308,7 @@ bool SwappingManager::hasPageBeenDirty(ustl::vector<ArchmemIPT*> &virtual_page_i
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
     
-    if(archmemory->hasPageBeenDirty(vpn))
+    if(archmemory->isBitSet(vpn, BitType::BEEN_DIRTY, true))
     {
       return true;
     }

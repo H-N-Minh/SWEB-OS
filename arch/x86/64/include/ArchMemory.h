@@ -6,7 +6,7 @@
 #include "offsets.h"
 #include "paging-definitions.h"
 
-enum BitType {COW};
+enum BitType {COW, BEEN_DIRTY, DISCARDED, DIRTY};
 
 struct ArchMemoryMapping
 {
@@ -115,9 +115,8 @@ class ArchMemory
     bool isPresent(size_t virtual_addr);
     bool isWriteable(size_t virtual_addr);
     bool isPageAccessed(size_t vpn);
-    bool isPageDirty(size_t vpn);
-    bool hasPageBeenDirty(size_t vpn);
-    bool isPageDiscarded(size_t vpn);
+    
+
 
 
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);

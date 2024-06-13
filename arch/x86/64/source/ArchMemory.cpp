@@ -813,26 +813,6 @@ void ArchMemory::resetAccessBits(size_t vpn)
 }
 
 
-bool ArchMemory::isPageDirty(size_t vpn)
-{
-  assert(archmemory_lock_.heldBy() == currentThread);
- 
-  debug(A_MEMORY, "ArchMemory::isPageDirty: with vpn %p.\n", (void*)vpn); 
-  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
-  PageTableEntry* pt_entry = &m.pt[m.pti];
-
-  if (m.pt && pt_entry && pt_entry->dirty)
-  {
-    debug(A_MEMORY, "ArchMemory::isPageDirty: vpn %p is dirty\n", (void*)vpn);
-    return true;
-  }
-  else
-  {
-    debug(A_MEMORY, "ArchMemory::isPageDirty: vpn %p is not dirty\n", (void*)vpn);
-    return false;
-  }
-}
-
 bool ArchMemory::updatePageTableEntryForWriteBackToDisk(size_t vpn)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
@@ -869,25 +849,7 @@ void ArchMemory::setPageTableEntryToNotPresent(size_t vpn)
 }
 
 
-bool ArchMemory::hasPageBeenDirty(size_t vpn)
-{
-  assert(archmemory_lock_.heldBy() == currentThread);
- 
-  debug(A_MEMORY, "ArchMemory::hasPageBeenDirty: with vpn %p.\n", (void*)vpn); 
-  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
-  PageTableEntry* pt_entry = &m.pt[m.pti];
 
-  if (m.pt && pt_entry && pt_entry->been_dirty)
-  {
-    debug(A_MEMORY, "ArchMemory::hasPageBeenDirty: vpn %p has been dirty\n", (void*)vpn);
-    return true;
-  }
-  else
-  {
-    debug(A_MEMORY, "ArchMemory::hasPageBeenDirty: vpn %p has been not dirty\n", (void*)vpn);
-    return false;
-  }
-}
 
 void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)        
 {
@@ -906,25 +868,7 @@ void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)
 }
 
 
-bool ArchMemory::isPageDiscarded(size_t vpn)
-{
-  assert(archmemory_lock_.heldBy() == currentThread);
- 
-  debug(A_MEMORY, "ArchMemory::isPageDiscarded: with vpn %p.\n", (void*)vpn); 
-  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
-  PageTableEntry* pt_entry = &m.pt[m.pti];
 
-  if (m.pt && pt_entry && pt_entry->discarded)
-  {
-    debug(A_MEMORY, "ArchMemory::isPageDiscarded: vpn %p is discarded\n", (void*)vpn);
-    return true;
-  }
-  else
-  {
-    debug(A_MEMORY, "ArchMemory::isPageDirty: vpn %p is not discarded\n", (void*)vpn);
-    return false;
-  }
-}
 
 
 bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present)
@@ -947,6 +891,21 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
       return true;
     }
+    else if(bit == BEEN_DIRTY && pt_entry->been_dirty)
+    {
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      return true;
+    }
+    else if(bit == DISCARDED && pt_entry->discarded)
+    {
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      return true;  
+    }
+    else if(bit == DIRTY && pt_entry->dirty)
+    {
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      return true;  
+    }
   }
   debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is not set!\n", bitAsString(bit), (void*)vpn, vpn);
   return false;
@@ -959,6 +918,18 @@ const char* ArchMemory::bitAsString(BitType bit)
   if(bit == COW)
   {
     return "cow";
+  }
+  if(bit == BEEN_DIRTY)
+  {
+    return "been dirty";
+  }
+  if(bit == DISCARDED)
+  {
+    return "discarded";
+  }
+  if(bit == DIRTY)
+  {
+    return "dirty";
   }
   assert(0);
   return "";

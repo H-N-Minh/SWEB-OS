@@ -123,7 +123,6 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on heap.\n", address);
       swapper->swap_in_lock_.release();
       size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
-      size_t vpn = address / PAGE_SIZE;
       bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
       assert(rv == true);
       current_archmemory.archmemory_lock_.release();
@@ -131,12 +130,11 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       heap_manager->current_break_lock_.release();
     }
     //Page is on stack
-    else if(address > STACK_END && address < STACK_START && current_archmemory.isPageDiscarded(address / PAGE_SIZE))
+    else if(address > STACK_END && address < STACK_START && current_archmemory.isBitSet(vpn, BitType::DISCARDED, true))
     {
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", address);//todos check if page was ever mapped
       swapper->swap_in_lock_.release();
       heap_manager->current_break_lock_.release();
-      size_t vpn = address / PAGE_SIZE;
       size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
       bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
       assert(rv == true);
