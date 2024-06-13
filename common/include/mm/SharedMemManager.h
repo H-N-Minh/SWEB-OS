@@ -34,35 +34,59 @@ typedef struct mmap_params {
 
 
 
-// struct to store all information of each shared memory entry within a process
-class SharedMemEntry
-{
+// // struct to store all information of each shared memory entry within a process
+// class SharedMemEntry
+// {
+// public:
+//   vpn_t start_;
+//   vpn_t end_;
+//   int prot_;
+//   int flags_;
+//   int fd_;
+//   ssize_t offset_;
+//
+//   SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset);
+//
+//   /**
+//    * check if the given vpn is within this shared memory block
+//   */
+//   bool isInBlockRange(vpn_t vpn);
+//
+//   /**
+//    * get the size of the mem block (in pages)
+//   */
+//   size_t getSize();
+// };
+
+class SharedMemObject {
 public:
-  vpn_t start_;
-  vpn_t end_;
-  int prot_;
-  int flags_;
-  int fd_;
-  ssize_t offset_;
+    typedef size_t vpn_t;
 
-  SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset);
+    ustl::string name_;
+    vpn_t start_;
+    vpn_t end_;
+    int prot_;
+    int flags_;
+    int fd_;
+    ssize_t offset_;
 
-  /**
-   * check if the given vpn is within this shared memory block
-  */
-  bool isInBlockRange(vpn_t vpn);
+    SharedMemObject(const ustl::string& name, vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
+        : name_(name), start_(start), end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset) {}
 
-  /**
-   * get the size of the mem block (in pages)
-  */
-  size_t getSize();
+    bool isInBlockRange(vpn_t vpn) const {
+        return vpn >= start_ && vpn <= end_;
+    }
+
+    size_t getSize() const {
+        return end_ - start_ + 1;
+    }
 };
 
 
 class SharedMemManager
 {
 private:
-  ustl::vector<SharedMemEntry*> shared_map_;
+  ustl::vector<SharedMemObject*> shared_map_;
   vpn_t last_free_vpn_;
 
   ustl::map<ustl::string, SharedMemObject*> shm_objects_;
@@ -99,12 +123,12 @@ public:
   /**
    * get the shared memory entry that contains the given address
   */
-  SharedMemEntry* getSharedMemEntry(size_t address);
+  SharedMemObject* getSharedMemEntry(size_t address);
 
   /**
    * unmap one page from the shared memory. The vpn should already be a valid page that can be remove
   */
-  void unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry);
+  void unmapOnePage(vpn_t vpn, SharedMemObject* sm_entry);
 
   /**
    * find all relevant pages that are within the given range and fill up the vector
@@ -113,7 +137,7 @@ public:
    * @param length: the length of the range (in bytes)
    * @return: the vector filled up with all relevant pages. Vector is empty if error
   */
-  void findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length);
+  void findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemObject*>> &relevant_pages, size_t start, size_t length);
 
   /**
    * unmap all active shared mem pages. Used for process termination
@@ -124,13 +148,13 @@ public:
 
 };
 
-// struct to store parameters for shared memory object
-class SharedMemObject : public SharedMemEntry {
-public:
- ustl::string name_;
-
- SharedMemObject(const ustl::string& name, vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
-   : SharedMemEntry(start, end, prot, flags, fd, offset), name_(name) {}
-};
+// // struct to store parameters for shared memory object
+// class SharedMemObject : public SharedMemEntry {
+// public:
+//  ustl::string name_;
+//
+//  SharedMemObject(const ustl::string& name, vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
+//    : SharedMemEntry(start, end, prot, flags, fd, offset), name_(name) {}
+// };
 
 

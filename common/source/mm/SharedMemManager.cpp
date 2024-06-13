@@ -11,22 +11,22 @@
 
 #include "File.h"
 
-/////////////////////// SharedMemEntry ///////////////////////
-
-SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
-    : start_(start),end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
-{
-}
-
-bool SharedMemEntry::isInBlockRange(vpn_t vpn)
-{
-    return vpn >= start_ && vpn <= end_;
-}
-
-size_t SharedMemEntry::getSize()
-{
-    return end_ - start_ + 1;
-}
+// /////////////////////// SharedMemEntry ///////////////////////
+//
+// SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
+//     : start_(start),end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
+// {
+// }
+//
+// bool SharedMemEntry::isInBlockRange(vpn_t vpn)
+// {
+//     return vpn >= start_ && vpn <= end_;
+// }
+//
+// size_t SharedMemEntry::getSize()
+// {
+//     return end_ - start_ + 1;
+// }
 
 /////////////////////// SharedMemManager ///////////////////////
 
@@ -121,8 +121,8 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     {
         size++;
     }
-    vpn_t start = last_free_vpn_;
-    vpn_t end = start + size - 1;
+    SharedMemObject::vpn_t start = last_free_vpn_;
+    SharedMemObject::vpn_t end = start + size - 1;
 
     assert(start >= MIN_SHARED_MEM_VPN && end >= MIN_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
     assert(start <= MAX_SHARED_MEM_VPN && end <= MAX_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
@@ -132,7 +132,7 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
         return MAP_FAILED;
     }
     
-    SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset);
+		SharedMemObject* entry = new SharedMemObject("", start, end, prot, flags, fd, offset);
     shared_map_.push_back(entry);
 
     void* start_addr = (void*) (start * PAGE_SIZE);
@@ -177,7 +177,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
     int write = 0;
     int execute = 0;
 
-    SharedMemEntry* entry = getSharedMemEntry(address);
+    SharedMemObject* entry = getSharedMemEntry(address);
     if (entry->prot_ == PROT_READ)
     {
         read = 1;
@@ -224,7 +224,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
 }
 
 
-SharedMemEntry* SharedMemManager::getSharedMemEntry(size_t address)
+SharedMemObject* SharedMemManager::getSharedMemEntry(size_t address)
 {
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::getSharedMemEntry: shared_mem_lock_ not held\n");
 
@@ -252,7 +252,7 @@ int SharedMemManager::munmap(void* start, size_t length)
 
     
     // check if the munmap is valid, or already unmapped
-    ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> relevant_pages;
+    ustl::vector<ustl::pair<vpn_t, SharedMemObject*>> relevant_pages;
     findRevelantPages(relevant_pages, (size_t) start, length);
     if (relevant_pages.empty())
     {
@@ -277,7 +277,7 @@ int SharedMemManager::munmap(void* start, size_t length)
     return 0;
 }
 
-void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length)
+void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemObject*>> &relevant_pages, size_t start, size_t length)
 {
     debug(MMAP, "SharedMemManager::findRevelantPages: start: %zu, length: %zu. Looping through all shared mem and find relevant pages to unmap\n", start, length);
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::findRevelantPages: shared_mem_lock_ not held\n");
@@ -334,7 +334,7 @@ void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMe
 }
 
 
-void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
+void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemObject* sm_entry)
 {
     debug(MMAP, "SharedMemManager::unmapOnePage: vpn: %zu\n", vpn);
     ArchMemory* arch_memory = &((UserThread*) currentThread)->loader_->arch_memory_;
@@ -368,8 +368,8 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
         }
         else
         {
-            shared_map_.push_back(new SharedMemEntry(sm_entry->start_, vpn - 1, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
-            shared_map_.push_back(new SharedMemEntry(vpn + 1, sm_entry->end_, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
+            shared_map_.push_back(new SharedMemObject("", sm_entry->start_, vpn - 1, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
+            shared_map_.push_back(new SharedMemObject("", vpn + 1, sm_entry->end_, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
             shared_map_.erase(it);
             delete sm_entry;
         }
