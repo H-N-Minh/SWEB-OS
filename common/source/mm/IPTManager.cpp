@@ -272,19 +272,8 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   for (auto subEntry : archmemIPTs_vector)
   {
     assert(subEntry->isLockedByUs() && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
-    if (!SwappingManager::pre_swap_enabled)
-    {
-      assert(!isEntryInMap(ppn_destination, destination_map_type, subEntry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
-    }
-    else if (isEntryInMap(ppn_destination, destination_map_type, subEntry->archmem_))
-    {
-      // If entry already exists in destination map due to pre-swapping, skip adding it again
-      debug(SWAPPING, "IPTManager::moveEntry: Entry already exists in destination map, skipping move\n");
-      source_map->erase(ppn_source);
-      return;
-    }
+    assert(!isEntryInMap(ppn_destination, destination_map_type, subEntry->archmem_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
   }
-
   debug(SWAPPING, "IPTManager::moveEntry: Entry to be moved seems valid, moving now\n");
 
   // Moving entries

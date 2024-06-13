@@ -59,6 +59,7 @@ class SwappingThread : public Thread
      * This satisfies both preswap and swap out on demand.
     */
     static bool isMemoryAlmostFull();
+    static bool isMemoryFull();
 
     /**
      * check if free_pages_ is empty or not
@@ -92,5 +93,6 @@ class SwappingThread : public Thread
     */
     bool isOffsetInMap(size_t disk_offset);
     static void preSwap();
+
 };
 

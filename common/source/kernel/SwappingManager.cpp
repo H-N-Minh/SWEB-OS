@@ -8,7 +8,7 @@
 
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
-bool SwappingManager::pre_swap_enabled = true;  // true = enabled, false = disabled
+bool SwappingManager::pre_swap_enabled = false;  // true = enabled, false = disabled
 
 SwappingManager::SwappingManager()
     : disk_lock_("disk_lock_")
@@ -39,7 +39,7 @@ bool SwappingManager::preSwapPage(size_t ppn)
   ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   lock_archmemories_in_right_order(virtual_page_infos);
 
-  debug(SWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
+  debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
 
   ArchMemory* archmemory = virtual_page_infos[0]->archmem_;
   size_t vpn = virtual_page_infos[0]->vpn_;
@@ -69,6 +69,7 @@ bool SwappingManager::preSwapPage(size_t ppn)
   }
 
   disk_offset_counter_++;
+  pre_swapped_pages.push_back(ppn);
 
   PageManager::instance()->ref_count_lock_.acquire();
   PageManager::instance()->setReferenceCount(ppn, 0);
@@ -76,7 +77,7 @@ bool SwappingManager::preSwapPage(size_t ppn)
 
   unlock_archmemories(virtual_page_infos);
   disk_lock_.release();
-  debug(SWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld finished", ppn);
+  debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld finished", ppn);
   return true;
 }
 
@@ -85,10 +86,19 @@ void SwappingManager::swapOutPage(size_t ppn)
 {
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
   disk_lock_.acquire();
+  auto it = ustl::find(pre_swapped_pages.begin(), pre_swapped_pages.end(), ppn);
+  bool preswapped = it != pre_swapped_pages.end();
   ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   lock_archmemories_in_right_order(virtual_page_infos);
 
-  if (!pre_swap_enabled) {
+
+  if (preswapped)
+  {
+    // If preswapped, simply move entry from RAM_MAP to DISK_MAP
+    ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
+    pre_swapped_pages.erase(it); // remove from pre-swapped pages
+  }
+  else{
     debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
     ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
 
@@ -114,9 +124,6 @@ void SwappingManager::swapOutPage(size_t ppn)
       archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
     }
     disk_offset_counter_++;
-  } else {
-    debug(SWAPPING, "SwappingManager::swapOutPage: Pre-swap already handled writing for ppn %ld, skipping write.\n", ppn);
-    ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
   }
 
   PageManager::instance()->ref_count_lock_.acquire();

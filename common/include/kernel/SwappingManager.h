@@ -41,4 +41,5 @@ class SwappingManager
 
     int total_disk_reads_ = 0;
     int total_disk_writes_ = 0;
+    ustl::vector<size_t> pre_swapped_pages;
 };

@@ -10,6 +10,7 @@
 #define TIME_STEP 1 // in seconds
 #define TICKS_PER_SEC 18
 #define PRESWAP_THRESHOLD 80  // in percentage (start pre-swapping when memory usage is above 80%)
+#define SWAP_THRESHOLD 75
 #define MAX_PRESWAP_PAGES 20  // maximum total number of pages to pre-swap
 #define SWAP_OUT_AMOUNT 10     // max number of pages to swap out at a time
 #define SWAP_IN_AMOUNT 10     // max number of pages to swap in at a time
@@ -46,6 +47,16 @@ bool SwappingThread::isMemoryAlmostFull()
   return usedMemoryRatio > PRESWAP_THRESHOLD;
 }
 
+bool SwappingThread::isMemoryFull()
+{
+  PageManager* pm = PageManager::instance();
+  uint32_t totalNumPages = pm->getTotalNumPages();
+  uint32_t usedNumPages = totalNumPages - pm->getNumFreePages();
+  uint32_t usedMemoryRatio = (usedNumPages * 100) / totalNumPages;
+
+  return usedMemoryRatio > SWAP_THRESHOLD;
+}
+
 void SwappingThread::preSwap()
 {
   if (isMemoryAlmostFull()) {
@@ -61,8 +72,8 @@ void SwappingThread::swapOut()
 {
   swap_out_lock_.acquire();
 
-  bool almost_full_memory = isMemoryAlmostFull();
-  if (almost_full_memory && free_pages_.size() < MAX_PRESWAP_PAGES)
+  bool memory_full = isMemoryFull();
+  if (memory_full && free_pages_.size() < MAX_PRESWAP_PAGES)
   {
     for (int i = 0; i < SWAP_OUT_AMOUNT; i++)
     {
@@ -72,7 +83,9 @@ void SwappingThread::swapOut()
       miss_count_++;
       swap_out_cond_.signal();
     }
-  } else if (!almost_full_memory) {
+  }
+  else if (!memory_full)
+  {
     if (!free_pages_.empty()) {
       for (uint32 ppn : free_pages_) {
         PageManager::instance()->freePPN(ppn);
@@ -128,15 +141,19 @@ void SwappingThread::swapIn()
 {
   while (true) {
     if (user_initialized_flag_) {
-      if (SwappingManager::pre_swap_enabled) {
-        preSwap();
+      if (SwappingManager::pre_swap_enabled && isMemoryAlmostFull())
+      {
+        preSwap(); // Call preSwap when PRESWAP_THRESHOLD surpassed
       }
 
       if (isOneTimeStep()) {
         updateMetaData();
       }
 
-      swapOut();
+      if (isMemoryFull())
+      {
+        swapOut(); // Call swapOut when SWAP_THRESHOLD surpassed
+      }
       swapIn();
     }
     Scheduler::instance()->yield();

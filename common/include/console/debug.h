@@ -67,7 +67,7 @@ const size_t SBRK               = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t GROW_STACK         = Ansi_Green;
 const size_t IPT                = Ansi_Green | OUTPUT_ENABLED;
 const size_t SWAPPING           = Ansi_Magenta | OUTPUT_ENABLED;
-const size_t PRESWAPPING        = Ansi_Magenta | OUTPUT_ENABLED;
+const size_t PRESWAPPING        = Ansi_Red | OUTPUT_ENABLED;
 
 //group driver
 const size_t DRIVER             = Ansi_Yellow;
