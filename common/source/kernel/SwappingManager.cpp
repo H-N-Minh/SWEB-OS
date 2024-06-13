@@ -29,16 +29,14 @@ SwappingManager* SwappingManager::instance()
 
 SwappingManager::~SwappingManager()
 {
-  if(ASYNCHRONOUS_SWAPPING)
+
+  SwappingThread::should_be_killed_ = true;
+  swapping_thread_finished_lock_.acquire();
+  while(SwappingThread::user_initialized_flag_)
   {
-    SwappingThread::should_be_killed_ = true;
-    swapping_thread_finished_lock_.acquire();
-    while(SwappingThread::user_initialized_flag_)
-    {
-      swapping_thread_finished_.wait();
-    }
-    swapping_thread_finished_lock_.release();
+    swapping_thread_finished_.wait();
   }
+  swapping_thread_finished_lock_.release();
 
   delete ipt_;
 }

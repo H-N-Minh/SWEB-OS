@@ -19,8 +19,8 @@ int PS3 = 1;
 
 int main()
 {
-    // setPRA(__RANDOM_PRA__); 
-    setPRA(__NFU_PRA__); 
+    setPRA(__RANDOM_PRA__); 
+    // setPRA(__NFU_PRA__); 
     // setPRA(__SECOND_CHANCE_PRA__); 
 
     int retval;

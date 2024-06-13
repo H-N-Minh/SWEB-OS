@@ -43,6 +43,10 @@ int ps3()
   {
     big_array3[i * (PAGESIZE / 8)] = i;
   }
+  for(int i = 0; i < PAGES_IN_ARRAY; i++)
+  {
+    assert(big_array3[i * (PAGESIZE / 8)] == i);
+  }
 
   printStatistic3();
 

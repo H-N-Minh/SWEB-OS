@@ -34,11 +34,8 @@ Scheduler::Scheduler()
   ticks_ = 0;
   addNewThread(&cleanup_thread_);
   addNewThread(&idle_thread_);
+  addNewThread(&swapping_thread_);
 
-  if(ASYNCHRONOUS_SWAPPING)
-  {  
-    addNewThread(&swapping_thread_);
-  }
 
 }
 

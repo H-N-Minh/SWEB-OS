@@ -258,48 +258,29 @@ uint32 PageManager::allocPPN(uint32 page_size)
   if (found == 0)
   {
     size_t ppn = 0;
-    if(DIRECT_SWAPPING)
-    {
-      debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
-      IPTManager::instance()->IPT_lock_.acquire();
-      ppn = findPageToSwapOut(); //TODOs!!!!!!!!!
-      SwappingManager::instance()->swapOutPage(ppn);
-      IPTManager::instance()->IPT_lock_.release();
 
-      // clear the new page and return it
-      memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
-      debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
-    }
-    else if(ASYNCHRONOUS_SWAPPING)
-    {
-      debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
-      SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
+    debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
+    SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
 
-      // wait for the swapping thread to be give a free page
-      swapper->swap_out_lock_.acquire();
-      while (!swapper->isFreePageAvailable())
+    // wait for the swapping thread to be give a free page
+    swapper->swap_out_lock_.acquire();
+    while (!swapper->isFreePageAvailable())
+    {
+      swapper->swap_out_cond_.wait();
+      if(swapper->memory_full_try_alloc_again_)
       {
-        swapper->swap_out_cond_.wait();
-
-        if(swapper->memory_full_try_alloc_again_)
-        {
-          swapper->memory_full_try_alloc_again_ = false;
-          swapper->swap_out_lock_.release();
-          return allocPPN(page_size);
-        }
+        swapper->memory_full_try_alloc_again_ = false;
+        swapper->swap_out_lock_.release();
+        return allocPPN(page_size);
       }
-      ppn = swapper->getFreePage();
-      swapper->swap_out_lock_.release();
-
-      // clear the new page and return it
-      memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
-      debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
-
     }
-    else
-    {
-      assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
-    }
+    ppn = swapper->getFreePage();
+    swapper->swap_out_lock_.release();
+
+    // clear the new page and return it
+    memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
+    debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
+
     assert(ppn != 0);
     return ppn;
   }
