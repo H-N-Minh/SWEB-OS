@@ -587,25 +587,19 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 
 size_t ArchMemory::getDiskLocation(size_t vpn)
 {
-  debug(A_MEMORY, "A\n");
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
-  debug(A_MEMORY, "B\n");
   assert(archmemory_lock_.heldBy() == currentThread);
-  debug(A_MEMORY, "C\n");
-  ArchMemoryMapping mapping = resolveMapping(vpn);
-  debug(A_MEMORY, "D\n");
-  PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
-  debug(A_MEMORY, "E\n");
+  ArchMemoryMapping m = resolveMapping(vpn);
+  assert(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present); 
+
+  PageTableEntry* pt_entry = &m.pt[m.pti];
   assert(pt_entry && "No pagetable entry");
-  debug(A_MEMORY, "F\n");
-  if(mapping.pt && pt_entry && (pt_entry->swapped_out || !pt_entry->present))
+  if(m.pt && pt_entry && (pt_entry->swapped_out || !pt_entry->present))
   {
-    debug(A_MEMORY, "G\n");
     return pt_entry->page_ppn;
   }
   else
   {
-    debug(A_MEMORY, "H\n");
     return 0; //ppn is used to store disk location
   }
 
@@ -617,18 +611,15 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
 
 bool ArchMemory::updatePageTableEntryForSwapIn(size_t vpn, size_t ppn)
 {
-  debug(A_MEMORY, "1\n");
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
-  debug(A_MEMORY, "2\n");
   assert(archmemory_lock_.heldBy() == currentThread);
-  debug(A_MEMORY, "3\n");
 
   debug(A_MEMORY, "ArchMemory::updatePageTableEntryForSwapIn: Update vpn %p in archmemory %p and set ppn %p.\n", (void*)vpn, this, (void*)ppn);
 
-  ArchMemoryMapping mapping = resolveMapping(vpn);
-  
-  PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
-  assert(mapping.pt && pt_entry && "No pagetable entry");
+  ArchMemoryMapping m = resolveMapping(vpn);
+  assert(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present); 
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+  assert(m.pt && pt_entry && "No pagetable entry");
 
   pt_entry->present = 1;
   pt_entry->swapped_out = 0;
@@ -719,9 +710,10 @@ bool ArchMemory::updatePageTableEntryForWriteBackToDisk(size_t vpn)
   assert(archmemory_lock_.heldBy() == currentThread);
 
   debug(A_MEMORY, "ArchMemory::updatePageTableEntryForWriteBackToDisk: Update vpn %p in archmemory %p.\n", (void*)vpn, this);
-  ArchMemoryMapping mapping = resolveMapping(vpn);
+  ArchMemoryMapping m = resolveMapping(vpn);
+  assert(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present); 
   
-  PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
+  PageTableEntry* pt_entry = &m.pt[m.pti];
   assert(pt_entry && "No pagetable entry");
   assert(pt_entry->dirty == 0);
   assert(pt_entry->present == 0);
@@ -775,15 +767,16 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
-  PageTableEntry* pt_entry = &m.pt[m.pti];
+  
 
   if(pagetable_need_to_be_present)
   {
-    assert(m.pt && pt_entry);             //TODOs....
+    assert(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present);             //TODOs....?
   }
   
-  if(m.pt && pt_entry)
+  if(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present)
   {
+    PageTableEntry* pt_entry = &m.pt[m.pti];
     if(bit == COW && pt_entry->cow)
     {
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
