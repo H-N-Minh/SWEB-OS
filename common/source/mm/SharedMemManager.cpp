@@ -108,11 +108,12 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     return retval;
 }
 
+
 void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset, bool shared)
 {
-    // error checking: lock shared_mem_, out of free shared mem, given length is too big
+    // error checking: entry already exist, lock shared_mem_, out of free shared mem, given length is too big
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::addEntry: shared_mem_lock_ not held\n");
-
+    
     debug(MMAP, "SharedMemManager::addEntry: adding entry to shared_map_ addr: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",addr, length, prot, flags, fd, offset);
     if (last_free_vpn_ > MAX_SHARED_MEM_VPN)
     {
@@ -139,9 +140,38 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
 
     void* start_addr = (void*) (start * PAGE_SIZE);
     last_free_vpn_ += size;
+
+    // // adding reference to fd
+    // if (fd >= 0)
+    // {
+    //     entry->fd_ = addReferenceToFD(fd);
+    // }
+
     debug(MMAP, "SharedMemManager::addEntry: added shared block (start: %p, size: %zu pages) to process %d\n", start_addr, entry->getSize(), ((UserThread*) currentThread)->process_->pid_);
     return start_addr;
 }
+
+// // adding reference to fd, couldnt get it to work
+// int SharedMemManager::addReferenceToFD(int fd)
+// {
+//     UserThread& currentUserThread = *((UserThread*)currentThread);
+//     UserProcess& current_process = *currentUserThread.process_;
+
+//     LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+
+//     LocalFileDescriptor* originalLFD = lfdTable.getLocalFileDescriptor(fd);
+//     if(originalLFD == nullptr) {
+//     debug(SYSCALL, "Syscall::dup: original file descriptor not found\n");
+//     return -1;
+//     }
+
+//     int newDescriptor = lfdTable.createLocalFileDescriptor(
+//         originalLFD->getGlobalFileDescriptor(),
+//         originalLFD->getMode(),
+//         originalLFD->getOffset(),
+//         originalLFD->getType()
+//     )->getLocalFD();
+// }
 
 
 bool SharedMemManager::isAddressValid(size_t address)

@@ -144,6 +144,7 @@ public:
   */
   bool isTimeToWriteBack(SharedMemEntry* sm_entry, ArchMemory* arch_memory, size_t vpn);
 
+
 };
 
 

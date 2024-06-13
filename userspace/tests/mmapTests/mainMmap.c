@@ -7,17 +7,13 @@
 #include "wait.h"
 
 
-extern int mmap1();
-extern int mmap2();
-extern int mmap3();
+extern int shared1();
 extern int mmap4();
 
 extern int private1();
 extern int private1_anonym();
 
-int MMAP1 = 0;  
-int MMAP2 = 0;  
-int MMAP3 = 0;  
+int SHARED1 = 0;  
 int MMAP4 = 0;  
 
 int PRIVATE1 = 0;
@@ -30,14 +26,15 @@ int childMain()
 
     // comment out the tests you don't want to run
 
-//******* MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)********
-    PRIVATE1 = 1;   // Collection of bunch of basic tests for MAP_PRIVATE
-    PRIVATE1_ANONYM = 1;   // same as private1, but uses MAP_ANONYMOUS instead of a file descriptor.
+//******* MAP_PRIVATE - MAP_ANONYMOUS (using mmap like malloc)********
+    // PRIVATE1 = 1;   // Collection of bunch of basic tests for MAP_PRIVATE
+    // PRIVATE1_ANONYM = 1;   // same as private1, but uses MAP_ANONYMOUS instead of a file descriptor.
+
+//******* MAP_SHARED - MAP_ANONYMOUS (using mmap with fork)********
+    // NOTE: currently for map_shared, fd are never closed, this should be fixed. this is the only flag that requires writting back to the file, which requires fd to be open for kernel
+    SHARED1 = 1;   // Collection of bunch of basic tests for MAP_SHARED
 
 // **** completed tests, but still needs work
-    // MMAP1 = 1;   // MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)
-    // MMAP2 = 1;   // MAP_SHARED | MAP_ANONYMOUS (using mmap with fork)
-    // MMAP3 = 1;   // MAP_PRIVATE (using mmap with fd)
     // MMAP4 = 1;   // MAP_SHARED (using mmap with fd, multiple processes)
 
 
@@ -75,29 +72,12 @@ int childMain()
  *      
  * */
 
-
-    if (MMAP1)
+    if (SHARED1)
     {
-        printf("\nTesting mmap1: testing MAP_PRIVATE | MAP_ANONYMOUS (using mmap like malloc)...\n");
-        retval = mmap1();
-        if (retval == 0)                      { printf("===> mmap1 successful!\n"); }
-        else                                  { printf("===> mmap1 failed!\n");  return -1;}
-    }
-
-    if (MMAP2)
-    {
-        printf("\nTesting mmap2: testing MAP_SHARED | MAP_ANONYMOUS (using mmap with fork and IPC)...\n");
-        retval = mmap2();
-        if (retval == 0)                      { printf("===> mmap2 successful!\n"); }
-        else                                  { printf("===> mmap2 failed!\n");  return -1;}
-    }
-    
-    if (MMAP3)
-    {
-        printf("\nTesting mmap3: testing MAP_PRIVATE (using mmap with open() and fd)...\n");
-        retval = mmap3();
-        if (retval == 0)                      { printf("===> mmap3 successful!\n"); }
-        else                                  { printf("===> mmap3 failed!\n");  return -1;}
+        printf("\nTesting shared1: testing bunch of basic tests for MAP_SHARED...\n");
+        retval = shared1();
+        if (retval == 0)                      { printf("===> shared1 successful!\n"); }
+        else                                  { printf("===> shared1 failed!\n");  return -1;}
     }
     
     if (MMAP4)
