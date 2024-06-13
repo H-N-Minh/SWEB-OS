@@ -34,12 +34,12 @@ int childMain()
     int PRA1 = 1;   // Test PRA
     int PRA2 = 1;       // double pagefault => double swap (still single thread)
     int PRA3 = 1;       // 64 threads  writting to array at same time                //seems to fail - mayge caused by new fix ???
-    int PRA4 = 0;       // similar to pra5, but use fork instead of pthread_create
+    int PRA4 = 0;       // similar to pra3, but use fork instead of pthread_create
     int PRA5 = 0;       //More complex out of memory where i write in every location multiple times
     // Select pra-type:
     // setPRA(__RANDOM_PRA__); 
-    setPRA(__NFU_PRA__); 
-    // setPRA(__SECOND_CHANCE_PRA__); 
+    // setPRA(__NFU_PRA__); 
+    setPRA(__SECOND_CHANCE_PRA__); 
 
     if (PRA1)
     {

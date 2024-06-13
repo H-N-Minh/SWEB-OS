@@ -458,25 +458,4 @@ size_t PageManager::getPreAlocatedPage(ustl::vector<uint32>& pre_alocated_pages)
   return ppn;
 }
 
-//TODO: At the moment it does nonesens
-size_t PageManager::findPageToSwapOut()
-{
-  int counter = 0;
-  bool key_in_ipt = false;
-  while(!key_in_ipt)
-  {
-    counter++;
-    if(counter == 2000)
-    {
-      assert(0 && "No page to swap out\n");
-    }
-    possible_ppn_++;    
-    if(possible_ppn_ > 2016)
-    {
-      possible_ppn_ = 1009;
-    }
-    key_in_ipt = IPTManager::instance()->isKeyInMap(possible_ppn_, IPTMapType::RAM_MAP);
-  }
-  return possible_ppn_;
-}
 

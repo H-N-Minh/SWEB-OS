@@ -47,43 +47,44 @@ void SwappingManager::swapOutPage(size_t ppn)
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
 
   ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
+  assert(virtual_page_infos.size() > 0);
   lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
 
   setPagesToNotPresent(virtual_page_infos);
 
-  if(!isPageDirty(virtual_page_infos))
-  {
-    if(!hasPageBeenDirty(virtual_page_infos))
-    {
-      ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);             //TODOs: entries should get deleted but should still be possible to unlock
-      PageManager::instance()->setReferenceCount(ppn, 0);
-      // printDebugInfos(virtual_page_infos, ppn, 0);
-      updatePageTableEntriesForWriteBackToDisk(virtual_page_infos, ppn);
-      unlockArchmemorys(virtual_page_infos);
+  // if(!isPageDirty(virtual_page_infos))
+  // {
+  //   if(!hasPageBeenDirty(virtual_page_infos))
+  //   {
+  //     ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);             //TODOs: entries should get deleted but should still be possible to unlock
+  //     PageManager::instance()->setReferenceCount(ppn, 0);
+  //     // printDebugInfos(virtual_page_infos, ppn, 0);
+  //     updatePageTableEntriesForWriteBackToDisk(virtual_page_infos, ppn);
+  //     unlockArchmemorys(virtual_page_infos);
 
-      discard_unchanged_page_++;
-      return;
-    }
-    else 
-    {
-      size_t disk_offset = ipt_->ram_map_[ppn]->last_disk_offset_;
-      if(disk_offset == 0)
-      {
-        assert(0);   //break is probably better
-      }
+  //     discard_unchanged_page_++;
+  //     return;
+  //   }
+  //   else 
+  //   {
+  //     size_t disk_offset = ipt_->ram_map_[ppn]->last_disk_offset_;
+  //     if(disk_offset == 0)
+  //     {
+  //       assert(0);   //break is probably better
+  //     }
          
-      ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
-      // printDebugInfos(virtual_page_infos, ppn, disk_offset);
-      updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset, ppn);
-      PageManager::instance()->setReferenceCount(ppn, 0);
-      unlockArchmemorys(virtual_page_infos);
+  //     ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
+  //     // printDebugInfos(virtual_page_infos, ppn, disk_offset);
+  //     updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset, ppn);
+  //     PageManager::instance()->setReferenceCount(ppn, 0);
+  //     unlockArchmemorys(virtual_page_infos);
 
-      reuse_same_disk_location_++;
-      return;
-    }
+  //     reuse_same_disk_location_++;
+  //     return;
+  //   }
 
-  }
-  resetDirtyBitSetBeenDirtyBits(virtual_page_infos);  //todos: remove to check if is makes problems
+  // }
+  // resetDirtyBitSetBeenDirtyBits(virtual_page_infos);  //todos: remove to check if is makes problems
 
   //Find free disk_offset
   size_t disk_offset = disk_offset_counter_;
@@ -119,6 +120,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   }
 
   ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->disk_map_[disk_offset]->getArchmemIPTs();
+  assert(virtual_page_infos.size() > 0);
   lockArchmemorys(virtual_page_infos);
  
  //Get new ppn

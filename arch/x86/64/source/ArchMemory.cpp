@@ -770,7 +770,8 @@ void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)
 
 bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present)
 {
-  // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p.\n", bitAsString(bit), (void*)vpn);
+  if(bit != ACCESSED)
+  debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p.\n", bitAsString(bit), (void*)vpn);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
@@ -824,7 +825,9 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
       return true;  
     }
   }
-  // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is not set!\n", bitAsString(bit), (void*)vpn);
+
+  if(bit != ACCESSED)
+  debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is not set!\n", bitAsString(bit), (void*)vpn);
   return false;
 }
 
