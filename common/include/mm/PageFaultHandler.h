@@ -3,7 +3,7 @@
 #include "types.h"
 #include "uvector.h"
 
-#define PRESENT 3
+#define IS_PRESENT 3
 #define INVALID 0
 #define VALID 1
 #define GROWING_STACK_VALID 69

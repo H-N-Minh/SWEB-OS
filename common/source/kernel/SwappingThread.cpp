@@ -217,7 +217,7 @@ void SwappingThread::updateMetaData()
         assert(archmem && "SwappingThread::updateMetaData: archmem is nullptr\n");
         archmem->archmemory_lock_.acquire();
 
-        if(archmem->isPageAccessed(vpn))
+        if(archmem->isBitSet(vpn, BitType::ACCESSED, true))
         {
           // Page was accessed, reset the bits
           archmem->resetAccessBits(vpn);

@@ -6,7 +6,7 @@
 #include "offsets.h"
 #include "paging-definitions.h"
 
-enum BitType {COW, BEEN_DIRTY, DISCARDED, DIRTY};
+enum BitType {COW, BEEN_DIRTY, DISCARDED, DIRTY, WRITEABLE, SWAPPED_OUT, PRESENT, ACCESSED};
 
 struct ArchMemoryMapping
 {
@@ -110,33 +110,31 @@ class ArchMemory
     
     void deleteEverythingExecpt(size_t virtual_page);
 
-
-    bool isSwapped(size_t virtual_addr);
-    bool isPresent(size_t virtual_addr);
-    bool isWriteable(size_t virtual_addr);
-    bool isPageAccessed(size_t vpn);
+   
     
 
 
 
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
-    size_t getDiskLocation(size_t vpn);
+    
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
     bool updatePageTableEntryForWriteBackToDisk(size_t vpn);
-
     void setPageTableEntryToNotPresent(size_t vpn);
 
     size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
-    IPTMapType getMapType(PageTableEntry& pt_entry);
 
     int countArchmemPages();
 
-    const char* bitAsString(BitType bit);
+
+
+     
 
     bool isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present);
+    size_t getDiskLocation(size_t vpn);
+    const char* bitAsString(BitType bit);
 
 
 

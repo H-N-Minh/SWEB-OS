@@ -42,7 +42,7 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user, bo
   else if(present)
   {
     debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
-    return PRESENT;
+    return IS_PRESENT;
   }
   // else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
   // {
@@ -89,7 +89,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     current_archmemory.archmemory_lock_.acquire();
 
     //Page got set to present in the meantime, so no need to do anything anymore
-    if(current_archmemory.isPresent(address))
+    if(current_archmemory.isBitSet(vpn, BitType::present, false))
     {
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected, but another thread already swap this page in. Do nothing\n"); 
       current_archmemory.archmemory_lock_.release();
@@ -98,7 +98,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       swapper->swap_in_lock_.release();
     }
     //Page is swapped out
-    else if(current_archmemory.isSwapped(address))
+    else if(current_archmemory.isBitSet(vpn, BitType::SWAPPED_OUT, false))
     {
       heap_manager->current_break_lock_.release();
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected. Requesting a swap in\n");
@@ -152,21 +152,21 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
       IPTManager::instance()->IPT_lock_.release();
     }
   }
-  else if (status == PRESENT)
+  else if (status == IS_PRESENT)
   {
     IPTManager::instance()->IPT_lock_.acquire();
     current_archmemory.archmemory_lock_.acquire();
     //Page is not present anymore we need to swap it in -> do nothing so it gets swapped in on the next pagefault
-    if(!current_archmemory.isPresent(address))
+    if(!current_archmemory.isBitSet(vpn, BitType::PRESENT, false))
     {
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
-    else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && !current_archmemory.isWriteable(address))
+    else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && !current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))
     {
       current_archmemory.copyPage(address, preallocated_pages);
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
-    else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && current_archmemory.isWriteable(address))  //TODOs dont reset cowbit
+    else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))  //TODOs dont reset cowbit
     {
 
     }

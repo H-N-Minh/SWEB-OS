@@ -23,7 +23,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::NFU;
+  pra_type_ = PRA_TYPE::RANDOM;
 }
 
 IPTManager::~IPTManager()
@@ -189,7 +189,7 @@ size_t IPTManager::findPageToSwapOut()
           ArchMemory* archmem = archmem_ipt->archmem_;
           archmem->archmemory_lock_.acquire();
           size_t vpn = archmem_ipt->vpn_;
-          if(archmem->isPageAccessed(vpn))
+          if(archmem->isBitSet(vpn, BitType::ACCESSED, true))
           {
             not_accessed = false;
             archmem->resetAccessBits(vpn);
