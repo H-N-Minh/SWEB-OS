@@ -89,7 +89,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     current_archmemory.archmemory_lock_.acquire();
 
     //Page got set to present in the meantime, so no need to do anything anymore
-    if(current_archmemory.isBitSet(vpn, BitType::present, false))
+    if(current_archmemory.isBitSet(vpn, BitType::PRESENT, false))
     {
       debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Swapped out detected, but another thread already swap this page in. Do nothing\n"); 
       current_archmemory.archmemory_lock_.release();
@@ -120,7 +120,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page is on heap
     else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)
     {
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on heap.\n", address);
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on heap.\n", (void*)address);
       swapper->swap_in_lock_.release();
       size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
       bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
@@ -132,7 +132,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page is on stack
     else if(address > STACK_END && address < STACK_START && current_archmemory.isBitSet(vpn, BitType::DISCARDED, true))
     {
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", address);//todos check if page was ever mapped
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", (void*)address);//todos check if page was ever mapped
       swapper->swap_in_lock_.release();
       heap_manager->current_break_lock_.release();
       size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
