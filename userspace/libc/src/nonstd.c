@@ -2,6 +2,7 @@
 #include "sys/syscall.h"
 #include "../../../common/include/kernel/syscall-definitions.h"
 #include "stdlib.h"
+#include "assert.h"
 
 int createprocess(const char* path, int sleep)
 {
@@ -30,7 +31,7 @@ int setPRA(int pra)
 {
   if (pra != 0 && pra != 1 && pra!= 2)
   {
-    return -1;
+    assert(0);
   }
   return __syscall(sc_setPRA, (size_t) pra, 0x0, 0x0, 0x0, 0x0);
   

@@ -229,7 +229,7 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
 
 
   PageManager::instance()->decrementReferenceCount(m.page_ppn, virtual_page, this, IPTMapType::RAM_MAP);
-  debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+  debug(FORK, "getReferenceCount in unmapPage %d Page:%p\n", PageManager::instance()->getReferenceCount(m.page_ppn), (void*)m.page_ppn);
   
   if(PageManager::instance()->getReferenceCount(m.page_ppn) > 0)
   {
@@ -571,7 +571,7 @@ bool ArchMemory::updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
-  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForSwapOut: Update vpn %ld in archmemory %p and set disk_offset %ld.\n", vpn, this, disk_offset);
+  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForSwapOut: Update vpn %p in archmemory %p and set disk_offset %p.\n", (void*)vpn, this, (void*)disk_offset);
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
@@ -623,7 +623,7 @@ bool ArchMemory::updatePageTableEntryForSwapIn(size_t vpn, size_t ppn)
   assert(archmemory_lock_.heldBy() == currentThread);
   debug(A_MEMORY, "3\n");
 
-  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForSwapIn: Update vpn %ld in archmemory %p and set ppn %ld.\n", vpn, this, ppn);
+  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForSwapIn: Update vpn %p in archmemory %p and set ppn %p.\n", (void*)vpn, this, (void*)ppn);
 
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
@@ -718,7 +718,7 @@ bool ArchMemory::updatePageTableEntryForWriteBackToDisk(size_t vpn)
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
-  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForWriteBackToDisk: Update vpn %ld in archmemory %p.\n", vpn, this);
+  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForWriteBackToDisk: Update vpn %p in archmemory %p.\n", (void*)vpn, this);
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
@@ -738,7 +738,7 @@ void ArchMemory::setPageTableEntryToNotPresent(size_t vpn)
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
-  debug(A_MEMORY, "ArchMemory::setPageTableEntryToNotPresent: Update vpn %ld in archmemory %p.\n", vpn, this);
+  debug(A_MEMORY, "ArchMemory::setPageTableEntryToNotPresent: Update vpn %p in archmemory %p.\n", (void*)vpn, this);
   ArchMemoryMapping mapping = resolveMapping(vpn);
   
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
@@ -770,7 +770,7 @@ void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)
 
 bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present)
 {
-  debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld)\n", bitAsString(bit), (void*)vpn, vpn);
+  // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p.\n", bitAsString(bit), (void*)vpn);
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
@@ -785,46 +785,46 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
   {
     if(bit == COW && pt_entry->cow)
     {
-      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;
     }
     else if(bit == BEEN_DIRTY && pt_entry->been_dirty)
     {
-      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;
     }
     else if(bit == DISCARDED && pt_entry->discarded)
     {
-      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
     else if(bit == DIRTY && pt_entry->dirty)
     {
-      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
     else if(bit == WRITEABLE && pt_entry->writeable)
     {
-      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
     else if(bit == SWAPPED_OUT && pt_entry->swapped_out)
     {
-      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
     else if(bit == PRESENT && pt_entry->present)
     {
-      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
     else if(bit == ACCESSED && pt_entry->accessed) //TODOs - before we also check for presenet?
     {
-      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
   }
-  debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is not set!\n", bitAsString(bit), (void*)vpn, vpn);
+  // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is not set!\n", bitAsString(bit), (void*)vpn);
   return false;
 }
 

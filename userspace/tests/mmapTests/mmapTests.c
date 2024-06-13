@@ -10,7 +10,7 @@ int main1() {
 
     // Write "hello world" to the file
     const char* message = "hello world";
-    ssize_t bytes_written = write(fd, message, 20);
+    write(fd, message, 20);
 
 
     // Close the file

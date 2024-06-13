@@ -257,6 +257,12 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     }
   }
 
+  if (!isEntryInMap(ppn, map_type, archmem, vpn))
+  {
+    debug(IPT, "IPTManager::insertEntryIPT: Inserting Entry (ppn: %zu, archmem: %p) failed in %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
+    assert(0 && "IPTManager::insertEntryIPT: Insert entry failed\n");
+  }
+
   debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
 
 }
@@ -296,7 +302,12 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
         assert(0 && "PPN not found in fifo_ppns vector");
       }
     }
+  }
 
+  if (isEntryInMap(ppn, map_type, archmem, vpn))
+  {
+    debug(IPT, "IPTManager::removeEntryIPT: Entry (ppn: %zu, archmem: %p) not removed from %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
+    assert(0 && "IPTManager::removeEntryIPT: Removing failed\n");
   }
 
   debug(IPT, "IPTManager::removeIPT: successfully removed from IPT\n");
@@ -315,7 +326,7 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   auto* destination_map             = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
   const char* source_as_string      = (source == IPTMapType::RAM_MAP ? "RAM-MAP" : "DISK-MAP");
   const char* destination_as_string = (source == IPTMapType::RAM_MAP ? "DISK-MAP" : "RAM-MAP");
-  IPTMapType destination_map_type   = (source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP);
+  IPTMapType destination   = (source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP);
 
   debug(SWAPPING, "IPTManager::moveEntry: moving entry at offset %zu in %s to offset %zu in %s\n", ppn_source, source_as_string, ppn_destination, destination_as_string);
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
@@ -339,7 +350,7 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   for (auto entry : archmemIPTs_vector)
   {
     assert(entry->isLockedByUs() && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
-    assert(!isEntryInMap(ppn_destination, destination_map_type, entry->archmem_,  entry->vpn_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
+    assert(!isEntryInMap(ppn_destination, destination, entry->archmem_,  entry->vpn_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
   }
   debug(SWAPPING, "IPTManager::moveEntry: Entry to be moved seems valid, moving now\n");
 
@@ -351,6 +362,11 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   if(source != IPTMapType::RAM_MAP)
   {
     fifo_ppns.push_back(ppn_destination);
+  }
+
+  if (!isKeyInMap(ppn_destination, destination) && isKeyInMap(ppn_source, source))
+  {
+    assert(0 && "IPTManager::moveEntry: Move failed\n");
   }
 }
 

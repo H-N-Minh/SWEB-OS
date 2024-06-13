@@ -279,7 +279,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
 
     // clear the new page and return it
     memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
-    debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
+    debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %p. (swapped in)\n", (void*)ppn);
 
     assert(ppn != 0);
     return ppn;
@@ -354,7 +354,7 @@ uint32 PageManager::getNumPagesForUser() const
 
 void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype)
 {
-  debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
+  debug(PM, "PageManager::incrementReferenceCount with offset: %p, vpn: %p, archmemory: %p.\n",(void*)offset, (void*)vpn, archmemory);
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
 
   IPTManager::instance()->insertEntryIPT(maptype, offset, vpn, archmemory);
@@ -381,7 +381,7 @@ void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 
 void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype)
 {
-  debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
+  debug(PM, "PageManager::decrementReferenceCount with offset: %p, vpn: %p, archmemory: %p.\n", (void*)offset, (void*)vpn, archmemory);
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
 
   IPTManager::instance()->removeEntryIPT(maptype, offset, vpn, archmemory);

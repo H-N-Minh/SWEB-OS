@@ -84,7 +84,7 @@ int FileDescriptorList::remove(FileDescriptor* fd)
   {
     if((*it)->getFd() == fd->getFd())
     {
-      fds_.erase(it);
+      fds_.erase(it);  //TODOs ?? update iterator??
 
 //      fd->decrementRefCount();
 //      if (fd->getRefCount() == 0)

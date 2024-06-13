@@ -10,8 +10,8 @@ extern int ps2();
 extern int ps3();
 
 //set the test you want to test to 1
-int PS1 = 0;
-int PS2 = 0;
+int PS1 = 1;
+int PS2 = 1;
 int PS3 = 1;
 
 

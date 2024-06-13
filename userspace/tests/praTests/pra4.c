@@ -1,64 +1,53 @@
 #include "stdio.h"
+#include "types.h"
+#include "unistd.h"
 #include "pthread.h"
 #include "assert.h"
-#include "unistd.h"
 #include "sched.h"
-#include "nonstd.h"
 
-#define MEGABYTE4 1048576
-#define PAGESIZE4 4096
+#define MAX_FORK  64    // should be multiple of 2, so the array can be evenly divided between child processes
 
-#define N4 5
-#define N_MEGABYTE4 N4 * MEGABYTE4
-
-
-#define ELEMENTS_IN_ARRAY4 N_MEGABYTE4 / 4
-#define PAGES_IN_ARRAY4 N_MEGABYTE4/PAGESIZE4
+#define PAGESIZE 4096
+#define PAGES_IN_ARRAY 1280 
+#define ELEMENTS_IN_ARRAY (PAGES_IN_ARRAY * PAGESIZE)/8        
 
 
-int big_array4[ELEMENTS_IN_ARRAY4];  //5 Megabyes
+size_t big_array[ELEMENTS_IN_ARRAY];  //5 Megabyes
 
-size_t getTopOfThisPage(size_t variable_adr)
-{
-  size_t top_stack = variable_adr - variable_adr%PAGESIZE4 + PAGESIZE4 - sizeof(int);
-  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-  return top_stack;
-}
-
-// writting a big number at the end of a page that it overflows to the next page, causes double pagefault at a time
-int pra4()
-{
-  int hit;
-  int miss;
-  getPRAstats(&hit, &miss);
-  
-  printf("NFU PRA: Hit: %d, Miss: %d (before test)\n", hit, miss);
-
-  size_t top_page = getTopOfThisPage((size_t) big_array4);
-  
-  size_t* temp = (size_t*) top_page;
-  for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
-  {
-    // printf("%ld\n",i);
-    *temp = (size_t) (i * 10000000000 + (i + 1));      // cast to size_t to overflow into next page
-    temp = (size_t*) ((size_t) temp + PAGESIZE4 * 2);
-  }
-
-  printf("done writing phew!\n ");
-
-  temp = (size_t*) top_page;
-  for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
-  {
-    // printf("%ld\n",i);
-    if (*temp != (size_t) (i * 10000000000 + (i + 1)))
-    {
-      printf("Error: Expected %zu, got %zu. At index %zu\n", (size_t) (i * 10000000000 + (i + 1)), *temp, i);
+// Test: Many forks and children trigger out of memory
+int pra4() 
+{  
+    size_t x = 0;
+    for (int i = 0; i < MAX_FORK; i++) {
+        assert(x == i  && "each process should have its own unique value of x");
+        pid_t pid = fork();
+        if (pid > 0) 
+        {
+            x += 1;      
+            continue;    // parent continues to fork
+        } 
+        else if (pid == 0) 
+        {   // child writes data to array then die
+            int start = i * (PAGES_IN_ARRAY / MAX_FORK);
+            int end = (i + 1) * (PAGES_IN_ARRAY / MAX_FORK);
+            for(int i2 = start; i2 < end; i2++)
+            {
+                big_array[i2 * (PAGESIZE / 8)] = (size_t)i2;
+            }
+            for(int i3 = start; i3 < end; i3++)
+            {
+                assert(big_array[i3 * (PAGESIZE / 8)] == i3);
+            }
+            exit(0);
+        } 
+        else 
+        {
+            assert(0);
+        }
     }
-    temp = (size_t*) ((size_t) temp + PAGESIZE4 * 2);
-  }
 
-  getPRAstats(&hit, &miss);
-  printf("NFU PRA: Hit: %d, Miss: %d (after test)\n", hit, miss);
-
-  return 0;
+    // only 1 last process would reach here
+    assert(x == MAX_FORK  && "parent process (the 100th process) should now have x = 100");
+    
+    return 0;
 }
