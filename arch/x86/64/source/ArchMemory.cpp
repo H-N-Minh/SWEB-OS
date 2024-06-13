@@ -525,25 +525,6 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
 }
 
 
-bool ArchMemory::isCOW(size_t virtual_addr)
-{
-  debug(A_MEMORY, "ArchMemory::isCow: with virtual address %p.\n", (void*)virtual_addr);
-  assert(archmemory_lock_.heldBy() == currentThread);
-
-  ArchMemoryMapping pml1 = ArchMemory::resolveMapping(virtual_addr/PAGE_SIZE);
-  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
-
-  if (pml1_entry && pml1_entry->cow)
-  {
-    debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is cow\n", (void*)virtual_addr);
-    return true;
-  }
-  else
-  {
-    debug(A_MEMORY, "ArchMemory::isCow: virtual address %p is not cow\n", (void*)virtual_addr);
-    return false;
-  }
-}
 
 
 void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages)
@@ -945,4 +926,41 @@ bool ArchMemory::isPageDiscarded(size_t vpn)
   }
 }
 
+
+bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present)
+{
+  debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld)\n", bitAsString(bit), (void*)vpn, vpn);
+  assert(archmemory_lock_.heldBy() == currentThread);
+
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if(pagetable_need_to_be_present)
+  {
+    assert(m.pt && pt_entry);             //TODOs....
+  }
+  
+  if(m.pt && pt_entry)
+  {
+    if(bit == COW && pt_entry->cow)
+    {
+      debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is set!\n", bitAsString(bit), (void*)vpn, vpn);
+      return true;
+    }
+  }
+  debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p. (=%ld) is not set!\n", bitAsString(bit), (void*)vpn, vpn);
+  return false;
+
+}
+
+
+const char* ArchMemory::bitAsString(BitType bit)
+{
+  if(bit == COW)
+  {
+    return "cow";
+  }
+  assert(0);
+  return "";
+}
 

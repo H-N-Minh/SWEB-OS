@@ -6,6 +6,8 @@
 #include "offsets.h"
 #include "paging-definitions.h"
 
+enum BitType {COW};
+
 struct ArchMemoryMapping
 {
   PageMapLevel4Entry* pml4;
@@ -108,7 +110,7 @@ class ArchMemory
     
     void deleteEverythingExecpt(size_t virtual_page);
 
-    bool isCOW(size_t virtual_addr);
+
     bool isSwapped(size_t virtual_addr);
     bool isPresent(size_t virtual_addr);
     bool isWriteable(size_t virtual_addr);
@@ -133,6 +135,10 @@ class ArchMemory
 
     int countArchmemPages();
 
+    const char* bitAsString(BitType bit);
+
+    bool isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present);
+
 
 
 
@@ -142,6 +148,7 @@ class ArchMemory
     void resetAccessBits(size_t vpn);
 
     void resetDirtyBitSetBeenDirtyBits(size_t vpn);
+
 
 
   private:

@@ -80,6 +80,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
+  size_t vpn = address/PAGE_SIZE;
   if (status == VALID)
   {
     swapper->swap_in_lock_.acquire();
@@ -162,12 +163,12 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     {
     }
     //Page is set readonly we want to write and cow-bit is set -> copy page
-    else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
+    else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && !current_archmemory.isWriteable(address))
     {
       current_archmemory.copyPage(address, preallocated_pages);
     }
     //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
-    else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))  //TODOs dont reset cowbit
+    else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && current_archmemory.isWriteable(address))  //TODOs dont reset cowbit
     {
 
     }
