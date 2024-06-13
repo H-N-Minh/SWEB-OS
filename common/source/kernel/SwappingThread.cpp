@@ -10,7 +10,7 @@
 #define TIME_STEP 1 // in seconds
 #define TICKS_PER_SEC 18
 #define PRESWAP_THRESHOLD 80  // in percentage (start pre-swapping when memory usage is above 80%)
-#define SWAP_THRESHOLD 75
+#define SWAP_THRESHOLD 90
 #define MAX_PRESWAP_PAGES 20  // maximum total number of pages to pre-swap
 #define SWAP_OUT_AMOUNT 10     // max number of pages to swap out at a time
 #define SWAP_IN_AMOUNT 10     // max number of pages to swap in at a time
@@ -59,6 +59,7 @@ bool SwappingThread::isMemoryFull()
 
 void SwappingThread::preSwap()
 {
+
   if (isMemoryAlmostFull()) {
     IPTManager* ipt = IPTManager::instance();
     ipt->IPT_lock_.acquire();
