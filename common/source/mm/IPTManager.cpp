@@ -181,6 +181,7 @@ size_t IPTManager::findPageToSwapOut()
       counter++;
       for(auto& ppn : fifo_ppns)
       {
+        assert(isKeyInMap(ppn, IPTMapType::RAM_MAP) && "selected page need to be in ram");
         IPTEntry* entry = ram_map_[ppn];
         bool not_accessed = true;
         for(auto& archmem_ipt : entry->getArchmemIPTs())
