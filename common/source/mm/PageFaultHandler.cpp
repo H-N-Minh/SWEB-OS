@@ -132,7 +132,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
     //Page is on stack
     else if(address > STACK_END && address < STACK_START)
     {
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n");//todos check if page was ever mapped
+      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", address);//todos check if page was ever mapped
       swapper->swap_in_lock_.release();
       heap_manager->current_break_lock_.release();
       size_t vpn = address / PAGE_SIZE;
