@@ -16,6 +16,9 @@
 #define DIRECT_SWAPPING 0
 #define ASYNCHRONOUS_SWAPPING 1
 
+#define STACK_START USER_BREAK
+#define STACK_END (USER_BREAK / 2)
+
 class PageFaultHandler
 {
 private:

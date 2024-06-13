@@ -227,6 +227,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
     if (arch_memory->checkAddressValid(top_stack))
     {
       arch_memory->unmapPage(top_vpn);
+      debug(SYSCALL, "unmapThreadStack: Unmap vpn %d\n", top_vpn);
       top_vpn--;
       top_stack -= PAGE_SIZE;
     }

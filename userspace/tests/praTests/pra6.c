@@ -18,8 +18,8 @@
 #define N_MEGABYTE N * MEGABYTE
 
 
-#define ELEMENTS_IN_ARRAY N_MEGABYTE / 8
-#define PAGES_IN_ARRAY N_MEGABYTE/PAGESIZE
+#define ELEMENTS_IN_ARRAY N_MEGABYTE / 8              
+#define PAGES_IN_ARRAY N_MEGABYTE/PAGESIZE            
 
 
 size_t big_array[ELEMENTS_IN_ARRAY];  //5 Megabyes
