@@ -165,7 +165,7 @@ int private1() {
     close(fd);
 
     //////////////////////////////////////////// TEST 5 ////////////////////////////////////////////
-    // mmap 3 pages, but then munmap partially: first 1 page (the other 2 should be accessible), then the other 2 pages at the same time
+    // mmap 3 pages, but then munmap partially: first munmap 1 page (the other 2 should be accessible), then munmap the other 2 pages at the same time
     fd = -1;
     fd = open("usr/testmmn.txt", O_RDWR | O_CREAT , 0644);
     if (fd == -1) {

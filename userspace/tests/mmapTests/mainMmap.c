@@ -8,13 +8,13 @@
 
 
 extern int shared1();
-extern int mmap4();
+extern int shared1_anonym();
 
 extern int private1();
 extern int private1_anonym();
 
 int SHARED1 = 0;  
-int MMAP4 = 0;  
+int SHARED1_ANONYM = 0;  
 
 int PRIVATE1 = 0;
 int PRIVATE1_ANONYM = 0;
@@ -27,48 +27,32 @@ int childMain()
     // comment out the tests you don't want to run
 
 //******* MAP_PRIVATE - MAP_ANONYMOUS (using mmap like malloc)********
-    // PRIVATE1 = 1;   // Collection of bunch of basic tests for MAP_PRIVATE
-    // PRIVATE1_ANONYM = 1;   // same as private1, but uses MAP_ANONYMOUS instead of a file descriptor.
+//     PRIVATE1 = 1;   // Collection of bunch of basic tests for MAP_PRIVATE
+//     PRIVATE1_ANONYM = 1;   // same as private1, but uses MAP_ANONYMOUS instead of a file descriptor.
 
-//******* MAP_SHARED - MAP_ANONYMOUS (using mmap with fork)********
-    // NOTE: currently for map_shared, fd are never closed, this should be fixed. this is the only flag that requires writting back to the file, which requires fd to be open for kernel
+// //******* MAP_SHARED - MAP_ANONYMOUS (using mmap with fork)********
+//     // NOTE: currently for map_shared, fd are never closed, this should be fixed. this is the only flag that requires writting back to the file, which requires fd to be open for kernel
     SHARED1 = 1;   // Collection of bunch of basic tests for MAP_SHARED
-
-// **** completed tests, but still needs work
-    // MMAP4 = 1;   // MAP_SHARED (using mmap with fd, multiple processes)
+    // SHARED1_ANONYM = 1;   // same as shared1, but uses MAP_ANONYMOUS instead of a file descriptor.
 
 
 /** tests ideas:
- *  TODO: for MAP_PRIVATE | MAP_ANONYMOUS:
- *      - test giving mmap & munmap invalid parameters (for munmap, length cant be 0, start must be multiple of page size, start must be in the range of mmaped memory)
- *      - test mapping then write, should be possible, then unmap then write again, should be error
- *      - similar to the test above, but 1 threads calls munmap and another thread tries to read afterwards
- *      - test unmaping twice on same address
- *      - test mapping 2 pages then unmap both pages at once using 1 munmap call, this should be possible
- *      - test mapping 1 page but then unmap 2 pages, should be error
- *      - test mapping 2 pages but then unmap 1 pages twice, should be possible
- *      - test mapping on unmapped page.
- *      - changes to the file shall not be visible for other processes (MAP_PRIVATE).
- *      - map private a page, then call fork. each process should now has its own version of the page. (cow)
- * 
+ *  TODO:
+ *      for MAP_SHARED - MAP_ANONYMOUS:
+ *      - mmap 3 pages and write to all 3, then munmap all 3, then mmap again the same fd but with offset 1 page. read the data to see if the page mapped at the right offet 
  *      
- *      for MAP_PRIVATE:
- *      - wrong params
- *      - check writing back to file successfully with and without munmap
- *      - open file that has 5 pages, mmap with offset 1 page, reading data from page 2 3 4 5 should be correct. Also try reading page 5 first then 2 then 4 then 3
- *      - write to mem, unmap, check if the data still written to the file. Also try this with process termination instead of unmap
- *      - mmap then fork, both process should have their own version of the page privately
- *      
- *     for general:
- *      - mmap with wrong params
- *      - mmap with multiple pages
- *      - give a bullshit fd value
- *     - test different protection flags
- *      - test different flags
+ *      for MAP_PRIVATE - MAP_ANONYMOUS:
+ *      - test munmap on unmapped page.
+ *      - set read-only prot then write to it. should crash
+ *      - writting/reading after munmap. should crash
+ *      - mmap then fork, both process should have their own version of the page privately (child writes st to the page then die. parent shouldnt see the change)
  * 
- *      - set readonly prot then write to it
- *      - writting/reading after munmap
- *  
+ *      for both MAP_PRIVATE and MAP_SHARED:
+ *      - open file that has 5 pages. Try writing/reading randomly (zb: page 5 first then 2 then 4 then 3). should work
+ *      - write to file, unmap, then mmap again with the same process. check if the data still written to the file. data should still be there
+ *      - first mmap 1 page then mmap 1 page again. then calls munmap using address of the first mmap, but with size of 2 pages. this should be possible
+ *      - calling munmap using invalid address: address that is not page aligned, address that is not in the range of mmaped memory. should fail
+ *      - mmap 3 pages, calling munmap on the second page. 1st and 3rd page should still be accessible 
  *      
  * */
 
@@ -80,12 +64,12 @@ int childMain()
         else                                  { printf("===> shared1 failed!\n");  return -1;}
     }
     
-    if (MMAP4)
+    if (SHARED1_ANONYM)
     {
-        printf("\nTesting mmap4: testing MAP_PRIVATE (using mmap with open() and fd)...\n");
-        retval = mmap4();
-        if (retval == 0)                      { printf("===> mmap4 successful!\n"); }
-        else                                  { printf("===> mmap4 failed!\n");  return -1;}
+        printf("\nTesting shared1_anonym: same as shared1, but test with MAP_ANONYMOUS instead of using fd...\n");
+        retval = shared1_anonym();
+        if (retval == 0)                      { printf("===> shared1_anonym successful!\n"); }
+        else                                  { printf("===> shared1_anonym failed!\n");  return -1;}
     }
     
     if (PRIVATE1)
@@ -98,7 +82,7 @@ int childMain()
     
     if (PRIVATE1_ANONYM)
     {
-        printf("\nTesting private1_anonym: same as private1, but test with MAP_ANONYMOUS...\n");
+        printf("\nTesting private1_anonym: same as private1, but test with MAP_ANONYMOUS instead of using fd...\n");
         retval = private1_anonym();
         if (retval == 0)                      { printf("===> private1_anonym successful!\n"); }
         else                                  { printf("===> private1_anonym failed!\n");  return -1;}
