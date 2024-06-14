@@ -232,6 +232,9 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
     if (entry->shared_)
     {
         debug(MMAP, "SharedMemManager::handleSharedPF: Mapping the new shared ppn %zu to every relevant archmem\n", ppn);
+        IPTManager* ipt = IPTManager::instance();
+
+        assert(IPTManager::instance()->isUspValid(parent_index, vpn, src) && "SharedMemManager::handleSharedPF: page_ppn is not valid\n");
         ustl::vector<ArchmemIPT*>& archmems = IPTManager::instance()->getUspSubVector(arch_memory, vpn);
         assert(archmems.size() > 0 && "SharedMemManager::handleSharedPF: no relevant archmem found\n");
         for (auto it : archmems)

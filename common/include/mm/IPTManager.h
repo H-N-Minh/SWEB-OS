@@ -107,22 +107,27 @@ public:
   */
   void debugRandomGenerator();
   
-  /**
-   * , called by archmem copy constructor
-   * The parent should already be somewhere in the vector, and since the child should also mapped to the same shared page as the parent, it should 
-   * also be inserted into the same vector. This func search which vector the parents belong to, then add the child to the same vector
-   * @param parent_arch the  archmem of the parent, should already exists in some sub-vector in unmapped_shared_pages_
-   * @param parent_vpn the vpn of the parent archmem that should be mapped to the future shared ppn
-   * @param second_arch the child archmem, should not already be in the vector.
-   * @param second_vpn the vpn of the child archmem that should be mapped to the same future shared ppn
-  */
-  void insertPairedUSP(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn);
+  // /** this is not being used, maybe delete this
+  //  * , called by archmem copy constructor
+  //  * The parent should already be somewhere in the vector, and since the child should also mapped to the same shared page as the parent, it should 
+  //  * also be inserted into the same vector. This func search which vector the parents belong to, then add the child to the same vector
+  //  * @param parent_arch the  archmem of the parent, should already exists in some sub-vector in unmapped_shared_pages_
+  //  * @param parent_vpn the vpn of the parent archmem that should be mapped to the future shared ppn
+  //  * @param second_arch the child archmem, should not already be in the vector.
+  //  * @param second_vpn the vpn of the child archmem that should be mapped to the same future shared ppn
+  // */
+  // void insertPairedUSP(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn);
 
   /**
    * inserting entry to unmapped_shared_pages_. this is for when the shared page is just newly created and currently only used by 1 archmem
    * Since the page is not allocated a ppn yet (not until a PF happens), therefore the page is not yet in the IPT table. Thats why this unmapped_shared_pages_ exists.
   */
   void insertUspEntry(ArchMemory* archmem, size_t vpn);
+
+  /**
+   * check if the given index matches with the given vpn and archmemory* in the vector unmapped_shared_pages_
+  */
+  bool isUspValid(size_t parent_index, size_t vpn, ArchMemory &src);
 
   /**
    * remove an entry from the unmapped_shared_pages_. This is called when the sarchmem sharing a page is finally allocated a ppn for that page
