@@ -19,7 +19,7 @@ class ArchmemIPT;
 IPTManager* IPTManager::instance_ = nullptr;
 
 IPTManager::IPTManager() 
-  : IPT_lock_("IPTManager::IPT_lock_")
+  : IPT_lock_("IPTManager::IPT_lock_"), fake_ppn_lock_("IPTManager::fake_ppn_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -478,97 +478,191 @@ void IPTManager::checkDiskMapConsistency()
 //   assert(0 && "IPTManager::insertPairedUSP: parent archmem not found in unmapped_shared_pages_\n");
 // }
 
-void IPTManager::insertUspEntry(ArchMemory* archmem, size_t vpn)
+void IPTManager::insertFakePpnEntry(ArchMemory* archmem, size_t vpn)
 {
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertUspEntry called but IPT not locked\n");
-  assert(archmem->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertUspEntry called but ArchMemory not locked\n");
+  assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertFakePpnEntry called but fake_ppn_lock_ not locked\n");
 
-  // check if the archmem is already in the vector
-  for (auto& sub_vector : unmapped_shared_pages_)
+  fake_ppn_t new_ppn = fake_ppn_counter_;
+
+  // Adding entry to the fake_ppn_map_
+  debug(IPT, "IPTManager::insertFakePpnEntry: inserting archmem: %p, vpn: %zu to fake_ppn_map_\n", archmem, vpn);
+  auto it = fake_ppn_map_.find(archmem);
+  if (it != fake_ppn_map_.end())
   {
-    for (auto& archmem_ipt : sub_vector)
+    debug(IPT, "IPTManager::insertFakePpnEntry: archmem exists in fake_ppn_map_\n");
+    auto& sub_map = it->second;
+    if (sub_map.find(vpn) != sub_map.end())
     {
-      assert(archmem_ipt && "IPTManager::insertUspEntry: archmem_ipt is null");
-      if (archmem_ipt->archmem_ == archmem && archmem_ipt->vpn_ == vpn)
-      {
-        assert(0 && "IPTManager::insertUspEntry: archmem already in the vector");
-      }
+      assert(0 && "IPTManager::insertFakePpnEntry: vpn already exists in the sub map");
+    }
+    else
+    {
+      sub_map[vpn] = new_ppn;
     }
   }
-
-  // if archmem is not found anywhere, then this is a new shared page. create a new entry
-  ustl::vector<ArchmemIPT*> new_vector;
-  new_vector.push_back(new ArchmemIPT(vpn, archmem));
-  unmapped_shared_pages_.push_back(new_vector);
-  size_t index_new_vector = unmapped_shared_pages_.size() - 1;
-
-  // storing the index into archmem page table. this is used to find the vector later. Storing with offset 69 to avoid storing the value 0 (help avoid bugs)
-  ArchMemoryMapping pml1 = archmem->resolveMapping(vpn);
-  PageTableEntry* pml1_entry = &pml1.pt[pml1.pti];
-  pml1_entry->page_ppn = 69 + index_new_vector;
-
-}
-
-bool IPTManager::isUspValid(size_t parent_index, size_t vpn, ArchMemory &src)
-{
-  IPTManager* ipt = IPTManager::instance();
-
-  assert(parent_index != 0 && "Shared pages was not added to the IPTManager::unmapped_shared_pages_");
-  assert(parent_index < ipt->unmapped_shared_pages_.size() && "the index of parent is invalid in unmapped_shared_pages_");
-  assert(ipt->unmapped_shared_pages_[parent_index].size() > 0 && "the index of parent is invalid in unmapped_shared_pages_. The sub-vector is empty");
-
-  for ( auto& archmem_ipt : ipt->unmapped_shared_pages_[parent_index])
+  else
   {
-    if (archmem_ipt->archmem_ == &src && archmem_ipt->vpn_ == vpn)
-    {
-      return true;
-    }
+    debug(IPT, "IPTManager::insertFakePpnEntry: archmem does not exist yet in fake_ppn_map_, creating new\n");
+    fake_ppn_map_[archmem][vpn] = new_ppn;
   }
   
-  return false;
+  // adding entry to the inverted fake ppn map
+  auto it2 = inverted_fake_ppn_.find(new_ppn);
+  if (it2 != inverted_fake_ppn_.end())
+  {
+    debug(IPT, "IPTManager::insertFakePpnEntry: ppn %zu already exists in inverted_fake_ppn_\n", new_ppn);
+    assert(0 && "IPTManager::insertFakePpnEntry: ppn already exists in inverted_fake_ppn_\n");
+  }
+  else
+  {
+    ArchmemIPT* new_arch_ipt = new ArchmemIPT(vpn, archmem);
+    inverted_fake_ppn_.insert({new_ppn, new_arch_ipt});
+  }
+
+  fake_ppn_counter_++;
 }
 
-ustl::vector<ArchmemIPT*>& IPTManager::getUspSubVector(ArchMemory* arch_memory, size_t vpn)
+void IPTManager::addToFakePpnEntry(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn)
 {
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getUspSubVector called but IPT not locked\n");
-  assert(arch_memory->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getUspSubVector called but ArchMemory not locked\n");
+  assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::addToFakePpnEntry called but fake_ppn_lock_ not locked\n");
 
-  for (auto it = unmapped_shared_pages_.begin(); it != unmapped_shared_pages_.end(); ++it)
+  fake_ppn_t mutual_fake_ppn = 0;
+  // check if the parent archmem exists in the map (it should)
+  auto it = fake_ppn_map_.find(parent_arch);
+  if (it != fake_ppn_map_.end())
   {
-    auto& sub_vector = *it;
-    for (auto& archmem_ipt : sub_vector)
+    auto& sub_map = it->second;
+    if (sub_map.find(parent_vpn) != sub_map.end())
     {
-      assert(archmem_ipt && "IPTManager::getUspSubVector: archmem_ipt is null");
-      if (archmem_ipt->archmem_ == arch_memory && archmem_ipt->vpn_ == vpn)
-      {
-        return sub_vector;
-      }
+      mutual_fake_ppn = sub_map[parent_vpn];
+    }
+    else
+    {
+      assert(0 && "IPTManager::addToFakePpnEntry: parent vpn not found in fake_ppn_map_\n");
+    }
+  }
+  else
+  {
+    assert(0 && "IPTManager::addToFakePpnEntry: parent archmem not found in fake_ppn_map_\n");
+  }
+
+  // adding child archmem to the fake_ppn_map_
+  debug(IPT, "IPTManager::addToFakePpnEntry: adding child archmem: %p, vpn: %zu to fake_ppn_map_\n", child_arch, child_vpn);
+  fake_ppn_map_[child_arch][child_vpn] = mutual_fake_ppn;
+
+  // adding child archmem to the inverted_fake_ppn_
+  ArchmemIPT* new_arch_ipt = new ArchmemIPT(child_vpn, child_arch);
+  inverted_fake_ppn_.insert({mutual_fake_ppn, new_arch_ipt});
+
+}
+
+void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages, SharedMemManager* smm, SharedMemEntry* entry)
+{
+  assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::mapRealPPN called but fake_ppn_lock_ not locked\n");
+  // TODO: lock all the archmemory
+  fake_ppn_t mutual_fake_ppn = 0;
+  // find if the archmemory exists in the fake_ppn_map_
+  auto it = fake_ppn_map_.find(arch_memory);
+  if (it != fake_ppn_map_.end())
+  {
+    auto& sub_map = it->second;
+    if (sub_map.find(vpn) != sub_map.end())
+    {
+      mutual_fake_ppn = sub_map[vpn];
+    }
+    else
+    {
+      assert(0 && "IPTManager::addToFakePpnEntry:  vpn not found in fake_ppn_map_\n");
+    }
+  }
+  else
+  {
+    assert(0 && "IPTManager::addToFakePpnEntry: archmem not found in fake_ppn_map_\n");
+  }
+
+  // go through every archmem in inverted_fake_ppn_ and update with the real ppn
+  for (auto it = inverted_fake_ppn_.begin(); it != inverted_fake_ppn_.end(); ++it)
+  {
+    if (it->first == mutual_fake_ppn)
+    {
+      ArchmemIPT* archmem_ipt = it->second;
+      assert(archmem_ipt && "IPTManager::mapRealPPN: archmem_ipt is null");
+      ArchMemory* temp_archmem = archmem_ipt->archmem_;
+      assert(archmem && "IPTManager::mapRealPPN: archmem is null");
+      size_t temp_vpn = archmem_ipt->vpn_;
+      
+      bool rv = temp_archmem->mapPage(temp_vpn, ppn, 1, preallocated_pages);
+      assert(rv == true);
+
+      // setting up the bits
+      // SharedMemManager* smm = temp_archmem
+      // smm->setProtectionBits(entry, temp_archmem, temp_vpn);
+      // temp_archmem->setSharedBit(temp_vpn);
     }
   }
 
-  assert(0 && "IPTManager::getUspSubVector: archmem not found in unmapped_shared_pages_\n");
-  return unmapped_shared_pages_[0]; // this is just to avoid warning
 }
 
-void IPTManager::deleteUspSubVector(ustl::vector<ArchmemIPT*>& sub_vector)
-{
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::deleteUspSubVector called but IPT not locked\n");
+// bool IPTManager::isUspValid(size_t parent_index, size_t vpn, ArchMemory &src)
+// {
+//   IPTManager* ipt = IPTManager::instance();
+
+//   assert(parent_index != 0 && "Shared pages was not added to the IPTManager::unmapped_shared_pages_");
+//   assert(parent_index < ipt->unmapped_shared_pages_.size() && "the index of parent is invalid in unmapped_shared_pages_");
+//   assert(ipt->unmapped_shared_pages_[parent_index].size() > 0 && "the index of parent is invalid in unmapped_shared_pages_. The sub-vector is empty");
+
+//   for ( auto& archmem_ipt : ipt->unmapped_shared_pages_[parent_index])
+//   {
+//     if (archmem_ipt->archmem_ == &src && archmem_ipt->vpn_ == vpn)
+//     {
+//       return true;
+//     }
+//   }
   
-  for (auto it = unmapped_shared_pages_.begin(); it != unmapped_shared_pages_.end(); ++it)
-  {
-    if ((*it) == sub_vector)
-    {
-      for (auto& archmem_ipt : sub_vector)
-      {
-        delete archmem_ipt;
-      }
-      unmapped_shared_pages_.erase(it);
-      return;
-    }
-  }
+//   return false;
+// }
 
-  assert(0 && "IPTManager::deleteUspSubVector: sub_vector not found in unmapped_shared_pages_\n");
-}
+// ustl::vector<ArchmemIPT*>& IPTManager::getUspSubVector(ArchMemory* arch_memory, size_t vpn)
+// {
+//   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getUspSubVector called but IPT not locked\n");
+//   assert(arch_memory->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::getUspSubVector called but ArchMemory not locked\n");
+
+//   for (auto it = unmapped_shared_pages_.begin(); it != unmapped_shared_pages_.end(); ++it)
+//   {
+//     auto& sub_vector = *it;
+//     for (auto& archmem_ipt : sub_vector)
+//     {
+//       assert(archmem_ipt && "IPTManager::getUspSubVector: archmem_ipt is null");
+//       if (archmem_ipt->archmem_ == arch_memory && archmem_ipt->vpn_ == vpn)
+//       {
+//         return sub_vector;
+//       }
+//     }
+//   }
+
+//   assert(0 && "IPTManager::getUspSubVector: archmem not found in unmapped_shared_pages_\n");
+//   return unmapped_shared_pages_[0]; // this is just to avoid warning
+// }
+
+// void IPTManager::deleteUspSubVector(ustl::vector<ArchmemIPT*>& sub_vector)
+// {
+//   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::deleteUspSubVector called but IPT not locked\n");
+  
+//   for (auto it = unmapped_shared_pages_.begin(); it != unmapped_shared_pages_.end(); ++it)
+//   {
+//     if ((*it) == sub_vector)
+//     {
+//       for (auto& archmem_ipt : sub_vector)
+//       {
+//         delete archmem_ipt;
+//       }
+//       unmapped_shared_pages_.erase(it);
+//       return;
+//     }
+//   }
+
+//   assert(0 && "IPTManager::deleteUspSubVector: sub_vector not found in unmapped_shared_pages_\n");
+// }
 
 
 

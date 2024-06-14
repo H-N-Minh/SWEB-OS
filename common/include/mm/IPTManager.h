@@ -6,7 +6,7 @@
 #include "umultimap.h"
 #include "Mutex.h"
 #include "IPTEntry.h"
-
+#include "SharedMemManager.h"
 
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
 enum PRA_TYPE {RANDOM, NFU, SIMPLE};
@@ -14,6 +14,8 @@ enum PRA_TYPE {RANDOM, NFU, SIMPLE};
 // class IPTEntry;
 class ArchMemory;
 
+typedef size_t fake_ppn_t;    // index of the 
+typedef size_t vpn_t;
 typedef size_t ppn_t;
 typedef size_t diskoffset_t;
 
@@ -24,15 +26,22 @@ private:
 
 public:
   // locking order: Ipt_lock -> disk_lock -> archmem_lock
-  Mutex IPT_lock_;          // responsible for: ram_map_, disk_map_, pra_type_, unmapped_shared_pages_
+  Mutex IPT_lock_;          // responsible for: ram_map_, disk_map_, pra_type_
   ustl::map<ppn_t, IPTEntry*> ram_map_;
   ustl::map<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
 
   // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
-  // Therefore this vector exists. Each sub-vector is responsible for 1 shared page, contains all archmem that all mapped to this shared page. 
-  // Therefore, the vector unmap_shared_pages_ is a vector of all shared pages accross all processes, that are not yet allocated a ppn
-  ustl::vector<ustl::vector<ArchmemIPT*>> unmapped_shared_pages_;
+  // Therefore this map exists. It assigns a fake ppn temprorarily, until the page is actually allocated a real ppn.
+  ustl::map<ArchMemory*, ustl::map<vpn_t, fake_ppn_t>> fake_ppn_map_; 
+
+  // the map to tracks backwards from fake ppn to all the archmem that is sharing this fake ppn. 
+  // This is used when the shared page is assigned a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
+  ustl::multimap<fake_ppn_t, ArchmemIPT*> inverted_fake_ppn_;
+
+  fake_ppn_t fake_ppn_counter_ = 0; // for generating fake ppn
+
+  Mutex fake_ppn_lock_; // responsible for fake_ppn_map_ and inverted_fake_ppn_ and fake_ppn_counter_
 
   IPTManager();
   ~IPTManager();
@@ -107,39 +116,38 @@ public:
   */
   void debugRandomGenerator();
   
-  // /** this is not being used, maybe delete this
-  //  * , called by archmem copy constructor
-  //  * The parent should already be somewhere in the vector, and since the child should also mapped to the same shared page as the parent, it should 
-  //  * also be inserted into the same vector. This func search which vector the parents belong to, then add the child to the same vector
-  //  * @param parent_arch the  archmem of the parent, should already exists in some sub-vector in unmapped_shared_pages_
-  //  * @param parent_vpn the vpn of the parent archmem that should be mapped to the future shared ppn
-  //  * @param second_arch the child archmem, should not already be in the vector.
-  //  * @param second_vpn the vpn of the child archmem that should be mapped to the same future shared ppn
+  /**
+   * Is called when archmemory copy constructor. Add the child to the same shared page as the parent. Adding to both fake_ppn_map_ and inverted_fake_ppn_
+  */
+  void addToFakePpnEntry(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn);
+
+  /**
+   * Is called when a new shared page is created. Adding entry to both fake_ppn_map_ and inverted_fake_ppn_
+  */
+  void insertFakePpnEntry(ArchMemory* archmem, size_t vpn);
+
+  /**
+   * Is called when a page fault happens, and the shared page receives a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
+   * this also removes entry from fake_ppn_map_ and inverted_fake_ppn_
+  */
+  void mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages, SharedMemEntry* entry);
+
+  // /**
+  //  * check if the given index matches with the given vpn and archmemory* in the vector unmapped_shared_pages_
   // */
-  // void insertPairedUSP(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn);
+  // bool isUspValid(size_t parent_index, size_t vpn, ArchMemory &src);
 
-  /**
-   * inserting entry to unmapped_shared_pages_. this is for when the shared page is just newly created and currently only used by 1 archmem
-   * Since the page is not allocated a ppn yet (not until a PF happens), therefore the page is not yet in the IPT table. Thats why this unmapped_shared_pages_ exists.
-  */
-  void insertUspEntry(ArchMemory* archmem, size_t vpn);
+  // /**
+  //  * remove an entry from the unmapped_shared_pages_. This is called when the sarchmem sharing a page is finally allocated a ppn for that page
+  //  * @param archmem the archmem of one of the sharing archmems
+  //  * @param vpn the vpn of that archmem that points to the shared page
+  // */
+  // ustl::vector<ArchmemIPT*>& getUspSubVector(ArchMemory* arch_memory, size_t vpn);
 
-  /**
-   * check if the given index matches with the given vpn and archmemory* in the vector unmapped_shared_pages_
-  */
-  bool isUspValid(size_t parent_index, size_t vpn, ArchMemory &src);
-
-  /**
-   * remove an entry from the unmapped_shared_pages_. This is called when the sarchmem sharing a page is finally allocated a ppn for that page
-   * @param archmem the archmem of one of the sharing archmems
-   * @param vpn the vpn of that archmem that points to the shared page
-  */
-  ustl::vector<ArchmemIPT*>& getUspSubVector(ArchMemory* arch_memory, size_t vpn);
-
-  /**
-   * similar to getUspSubVector, but removes the sub-vector from the vector unmapped_shared_pages_
-  */
-  void deleteUspSubVector(ustl::vector<ArchmemIPT*>& sub_vector);
+  // /**
+  //  * similar to getUspSubVector, but removes the sub-vector from the vector unmapped_shared_pages_
+  // */
+  // void deleteUspSubVector(ustl::vector<ArchmemIPT*>& sub_vector);
 
   private:
 

@@ -30,15 +30,19 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
   archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
+
 }
 
 // COPY CONSTRUCTOR
-ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages):archmemory_lock_("archmemory_lock_")
+ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages)
+  :archmemory_lock_("archmemory_lock_")
 {
-  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
+  IPTManager* ipt = IPTManager::instance();
+  assert(ipt->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   assert(src.archmemory_lock_.heldBy() == currentThread && "Parent archmemory need to be locked");
   assert(PageManager::instance()->heldBy() != currentThread);
   archmemory_lock_.acquire();
+  ipt->fake_ppn_lock_.acquire();
   
   debug(FORK, "ArchMemory::copy-constructor starts \n");
   page_map_level_4_ = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
@@ -113,9 +117,8 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
                 }
                 else if (PARENT_pt[pti].shared) // if page is shared but not mapped yet
                 {
-                  size_t parent_index = PARENT_pt[pti].page_ppn;
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  addChildToSameVector(parent_index, vpn, src, CHILD_pt, pti, this);
+                  ipt->addToFakePpnEntry(&src, vpn, this, vpn);
                 }
               }
             }
@@ -125,6 +128,7 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
     }
   }
   debug(FORK, "ArchMemory::copy-constructor finished \n");
+  ipt->fake_ppn_lock_.release();
   archmemory_lock_.release();
 }
 
@@ -912,17 +916,4 @@ void ArchMemory::setSharedBit(size_t vpn)
     pt_entry->shared = 1;
   }
 }
-
-void ArchMemory::addChildToSameVector(size_t parent_index, size_t vpn, ArchMemory &src, PageTableEntry* CHILD_pt, size_t pti, ArchMemory* child_arch)
-{
-
-
-  // checking that the value at parent's page_ppn is correct, before copying that to child
-  assert(IPTManager::instance()->isUspValid(parent_index, vpn, src) && "ArchMemory::addChildToSameVector: parent's page_ppn is not valid\n");
-  
-  // The parent's index is valid, adding the child to the same vector
-  CHILD_pt[pti].page_ppn = parent_index;
-  ipt->unmapped_shared_pages_[parent_index].push_back(new ArchmemIPT(vpn, child_arch));
-}
-
 
