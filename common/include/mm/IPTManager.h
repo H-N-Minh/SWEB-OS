@@ -30,6 +30,7 @@ public:
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
 
   ustl::vector<uint32> fifo_ppns;
+  unsigned last_index_ = 0;
 
 
   IPTManager();

@@ -23,7 +23,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::RANDOM;
+  pra_type_ = PRA_TYPE::SECOND_CHANGE;
 }
 
 IPTManager::~IPTManager()
@@ -179,8 +179,15 @@ size_t IPTManager::findPageToSwapOut()
     while(ppn_retval == INVALID_PPN && counter < 2)
     {
       counter++;
-      for(auto& ppn : fifo_ppns)
+      
+      if(last_index_ > (fifo_ppns.size() - 1))
       {
+        last_index_ = 0;
+      }
+
+      for(unsigned i = last_index_; i <  fifo_ppns.size(); i++)
+      {
+        auto& ppn = fifo_ppns[i];
         assert(isKeyInMap(ppn, IPTMapType::RAM_MAP) && "selected page need to be in ram");
         IPTEntry* entry = ram_map_[ppn];
         bool not_accessed = true;
@@ -199,12 +206,12 @@ size_t IPTManager::findPageToSwapOut()
         if(not_accessed)
         {
           ppn_retval = ppn;
-
-
+        
           auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn);
           if (it != fifo_ppns.end())
           {
             fifo_ppns.erase(it);
+            last_index_ = ++i;
           }
           else
           {
