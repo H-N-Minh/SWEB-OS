@@ -115,11 +115,6 @@ public:
   */
   void debugRandomGenerator();
   
-  // /**
-  //  * Is called when archmemory copy constructor. Add the child to the same shared page as the parent. Adding to both fake_ppn_map_ and inverted_fake_ppn_
-  // */
-  // void addToFakePpnEntry(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn);
-
   /**
    * Is called when a new shared page is created. Adding entry to both fake_ppn_map_ and inverted_fake_ppn_
   */
@@ -135,23 +130,6 @@ public:
    * Is called when archmemory copy constructor. Add the child to the same shared page as the parent. Adding to both fake_ppn_map_ and inverted_fake_ppn_
   */
   void copyFakedPages(ArchMemory* parent, ArchMemory* child);
-
-  // /**
-  //  * check if the given index matches with the given vpn and archmemory* in the vector unmapped_shared_pages_
-  // */
-  // bool isUspValid(size_t parent_index, size_t vpn, ArchMemory &src);
-
-  // /**
-  //  * remove an entry from the unmapped_shared_pages_. This is called when the sarchmem sharing a page is finally allocated a ppn for that page
-  //  * @param archmem the archmem of one of the sharing archmems
-  //  * @param vpn the vpn of that archmem that points to the shared page
-  // */
-  // ustl::vector<ArchmemIPT*>& getUspSubVector(ArchMemory* arch_memory, size_t vpn);
-
-  // /**
-  //  * similar to getUspSubVector, but removes the sub-vector from the vector unmapped_shared_pages_
-  // */
-  // void deleteUspSubVector(ustl::vector<ArchmemIPT*>& sub_vector);
 
   private:
 

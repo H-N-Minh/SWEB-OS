@@ -236,23 +236,6 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
 
         ipt->fake_ppn_lock_.release();
 
-        // // check if this archmem exists in the unmapped_shared_pages_ vector. it should
-        
-        // assert(ipt->isUspValid(index, vpn, *arch_memory) && "SharedMemManager::handleSharedPF: page_ppn is not valid\n");
-
-        // // Archmem is valid, retrieving vector of all archmem that should be mapped to the new ppn
-        // ustl::vector<ArchmemIPT*>& archmems = IPTManager::instance()->getUspSubVector(arch_memory, vpn);
-        // assert(archmems.size() > 0 && "SharedMemManager::handleSharedPF: no relevant archmem found\n");
-        // for (auto it : archmems)
-        // {
-        //     assert(it && "SharedMemManager::handleSharedPF: ArchmemIPT is null\n");
-        //     bool rv = it->archmem_->mapPage(it->vpn_, ppn, 1, preallocated_pages);
-        //     assert(rv == true);
-        //     setProtectionBits(entry, it->archmem_, it->vpn_);
-        //     it->archmem_->setSharedBit(it->vpn_);
-        // }
-        // IPTManager::instance()->deleteUspSubVector(archmems);
-
     }
     else
     {
