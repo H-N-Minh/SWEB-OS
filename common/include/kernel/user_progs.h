@@ -6,7 +6,8 @@ char const *user_progs[] = {
                             // "/usr/shell.sweb",
                             
 //mmap-----------------------------------------------------------------------
-                            "/usr/mmapTests.sweb", 
+                            "/usr/mmapPrivateTests.sweb", 
+                            // "/usr/mmapSharedTests.sweb", 
 
 //Swapping-----------------------------------------------------------------------
                             // "/usr/iptTests.sweb", 
