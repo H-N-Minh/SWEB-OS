@@ -117,10 +117,6 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<uint32>& preallocate
       debug(LOADER, "Loader::loadPage: error: %p  %p\n", (void*)virt_page_start_addr, (void*)virt_page_end_addr);
       PageManager::instance()->freePPN(ppn);
       debug(LOADER, "Loader::loadPage: ERROR! No section refers to the given address.\n");
-      if(!arch_memory_.checkAddressValid(virtual_address))
-      {
-        assert(0);
-      }
       arch_memory_.archmemory_lock_.release();
       IPTManager::instance()->IPT_lock_.release();
       PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
