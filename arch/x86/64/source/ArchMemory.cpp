@@ -23,18 +23,22 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
   size_t ppn = PageManager::instance()->allocPPN();
   IPTManager::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
+
   page_map_level_4_ = ppn;
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
   memset(new_pml4, 0, PAGE_SIZE / 2); // should be zero, this is just for safety, also only clear lower half
   archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
+
 }
 
 // COPY CONSTRUCTOR
-ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated_pages):archmemory_lock_("archmemory_lock_")
+ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages)
+  :archmemory_lock_("archmemory_lock_")
 {
-  assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
+  IPTManager* ipt = IPTManager::instance();
+  assert(ipt->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   assert(src.archmemory_lock_.heldBy() == currentThread && "Parent archmemory need to be locked");
   assert(PageManager::instance()->heldBy() != currentThread);
   archmemory_lock_.acquire();
@@ -89,22 +93,14 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
               memcpy((void*) CHILD_pt, (void*) PARENT_pt, PAGE_SIZE);
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
 
-
-
               // loop through pt to get each pageT
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
-                if (PARENT_pt[pti].present)
+                if (PARENT_pt[pti].present || PARENT_pt[pti].swapped_out)
                 {
-                  if (PARENT_pt[pti].shared)
-                  {
-                    PARENT_pt[pti].writeable = 1;
-                    PARENT_pt[pti].cow = 0;
+                  IPTMapType maptype = PARENT_pt[pti].swapped_out ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP;
 
-                    CHILD_pt[pti].writeable = 1;
-                    CHILD_pt[pti].cow = 0;
-                  }
-                  else
+                  if (!PARENT_pt[pti].shared)
                   {
                     PARENT_pt[pti].writeable = 0;
                     PARENT_pt[pti].cow = 1;
@@ -112,33 +108,11 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
                     CHILD_pt[pti].writeable = 0;
                     CHILD_pt[pti].cow = 1;
                   }
-
+                
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
+                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
-                }
-                else if(PARENT_pt[pti].swapped_out)
-                {
-                  if (PARENT_pt[pti].shared)
-                  {
-                    PARENT_pt[pti].writeable = 1;
-                    PARENT_pt[pti].cow = 0;
-
-                    CHILD_pt[pti].writeable = 1;
-                    CHILD_pt[pti].cow = 0;
-                  }
-                  else
-                  {
-                    PARENT_pt[pti].writeable = 0;
-                    PARENT_pt[pti].cow = 1;
-
-                    CHILD_pt[pti].writeable = 0;
-                    CHILD_pt[pti].cow = 1;
-                  }
-
-                  size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::DISK_MAP);
                 }
               }
             }
@@ -148,8 +122,15 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
     }
   }
   debug(FORK, "ArchMemory::copy-constructor finished \n");
+
+  // copying the shared pages that are not mapped yet
+  ipt->fake_ppn_lock_.acquire();
+  ipt->copyFakedPages(&src, this);
+  ipt->fake_ppn_lock_.release();
+
   archmemory_lock_.release();
 }
+
 
 
 ArchMemory::~ArchMemory()
@@ -243,6 +224,7 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   assert(archmemory_lock_.heldBy() == currentThread && "Try to unmap page without holding archmemory lock");
   ArchMemoryMapping m = resolveMapping(virtual_page);
+  PageManager* pm = PageManager::instance();
 
   assert(m.page_ppn != 0);
   assert(m.page_size == PAGE_SIZE);
@@ -251,10 +233,11 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
 
   IPTMapType maptype = getMapType((m.pt[m.pti]));
 
-  PageManager::instance()->decrementReferenceCount(m.page_ppn, virtual_page, this, maptype);
-  debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", PageManager::instance()->getReferenceCount(m.page_ppn), (m.page_ppn));
+  pm->decrementReferenceCount(m.page_ppn, virtual_page, this, maptype);
+  uint32 ref_count = pm->getReferenceCount(m.page_ppn);
+  debug(FORK, "getReferenceCount in unmapPage %d Page:%ld\n", ref_count, (m.page_ppn));
   
-  if(PageManager::instance()->getReferenceCount(m.page_ppn) > 0)
+  if(ref_count > 0)
   {
     return true;
   }
@@ -265,17 +248,17 @@ bool ArchMemory::unmapPage(uint64 virtual_page)
   if (empty)
   {
     empty = checkAndRemove<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi);
-    PageManager::instance()->freePPN(m.pt_ppn);
+    pm->freePPN(m.pt_ppn);
   }
   if (empty)
   {
     empty = checkAndRemove<PageDirPointerTablePageDirEntry>(getIdentAddressOfPPN(m.pdpt_ppn), m.pdpti);
-    PageManager::instance()->freePPN(m.pd_ppn);
+    pm->freePPN(m.pd_ppn);
   }
   if (empty)
   {
     checkAndRemove<PageMapLevel4Entry>(getIdentAddressOfPPN(m.pml4_ppn), m.pml4i);
-    PageManager::instance()->freePPN(m.pdpt_ppn);
+    pm->freePPN(m.pdpt_ppn);
   }
   return true;
 }

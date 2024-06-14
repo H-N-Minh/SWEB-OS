@@ -602,7 +602,7 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
   lfdTable.lfds_lock_.acquire();
-  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+  LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(fd);
 
   if (fd == fd_stdin)
   {
@@ -1007,3 +1007,4 @@ void Syscall::checkRandomPRA()
   IPTManager* ipt = IPTManager::instance();
   ipt->debugRandomGenerator();
 }
+

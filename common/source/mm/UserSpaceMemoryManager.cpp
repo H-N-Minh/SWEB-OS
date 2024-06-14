@@ -27,6 +27,7 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(const UserSpaceMemoryManager& oth
     current_break_lock_("UserSpaceMemoryManager::lock_")
 {
   shared_mem_manager_ = new SharedMemManager(*other.shared_mem_manager_);
+  loader->arch_memory_.shared_mem_manager_ = shared_mem_manager_;
 }
 
 

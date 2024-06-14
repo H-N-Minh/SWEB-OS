@@ -55,6 +55,12 @@ public:
    * get the size of the mem block (in pages)
   */
   size_t getSize();
+
+  /**
+   * get the offset of the given vpn from the start of the shared memory block. 
+   * @return in bytes. Assert if vpn is not within the block
+  */
+  ssize_t getOffset(size_t vpn);
 };
 
 
@@ -65,8 +71,8 @@ private:
   vpn_t last_free_vpn_;
 
 public:
-  Mutex shared_mem_lock_;
-
+  Mutex shared_mem_lock_; // responsible for shared_map_ and last_free_vpn_
+  // locking order: shared_mem_lock_ -> ipt_lock_ -> archmem_lock_
   
   SharedMemManager();
   SharedMemManager(const SharedMemManager& other);
@@ -121,7 +127,24 @@ public:
   /**
    * helper for HandleSharedPF(), set the protection bits for the new vpn, based on the info from the shared memory entry
   */
-  void setProtectionBits(SharedMemEntry* entry, size_t vpn);
+  void setProtectionBits(SharedMemEntry* entry, ArchMemory* archmem, size_t vpn);
+
+  /**
+   * read the fd file and copy content (1 page, start from the offset) to the given ppn
+  */
+  void copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory);
+
+  /**
+   * write the content of the given vpn to the fd file (1 page, start from the offset)
+  */
+  void writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchMemory* arch_memory);
+
+  /**
+   * check if the given page is a shared page and only 1 process left using it. If so, write back to the file before unmap
+  */
+  bool isTimeToWriteBack(SharedMemEntry* sm_entry, ArchMemory* arch_memory, size_t vpn);
+
+
 };
 
 

@@ -8,6 +8,7 @@
 #include "SwappingManager.h"
 #include "ArchMemory.h"
 #include "SwappingThread.h"
+#include "SharedMemManager.h"
 
 
 #define INVALID_PPN -1
@@ -19,7 +20,7 @@ class ArchmemIPT;
 IPTManager* IPTManager::instance_ = nullptr;
 
 IPTManager::IPTManager() 
-  : IPT_lock_("IPTManager::IPT_lock_")
+  : IPT_lock_("IPTManager::IPT_lock_"), fake_ppn_lock_("IPTManager::fake_ppn_lock_")
 {
   assert(!instance_);
   instance_ = this;
@@ -454,7 +455,199 @@ void IPTManager::checkDiskMapConsistency()
 }
 
 
+void IPTManager::insertFakePpnEntry(ArchMemory* archmem, size_t vpn)
+{
+  assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertFakePpnEntry called but fake_ppn_lock_ not locked\n");
 
+  fake_ppn_t new_ppn = fake_ppn_counter_;
+
+  // Adding entry to the fake_ppn_map_
+  debug(IPT, "IPTManager::insertFakePpnEntry: inserting archmem: %p, vpn: %zu to fake_ppn_map_\n", archmem, vpn);
+  auto it = fake_ppn_map_.find(archmem);
+  if (it != fake_ppn_map_.end())
+  {
+    debug(IPT, "IPTManager::insertFakePpnEntry: archmem exists in fake_ppn_map_\n");
+    auto& sub_map = it->second;
+    if (sub_map.find(vpn) != sub_map.end())
+    {
+      assert(0 && "IPTManager::insertFakePpnEntry: vpn already exists in the sub map");
+    }
+    else
+    {
+      sub_map[vpn] = new_ppn;
+    }
+  }
+  else
+  {
+    debug(IPT, "IPTManager::insertFakePpnEntry: archmem does not exist yet in fake_ppn_map_, creating new\n");
+    fake_ppn_map_[archmem][vpn] = new_ppn;
+  }
+  
+  // adding entry to the inverted fake ppn map
+  auto it2 = inverted_fake_ppn_.find(new_ppn);
+  if (it2 != inverted_fake_ppn_.end())
+  {
+    debug(IPT, "IPTManager::insertFakePpnEntry: ppn %zu already exists in inverted_fake_ppn_\n", new_ppn);
+    assert(0 && "IPTManager::insertFakePpnEntry: ppn already exists in inverted_fake_ppn_\n");
+  }
+  else
+  {
+    ArchmemIPT* new_arch_ipt = new ArchmemIPT(vpn, archmem);
+    inverted_fake_ppn_.insert({new_ppn, new_arch_ipt});
+  }
+
+  fake_ppn_counter_++;
+}
+
+
+void IPTManager::copyFakedPages(ArchMemory* parent, ArchMemory* child)
+{
+  assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::copyFakedPages called but fake_ppn_lock_ not locked\n");
+
+  // check if the parent archmem exists in the map (it should)
+  auto it = fake_ppn_map_.find(parent);
+  if (it != fake_ppn_map_.end())
+  {
+    auto& sub_map = it->second;
+    for (auto& pair : sub_map)
+    {
+      size_t vpn = pair.first;
+      fake_ppn_t mutual_fake_ppn = pair.second;
+
+      // adding child archmem to the fake_ppn_map_
+      debug(IPT, "IPTManager::copyFakedPages: adding child archmem: %p, vpn: %zu to fake_ppn_map_\n", child, vpn);
+      fake_ppn_map_[child][vpn] = mutual_fake_ppn;
+
+      // adding child archmem to the inverted_fake_ppn_
+      ArchmemIPT* new_arch_ipt = new ArchmemIPT(vpn, child);
+      inverted_fake_ppn_.insert({mutual_fake_ppn, new_arch_ipt});
+    }
+  }
+}
+
+// TODO: lock all the archmemory
+void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages)
+{
+  assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::mapRealPPN called but fake_ppn_lock_ not locked\n");
+  fake_ppn_t mutual_fake_ppn = 0;
+  // find if the archmemory exists in the fake_ppn_map_, it should
+  auto it = fake_ppn_map_.find(arch_memory);
+  if (it != fake_ppn_map_.end())
+  {
+    auto& sub_map = it->second;
+    if (sub_map.find(vpn) != sub_map.end())
+    {
+      mutual_fake_ppn = sub_map[vpn];      
+    }
+    else
+    {
+      assert(0 && "IPTManager::mapRealPPN:  vpn not found in fake_ppn_map_\n");
+    }
+  }
+  else
+  {
+    assert(0 && "IPTManager::mapRealPPN: archmem not found in fake_ppn_map_\n");
+  }
+
+  // go through every archmem in inverted_fake_ppn_ and update with the real ppn
+  for (auto it = inverted_fake_ppn_.begin(); it != inverted_fake_ppn_.end(); ++it)
+  {
+    if (it->first == mutual_fake_ppn)
+    {
+      ArchmemIPT* archmem_ipt = it->second;
+      assert(archmem_ipt && "IPTManager::mapRealPPN: archmem_ipt is null");
+      ArchMemory* temp_archmem = archmem_ipt->archmem_;
+      assert(temp_archmem && "IPTManager::mapRealPPN: archmem is null");
+      size_t temp_vpn = archmem_ipt->vpn_;
+      
+      if (temp_archmem != arch_memory)
+      {
+        temp_archmem->archmemory_lock_.acquire();
+      }
+      
+
+      bool rv = temp_archmem->mapPage(temp_vpn, ppn, 1, preallocated_pages);
+      assert(rv == true);
+
+      // setting up the bits
+      SharedMemManager* smm = temp_archmem->shared_mem_manager_;
+      assert(smm && "IPTManager::mapRealPPN: shared_mem_manager_ is null");
+      SharedMemEntry* entry = smm->getSharedMemEntry(temp_vpn * PAGE_SIZE);
+      smm->setProtectionBits(entry, temp_archmem, temp_vpn);
+      temp_archmem->setSharedBit(temp_vpn);
+
+      if (temp_archmem != arch_memory)
+      {
+        temp_archmem->archmemory_lock_.release();
+      }
+
+      // delete the entry in inverted_fake_ppn_
+      delete it->second;
+      inverted_fake_ppn_.erase(it);
+      it--;
+
+      // delete the entry in fake_ppn_map_
+      fake_ppn_map_[temp_archmem].erase(temp_vpn);
+      if (fake_ppn_map_[temp_archmem].size() == 0)
+      {
+        fake_ppn_map_.erase(temp_archmem);
+      }
+      
+    }
+  }
+}
+
+
+void IPTManager::unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory)
+{
+  assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::unmapOneFakePPN called but fake_ppn_lock_ not locked\n");
+
+  // find if the archmemory exists in the fake_ppn_map_, it should
+  auto it = fake_ppn_map_.find(arch_memory);
+  if (it != fake_ppn_map_.end())
+  {
+    auto& sub_map = it->second;
+    if (sub_map.find(vpn) != sub_map.end())
+    {
+      fake_ppn_t mutual_fake_ppn = sub_map[vpn];
+      // removing from fake_ppn_map
+      sub_map.erase(vpn);
+      if (sub_map.size() == 0)
+      {
+        fake_ppn_map_.erase(it);
+      }
+      
+      // removing from inverted_fake_ppn_
+      for (auto it2 = inverted_fake_ppn_.begin(); it2 != inverted_fake_ppn_.end(); ++it2)
+      {
+        if (it2->first == mutual_fake_ppn)
+        {
+          ArchmemIPT* archmem_ipt = it2->second;
+          assert(archmem_ipt && "IPTManager::unmapOneFakePPN: archmem_ipt is null");
+          ArchMemory* temp_archmem = archmem_ipt->archmem_;
+          assert(temp_archmem && "IPTManager::unmapOneFakePPN: archmem is null");
+          size_t temp_vpn = archmem_ipt->vpn_;
+
+          if (temp_archmem == arch_memory && temp_vpn == vpn)
+          {
+            // delete the entry in inverted_fake_ppn_
+            delete it2->second;
+            inverted_fake_ppn_.erase(it2);
+            break;
+          }
+        }
+      }
+    }
+    else
+    {
+      assert(0 && "IPTManager::unmapOneFakePPN: vpn not found in fake_ppn_map_\n");
+    }
+  }
+  else
+  {
+    assert(0 && "IPTManager::unmapOneFakePPN: archmem not found in fake_ppn_map_\n");
+  }
+}
 
 
 
