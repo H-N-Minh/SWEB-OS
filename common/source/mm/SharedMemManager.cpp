@@ -141,6 +141,21 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     void* start_addr = (void*) (start * PAGE_SIZE);
     last_free_vpn_ += size;
 
+    // if the page is shared, add it to usp vector of IPTManager
+    if (shared)
+    {
+        IPTManager* ipt = IPTManager::instance();
+        ArchMemory* arch_memory = &((UserThread*) currentThread)->loader_->arch_memory_;
+        ipt->IPT_lock_.acquire();
+        arch_memory->archmemory_lock_.acquire();
+        for (vpn_t vpn = start; vpn <= end; vpn++)
+        {
+            ipt->insertUspEntry(arch_memory, vpn);
+        }
+        ipt->IPT_lock_.release();
+        arch_memory->archmemory_lock_.release();
+    }
+
     // // adding reference to fd
     // if (fd >= 0)
     // {
@@ -195,33 +210,51 @@ bool SharedMemManager::isAddressValid(size_t address)
 
 void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, size_t address)
 {
+    assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "SharedMemManager::handleSharedPF: IPT need to be locked");
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::handleSharedPF: shared_mem_lock_ not held\n");
     assert(currentThread->loader_->arch_memory_.archmemory_lock_.isHeldBy(currentThread) && "SharedMemManager::handleSharedPF: archmemory_lock_ not held\n");
 
     ArchMemory* arch_memory = &currentThread->loader_->arch_memory_;
     SharedMemEntry* entry = getSharedMemEntry(address);
 
+    // create new ppn and copy content from fd if necessary
     size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
     size_t vpn = address / PAGE_SIZE;
-    
-    bool rv = arch_memory->mapPage(vpn, ppn, 1, preallocated_pages);
-    assert(rv == true);
-
-    debug(MMAP, "SharedMemManager::handleSharedPF: Page mapped to ppn %zu, setting the bits for the new page\n", ppn);
-    setProtectionBits(entry, vpn);
-    if (entry->shared_)
-    {
-        arch_memory->setSharedBit(vpn);
-    }
-
     if ((entry->flags_ == MAP_PRIVATE || entry->flags_ == MAP_SHARED) && entry->fd_ >= 0)
     {
-        debug(MMAP, "SharedMemManager::handleSharedPF: copying content from fd (%d) to page (%zu)\n", entry->fd_, ppn);
+        debug(MMAP, "SharedMemManager::handleSharedPF: fd exists, copying content from fd (%d) to the new ppn (%zu)\n", entry->fd_, ppn);
         ssize_t offset = entry->getOffset(vpn);
         copyContentFromFD(ppn, entry->fd_, offset, arch_memory);
         
     }
     
+    // map every relevant archmem to the new ppn
+    if (entry->shared_)
+    {
+        debug(MMAP, "SharedMemManager::handleSharedPF: Mapping the new shared ppn %zu to every relevant archmem\n", ppn);
+        ustl::vector<ArchmemIPT*>& archmems = IPTManager::instance()->getUspSubVector(arch_memory, vpn);
+        assert(archmems.size() > 0 && "SharedMemManager::handleSharedPF: no relevant archmem found\n");
+        for (auto it : archmems)
+        {
+            assert(it && "SharedMemManager::handleSharedPF: ArchmemIPT is null\n");
+            bool rv = it->archmem_->mapPage(it->vpn_, ppn, 1, preallocated_pages);
+            assert(rv == true);
+            setProtectionBits(entry, it->archmem_, it->vpn_);
+            it->archmem_->setSharedBit(it->vpn_);
+        }
+        IPTManager::instance()->deleteUspSubVector(archmems);
+
+    }
+    else
+    {
+        bool rv = arch_memory->mapPage(vpn, ppn, 1, preallocated_pages);
+        assert(rv == true);
+        setProtectionBits(entry, arch_memory, vpn);
+    }
+    
+    
+
+    debug(MMAP, "SharedMemManager::handleSharedPF: done\n");
 }
 
 void SharedMemManager::copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory)
@@ -265,7 +298,7 @@ void SharedMemManager::copyContentFromFD(size_t ppn, int fd, ssize_t offset, Arc
     debug(MMAP, "SharedMemManager::copyContentFromFD: copied %d bytes from fd (%d) to page (%zu)\n", num_read, fd, ppn);
 }
 
-void SharedMemManager::setProtectionBits(SharedMemEntry* entry, size_t vpn)
+void SharedMemManager::setProtectionBits(SharedMemEntry* entry, ArchMemory* archmem, size_t vpn)
 {
     int read = 0;
     int write = 0;
@@ -312,7 +345,7 @@ void SharedMemManager::setProtectionBits(SharedMemEntry* entry, size_t vpn)
         assert(false && "SharedMemManager::handleSharedPF: invalid protection bits\n");
     }
 
-    currentThread->loader_->arch_memory_.setProtectionBits(vpn, read, write, execute);
+    archmem->setProtectionBits(vpn, read, write, execute);
 
 }
 

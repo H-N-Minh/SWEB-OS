@@ -102,7 +102,7 @@ class ArchMemory
     static PageMapLevel4Entry* getRootOfKernelPagingStructure();
 
     /// Prevents accidental copying/assignment, can be implemented if needed
-    ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated_pages);
+    ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
     

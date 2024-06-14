@@ -24,11 +24,15 @@ private:
 
 public:
   // locking order: Ipt_lock -> disk_lock -> archmem_lock
-  Mutex IPT_lock_;          // responsible for: ram_map_, disk_map_, pra_type_
+  Mutex IPT_lock_;          // responsible for: ram_map_, disk_map_, pra_type_, unmapped_shared_pages_
   ustl::map<ppn_t, IPTEntry*> ram_map_;
   ustl::map<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
 
+  // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
+  // Therefore this vector exists. Each sub-vector is responsible for 1 shared page, contains all archmem that all mapped to this shared page. 
+  // Therefore, the vector unmap_shared_pages_ is a vector of all shared pages accross all processes, that are not yet allocated a ppn
+  ustl::vector<ustl::vector<ArchmemIPT*>> unmapped_shared_pages_;
 
   IPTManager();
   ~IPTManager();
@@ -103,6 +107,34 @@ public:
   */
   void debugRandomGenerator();
   
+  /**
+   * , called by archmem copy constructor
+   * The parent should already be somewhere in the vector, and since the child should also mapped to the same shared page as the parent, it should 
+   * also be inserted into the same vector. This func search which vector the parents belong to, then add the child to the same vector
+   * @param parent_arch the  archmem of the parent, should already exists in some sub-vector in unmapped_shared_pages_
+   * @param parent_vpn the vpn of the parent archmem that should be mapped to the future shared ppn
+   * @param second_arch the child archmem, should not already be in the vector.
+   * @param second_vpn the vpn of the child archmem that should be mapped to the same future shared ppn
+  */
+  void insertPairedUSP(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn);
+
+  /**
+   * inserting entry to unmapped_shared_pages_. this is for when the shared page is just newly created and currently only used by 1 archmem
+   * Since the page is not allocated a ppn yet (not until a PF happens), therefore the page is not yet in the IPT table. Thats why this unmapped_shared_pages_ exists.
+  */
+  void insertUspEntry(ArchMemory* archmem, size_t vpn);
+
+  /**
+   * remove an entry from the unmapped_shared_pages_. This is called when the sarchmem sharing a page is finally allocated a ppn for that page
+   * @param archmem the archmem of one of the sharing archmems
+   * @param vpn the vpn of that archmem that points to the shared page
+  */
+  ustl::vector<ArchmemIPT*>& getUspSubVector(ArchMemory* arch_memory, size_t vpn);
+
+  /**
+   * similar to getUspSubVector, but removes the sub-vector from the vector unmapped_shared_pages_
+  */
+  void deleteUspSubVector(ustl::vector<ArchmemIPT*>& sub_vector);
 
   private:
 

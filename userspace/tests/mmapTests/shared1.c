@@ -43,8 +43,8 @@ int shared1() {
     // }
     // // test writing
     // int *num = (int*) addr;
-    // *num = 10;
-    // assert(*num == 10 && "Error: writing 1 failed\n");
+    // // *num = 10;
+    // // assert(*num == 10 && "Error: writing 1 failed\n");
     // // test IPC
     // pid_t child_pid;
     // int child_status;
@@ -135,6 +135,7 @@ int shared1() {
             memcpy((char*) temp, st, strlen(st) + 1);
             temp += 4096;
         }
+        printf("child wrote to the page\n");
         exit(0);
     } 
     else 

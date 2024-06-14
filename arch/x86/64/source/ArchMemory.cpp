@@ -23,6 +23,7 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
   size_t ppn = PageManager::instance()->allocPPN();
   IPTManager::instance()->IPT_lock_.acquire();
   archmemory_lock_.acquire();
+
   page_map_level_4_ = ppn;
   PageMapLevel4Entry* new_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   memcpy((void*) new_pml4, (void*) kernel_page_map_level_4, PAGE_SIZE);
@@ -32,7 +33,7 @@ ArchMemory::ArchMemory():archmemory_lock_("archmemory_lock_")
 }
 
 // COPY CONSTRUCTOR
-ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated_pages):archmemory_lock_("archmemory_lock_")
+ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages):archmemory_lock_("archmemory_lock_")
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   assert(src.archmemory_lock_.heldBy() == currentThread && "Parent archmemory need to be locked");
@@ -89,22 +90,14 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
               memcpy((void*) CHILD_pt, (void*) PARENT_pt, PAGE_SIZE);
               assert(CHILD_pd[pdi].pt.present == 1 && "The page directory entries should be both be present in child and parent");
 
-
-
               // loop through pt to get each pageT
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
-                if (PARENT_pt[pti].present)
+                if (PARENT_pt[pti].present || PARENT_pt[pti].swapped_out)
                 {
-                  if (PARENT_pt[pti].shared)
-                  {
-                    PARENT_pt[pti].writeable = 1;
-                    PARENT_pt[pti].cow = 0;
+                  IPTMapType maptype = PARENT_pt[pti].swapped_out ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP;
 
-                    CHILD_pt[pti].writeable = 1;
-                    CHILD_pt[pti].cow = 0;
-                  }
-                  else
+                  if (!PARENT_pt[pti].shared)
                   {
                     PARENT_pt[pti].writeable = 0;
                     PARENT_pt[pti].cow = 1;
@@ -112,33 +105,17 @@ ArchMemory::ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated
                     CHILD_pt[pti].writeable = 0;
                     CHILD_pt[pti].cow = 1;
                   }
-
+                
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
+                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
-                else if(PARENT_pt[pti].swapped_out)
+                else if (PARENT_pt[pti].shared) // if page is shared but not mapped yet
                 {
-                  if (PARENT_pt[pti].shared)
-                  {
-                    PARENT_pt[pti].writeable = 1;
-                    PARENT_pt[pti].cow = 0;
-
-                    CHILD_pt[pti].writeable = 1;
-                    CHILD_pt[pti].cow = 0;
-                  }
-                  else
-                  {
-                    PARENT_pt[pti].writeable = 0;
-                    PARENT_pt[pti].cow = 1;
-
-                    CHILD_pt[pti].writeable = 0;
-                    CHILD_pt[pti].cow = 1;
-                  }
-
-                  size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, IPTMapType::DISK_MAP);
+                  assert(PARENT_pt[pti].page_ppn != 0 && "Shared pages was not added to the IPTManager::unmapped_shared_pages_");
+                  assert(PARENT_pt[pti].page_ppn < IPTManager::instance()->unmapped_shared_pages_.size() && "the index of parent is invalid in unmapped_shared_pages_");
+                  CHILD_pt[pti].page_ppn = PARENT_pt[pti].page_ppn;
                 }
               }
             }

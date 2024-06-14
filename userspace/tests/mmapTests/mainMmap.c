@@ -27,8 +27,8 @@ int childMain()
     // comment out the tests you don't want to run
 
 //******* MAP_PRIVATE - MAP_ANONYMOUS (using mmap like malloc)********
-//     PRIVATE1 = 1;   // Collection of bunch of basic tests for MAP_PRIVATE
-//     PRIVATE1_ANONYM = 1;   // same as private1, but uses MAP_ANONYMOUS instead of a file descriptor.
+    // PRIVATE1 = 1;   // Collection of bunch of basic tests for MAP_PRIVATE
+    // PRIVATE1_ANONYM = 1;   // same as private1, but uses MAP_ANONYMOUS instead of a file descriptor.
 
 // //******* MAP_SHARED - MAP_ANONYMOUS (using mmap with fork)********
 //     // NOTE: currently for map_shared, fd are never closed, this should be fixed. this is the only flag that requires writting back to the file, which requires fd to be open for kernel

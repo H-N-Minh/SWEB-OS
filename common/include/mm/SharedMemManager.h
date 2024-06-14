@@ -71,8 +71,8 @@ private:
   vpn_t last_free_vpn_;
 
 public:
-  Mutex shared_mem_lock_;
-
+  Mutex shared_mem_lock_; // responsible for shared_map_ and last_free_vpn_
+  // locking order: shared_mem_lock_ -> ipt_lock_ -> archmem_lock_ -> usp_lock_
   
   SharedMemManager();
   SharedMemManager(const SharedMemManager& other);
@@ -127,7 +127,7 @@ public:
   /**
    * helper for HandleSharedPF(), set the protection bits for the new vpn, based on the info from the shared memory entry
   */
-  void setProtectionBits(SharedMemEntry* entry, size_t vpn);
+  void setProtectionBits(SharedMemEntry* entry, ArchMemory* archmem, size_t vpn);
 
   /**
    * read the fd file and copy content (1 page, start from the offset) to the given ppn
