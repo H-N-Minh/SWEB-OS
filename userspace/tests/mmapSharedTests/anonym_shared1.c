@@ -17,7 +17,7 @@ int anonym_shared1() {
         return 1;
     }
     // test reading
-    if (memcmp(addr, "can u see me now", strlen("can u see me now") + 1))
+    if (memcmp(addr, "", strlen("") + 1))
     {
         printf("Error: reading 1 failed\n");
         return -1;

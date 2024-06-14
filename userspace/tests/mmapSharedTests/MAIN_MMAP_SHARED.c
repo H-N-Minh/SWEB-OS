@@ -57,18 +57,18 @@ int childMain()
 // //******* MAP_SHARED - MAP_ANONYMOUS (using mmap with fork)********
 
 //// NOTE: currently for map_shared, fd are never closed, this should be fixed. this is the only flag that requires writting back to the file, which requires fd to be open for kernel
-    // SHARED1 = 1;   // very basic mmap, write and read and munmap, and IPC between 2 processes
-    // SHARED2 = 1;   // mmap with read-only protection, child tries to write and should crash
-    // SHARED3 = 1;   // mmap with larger size, child writes to every page, Parent should see all the changes made by the child
-    // SHARED4 = 1;   // Child calls munmap, parent should still be able to access the page and then call munmap itself on the same page
-    // SHARED5 = 1;   // Child calls munmap with too big size (should fail), then with small size (size should be rounded up and page should still be unmapped), 
-    //         //          then munmap same page again (should fail). Child shouldnt crash in this test
-    // SHARED6 = 1;   // Child calls munmap, then tries to write to page, child should crashes.
-    // SHARED7 = 1;   // Calling mmap and munmap with invalid parameters, these should all fail
-    // SHARED8 = 1;   // Child munmaps the first page, writes to the other 2 pages (to show that they are still accessible), 
-    // //         //          then munmaps those 2 pages at the same time. child shouldnt crash
-    // SHARED9 = 1;   // Child writes to the shared page, then exits without munmap. Parent should still be able to see what the child wrote. 
-    //         //          This shows the page is written back to file (even without munmap) when process terminates
+    SHARED1 = 1;   // very basic mmap, write and read and munmap, and IPC between 2 processes
+    SHARED2 = 1;   // mmap with read-only protection, child tries to write and should crash
+    SHARED3 = 1;   // mmap with larger size, child writes to every page, Parent should see all the changes made by the child
+    SHARED4 = 1;   // Child calls munmap, parent should still be able to access the page and then call munmap itself on the same page
+    SHARED5 = 1;   // Child calls munmap with too big size (should fail), then with small size (size should be rounded up and page should still be unmapped), 
+            //          then munmap same page again (should fail). Child shouldnt crash in this test
+    SHARED6 = 1;   // Child calls munmap, then tries to write to page, child should crashes.
+    SHARED7 = 1;   // Calling mmap and munmap with invalid parameters, these should all fail
+    SHARED8 = 1;   // Child munmaps the first page, writes to the other 2 pages (to show that they are still accessible), 
+    //         //          then munmaps those 2 pages at the same time. child shouldnt crash
+    SHARED9 = 1;   // Child writes to the shared page, then exits without munmap. Parent should still be able to see what the child wrote. 
+            //          This shows the page is written back to file (even without munmap) when process terminates
 
 // ANONYM SHARED tests: same as shared tests, but uses MAP_ANONYMOUS instead of a file descriptor.
     ANONYM_SHARED1 = 1;
