@@ -8,7 +8,11 @@
 
 size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
+
+//ENABLE DISABLE PRE-SWAPPING
 bool SwappingManager::pre_swap_enabled = true;  // true = enabled, false = disabled
+
+
 
 SwappingManager::SwappingManager()
     : disk_lock_("disk_lock_")
