@@ -62,8 +62,9 @@ bool SwappingManager::preSwapPage(size_t ppn)
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
   }
 
+  // If the entry disk map doesn't already contain the current entry, add it
   if (!ipt_->isEntryInMap(disk_offset_counter_, IPTMapType::DISK_MAP, archmemory)) {
-    ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
+    ipt_->copyEntryToPreswap(IPTMapType::RAM_MAP, ppn);
   } else {
     debug(PRESWAPPING,"SwappingManager::preSwapPage: Entry already exists in the disk map, skipping move.\n");
   }
@@ -91,12 +92,11 @@ void SwappingManager::swapOutPage(size_t ppn)
   ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   lock_archmemories_in_right_order(virtual_page_infos);
 
-
   if (preswapped)
   {
-    // If preswapped, simply move entry from RAM_MAP to DISK_MAP
-    ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
-    pre_swapped_pages.erase(it); // remove from pre-swapped pages
+    // Use the new method instead of moveEntry()
+    ipt_->movePreswapedToDisk(IPTMapType::RAM_MAP, ppn);
+    pre_swapped_pages.erase(it);
   }
   else{
     debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);

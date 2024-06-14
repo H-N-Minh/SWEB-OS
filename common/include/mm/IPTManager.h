@@ -9,7 +9,7 @@
 
 #define PRESWAPTHRESHOLD 80 //80%
 #define MAX_PRESWAP_PAGES 20
-enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
+enum IPTMapType {RAM_MAP, DISK_MAP, PRESWAP_MAP, NONE};
 enum PRA_TYPE {RANDOM, NFU};
 
 // class IPTEntry;
@@ -63,6 +63,11 @@ public:
   */
   void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
+  void copyEntryToPreswap(IPTMapType map_type, size_t ppn);
+
+  void movePreswapedToDisk(IPTMapType map_type, size_t ppn);
+
+
   /**
    * Getter for debugging info, doesnt use any lock but who cares
   */
@@ -105,6 +110,4 @@ public:
   // tobe removed
   bool isThereAnyPageToSwapOut();
 
-  //preswapping
-  static bool ENABLE_PRE_SWAP; //true = used, false = not used
 };

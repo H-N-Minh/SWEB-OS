@@ -288,6 +288,30 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   iptEntry->access_counter_ = 0;
 }
 
+void IPTManager::copyEntryToPreswap(IPTMapType map_type, size_t ppn)
+{
+  auto* original_map = &ram_map_;
+
+  // Check that the entry is in the original map
+  assert(isKeyInMap(ppn, map_type) && "IPTManager::copyEntryToPreswap: Entry to be copied not found in original map");
+
+  // Get the original entry
+  IPTEntry* original_entry = (*original_map)[ppn];
+
+  // Insert the entry to the disk map. This is a placeholder
+  disk_map_[ppn] = new IPTEntry(*original_entry);
+}
+
+void IPTManager::movePreswapedToDisk(IPTMapType map_type, size_t ppn)
+{
+  auto* original_map = &ram_map_;
+
+  // Check that the entry is in the original map
+  assert(isKeyInMap(ppn, map_type) && "IPTManager::movePreswapedToDisk: Entry to be copied not found in original map");
+
+  // Remove the original entry
+  original_map->erase(ppn);
+}
 
 bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem)
 {
