@@ -176,15 +176,10 @@ size_t IPTManager::findPageToSwapOut()
       assert(0);
     }
     int counter = 0;
-    while(ppn_retval == INVALID_PPN && counter < 2)
+    while(ppn_retval == INVALID_PPN && counter < 3)
     {
       counter++;
       
-      if(last_index_ > (fifo_ppns.size() - 1))
-      {
-        last_index_ = 0;
-      }
-
       for(;last_index_ <  fifo_ppns.size(); last_index_++)
       {
         auto& ppn = fifo_ppns.at(last_index_);
@@ -207,8 +202,12 @@ size_t IPTManager::findPageToSwapOut()
             archmem->archmemory_lock_.release();
             break;
           }
-          
         }
+      }
+
+      if(last_index_ > (fifo_ppns.size() - 1))
+      {
+        last_index_ = 0;
       }
     }
 
