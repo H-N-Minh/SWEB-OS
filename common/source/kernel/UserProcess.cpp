@@ -219,7 +219,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
 
   // uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
-  uint64 top_vpn = top_stack/PAGE_SIZE;
+  size_t top_vpn = top_stack/PAGE_SIZE;
 
   IPTManager::instance()->IPT_lock_.acquire();
   arch_memory->archmemory_lock_.acquire();
@@ -228,7 +228,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
     if (arch_memory->checkAddressValid(top_stack))
     {
       arch_memory->unmapPage(top_vpn);
-      debug(SYSCALL, "unmapThreadStack: Unmap vpn %lu\n", top_vpn);
+      debug(SYSCALL, "unmapThreadStack: Unmap vpn %p\n", (void*)top_vpn);
       top_vpn--;
       top_stack -= PAGE_SIZE;
     }
