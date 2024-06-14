@@ -42,7 +42,6 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
   assert(src.archmemory_lock_.heldBy() == currentThread && "Parent archmemory need to be locked");
   assert(PageManager::instance()->heldBy() != currentThread);
   archmemory_lock_.acquire();
-  ipt->fake_ppn_lock_.acquire();
   
   debug(FORK, "ArchMemory::copy-constructor starts \n");
   page_map_level_4_ = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
@@ -115,11 +114,6 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
 
                   assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
-                else if (PARENT_pt[pti].shared) // if page is shared but not mapped yet
-                {
-                  size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                  ipt->addToFakePpnEntry(&src, vpn, this, vpn);
-                }
               }
             }
           }
@@ -128,7 +122,12 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
     }
   }
   debug(FORK, "ArchMemory::copy-constructor finished \n");
+
+  // copying the shared pages that are not mapped yet
+  ipt->fake_ppn_lock_.acquire();
+  ipt->copyFakedPages(&src, this);
   ipt->fake_ppn_lock_.release();
+
   archmemory_lock_.release();
 }
 

@@ -144,12 +144,6 @@ class ArchMemory
 
     void setSharedBit(size_t vpn);
 
-    /**
-     * helper for archmem cpy constructor, used for when a page is a shared page but doesnt have a ppn yet. So adding child to same vector as parent
-     * to keep track of all archmem that share the same page
-    */
-    void addChildToSameVector(size_t parent_index, size_t vpn, ArchMemory &src, PageTableEntry* CHILD_pt, size_t pti, ArchMemory* child_arch);
-
 
   private:
     /**

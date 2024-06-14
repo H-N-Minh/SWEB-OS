@@ -123,6 +123,7 @@ int shared1() {
         printf("mmap 3 failed\n");
         return 1;
     }
+    printf("mmap 3 done\n");
     // test IPC
     pid_t child_pid = -1;
     int child_status = -1;
@@ -130,6 +131,7 @@ int shared1() {
     child_pid = fork();
     if (child_pid == 0) {
         // write st to every page
+        printf("child writing to the page\n");
         size_t temp = (size_t) addr;
         for (int i = 0; i < pages; i++) {
             memcpy((char*) temp, st, strlen(st) + 1);
@@ -141,6 +143,7 @@ int shared1() {
     else 
     {
         waitpid(child_pid, &child_status, 0);
+        printf("parent reading the page\n");
         if (child_status != 0)
         {
             printf("Error fork 3: Child process did not finish successfully (code %d)\n", child_status);
@@ -155,6 +158,7 @@ int shared1() {
             }
             temp += 4096;
         }
+        printf("parent done read the page\n");
     }
     // reset the file data and test munmap
     memcpy(addr, "can u see me now", strlen("can u see me now") + 1);

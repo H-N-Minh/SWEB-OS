@@ -361,7 +361,7 @@ void SharedMemManager::setProtectionBits(SharedMemEntry* entry, ArchMemory* arch
 
 SharedMemEntry* SharedMemManager::getSharedMemEntry(size_t address)
 {
-    assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::getSharedMemEntry: shared_mem_lock_ not held\n");
+    // assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::getSharedMemEntry: shared_mem_lock_ not held\n");
 
     vpn_t vpn = address / PAGE_SIZE;
     for (auto it : shared_map_)

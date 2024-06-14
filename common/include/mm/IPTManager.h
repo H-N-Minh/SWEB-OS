@@ -115,10 +115,10 @@ public:
   */
   void debugRandomGenerator();
   
-  /**
-   * Is called when archmemory copy constructor. Add the child to the same shared page as the parent. Adding to both fake_ppn_map_ and inverted_fake_ppn_
-  */
-  void addToFakePpnEntry(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn);
+  // /**
+  //  * Is called when archmemory copy constructor. Add the child to the same shared page as the parent. Adding to both fake_ppn_map_ and inverted_fake_ppn_
+  // */
+  // void addToFakePpnEntry(ArchMemory* parent_arch, size_t parent_vpn, ArchMemory* child_arch, size_t child_vpn);
 
   /**
    * Is called when a new shared page is created. Adding entry to both fake_ppn_map_ and inverted_fake_ppn_
@@ -130,6 +130,11 @@ public:
    * this also removes entry from fake_ppn_map_ and inverted_fake_ppn_
   */
   void mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages);
+
+  /**
+   * Is called when archmemory copy constructor. Add the child to the same shared page as the parent. Adding to both fake_ppn_map_ and inverted_fake_ppn_
+  */
+  void copyFakedPages(ArchMemory* parent, ArchMemory* child);
 
   // /**
   //  * check if the given index matches with the given vpn and archmemory* in the vector unmapped_shared_pages_
