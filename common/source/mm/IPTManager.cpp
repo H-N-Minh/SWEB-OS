@@ -556,7 +556,7 @@ void IPTManager::addToFakePpnEntry(ArchMemory* parent_arch, size_t parent_vpn, A
 
 }
 
-void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages, SharedMemManager* smm, SharedMemEntry* entry)
+void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages)
 {
   assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::mapRealPPN called but fake_ppn_lock_ not locked\n");
   // TODO: lock all the archmemory
@@ -588,7 +588,7 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
       ArchmemIPT* archmem_ipt = it->second;
       assert(archmem_ipt && "IPTManager::mapRealPPN: archmem_ipt is null");
       ArchMemory* temp_archmem = archmem_ipt->archmem_;
-      assert(archmem && "IPTManager::mapRealPPN: archmem is null");
+      assert(temp_archmem && "IPTManager::mapRealPPN: archmem is null");
       size_t temp_vpn = archmem_ipt->vpn_;
       
       bool rv = temp_archmem->mapPage(temp_vpn, ppn, 1, preallocated_pages);

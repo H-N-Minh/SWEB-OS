@@ -6,7 +6,6 @@
 #include "umultimap.h"
 #include "Mutex.h"
 #include "IPTEntry.h"
-#include "SharedMemManager.h"
 
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
 enum PRA_TYPE {RANDOM, NFU, SIMPLE};
@@ -130,7 +129,7 @@ public:
    * Is called when a page fault happens, and the shared page receives a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
    * this also removes entry from fake_ppn_map_ and inverted_fake_ppn_
   */
-  void mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages, SharedMemEntry* entry);
+  void mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages);
 
   // /**
   //  * check if the given index matches with the given vpn and archmemory* in the vector unmapped_shared_pages_

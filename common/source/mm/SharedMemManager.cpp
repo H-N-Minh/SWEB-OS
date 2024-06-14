@@ -233,7 +233,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
         ipt->fake_ppn_lock_.acquire();
 
         debug(MMAP, "SharedMemManager::handleSharedPF: Mapping the new shared ppn %zu to every relevant archmem\n", ppn);
-        ipt->mapRealPPN(ppn, vpn, arch_memory, entry);
+        ipt->mapRealPPN(ppn, vpn, arch_memory, preallocated_pages);
 
         ipt->fake_ppn_lock_.release();
 
