@@ -201,7 +201,6 @@ pointer ArchMemory::checkAddressValid(uint64 vaddress_to_check)
   }
 }
 
-
 template<typename T>
 bool ArchMemory::checkAndRemove(pointer map_ptr, uint64 index)
 {
@@ -210,11 +209,15 @@ bool ArchMemory::checkAndRemove(pointer map_ptr, uint64 index)
   ((uint64*) map)[index] = 0;
   for (uint64 i = 0; i < PAGE_DIR_ENTRIES; i++)
   {
-    if (map[i].present != 0)
+    if (map[i].present != 0 || map[i].swapped_out != 0 || map[i].discarded != 0)
       return false;
   }
   return true;
 }
+
+
+
+
 
 bool ArchMemory::unmapPage(uint64 virtual_page)
 {

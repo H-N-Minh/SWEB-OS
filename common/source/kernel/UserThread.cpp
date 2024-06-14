@@ -344,8 +344,8 @@ void UserThread::exitThread(void* value_ptr)
   process_->threads_lock_.release();
 
   // unmap its stack
-  // debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
-  // process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
+  debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
+  process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
 
   if(last_thread)
   {
