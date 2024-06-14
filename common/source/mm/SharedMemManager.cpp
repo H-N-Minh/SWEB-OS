@@ -6,7 +6,6 @@
 #include "paging-definitions.h"
 #include "UserThread.h"
 #include "UserProcess.h"
-#include "IPTManager.h"
 #include "VfsSyscall.h"
 #include "Syscall.h"
 #include "File.h"

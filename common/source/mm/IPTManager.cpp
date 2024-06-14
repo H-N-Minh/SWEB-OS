@@ -8,6 +8,7 @@
 #include "SwappingManager.h"
 #include "ArchMemory.h"
 #include "SwappingThread.h"
+#include "SharedMemManager.h"
 
 
 #define INVALID_PPN -1
@@ -595,9 +596,11 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
       assert(rv == true);
 
       // setting up the bits
-      // SharedMemManager* smm = temp_archmem
-      // smm->setProtectionBits(entry, temp_archmem, temp_vpn);
-      // temp_archmem->setSharedBit(temp_vpn);
+      SharedMemManager* smm = temp_archmem->shared_mem_manager_;
+      assert(smm && "IPTManager::mapRealPPN: shared_mem_manager_ is null");
+      SharedMemEntry* entry = smm->getSharedMemEntry(temp_vpn * PAGE_SIZE);
+      smm->setProtectionBits(entry, temp_archmem, temp_vpn);
+      temp_archmem->setSharedBit(temp_vpn);
     }
   }
 
