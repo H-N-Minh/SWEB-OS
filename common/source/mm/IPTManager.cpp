@@ -598,6 +598,58 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
 }
 
 
+void IPTManager::unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory)
+{
+  assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::unmapOneFakePPN called but fake_ppn_lock_ not locked\n");
+
+  // find if the archmemory exists in the fake_ppn_map_, it should
+  auto it = fake_ppn_map_.find(arch_memory);
+  if (it != fake_ppn_map_.end())
+  {
+    auto& sub_map = it->second;
+    if (sub_map.find(vpn) != sub_map.end())
+    {
+      fake_ppn_t mutual_fake_ppn = sub_map[vpn];
+      // removing from fake_ppn_map
+      sub_map.erase(vpn);
+      if (sub_map.size() == 0)
+      {
+        fake_ppn_map_.erase(it);
+      }
+      
+      // removing from inverted_fake_ppn_
+      for (auto it2 = inverted_fake_ppn_.begin(); it2 != inverted_fake_ppn_.end(); ++it2)
+      {
+        if (it2->first == mutual_fake_ppn)
+        {
+          ArchmemIPT* archmem_ipt = it2->second;
+          assert(archmem_ipt && "IPTManager::unmapOneFakePPN: archmem_ipt is null");
+          ArchMemory* temp_archmem = archmem_ipt->archmem_;
+          assert(temp_archmem && "IPTManager::unmapOneFakePPN: archmem is null");
+          size_t temp_vpn = archmem_ipt->vpn_;
+
+          if (temp_archmem == arch_memory && temp_vpn == vpn)
+          {
+            // delete the entry in inverted_fake_ppn_
+            delete it2->second;
+            inverted_fake_ppn_.erase(it2);
+            break;
+          }
+        }
+      }
+    }
+    else
+    {
+      assert(0 && "IPTManager::unmapOneFakePPN: vpn not found in fake_ppn_map_\n");
+    }
+  }
+  else
+  {
+    assert(0 && "IPTManager::unmapOneFakePPN: archmem not found in fake_ppn_map_\n");
+  }
+}
+
+
 
 // void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
 // {

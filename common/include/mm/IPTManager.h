@@ -131,6 +131,11 @@ public:
   */
   void copyFakedPages(ArchMemory* parent, ArchMemory* child);
 
+  /**
+   * this is for when a shared page is unmmaped when its not even mapped yet. removing entry from fake_ppn_map_
+  */
+  void unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory);
+
   private:
 
     int pages_in_ram_ = 0;  //TODOs: not used at the moment

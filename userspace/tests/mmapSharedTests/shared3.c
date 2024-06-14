@@ -19,7 +19,7 @@ int shared3() {
     /////////////////////////////////////////////// TEST 3 ////////////////////////////////////////////////
     // mmap with larger size, child writes to every page, Parent should see all the changes made by the child
     void* addr = MAP_FAILED;
-    int pages = 1;
+    int pages = 20;
     addr = mmap(NULL, pages * 4096, PROT_READ | PROT_WRITE, MAP_SHARED, fd, 0);
     if (addr == MAP_FAILED) {
         printf("mmap 3 failed\n");

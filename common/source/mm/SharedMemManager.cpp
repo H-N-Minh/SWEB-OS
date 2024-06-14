@@ -483,6 +483,13 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
         }
         arch_memory->unmapPage(vpn);
     }
+    else if (sm_entry->shared_) // if page is not valid, but shared, we need to remove the entry from IPT::fake_ppn_map_
+    {
+        IPTManager* ipt = IPTManager::instance();
+        ipt->fake_ppn_lock_.acquire();
+        ipt->unmapOneFakePPN(vpn, arch_memory);
+        ipt->fake_ppn_lock_.release();
+    }
 
     // remove entry from shared_map (split the memory segment if necessary)
     if (sm_entry->getSize() == 1)
