@@ -432,13 +432,13 @@ uint32 PageManager::getReferenceCount(uint64 page_number) // ppn
 
 ustl::vector<uint32> PageManager::preAlocatePages(int needed_pages_count)
 {
-  preallocator_free_lock.acquire();
-  if(!preallocator_free)
-  {
-    preallocator_free_condition.wait();
-  }
-  preallocator_free = false;
-  preallocator_free_lock.release();
+  // preallocator_free_lock.acquire();
+  // if(!preallocator_free)
+  // {
+  //   preallocator_free_condition.wait();
+  // }
+  // preallocator_free = false;
+  // preallocator_free_lock.release();
 
   ustl::vector<uint32> pre_alocated_pages;
   for(int i = 0; i < needed_pages_count; i++)
@@ -447,10 +447,10 @@ ustl::vector<uint32> PageManager::preAlocatePages(int needed_pages_count)
     pre_alocated_pages.push_back(ppn);
   }
 
-  preallocator_free_lock.acquire();
-  preallocator_free = true;
-  preallocator_free_condition.signal();
-  preallocator_free_lock.release();
+  // preallocator_free_lock.acquire();
+  // preallocator_free = true;
+  // preallocator_free_condition.signal();
+  // preallocator_free_lock.release();
 
   return pre_alocated_pages;
 }
