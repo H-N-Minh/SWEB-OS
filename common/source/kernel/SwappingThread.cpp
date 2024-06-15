@@ -183,10 +183,10 @@ void SwappingThread::Run()
         SwappingManager::instance()->swapping_thread_finished_lock_.release();
         continue;
       }
-      if (SwappingManager::pre_swap_enabled && isMemoryAlmostFull())
-      {
-        preSwap(); // Call preSwap when PRESWAP_THRESHOLD surpassed
-      }
+//      if (SwappingManager::pre_swap_enabled && isMemoryAlmostFull())
+//      {
+//        preSwap(); // Call preSwap when PRESWAP_THRESHOLD surpassed
+//      }
       // 1. Updating Meta data every 1 seconds
       if (isOneTimeStep())
       {

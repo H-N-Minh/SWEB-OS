@@ -11,7 +11,7 @@ size_t SwappingManager::disk_offset_counter_ = 0;
 SwappingManager* SwappingManager::instance_ = nullptr;
 
 //ENABLE DISABLE PRE-SWAPPING
-bool SwappingManager::pre_swap_enabled = true;  // true = enabled, false = disabled
+bool SwappingManager::pre_swap_enabled = false;  // true = enabled, false = disabled
 
 
 
@@ -48,14 +48,68 @@ SwappingManager::~SwappingManager()
   delete ipt_;
 }
 
+//bool SwappingManager::preSwapPage(size_t ppn)
+//{
+//  if (!pre_swap_enabled) return false;  // Return immediately if preswapping is disabled
+//
+//  assert(ipt_->IPT_lock_.heldBy() == currentThread);
+//  disk_lock_.acquire();
+//  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
+//  lock_archmemories_in_right_order(virtual_page_infos);
+//
+//  debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
+//
+//  ArchMemory* archmemory = virtual_page_infos[0]->archmem_;
+//  size_t vpn = virtual_page_infos[0]->vpn_;
+//
+//  ArchMemoryMapping m = ArchMemory::resolveMapping(archmemory->page_map_level_4_, vpn);
+//  char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
+//
+//  bool write_status = bd_device_->writeData(disk_offset_counter_ * bd_device_->getBlockSize(), PAGE_SIZE, const_cast<char*>(page_content));
+//
+//  if (!write_status) {
+//    kprintf("SwappingManager::preSwapPage: Failed to write data on disk.\n");
+//    unlock_archmemories(virtual_page_infos);
+//    disk_lock_.release();
+//    return false;
+//  }
+//
+//  for (ArchmemIPT* virtual_page_info : virtual_page_infos) {
+//    archmemory = virtual_page_info->archmem_;
+//    vpn = virtual_page_info->vpn_;
+//    archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
+//  }
+//
+//  // If the entry disk map doesn't already contain the current entry, add it
+//  if (!ipt_->isEntryInMap(disk_offset_counter_, IPTMapType::DISK_MAP, archmemory)) {
+//    ipt_->copyEntryToPreswap(IPTMapType::RAM_MAP, ppn);
+//  } else {
+//    debug(PRESWAPPING,"SwappingManager::preSwapPage: Entry already exists in the disk map, skipping move.\n");
+//  }
+//
+//  disk_offset_counter_++;
+//  pre_swapped_pages.push_back(ppn);
+//
+//  PageManager::instance()->ref_count_lock_.acquire();
+//  PageManager::instance()->setReferenceCount(ppn, 0);
+//  PageManager::instance()->ref_count_lock_.release();
+//
+//  unlock_archmemories(virtual_page_infos);
+//  disk_lock_.release();
+//  debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld finished", ppn);
+//  return true;
+//}
+
 bool SwappingManager::preSwapPage(size_t ppn)
 {
   if (!pre_swap_enabled) return false;  // Return immediately if preswapping is disabled
 
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
-  disk_lock_.acquire();
+
   ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
-  lock_archmemories_in_right_order(virtual_page_infos);
+  lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
+
+  disk_lock_.acquire();
 
   debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
 
@@ -69,10 +123,13 @@ bool SwappingManager::preSwapPage(size_t ppn)
 
   if (!write_status) {
     kprintf("SwappingManager::preSwapPage: Failed to write data on disk.\n");
-    unlock_archmemories(virtual_page_infos);
+    unlockArchmemorys(virtual_page_infos);
     disk_lock_.release();
     return false;
   }
+
+  disk_offset_counter_++;
+  pre_swapped_pages.push_back(ppn);
 
   for (ArchmemIPT* virtual_page_info : virtual_page_infos) {
     archmemory = virtual_page_info->archmem_;
@@ -80,21 +137,15 @@ bool SwappingManager::preSwapPage(size_t ppn)
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
   }
 
-  // If the entry disk map doesn't already contain the current entry, add it
-  if (!ipt_->isEntryInMap(disk_offset_counter_, IPTMapType::DISK_MAP, archmemory)) {
+  if (!ipt_->isEntryInMap(disk_offset_counter_, IPTMapType::DISK_MAP, archmemory, vpn)) {
     ipt_->copyEntryToPreswap(IPTMapType::RAM_MAP, ppn);
   } else {
     debug(PRESWAPPING,"SwappingManager::preSwapPage: Entry already exists in the disk map, skipping move.\n");
   }
 
-  disk_offset_counter_++;
-  pre_swapped_pages.push_back(ppn);
-
-  PageManager::instance()->ref_count_lock_.acquire();
   PageManager::instance()->setReferenceCount(ppn, 0);
-  PageManager::instance()->ref_count_lock_.release();
 
-  unlock_archmemories(virtual_page_infos);
+  unlockArchmemorys(virtual_page_infos);
   disk_lock_.release();
   debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld finished", ppn);
   return true;
@@ -139,6 +190,58 @@ void SwappingManager::swapOutPage(size_t ppn)
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
 }
 
+//void SwappingManager::swapOutPage(size_t ppn)
+//{
+//  assert(ipt_->IPT_lock_.heldBy() == currentThread);
+//  disk_lock_.acquire();
+//  auto it = ustl::find(pre_swapped_pages.begin(), pre_swapped_pages.end(), ppn);
+//  bool preswapped = it != pre_swapped_pages.end();
+//  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
+//  lock_archmemories_in_right_order(virtual_page_infos);
+//
+//  if (preswapped)
+//  {
+//    // Use the new method instead of moveEntry()
+//    ipt_->movePreswapedToDisk(IPTMapType::RAM_MAP, ppn);
+//    pre_swapped_pages.erase(it);
+//  }
+//  else{
+//    debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
+//    ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset_counter_);
+//
+//    ArchMemory* archmemory = virtual_page_infos[0]->archmem_;
+//    size_t vpn = virtual_page_infos[0]->vpn_;
+//
+//    ArchMemoryMapping m = ArchMemory::resolveMapping(archmemory->page_map_level_4_, vpn);
+//    char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
+//
+//    bool write_status = bd_device_->writeData(disk_offset_counter_ * bd_device_->getBlockSize(), PAGE_SIZE, const_cast<char*>(page_content));
+//
+//    if (!write_status) {
+//      kprintf("SwappingManager::swapOutPage: Failed to write data on disk.\n");
+//      unlock_archmemories(virtual_page_infos);
+//      disk_lock_.release();
+//      return;
+//    }
+//    total_disk_writes_++;
+//
+//    for (ArchmemIPT* virtual_page_info : virtual_page_infos) {
+//      archmemory = virtual_page_info->archmem_;
+//      vpn = virtual_page_info->vpn_;
+//      archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
+//    }
+//    disk_offset_counter_++;
+//  }
+//
+//  PageManager::instance()->ref_count_lock_.acquire();
+//  PageManager::instance()->setReferenceCount(ppn, 0);
+//  PageManager::instance()->ref_count_lock_.release();
+//
+//  unlock_archmemories(virtual_page_infos);
+//  disk_lock_.release();
+//  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
+//}
+
 //Only works if the page i want to swap in is in the archmemory of current thread
 int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages)
 {
@@ -154,7 +257,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   lockArchmemorys(virtual_page_infos);
 
  //Get new ppn
-  size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+  size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 
   //Move Page infos from  ipt_map_disk to ipt_map_ram
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with disk_offset %ld to ppn %ld.\n", disk_offset, ppn);
@@ -278,13 +381,13 @@ void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*>& virtual_pag
 }
 
 
-int SwappingManager::getDiskWrites()
+int SwappingManager::getDiskWrites() const
 {
   return total_disk_writes_;
 }
 
 
-int SwappingManager::getDiskReads()
+int SwappingManager::getDiskReads() const
 {
   return total_disk_reads_;
 }

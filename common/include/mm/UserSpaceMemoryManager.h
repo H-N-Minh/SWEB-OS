@@ -40,7 +40,7 @@ class UserSpaceMemoryManager
 
     SharedMemManager* shared_mem_manager_;
 
-    size_t totalUsedHeap();
+    size_t totalUsedHeap() const;
 
 
     /**

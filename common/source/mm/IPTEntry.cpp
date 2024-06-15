@@ -7,7 +7,7 @@
 
 ArchmemIPT::ArchmemIPT(size_t vpn, ArchMemory* archmem) : vpn_(vpn), archmem_(archmem) {}
 
-bool ArchmemIPT::isLockedByUs()
+bool ArchmemIPT::isLockedByUs() const
 {
   return archmem_->archmemory_lock_.isHeldBy((Thread*) currentThread);
 }
