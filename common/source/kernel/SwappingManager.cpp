@@ -98,56 +98,56 @@ SwappingManager::~SwappingManager()
 //  return true;
 //}
 
-bool SwappingManager::preSwapPage(size_t ppn)
-{
-  if (!pre_swap_enabled) return false;  // Return immediately if preswapping is disabled
-
-  assert(ipt_->IPT_lock_.heldBy() == currentThread);
-
-  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
-  lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
-
-  disk_lock_.acquire();
-
-  debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
-
-  ArchMemory* archmemory = virtual_page_infos[0]->archmem_;
-  size_t vpn = virtual_page_infos[0]->vpn_;
-
-  ArchMemoryMapping m = ArchMemory::resolveMapping(archmemory->page_map_level_4_, vpn);
-  char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
-
-  bool write_status = bd_device_->writeData(disk_offset_counter_ * bd_device_->getBlockSize(), PAGE_SIZE, const_cast<char*>(page_content));
-
-  if (!write_status) {
-    kprintf("SwappingManager::preSwapPage: Failed to write data on disk.\n");
-    unlockArchmemorys(virtual_page_infos);
-    disk_lock_.release();
-    return false;
-  }
-
-  disk_offset_counter_++;
-  pre_swapped_pages.push_back(ppn);
-
-  for (ArchmemIPT* virtual_page_info : virtual_page_infos) {
-    archmemory = virtual_page_info->archmem_;
-    vpn = virtual_page_info->vpn_;
-    archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
-  }
-
-  if (!ipt_->isEntryInMap(disk_offset_counter_, IPTMapType::DISK_MAP, archmemory, vpn)) {
-    ipt_->copyEntryToPreswap(IPTMapType::RAM_MAP, ppn);
-  } else {
-    debug(PRESWAPPING,"SwappingManager::preSwapPage: Entry already exists in the disk map, skipping move.\n");
-  }
-
-  PageManager::instance()->setReferenceCount(ppn, 0);
-
-  unlockArchmemorys(virtual_page_infos);
-  disk_lock_.release();
-  debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld finished", ppn);
-  return true;
-}
+//bool SwappingManager::preSwapPage(size_t ppn)
+//{
+//  if (!pre_swap_enabled) return false;  // Return immediately if preswapping is disabled
+//
+//  assert(ipt_->IPT_lock_.heldBy() == currentThread);
+//
+//  ustl::vector<ArchmemIPT*> virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
+//  lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
+//
+//  disk_lock_.acquire();
+//
+//  debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld to disk offset %ld.\n", ppn, disk_offset_counter_);
+//
+//  ArchMemory* archmemory = virtual_page_infos[0]->archmem_;
+//  size_t vpn = virtual_page_infos[0]->vpn_;
+//
+//  ArchMemoryMapping m = ArchMemory::resolveMapping(archmemory->page_map_level_4_, vpn);
+//  char* page_content = (char*)ArchMemory::getIdentAddressOfPPN(m.pt[m.pti].page_ppn);
+//
+//  bool write_status = bd_device_->writeData(disk_offset_counter_ * bd_device_->getBlockSize(), PAGE_SIZE, const_cast<char*>(page_content));
+//
+//  if (!write_status) {
+//    kprintf("SwappingManager::preSwapPage: Failed to write data on disk.\n");
+//    unlockArchmemorys(virtual_page_infos);
+//    disk_lock_.release();
+//    return false;
+//  }
+//
+//  disk_offset_counter_++;
+//  pre_swapped_pages.push_back(ppn);
+//
+//  for (ArchmemIPT* virtual_page_info : virtual_page_infos) {
+//    archmemory = virtual_page_info->archmem_;
+//    vpn = virtual_page_info->vpn_;
+//    archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset_counter_);
+//  }
+//
+//  if (!ipt_->isEntryInMap(disk_offset_counter_, IPTMapType::DISK_MAP, archmemory, vpn)) {
+//    ipt_->copyEntryToPreswap(IPTMapType::RAM_MAP, ppn);
+//  } else {
+//    debug(PRESWAPPING,"SwappingManager::preSwapPage: Entry already exists in the disk map, skipping move.\n");
+//  }
+//
+//  PageManager::instance()->setReferenceCount(ppn, 0);
+//
+//  unlockArchmemorys(virtual_page_infos);
+//  disk_lock_.release();
+//  debug(PRESWAPPING, "SwappingManager::preSwapPage: Pre-swap page with ppn %ld finished", ppn);
+//  return true;
+//}
 
 //does only work if the page to swap out is also in the archmemory of the current thread
 void SwappingManager::swapOutPage(size_t ppn)

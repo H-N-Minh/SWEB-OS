@@ -61,17 +61,17 @@ bool SwappingThread::isMemoryFull()
   return usedMemoryRatio > SWAP_THRESHOLD;
 }
 
-void SwappingThread::preSwap()
-{
-
-  if (isMemoryAlmostFull()) {
-    IPTManager* ipt = IPTManager::instance();
-    ipt->IPT_lock_.acquire();
-    size_t ppn = ipt->findPageToSwapOut();
-    SwappingManager::instance()->preSwapPage(ppn);
-    ipt->IPT_lock_.release();
-  }
-}
+//void SwappingThread::preSwap()
+//{
+//
+//  if (isMemoryAlmostFull()) {
+//    IPTManager* ipt = IPTManager::instance();
+//    ipt->IPT_lock_.acquire();
+//    size_t ppn = ipt->findPageToSwapOut();
+//    SwappingManager::instance()->preSwapPage(ppn);
+//    ipt->IPT_lock_.release();
+//  }
+//}
 
 void SwappingThread::swapOut()
 {

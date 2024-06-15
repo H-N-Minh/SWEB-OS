@@ -93,7 +93,7 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
 
 void PageFaultHandler::enterPageFault(size_t address, bool user, bool present, bool writing, bool fetch)
 {
-  assert(currentThread && "You have a pagefault, but no current thread");
+  assert(currentThread && "You have a page fault, but no current thread");
   //save previous state on stack of currentThread
   uint32 saved_switch_to_userspace = currentThread->switch_to_userspace_;
 
@@ -215,7 +215,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     swap_lock->release();
     shared_mem_lock->release();
 
-      size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+      size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
       bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
       assert(rv == true);
 
@@ -277,7 +277,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 
   size_t vpn = address/PAGE_SIZE;
 
-  ustl::vector<uint32> preallocated_pages = pm->preAlocatePages(1);  //TODOs make sure that it gets freed in all cases
+  ustl::vector<uint32> preallocated_pages = pm->preAllocatePages(1);  //TODOs make sure that it gets freed in all cases
 
   ipt_lock->acquire();
   archmem_lock->acquire();

@@ -17,7 +17,7 @@ public:
   /**
    * check if the archmem of this entry is locked
   */
-  bool isLockedByUs() const;
+  bool isLockedByUs();
 
 };
 
