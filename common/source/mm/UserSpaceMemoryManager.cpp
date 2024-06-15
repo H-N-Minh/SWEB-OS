@@ -18,13 +18,22 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
   heap_start_ = (size_t) loader->getBrkStart();
   current_break_ = heap_start_;
   loader_ = loader;
-  shared_mem_ = new SharedMemManager();
+  shared_mem_manager_ = new SharedMemManager();
 
 }
 
+UserSpaceMemoryManager::UserSpaceMemoryManager(const UserSpaceMemoryManager& other, Loader* loader)
+  : current_break_(other.current_break_), heap_start_(other.heap_start_), loader_(loader),
+    current_break_lock_("UserSpaceMemoryManager::lock_")
+{
+  shared_mem_manager_ = new SharedMemManager(*other.shared_mem_manager_);
+  loader->arch_memory_.shared_mem_manager_ = shared_mem_manager_;
+}
+
+
 UserSpaceMemoryManager::~UserSpaceMemoryManager()
 {
-  delete shared_mem_;
+  delete shared_mem_manager_;
 }
 
 
@@ -209,9 +218,9 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   // Set up new page
   debug(GROW_STACK, "UserSpaceMemoryManager::increaseStackSize: passed sanity check, setting up new page\n");
   
-  // TODO MINH: growing stack  now has broken locking because of new allocPPN rule
+  // TODOMINH: growing stack  now has broken locking because of new allocPPN rule
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
-  uint32 new_ppn = PageManager::instance()->allocPPN(); //TODO MINH: this alloc and the prealloc below should be put outside locks
+  uint32 new_ppn = PageManager::instance()->allocPPN(); //TODOMINH: this alloc and the prealloc below should be put outside locks
   ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(3); // for mapPage later
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true, preallocated_pages);
   PageManager::instance()->releaseNotNeededPages(preallocated_pages);

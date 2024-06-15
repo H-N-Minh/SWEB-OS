@@ -30,6 +30,8 @@ struct ArchMemoryMapping
   uint64 pti;
 };
 
+class SharedMemManager;
+
 class ArchMemory
 {
   public:
@@ -38,7 +40,7 @@ class ArchMemory
     
     uint64 page_map_level_4_;
     
-
+    SharedMemManager* shared_mem_manager_;
 
     static constexpr size_t RESERVED_START = 0xFFFFFFFF80000ULL;
     static constexpr size_t RESERVED_END = 0xFFFFFFFFC0000ULL;
@@ -104,7 +106,7 @@ class ArchMemory
     static PageMapLevel4Entry* getRootOfKernelPagingStructure();
 
     /// Prevents accidental copying/assignment, can be implemented if needed
-    ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated_pages);
+    ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
     
@@ -146,6 +148,9 @@ class ArchMemory
 
     void resetDirtyBitSetBeenDirtyBits(size_t vpn);
 
+    void setProtectionBits(size_t vpn, int read, int write, int execute);
+
+    void setSharedBit(size_t vpn);
 
 
   private:

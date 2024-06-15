@@ -12,7 +12,14 @@
 #include "SharedMemManager.h"
 
 
+// if any of these are changed, update mman.h in userspace
 #define MAX_HEAP_ADDRESS (USER_BREAK / 4)
+
+#define MIN_SHARED_MEM_ADDRESS (MAX_HEAP_ADDRESS + (1000 * PAGE_SIZE))
+#define MAX_SHARED_MEM_ADDRESS (USER_BREAK / 2)
+#define MAX_SHARED_MEM_VPN (MAX_SHARED_MEM_ADDRESS / PAGE_SIZE) - 1
+#define MIN_SHARED_MEM_VPN (MIN_SHARED_MEM_ADDRESS / PAGE_SIZE)
+
 #define MAX_STACK_AMOUNT 5    // if this is changed then update the define in pthread.h in userspace 
 #define GUARD_MARKER 0xbadcafe00000ULL  
 
@@ -21,6 +28,8 @@ class UserSpaceMemoryManager
 {
   public:
     UserSpaceMemoryManager(Loader* loader);
+    UserSpaceMemoryManager(const UserSpaceMemoryManager& other, Loader* loader);
+
     ~UserSpaceMemoryManager();
 
     size_t current_break_;
@@ -29,7 +38,7 @@ class UserSpaceMemoryManager
 
     Mutex current_break_lock_;   // used to protect current_break_
 
-    SharedMemManager* shared_mem_;
+    SharedMemManager* shared_mem_manager_;
 
     size_t totalUsedHeap();
 

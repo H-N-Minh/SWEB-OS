@@ -53,6 +53,7 @@
 #define sc_swappingStats 706
 
 #define sc_mmap 800
+#define sc_munmap 801
 
 
 

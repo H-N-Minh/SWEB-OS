@@ -68,4 +68,15 @@ public:
   static int checkGrowingStack(size_t address);
   static void errorInPageFaultKillProcess();
 
+  /**
+   * Helper for handlePageFault. handles all valid pagefaults including: swap in page, load page from binary, heap pages
+  */
+  static void handleValidPageFault(size_t address);
+
+  /**
+   * Helper for handlePageFault. handles all present pagefaults including: COW, writing to read-only pages
+  */
+  static void handlePresentPageFault(size_t address, bool writing);
+
+
 };

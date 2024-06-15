@@ -98,7 +98,7 @@ UserProcess::UserProcess(const UserProcess& other)
 
   PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
 
-  user_mem_manager_ = new UserSpaceMemoryManager(loader_);
+  user_mem_manager_ = new UserSpaceMemoryManager(*(other.user_mem_manager_), loader_);
 
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
@@ -137,7 +137,7 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-  localFileDescriptorTable.closeAllFileDescriptors();
+  // localFileDescriptorTable.closeAllFileDescriptors();
   delete working_dir_;
   working_dir_ = nullptr;
 
