@@ -18,72 +18,83 @@ extern "C" void arch_contextSwitch();
 
 const size_t PageFaultHandler::null_reference_check_border_ = PAGE_SIZE;
 
-inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user, bool present, bool switch_to_us)
-{
+inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user, bool present, bool switch_to_us) {
   assert((user == switch_to_us) && "Thread is in user mode even though is should not be.");
   assert(!(address < USER_BREAK && currentThread->loader_ == 0) && "Thread accesses the user space, but has no loader.");
   assert(!(user && currentThread->user_registers_ == 0) && "Thread is in user mode, but has no valid registers.");
 
-  if(address < null_reference_check_border_)
-  {
-    debug(PAGEFAULT, "Maybe you are dereferencing a null-pointer.\n");
+  if (nullPointerDereference(address))
     return INVALID;
-  }
-  else if(!user && address >= USER_BREAK)
-  {
-    debug(PAGEFAULT, "You are accessing an invalid kernel address.\n");
+
+  if (invalidKernelAccess(address, user))
     return INVALID;
-  }
-  else if(user && address >= USER_BREAK)
-  {
-    debug(PAGEFAULT, "You are accessing a kernel address in user-mode.\n");
+
+  if (kernelAddressAccessInUserMode(address, user))
     return INVALID;
-  }
-  else if(present)
-  {
-    debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
+
+  if (isPresentCheck(present))
     return IS_PRESENT;
-  }
-  // else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
-  // {
-  //   return USER;
-  // }
-  else
-  {
-    // everything seems to be okay
-    return VALID;
-  }
-  return INVALID;
+
+  return VALID;
 }
 
-inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool present, bool writing, bool fetch, bool switch_to_us)
-{
+inline bool PageFaultHandler::nullPointerDereference(size_t address) {
+  if (address < null_reference_check_border_) {
+    debug(PAGEFAULT, "Maybe you are dereferencing a null-pointer.\n");
+    return true;
+  }
+  return false;
+}
+
+inline bool PageFaultHandler::invalidKernelAccess(size_t address, bool user) {
+  if (!user && address >= USER_BREAK) {
+    debug(PAGEFAULT, "You are accessing an invalid kernel address.\n");
+    return true;
+  }
+  return false;
+}
+
+inline bool PageFaultHandler::kernelAddressAccessInUserMode(size_t address, bool user) {
+  if (user && address >= USER_BREAK) {
+    debug(PAGEFAULT, "You are accessing a kernel address in user-mode.\n");
+    return true;
+  }
+  return false;
+}
+
+inline bool PageFaultHandler::isPresentCheck(bool present) {
+  if (present) {
+    debug(PAGEFAULT, "You got a page fault even though the address is mapped.\n");
+    return true;
+  }
+  return false;
+}
+
+inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool present, bool writing, bool fetch, bool switch_to_us) {
   if (PAGEFAULT & OUTPUT_ENABLED)
     kprintfd("\n");
+
+  ustl::string mode = user ? "  user" : "kernel";
+  ustl::string action = writing ? "writing " : "reading";
+  ustl::string fetchType = fetch ? "instruction" : "    operand";
+
   debug(PAGEFAULT, "Address: %18zx - Thread %zu: %s (%p)\n", address, currentThread->getTID(), currentThread->getName(), currentThread);
-  debug(PAGEFAULT, "Flags: %spresent, %s-mode, %s, %s-fetch, switch to userspace: %1d\n", present ? "    " : "not ",
-        user ? "  user" : "kernel", writing ? "writing" : "reading",  fetch ? "instruction" : "    operand", switch_to_us);
+  debug(PAGEFAULT, "Flags: %s-present, %s-mode, %s, %s-fetch, switch to userspace: %1d\n", present ? "    " : "not ", mode.c_str(), action.c_str(), fetchType.c_str(), switch_to_us);
 
   ArchThreads::printThreadRegisters(currentThread, false);
 
-
-  if (currentThread->holding_lock_list_)
-  {
+  if (currentThread->holding_lock_list_) {
     debug(PAGEFAULT, "PageFaultHandler::handlePageFault: currentThread still holding lock %s\n", currentThread->holding_lock_list_->getName());
-    assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldnt be called while thread still holding lock\n");
+    assert(!currentThread->holding_lock_list_ && "PageFaultHandler shouldn't be called while thread still holding lock\n");
   }
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
 
-  if (status == VALID)
-  {
+  if (status == VALID) {
     handleValidPageFault(address);
-  }
-  else if (status == IS_PRESENT)
-  {
+  } else if (status == IS_PRESENT) {
     handlePresentPageFault(address, writing);
-  }
-  else  //status INVALID
+  } else//status INVALID
   {
     errorInPageFaultKillProcess();
   }
@@ -91,24 +102,35 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   debug(PAGEFAULT, "Page fault handling finished for Address: %18zx.\n", address);
 }
 
-void PageFaultHandler::enterPageFault(size_t address, bool user, bool present, bool writing, bool fetch)
-{
+void PageFaultHandler::enterPageFault(size_t faultAddress, bool isUserMode, bool isPagePresent, bool isWriting, bool isFetch) {
   assert(currentThread && "You have a page fault, but no current thread");
-  //save previous state on stack of currentThread
-  uint32 saved_switch_to_userspace = currentThread->switch_to_userspace_;
+  auto previousUserSwitchState = savePreviousUserSwitchState();
+  saveCurrentThreadRegisters();
 
-  currentThread->switch_to_userspace_ = 0;
-  currentThreadRegisters = currentThread->kernel_registers_;
   ArchInterrupts::enableInterrupts();
+  handlePageFault(faultAddress, isUserMode, isPagePresent, isWriting, isFetch, previousUserSwitchState);
 
-  handlePageFault(address, user, present, writing, fetch, saved_switch_to_userspace);
+  restorePreviousUserSwitchState(previousUserSwitchState);
+}
 
+uint32 PageFaultHandler::savePreviousUserSwitchState() {
+  auto savedSwitchToUserspace = currentThread->switch_to_userspace_;
+  currentThread->switch_to_userspace_ = 0;
+
+  return savedSwitchToUserspace;
+}
+
+void PageFaultHandler::saveCurrentThreadRegisters() {
+  currentThreadRegisters = currentThread->kernel_registers_;
+}
+
+void PageFaultHandler::restorePreviousUserSwitchState(uint32 previousUserSwitchState) {
   ArchInterrupts::disableInterrupts();
-  currentThread->switch_to_userspace_ = saved_switch_to_userspace;
+  currentThread->switch_to_userspace_ = previousUserSwitchState;
+
   if (currentThread->switch_to_userspace_)
     currentThreadRegisters = currentThread->user_registers_;
 }
-
 
 
 int PageFaultHandler::checkGrowingStack(size_t address)
@@ -181,7 +203,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
 
   if(current_archmemory.isBitSet(vpn, BitType::PRESENT, false))
   {
-    debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Another thread already solved this pagefault. Do nothing\n"); 
+    debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Another thread already solved this page fault. Do nothing\n");
     archmem_lock->release();
     ipt_lock->release();
     heap_lock->release();
@@ -215,8 +237,8 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     swap_lock->release();
     shared_mem_lock->release();
 
-      size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
-      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
+    size_t ppn = PageManager::getPreAllocatedPage(preallocated_pages);
+    bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
       assert(rv == true);
 
     archmem_lock->release();
@@ -226,7 +248,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     //Page is on stack
     // else if(address > STACK_END && address < STACK_START && current_archmemory.isBitSet(vpn, BitType::DISCARDED, true)) //Todos: reset
     // {
-    //   debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", (void*)address);//todos check if page was ever mapped
+    //   debug(PAGE FAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", (void*)address);//todos check if page was ever mapped
     //   swapper->swap_in_lock_.release();
     //   heap_manager->current_break_lock_.release();
     //   size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
@@ -281,7 +303,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 
   ipt_lock->acquire();
   archmem_lock->acquire();
-  //Page is not present anymore we need to swap it in -> do nothing so it gets swapped in on the next pagefault
+  //Page is not present anymore we need to swap it in -> do nothing, so it gets swapped in on the next page fault
   if(!current_archmemory.isBitSet(vpn, BitType::PRESENT, false))
   {
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is not present anymore (swapped out). Do nothing\n");
@@ -292,8 +314,8 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW and we want to write. Copy page\n");
     current_archmemory.copyPage(address, preallocated_pages);
   }
-  //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
-  else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))  //TODOs dont reset cowbit
+  //Page is set writable we want to write and cow-bit is set -> somebody else was faster with cow
+  else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))  //TODOs dont reset cow bit
   {
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW but writeable bit is set => Somebody else was faster with COW. Do nothing\n");
   }

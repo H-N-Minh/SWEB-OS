@@ -1,5 +1,6 @@
 #pragma once
 
+#include "ArchMemory.h"
 #include "types.h"
 #include "uvector.h"
 
@@ -36,6 +37,10 @@ private:
    * @return 1 if valid, 0 if invalid or segmentation fault, 69 if its growing stack
    */
   static inline int checkPageFaultIsValid(size_t address, bool user, bool present, bool switch_to_us);
+  static bool nullPointerDereference(size_t address);
+  static bool invalidKernelAccess(size_t address, bool user);
+  static bool kernelAddressAccessInUserMode(size_t address, bool user);
+  static bool isPresentCheck(bool present);
 
   /**
    * Print out the pagefault information. Check if the pagefault is valid, or the thread state is corrupt.
@@ -64,6 +69,10 @@ public:
   static void enterPageFault(size_t address, bool user,
                              bool present, bool writing,
                              bool fetch);
+  static uint32 savePreviousUserSwitchState();
+  static void saveCurrentThreadRegisters();
+  static void restorePreviousUserSwitchState(uint32 previousUserSwitchState);
+
 
   static int checkGrowingStack(size_t address);
   static void errorInPageFaultKillProcess();
@@ -79,4 +88,8 @@ public:
   static void handlePresentPageFault(size_t address, bool writing);
 
 
+  static void handlePageFault(size_t address, bool isWriteOperation);
+  static void handlePageFaultPageNotPresent();
+  static void handlePageFaultPagePresent(ArchMemory &currentMemory, size_t virtualPageNumber, bool isWriteOperation, ustl::vector<uint32> &preallocatedPages);
+  void handlePageFaultCOW(ArchMemory &currentMemory, size_t virtualPageNumber, ustl::vector<uint32> &preallocatedPages);
 };
