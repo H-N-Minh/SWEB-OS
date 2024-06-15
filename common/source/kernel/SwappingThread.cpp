@@ -165,17 +165,18 @@ void SwappingThread::Run()
         SwappingManager::instance()->swapping_thread_finished_lock_.release();
         continue;
       }
+      // 3. Swap in if needed
+      swapIn();
+
       // 1. Updating Meta data every 1 seconds
       if (isOneTimeStep())
       {
         updateMetaData();
       }
-
       // 2. Swap out if needed
       swapOut();
       
-      // 3. Swap in if needed
-      swapIn();
+
 
 
  

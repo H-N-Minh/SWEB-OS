@@ -7,6 +7,7 @@ int realloc1()
   void* break_before = sbrk(0);
 
 	int* ptr1 = realloc(NULL, 20 * sizeof(int));
+	printf("ptr1: %p\n", ptr1);
 	assert(ptr1 != NULL);
 	for(int i = 0; i < 20; i++)
 	{
@@ -15,6 +16,7 @@ int realloc1()
 	
 	//saved stuff should still be in ptr after increasing the size
 	int* ptr2 = realloc(ptr1, 40 * sizeof(int));
+	printf("ptr2: %p\n", ptr2);
 	assert(ptr2 != NULL);
 	assert(ptr1 == ptr2 && "Since there is nothing behind us we can just reuse the same position");
 	for(int i = 0; i < 20; i++)
@@ -31,7 +33,11 @@ int realloc1()
 	assert(ptr3 != NULL);
 	int* ptr4 = realloc(ptr2, 40 * sizeof(int));
 	assert(ptr4 != NULL);
-	assert(ptr4 > ptr3 && ptr3 > ptr2 && "Make sure it moved the location");
+	printf("ptr3: %p\n", ptr3);
+	printf("ptr4: %p\n", ptr4);
+	assert(ptr4 > ptr3 && "Make sure it moved the location");
+	assert(ptr3 > ptr2 && "Make sure it moved the location");
+
 	
 	for(int i = 0; i < 40; i++)
 	{
