@@ -394,6 +394,7 @@ int checkOverflowProtection(MemoryBlock* memory_block)
   }
   else
   {
+    assert(0 && "overflow");
     return -1;
   }
 }
