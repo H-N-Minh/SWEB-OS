@@ -15,17 +15,8 @@ int brk(void *end_data_segment)
  * posix compatible signature - do not change the signature!
  */
 void* sbrk(intptr_t increment)
-{
-  void* allocated_space = 0;
-  int retval = __syscall(sc_sbrk, (size_t) &increment, (size_t) &allocated_space, 0x0, 0x0, 0x0);
-  if (retval != 0)
-  {
-    return (void*) -1;
-  }
-  else
-  {
-    return allocated_space;
-  }
+{ 
+  return (void*)__syscall(sc_sbrk, increment, 0x0, 0x0, 0x0, 0x0);
 }
 
 

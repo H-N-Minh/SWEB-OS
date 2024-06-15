@@ -27,7 +27,6 @@ class IPTEntry
 private:
   // use Getter func instead
   ustl::vector<ArchmemIPT*> archmemIPTs_;
-  size_t disk_offset_{};
 
 public:
   // for PRA, keep track of how many times this PPN is accessed
@@ -41,7 +40,7 @@ public:
   /**
    * check if the given searchArchmem is part of the vector
   */
-  bool isArchmemExist(ArchMemory*searchArchmem);
+  bool isArchmemExist(ArchMemory* archmem, size_t vpn);
 
   /**
    * check if the vector is empty

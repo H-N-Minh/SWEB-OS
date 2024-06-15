@@ -10,11 +10,13 @@
 #define PRESWAPTHRESHOLD 80 //80%
 #define MAX_PRESWAP_PAGES 20
 enum IPTMapType {RAM_MAP, DISK_MAP, PRESWAP_MAP, NONE};
-enum PRA_TYPE {RANDOM, NFU};
+enum PRA_TYPE {RANDOM, NFU, SIMPLE};
 
 // class IPTEntry;
 class ArchMemory;
 
+typedef size_t fake_ppn_t;    // index of the
+typedef size_t vpn_t;
 typedef size_t ppn_t;
 typedef size_t diskoffset_t;
 
@@ -30,6 +32,17 @@ public:
   ustl::map<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
 
+  // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
+  // Therefore, this map exists. It assigns a fake ppn temporarily, until the page is actually allocated a real ppn.
+  ustl::map<ArchMemory*, ustl::map<vpn_t, fake_ppn_t>> fake_ppn_map_;
+
+  // the map to tracks backwards from fake ppn to all the archmem that is sharing this fake ppn.
+  // This is used when the shared page is assigned a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
+  ustl::multimap<fake_ppn_t, ArchmemIPT*> inverted_fake_ppn_;
+
+  fake_ppn_t fake_ppn_counter_ = 0; // for generating fake ppn
+
+  Mutex fake_ppn_lock_; // responsible for fake_ppn_map_ and inverted_fake_ppn_ and fake_ppn_counter_
 
   IPTManager();
   ~IPTManager();
@@ -46,6 +59,7 @@ public:
   */
   void insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
 
+
   /**
    * Remove an entry from the ram map or disk map
    * This does not accept removing an entry that does not exist in the map. (asserts if this happens)
@@ -54,6 +68,7 @@ public:
    * @param vpn the virtual page that will be used to locate the right PTE
   */
   void removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem);
+
 
   /**
    * Remove an entry from the source map and insert it to the destination map.
@@ -67,6 +82,7 @@ public:
 
   void movePreswapedToDisk(IPTMapType map_type, size_t ppn);
 
+  void removeEntry(IPTMapType map_type, size_t ppn);
 
   /**
    * Getter for debugging info, doesnt use any lock but who cares
@@ -81,14 +97,12 @@ public:
   /**
    * helper for insert, remove, moveEntry. This checks if an entry with exact Archmem and ppn is already in the map
   */
-  bool isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem);
+  bool isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archmem, size_t vpn);
 
   /**
    * @return the ppn of the page that will be swapped out. This is where the PRA is used
   */
   size_t findPageToSwapOut();
-  size_t findPageToSwapOutRandom();
-  size_t findPageToSwapOutNFU();
 
 
   /**
@@ -104,10 +118,31 @@ public:
   /**
    * Debug func, check if random generator is actually random
   */
-  static void debugRandomGenerator();
+  void debugRandomGenerator();
 
+  /**
+   * Is called when a new shared page is created. Adding entry to both fake_ppn_map_ and inverted_fake_ppn_
+  */
+  void insertFakePpnEntry(ArchMemory* archmem, size_t vpn);
 
-  // tobe removed
-  bool isThereAnyPageToSwapOut();
+  /**
+   * Is called when a page fault happens, and the shared page receives a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
+   * this also removes entry from fake_ppn_map_ and inverted_fake_ppn_
+  */
+  void mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages);
 
+  /**
+   * Is called when archmemory copy constructor. Add the child to the same shared page as the parent. Adding to both fake_ppn_map_ and inverted_fake_ppn_
+  */
+  void copyFakedPages(ArchMemory* parent, ArchMemory* child);
+
+  /**
+   * this is for when a shared page is unmmaped when its not even mapped yet. removing entry from fake_ppn_map_
+  */
+  void unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory);
+
+  private:
+
+    int pages_in_ram_ = 0;  //TODOs: not used at the moment
+    int pages_on_disk_ = 0;  //TODOs: not used at the moment
 };

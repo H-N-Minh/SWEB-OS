@@ -11,29 +11,29 @@ class SwappingThread : public Thread
 {
   public:
     static int user_initialized_flag_;    // 0: not initialized, 1: initialized. Only UserThread can change this flag.
-  
+    static bool should_be_killed_;
+
     SwappingThread();
     virtual ~SwappingThread();
     virtual void kill();
-    [[noreturn]] virtual void Run();
+    virtual void Run();
   
     /////////////////// PRA metadata
   private:
-    uint32 last_tick_{};
+    uint32 last_tick_;
   public:
     bool isOneTimeStep();
     void updateMetaData();
-    static void resetAccessedPages(IPTEntry *ipt_entry, bool &hit);
 
 
     ////////////////// PRA stats
   private:
     // both are protected by IPT lock
-    uint32 hit_count_{};    // the number of times a page is marked either dirty or accessed
-    uint32 miss_count_{};   // the number of times a page is swapped out
+    uint32 hit_count_;    // the number of times a page is marked either dirty or accessed
+    uint32 miss_count_;   // the number of times a page is swapped out
   public:
-    uint32 getHitCount() const;
-    uint32 getMissCount() const;
+    uint32 getHitCount();
+    uint32 getMissCount();
 
 
 
@@ -52,7 +52,7 @@ class SwappingThread : public Thread
     /**
      * swap out a page based on the current PRA, then return the ppn of the page that is now free
     */
-    static size_t swapPageOut();
+    size_t swapPageOut();
 
     /**
      * If the memory is almost full and we dont have enough free pages in free_pages_, we need to swap out some pages.

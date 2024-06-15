@@ -12,6 +12,10 @@
 #define NOT_RELATED_TO_GROWING_STACK 17
 #define GROWING_STACK_FAILED 18
 
+
+#define DIRECT_SWAPPING 0
+#define ASYNCHRONOUS_SWAPPING 1
+
 class PageFaultHandler
 {
 private:
@@ -62,5 +66,30 @@ public:
 
   static int checkGrowingStack(size_t address);
   static void errorInPageFaultKillProcess();
+
+  /**
+   * Helper for handlePageFault. handles all valid pagefaults including: swap in page, load page from binary, heap pages
+  */
+  static void handleValidPageFault(size_t address);
+
+  /**
+   * Helper for handlePageFault. handles all present pagefaults including: COW, writing to read-only pages
+  */
+  static void handlePresentPageFault(size_t address, bool writing);
+
+  /**
+   * Helper for handleValidPageFault. Hanldes the case of a heap page fault
+  */
+  static void handleHeapPF(ustl::vector<uint32>& preallocated_pages, size_t address);
+
+  /**
+   * Helper for handleValidPageFault. Hanldes the case of loading page from binary
+  */
+  static void handleLoadPF(ustl::vector<uint32>& preallocated_pages, size_t address);
+
+  /**
+   * Helper for handleValidPageFault. Hanldes the case of swapping in asynchronously
+  */
+  static void handleAsynSwapIn(size_t disk_offset);
 
 };

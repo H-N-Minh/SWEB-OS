@@ -7,15 +7,17 @@
 
 ArchmemIPT::ArchmemIPT(size_t vpn, ArchMemory* archmem) : vpn_(vpn), archmem_(archmem) {}
 
-bool ArchmemIPT::isLockedByUs() const
+bool ArchmemIPT::isLockedByUs()
 {
   return archmem_->archmemory_lock_.isHeldBy((Thread*) currentThread);
 }
 
 ////////////////////// IPTEntry //////////////////////
 
-IPTEntry::IPTEntry() :  disk_offset_(0), access_counter_(0) {}
-
+IPTEntry::IPTEntry()
+{
+  access_counter_ = 0;
+}
 
 IPTEntry::~IPTEntry()
 {
@@ -23,19 +25,20 @@ IPTEntry::~IPTEntry()
   {
     delete archmemIPT;
   }
+  access_counter_ = 0;
 }
 
 
-bool IPTEntry::isArchmemExist(ArchMemory* searchArchmem) {
-  auto archmemIPTs = getArchmemIPTs();
-  for (auto& currentArchmemIPT : archmemIPTs)
-  {
-    bool isFound = currentArchmemIPT->archmem_ == searchArchmem;
-    if (isFound) {
-      return true;
+bool IPTEntry::isArchmemExist(ArchMemory* archmem, size_t vpn)
+{
+    for (auto& archmemIPT : archmemIPTs_)
+    {
+        if (archmemIPT->archmem_ == archmem && archmemIPT->vpn_ == vpn)
+        {
+        return true;
+        }
     }
-  }
-  return false;
+    return false;
 }
 
 
@@ -67,4 +70,3 @@ ustl::vector<ArchmemIPT*>& IPTEntry::getArchmemIPTs()
 {
   return archmemIPTs_;
 }
-

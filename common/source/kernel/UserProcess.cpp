@@ -98,7 +98,7 @@ UserProcess::UserProcess(const UserProcess& other)
 
   PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
 
-  user_mem_manager_ = new UserSpaceMemoryManager(loader_);
+  user_mem_manager_ = new UserSpaceMemoryManager(*(other.user_mem_manager_), loader_);
 
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
@@ -137,7 +137,7 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-  localFileDescriptorTable.closeAllFileDescriptors();
+  // localFileDescriptorTable.closeAllFileDescriptors();
   delete working_dir_;
   working_dir_ = nullptr;
 
@@ -331,7 +331,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   argc = 0;
   exec_array_offset = 0;
-  // TODOAG: why not check the return value here? TODOSTEFI
+  // TODOS: why not check the return value here?
   check_parameters_for_exec(argv, argc, exec_array_offset);
 
 
@@ -382,7 +382,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   fd_ = execv_fd;
 
   //create fresh user registers for the thread (only leave the cr3 the same)
-  // TODOAG: memleak, this overwrites the existing user registers (calls new again)  TODOSTEFI
+  // TODOS: memleak, this overwrites the existing user registers (calls new again) 
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
   currentThread->user_registers_->cr3 = old_cr3;
 
@@ -484,7 +484,7 @@ void UserProcess::cancelAllOtherThreads()
   UserThread& currentUserThread = *((UserThread*)currentThread);
   assert(threads_lock_.heldBy() == currentThread);
 
-  // TODOAG: what if a thread is currently in pthread_create? The new thread is not killed TODOSTEFI
+  // TODOs: what if a thread is currently in pthread_create? The new thread is not killed
   for (auto& thread : threads_)
   {
     if(thread != &currentUserThread)

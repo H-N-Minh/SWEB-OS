@@ -58,7 +58,7 @@ int pc6()
       void* retval;
       int rv = pthread_join(thread_id[i], &retval);
       assert(rv == 0);
-      assert(retval = (void*)5);
+      assert(retval == (void*)5);
     }    
 
 

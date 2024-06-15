@@ -134,7 +134,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_tortillas_finished:   // needed for test system Tortillas
       break;
     case sc_sbrk:
-      return_value = sbrkMemory(arg1, arg2);
+      return_value = sbrkMemory((ssize_t)arg1);
       break;
     case sc_brk:
       return_value = brkMemory(arg1);
@@ -160,6 +160,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_mmap:
       return_value = mmap(arg1, arg2);
       break;
+    case sc_munmap:
+      return_value = munmap(arg1, arg2);
+      break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -167,36 +170,136 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
   return return_value;
 }
 
-int Syscall::mmap(size_t para, size_t retval)
+int Syscall::munmap(size_t start, size_t length)
 {
-  assert(para && "Syscall::mmap: arg1 is null\n");
-  mmap_params_t* params = (mmap_params_t*) para;
+  debug(SYSCALL, "Syscall::munmap: start: %p, length: %zu\n", (void*)start, length);
+  if ((start % PAGE_SIZE) != 0 || length == 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::munmap: start is not multiple of page size or length is 0\n");
+    return -1;
+  }
+  if ((start + length) >= MAX_SHARED_MEM_ADDRESS || start < MIN_SHARED_MEM_ADDRESS)
+  {
+    debug(ERROR_DEBUG, "Syscall::munmap: range is not within shared memory range\n");
+    return -1;
+  }
+
+  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
+  int rv = smm->munmap((void*) start, length);
+  debug(SYSCALL, "Syscall::munmap: finished with return value: %d\n", rv);
+  return rv;
+}
+
+bool isMmapParamValid(mmap_params_t* params)
+{
+  assert(params && "params is null");
   void* start = params->start;
   size_t length = params->length;
   int prot = params->prot;
   int flags = params->flags;
   int fd  = params->fd;
   off_t offset = params->offset;
-  debug(MINH, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
-  // error checking the para
-  if (start != (void*) 0 || offset != 0)
+  debug(SYSCALL, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
+
+  // start
+  if (start != (void*) 0)
   {
-    debug(ERROR_DEBUG, "Syscall::mmap: start and offset is not implemented\n");
+    debug(ERROR_DEBUG, "Syscall::mmap: start is not yet implemented, this para will be ignored\n");
+  }
+  if ((size_t) start % PAGE_SIZE != 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: start is not multiple of page size\n");
+    return false;
+  }
+
+  // length
+  if (length == 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: length is 0\n");
+    return false;
+  }
+
+  //prots
+  uint32 valid_prots[] = {PROT_NONE, PROT_READ, PROT_WRITE, PROT_EXEC, 
+                          PROT_READ | PROT_WRITE, PROT_READ | PROT_EXEC, PROT_WRITE | PROT_EXEC, 
+                          PROT_READ | PROT_WRITE | PROT_EXEC};
+  int prot_exists = 0;
+  for (int i : valid_prots) 
+  {
+    if (prot == i)
+    {
+      prot_exists = 1;
+      break;
+    }
+  }
+  if (!prot_exists)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: prot is not valid\n");
+    return false;
+  }
+
+  // flags
+  uint32 __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS};
+  int flag_exists = 0;
+  for (int i : __VALID_FLAGS__) 
+  {
+    if (flags == i)
+    {
+      flag_exists = 1;
+      break;
+    }
+  }
+  if (!flag_exists)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: flags is not valid\n");
+    return false;
+  }
+
+  // fd
+  if (fd < 0 && fd != -1)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: fd is not valid\n");
+    return false;
+  }
+
+  // offset
+  if (offset % PAGE_SIZE != 0 || offset < 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: offset is not multiple of page size or not positive\n");
+    return false;
+  }
+  
+  return true;
+}
+
+int Syscall::mmap(size_t para, size_t retval)
+{
+  if (para == 0 || retval == 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: para or retval is null\n");
     return -1;
   }
-  if (fd < 0)
+  mmap_params_t* params = (mmap_params_t*) para;
+  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
+  void* ret = MAP_FAILED;
+
+  // error checking
+  if (!isMmapParamValid(params))
   {
-    debug(ERROR_DEBUG, "Syscall::mmap: invalid fd\n");
+    *(size_t*) retval = (size_t) ret;
     return -1;
   }
   
-  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_;
-  void* ret = smm->mmap(params);
+  
+  // done error checking, now do the mmap
+  ret = smm->mmap(params);
+  
+  debug(SYSCALL, "Syscall::mmap: return value: %p\n", ret);
   *(size_t*) retval = (size_t) ret;
-  debug(MINH, "Syscall::mmap: return value: %p\n", ret);
 
   return 0;
 }
+
 
 l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence) {
   debug(Fabi, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
@@ -234,61 +337,28 @@ size_t Syscall::brkMemory(size_t new_brk_addr)
   debug(SBRK, "Syscall::brkMemory: brk called with address %p. Checking if addr is valid \n", (void*) new_brk_addr);
 
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
-  size_t heap_start = heap_manager->heap_start_;
 
-  if (new_brk_addr > MAX_HEAP_SIZE || new_brk_addr < heap_start)
-  {
-    debug(SBRK, "Syscall::brkMemory: address %p is not within heap segment\n", (void*) new_brk_addr);
-    return -1;
-  }
-  size_t new_brk_addr_kernel = new_brk_addr;
-  int successly_brk = heap_manager->brk(new_brk_addr_kernel);
-  
-  if (successly_brk == 0)
-  {
-    debug(SBRK, "Syscall::brkMemory: brk done with address %p\n", (void*) new_brk_addr);
-    return 0;
-  }
-  else
-  {
-    debug(SBRK, "Syscall::brkMemory: brk failed with address %p\n", (void*) new_brk_addr);
-    return -1;
-  }
+
+  heap_manager->current_break_lock_.acquire();
+  int successly_brk = heap_manager->brk(new_brk_addr);
+  heap_manager->current_break_lock_.release();
+
+  return successly_brk;
 }
 
-size_t Syscall::sbrkMemory(size_t size_ptr, size_t return_ptr)
+size_t Syscall::sbrkMemory(ssize_t size)
 {
   debug(SBRK, "Syscall::sbrkMemory: sbrk called\n");
-  assert(size_ptr != 0 && "Syscall::sbrkMemory: size_ptr is null\n");
-  assert(return_ptr != 0 && "Syscall::sbrkMemory: return_ptr is null\n");
-
   UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
 
-  debug(SBRK, "Syscall::sbrkMemory: get the size amount and check if its valid\n");
-  ssize_t size = *(ssize_t*) size_ptr;
-  size_t potential_new_break = heap_manager->current_break_ + size;
-  size_t heap_start = heap_manager->heap_start_;
-
-  if (potential_new_break > MAX_HEAP_SIZE || potential_new_break < heap_start)
-  {
-    debug(SBRK, "Syscall::sbrk: size %zd is too big\n", size);
-    return -1;
-  }
-
   debug(SBRK, "Syscall::sbrkMemory: calling sbrk from heap manager and check if its valid\n");
-  pointer reserved_space = 0;
-  reserved_space = heap_manager->sbrk(size);
-  if (reserved_space == 0)
-  {
-    debug(SBRK, "Syscall::sbrk: sbrk failed\n");
-    return -1;
-  }
-  else
-  {
-    debug(SBRK, "Syscall::sbrk: sbrk done with return %p\n", (void*) reserved_space);
-    *(pointer*) return_ptr = reserved_space;
-    return 0;
-  }
+
+
+  heap_manager->current_break_lock_.acquire();
+  void* old_break = heap_manager->sbrk(size);
+  heap_manager->current_break_lock_.release();
+
+  return (size_t)old_break;
 }
 
 
@@ -532,7 +602,7 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
   lfdTable.lfds_lock_.acquire();
-  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+  LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(fd);
 
   if (fd == fd_stdin)
   {
@@ -818,6 +888,8 @@ unsigned int Syscall::clock(void)
   return (unsigned int)clock_in_microseconds;
 }
 
+
+
 uint64_t Syscall::get_current_timestamp_64_bit()
 {
   unsigned int edx;
@@ -935,3 +1007,4 @@ void Syscall::checkRandomPRA()
   IPTManager* ipt = IPTManager::instance();
   ipt->debugRandomGenerator();
 }
+

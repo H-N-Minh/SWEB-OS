@@ -39,7 +39,6 @@ void* thread_function5(void* arg)
 
 int pra5()
 {
-  setPRA(__NFU_PRA__); 
   int hit;
   int miss;
   getPRAstats(&hit, &miss);
@@ -54,13 +53,13 @@ int pra5()
     pthread_create(&threads[i], NULL, thread_function5, &thread_ids[i]);
   }
   
-  printf("Threads created, waiting for them to finish\n");
+  // printf("Threads created, waiting for them to finish\n");
   for(int i = 0; i < THREAD_NUM5; i++)
   {
     pthread_join(threads[i], NULL);
   }
 
-  printf("all Threads finished\n");
+  // printf("all Threads finished\n");
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
