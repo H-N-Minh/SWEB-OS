@@ -490,12 +490,13 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
               PageTableEntry* pt = (PageTableEntry*) getIdentAddressOfPPN(pd[pdi].pt.page_ppn);
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
-                if (pt[pti].present)
+                if (pt[pti].present || pt[pti].swapped_out)
                 {
                   if(m.page_ppn != pt[pti].page_ppn)
                   {
                     size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, IPTMapType::RAM_MAP);
+                    IPTMapType maptype = pt[pti].swapped_out ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP;
+                    PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
                     debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                     ((uint64*)pt)[pti] = 0;
                   }
