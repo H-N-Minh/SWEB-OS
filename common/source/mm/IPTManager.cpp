@@ -24,7 +24,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::SECOND_CHANGE;
+  pra_type_ = PRA_TYPE::RANDOM;
 }
 
 IPTManager::~IPTManager()
