@@ -1,5 +1,6 @@
 #include "stdlib.h"
 #include "string.h"
+#include "assert.h"
 #include "stdio.h"
 
 
@@ -131,7 +132,7 @@ void free(void *ptr)
   MemoryBlock* element_before;
   while(next->next_ != NULL)
   {
-    if(*((char*)((size_t)next->address_ + next->size_)) != '|')
+    if(checkOverflowProtection(next) == -1)
     {
       pthread_spin_unlock(&memory_lock);
       exit(-1);
@@ -170,12 +171,12 @@ void free(void *ptr)
 
   if(element_to_free->next_ && element_to_free->next_->is_free_)
   {
-    element_to_free->size_ = element_to_free->size_ + element_to_free->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
+    element_to_free->size_ += bytesNeededForMemoryBlock(element_to_free->next_->size_);
     element_to_free->next_ = element_to_free->next_->next_;
   }
   if(element_to_free != first_memory_block_ &&element_before->is_free_)
   {
-    element_before->size_ = element_before->size_ + element_before->next_->size_ + sizeof(MemoryBlock) + sizeof(char);
+    element_before->size_ += bytesNeededForMemoryBlock(element_before->next_->size_);
     element_before->next_ = element_before->next_->next_;
   }
   pthread_spin_unlock(&memory_lock);
@@ -194,8 +195,148 @@ void* calloc(size_t nmemb, size_t size)
 
 }
 
-void *realloc(void *ptr, size_t size)
+void* realloc(void *ptr, size_t size)
 {
+  if(ptr == NULL)
+  {
+    return malloc(size);
+  }
+  else if(size == 0)
+  {
+    free(ptr);
+  }
+
+  pthread_spin_lock(&memory_lock);
+  MemoryBlock* block_to_realloc = (MemoryBlock*)ptr - 1;
+  MemoryBlock* next = first_memory_block_;
+
+  if(next == NULL)
+  {
+    pthread_spin_unlock(&memory_lock);
+    exit(-1);
+  }
+  MemoryBlock* element_before;
+  while(next->next_ != NULL)
+  {
+    if(checkOverflowProtection(next) == -1)
+    {
+      pthread_spin_unlock(&memory_lock);
+      exit(-1);
+    }
+    if(next->next_ == block_to_realloc)
+    {
+      element_before = next;
+    }
+    next = next->next_;
+  }
+  if(!element_before && block_to_realloc != first_memory_block_) //block not found
+  {
+    pthread_spin_unlock(&memory_lock);
+    exit(-1);
+  }
+  if(block_to_realloc->is_free_) //block was freed
+  {
+    pthread_spin_unlock(&memory_lock);
+    exit(-1);
+  }
+
+  if(checkOverflowProtection(block_to_realloc) == -1) 
+  {
+    pthread_spin_unlock(&memory_lock);
+    exit(-1);
+  }
+
+  ////////////////////////////////////////////////////////////////
+  //Case 1: Reduce size of memoryblock
+  if(block_to_realloc->size_ > size)
+  {
+    int size_left = block_to_realloc->size_ - size;
+    block_to_realloc->size_ = size;
+    addOverflowProtection(block_to_realloc);
+
+    //block after is free
+    if(block_to_realloc->next_ && block_to_realloc->next_->is_free_ == 1)       
+    {
+      MemoryBlock* new_block =  (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
+      size_t new_size = size_left + block_to_realloc->next_->size_;                          //TODOs - check for unallocated space in between
+      createNewMemoryBlock(new_block, new_size, 0, new_block + 1, block_to_realloc->next_);
+      addOverflowProtection(new_block);
+      block_to_realloc->next_ = new_block;
+    }
+    //block after is not free - check if enough space for new block
+    else
+    {
+      if(size_left >= bytesNeededForMemoryBlock(0))
+      {
+        MemoryBlock* new_block = (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
+        createNewMemoryBlock(new_block, size_left - bytesNeededForMemoryBlock(0), 0, new_block + 1, block_to_realloc->next_);
+        addOverflowProtection(new_block);
+        block_to_realloc->next_ = new_block;
+      }
+    }
+  }
+  //Case 2: Size of memory block stays the same
+  else if(block_to_realloc->size_ == size)
+  {
+    pthread_spin_unlock(&memory_lock);
+    return ptr;
+  }
+  //Case 3: Increase the size of the memoryblock
+  else
+  {
+    //Last Block in linked list
+    if(block_to_realloc->next_ == NULL)
+    {
+      if(free_bytes_left_on_page_ >= (size - block_to_realloc->size_))
+      {
+        free_bytes_left_on_page_=- (size - block_to_realloc->size_);
+      }
+      else
+      {
+        size_t bytes_needed = (size - block_to_realloc->size_) - free_bytes_left_on_page_;
+        int rv = allocateMemoryWithSbrk(bytes_needed);
+        if(rv == -1)
+        {
+          pthread_spin_unlock(&memory_lock);
+          return NULL;
+        }
+      }
+      block_to_realloc->size_ = size;
+      addOverflowProtection(block_to_realloc);
+      pthread_spin_unlock(&memory_lock);
+      return block_to_realloc->address_;
+    }
+    else
+    {
+      //Not enough space after this memory block or next memory block not free
+      if((block_to_realloc->next_->is_free_ == 0) || (block_to_realloc->size_ + bytesNeededForMemoryBlock(block_to_realloc->next_->size_) < size))
+      {
+        void* new_ptr = malloc(size);  //TODOs lock lock (Version of malloc that is locked from outside)
+        memcpy(new_ptr, block_to_realloc->address_, block_to_realloc->size_);
+        free(block_to_realloc->address_);   //TODOs lock lock   
+        pthread_spin_unlock(&memory_lock);
+        return new_ptr;    
+      }
+      //Enough space after this memory block and not last block
+      else
+      {
+        size_t size_left = size - (block_to_realloc->size_ + block_to_realloc->next_->size_);
+        block_to_realloc->size_ = size;
+
+        if(size_left >= bytesNeededForMemoryBlock(0))
+        {
+          MemoryBlock* new_block = (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
+          createNewMemoryBlock(new_block, size_left - bytesNeededForMemoryBlock(0), 0, new_block + 1, block_to_realloc->next_->next_);
+          addOverflowProtection(new_block);
+          block_to_realloc->next_ = new_block;
+        }
+
+        pthread_spin_unlock(&memory_lock);
+        return block_to_realloc->address_;     //TODOs: i should probably store this in tmp variable before releasing lock and also check for the others
+      }
+    } 
+  }
+  assert(0);
   return 0;
 }
 
@@ -253,4 +394,13 @@ int checkOverflowProtection(MemoryBlock* memory_block)
     return -1;
   }
 }
+
+
+
+//TODOs if i free check if there is space "free" before (not in the size of previous), if so add this to the freed space
+
+
+
+
+
 

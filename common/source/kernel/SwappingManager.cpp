@@ -7,7 +7,7 @@
 #include "SwappingThread.h"
 #include "IPTEntry.h"
 
-size_t SwappingManager::disk_offset_counter_ = 0;
+size_t SwappingManager::disk_offset_counter_ = 1;
 SwappingManager* SwappingManager::instance_ = nullptr;
 
 //ENABLE DISABLE PRE-SWAPPING
@@ -34,16 +34,14 @@ SwappingManager* SwappingManager::instance()
 
 SwappingManager::~SwappingManager()
 {
-  if(ASYNCHRONOUS_SWAPPING)
+
+  SwappingThread::should_be_killed_ = true;
+  swapping_thread_finished_lock_.acquire();
+  while(SwappingThread::user_initialized_flag_)
   {
-    SwappingThread::should_be_killed_ = true;
-    swapping_thread_finished_lock_.acquire();
-    while(SwappingThread::user_initialized_flag_)
-    {
-      swapping_thread_finished_.wait();
-    }
-    swapping_thread_finished_lock_.release();
+    swapping_thread_finished_.wait();
   }
+  swapping_thread_finished_lock_.release();
 
   delete ipt_;
 }
@@ -157,37 +155,65 @@ void SwappingManager::swapOutPage(size_t ppn)
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
 
   ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
+  assert(virtual_page_infos.size() > 0);
   lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
 
-  if(isPageUnchanged(virtual_page_infos))
+  setPagesToNotPresent(virtual_page_infos);
+
+  if(!isPageDirty(virtual_page_infos))
   {
-    ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);             //TODOs: entries should get deleted but should still be possible to unlock
-    PageManager::instance()->setReferenceCount(ppn, 0);
-    updatePageTableEntriesForWriteBackToDisk(virtual_page_infos);
-    unlockArchmemorys(virtual_page_infos);
-    return;
+    if(!hasPageBeenDirty(virtual_page_infos))
+    {
+  //     ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);             //TODOs: entries should get deleted but should still be possible to unlock
+  //     PageManager::instance()->setReferenceCount(ppn, 0);
+  //     // printDebugInfos(virtual_page_infos, ppn, 0);
+  //     updatePageTableEntriesForWriteBackToDisk(virtual_page_infos, ppn);
+  //     unlockArchmemorys(virtual_page_infos);
+
+  //     discard_unchanged_page_++;
+  //     return;
+    }
+    else
+    {
+      size_t disk_offset = ipt_->ram_map_[ppn]->last_disk_offset_;
+      if(disk_offset == 0)
+      {
+        assert(0);   //break is probably better
+      }
+
+      ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
+      // printDebugInfos(virtual_page_infos, ppn, disk_offset);
+      updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset, ppn);
+      PageManager::instance()->setReferenceCount(ppn, 0);
+      unlockArchmemorys(virtual_page_infos);
+
+      reuse_same_disk_location_++;
+      return;
+    }
+
   }
+  resetDirtyBitSetBeenDirtyBits(virtual_page_infos);  //todos: remove to check if is makes problems
 
   //Find free disk_offset
   size_t disk_offset = disk_offset_counter_;
   disk_offset_counter_++;
 
   //Move Page infos from ipt_map_ram to ipt_map_disk
-  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld to disk offset %ld.\n", ppn, disk_offset);
+  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %p to disk offset %p.\n", (void*)ppn, (void*)disk_offset);
   ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
 
-  printDebugInfos(virtual_page_infos, ppn, disk_offset);
+  // printDebugInfos(virtual_page_infos, ppn, disk_offset);
 
   //write to disk
   disk_lock_.acquire();
   writeToDisk(virtual_page_infos, disk_offset);
   disk_lock_.release();
-  updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset);
+  updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset, ppn);
 
   PageManager::instance()->setReferenceCount(ppn, 0);
 
   unlockArchmemorys(virtual_page_infos);
-  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %ld finished", ppn);
+  debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %p finished", (void*)ppn);
 }
 
 //void SwappingManager::swapOutPage(size_t ppn)
@@ -254,13 +280,14 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   }
 
   ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->disk_map_[disk_offset]->getArchmemIPTs();
+  assert(virtual_page_infos.size() > 0);
   lockArchmemorys(virtual_page_infos);
 
  //Get new ppn
   size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 
   //Move Page infos from  ipt_map_disk to ipt_map_ram
-  debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with disk_offset %ld to ppn %ld.\n", disk_offset, ppn);
+  debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with disk_offset %p to ppn %p.\n", (void*)disk_offset, (void*)ppn);
   ipt_->moveEntry(IPTMapType::DISK_MAP, disk_offset, ppn);
 
   updatePageTableEntriesForSwapIn(virtual_page_infos, ppn, disk_offset);
@@ -271,9 +298,11 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   readFromDisk(disk_offset, ppn);
   disk_lock_.release();
 
+  ipt_->ram_map_[ppn]->last_disk_offset_ = disk_offset;
+
   unlockArchmemorys(virtual_page_infos);
 
-  debug(SWAPPING, "SwappingManager::swapInPage: Swap in from disk_offset %ld finished", disk_offset);
+  debug(SWAPPING, "SwappingManager::swapInPage: Swap in from disk_offset %p finished", (void*)disk_offset);
   return 0;
 }
 
@@ -301,7 +330,7 @@ void SwappingManager::printDebugInfos(ustl::vector<ArchmemIPT*>& virtual_page_in
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
-    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %ld, archmemory: %p (ppn %ld -> disk offset %ld).\n", vpn, archmemory, ppn, disk_offset);
+    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %p, archmemory: %p (ppn %p -> disk offset %p).\n", (void*)vpn, archmemory, (void*)ppn, (void*)disk_offset);
   }
 }
 
@@ -322,12 +351,13 @@ void SwappingManager::readFromDisk(size_t disk_offset, size_t ppn)
   total_disk_reads_++;
 }
 
-void SwappingManager::updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset)
+void SwappingManager::updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset, size_t ppn)
 {
   for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
+    debug(SWAPPING, "SwappingManager::swapOutPage: vpn: %p, archmemory: %p (ppn %p -> disk offset %p).\n", (void*)vpn, archmemory, (void*)ppn, (void*)disk_offset);
     archmemory->updatePageTableEntryForSwapOut(vpn, disk_offset);
   }
 }
@@ -339,19 +369,20 @@ void SwappingManager::updatePageTableEntriesForSwapIn(ustl::vector<ArchmemIPT*>&
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
-    debug(SWAPPING, "SwappingManager::swapInPage: vpn: %ld, archmemory: %p (disk offset %ld -> ppn %ld).\n", vpn, archmemory, disk_offset, ppn);
+    debug(SWAPPING, "SwappingManager::swapInPage: vpn: %p, archmemory: %p (disk offset %p -> ppn %p).\n", (void*)vpn, archmemory, (void*)disk_offset, (void*)ppn);
     archmemory->updatePageTableEntryForSwapIn(vpn, ppn);
   }
 }
 
-void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*>& virtual_page_infos)
+
+void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos)
 {
-  debug(SWAPPING, "SwappingManager::lock_archmemories_in_right_order: locking archmem in order of lowest ArchMemory* address to highest\n");
+  debug(SWAPPING, "SwappingManager::unlock_archmemories: locking archmem in order of lowest ArchMemory* address to highest\n");
   ustl::vector<ArchMemory*> archmemories;
   for (ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
-    assert(virtual_page_info && "lock_archmemories_in_right_order(): ArchmemIPT* is null");
-    assert(virtual_page_info->archmem_ && "lock_archmemories_in_right_order(): ArchMemory* is null");
+    assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
+    assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
     archmemories.push_back(virtual_page_info->archmem_);
   }
   ustl::sort(archmemories.begin(), archmemories.end(), ustl::less<ArchMemory*>());
@@ -362,7 +393,8 @@ void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*>
   }
 }
 
-void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*>& virtual_page_infos)
+
+void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos)
 {
   debug(SWAPPING, "SwappingManager::unlock_archmemories: unlocking archmem in order of highest ArchMemory* to lowest ArchMemory*\n");
   ustl::vector<ArchMemory*> archmemories;
@@ -381,42 +413,79 @@ void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*>& virtual_pag
 }
 
 
-int SwappingManager::getDiskWrites() const
+int SwappingManager::getDiskWrites()
 {
   return total_disk_writes_;
 }
 
 
-int SwappingManager::getDiskReads() const
+int SwappingManager::getDiskReads()
 {
   return total_disk_reads_;
 }
 
 
-bool SwappingManager::isPageUnchanged(ustl::vector<ArchmemIPT*> &virtual_page_infos)
+bool SwappingManager::isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos)
 {
   for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
-
-    if(archmemory->isPageDirty(vpn))
+    
+    if(archmemory->isBitSet(vpn, BitType::DIRTY, true))
     {
-      return false;
+      return true;
     }
   }
-  return true;
+  return false;
 }
 
 
 
-void SwappingManager::updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos)
+void SwappingManager::updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn)
 {
   for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
+    debug(SWAPPING, "SwappingManager::writeBackPage: vpn: %p, archmemory: %p (ppn %p).\n", (void*)vpn, archmemory, (void*)ppn);
     archmemory->updatePageTableEntryForWriteBackToDisk(vpn);
+  }
+}
+
+void SwappingManager::setPagesToNotPresent(ustl::vector<ArchmemIPT*>& virtual_page_infos)
+{
+  for(ArchmemIPT* virtual_page_info : virtual_page_infos)
+  {
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
+    archmemory->setPageTableEntryToNotPresent(vpn);
+  }
+}
+
+bool SwappingManager::hasPageBeenDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos)
+{
+  for(ArchmemIPT* virtual_page_info : virtual_page_infos)
+  {
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
+
+    if(archmemory->isBitSet(vpn, BitType::BEEN_DIRTY, true))
+    {
+      return true;
+    }
+  }
+  return false;
+}
+
+
+void SwappingManager::resetDirtyBitSetBeenDirtyBits(ustl::vector<ArchmemIPT*>& virtual_page_infos)
+{
+  for(ArchmemIPT* virtual_page_info : virtual_page_infos)
+  {
+    ArchMemory* archmemory = virtual_page_info->archmem_;
+    size_t vpn = virtual_page_info->vpn_;
+    archmemory->resetDirtyBitSetBeenDirtyBits(vpn);
   }
 }
 

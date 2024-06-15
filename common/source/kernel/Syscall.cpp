@@ -154,6 +154,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_getPRAstats:
       return_value = getPRAstats((int*)arg1, (int*)arg2);
       break;
+    case sc_swappingStats:
+      return_value = getSwappingStats((int*)arg1, (int*)arg2, (int*)arg3, (int*)arg4);
+      break;
     case sc_checkRandomPRA:
       checkRandomPRA();
       break;
@@ -556,9 +559,9 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
   if (fd == fd_stdout)
   {
+    lfdTable.lfds_lock_.release();
     debug(SYSCALL, "Syscall::write: Writing to stdout\n");
     kprintf("%.*s", (int)size, (char*) buffer);
-    lfdTable.lfds_lock_.release();
     return size;
   }
   else if (localFileDescriptor != nullptr) {
@@ -984,7 +987,18 @@ void Syscall::setPraType(size_t type)
   debug(SYSCALL, "Syscall::setPraType: Setting PRA type to %s\n", type == 0 ? "RANDOM" : "NFU");
   IPTManager* ipt = IPTManager::instance();
   ipt->IPT_lock_.acquire();
-  ipt->pra_type_ = type? PRA_TYPE::NFU : PRA_TYPE::RANDOM;
+  if(type == PRA_TYPE::NFU)
+  {
+    ipt->pra_type_ = PRA_TYPE::NFU;
+  }
+  else if(type == PRA_TYPE::RANDOM)
+  {
+    ipt->pra_type_ = PRA_TYPE::RANDOM;
+  }
+  else if(type == PRA_TYPE::SECOND_CHANGE)
+  {
+    ipt->pra_type_ = PRA_TYPE::SECOND_CHANGE;
+  }
   ipt->IPT_lock_.release();
 }
 
@@ -998,6 +1012,28 @@ int Syscall::getPRAstats(int* hit_count, int* miss_count)
   SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
   *hit_count = swapper->getHitCount();
   *miss_count = swapper->getMissCount();
+
+  return 0;
+}
+
+int Syscall::getSwappingStats(int* disk_writes, int* disk_reads, int* discard_unchanged_page, int* reuse_same_disk_location)
+{
+  if(!check_parameter((size_t)disk_writes, false) || !check_parameter((size_t)disk_reads, false) || !check_parameter((size_t)discard_unchanged_page, false) || !check_parameter((size_t)reuse_same_disk_location, false))
+  {
+    debug(USERTHREAD, "Syscall::getPRAstats. Invalid pointers given to store the pra stats\n");
+    return -1;
+  }
+  IPTManager::instance()->IPT_lock_.acquire();
+  int disk_reads1 = SwappingManager::instance()->getDiskReads();
+  int disk_writes1 = SwappingManager::instance()->getDiskWrites();
+  int discard_unchanged_page1 = SwappingManager::instance()->discard_unchanged_page_;
+  int reuse_same_disk_location1 = SwappingManager::instance()->reuse_same_disk_location_;
+  IPTManager::instance()->IPT_lock_.release();
+
+  *disk_writes = disk_writes1;
+  *disk_reads = disk_reads1;
+  *discard_unchanged_page = discard_unchanged_page1;
+  *reuse_same_disk_location = reuse_same_disk_location1;
 
   return 0;
 }

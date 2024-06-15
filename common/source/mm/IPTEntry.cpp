@@ -7,7 +7,7 @@
 
 ArchmemIPT::ArchmemIPT(size_t vpn, ArchMemory* archmem) : vpn_(vpn), archmem_(archmem) {}
 
-bool ArchmemIPT::isLockedByUs() const
+bool ArchmemIPT::isLockedByUs()
 {
   return archmem_->archmemory_lock_.isHeldBy((Thread*) currentThread);
 }
@@ -49,8 +49,10 @@ bool IPTEntry::isEmpty()
 
 void IPTEntry::addArchmemIPT(size_t vpn, ArchMemory* archmem)
 {
-  auto* newArchmemIPT = new ArchmemIPT(vpn, archmem);
-  archmemIPTs_.push_back(newArchmemIPT);
+    int size_before = archmemIPTs_.size();
+    archmemIPTs_.push_back(new ArchmemIPT(vpn, archmem));
+    int size_after = archmemIPTs_.size();
+    assert(size_after - size_before > 0);
 }
 
 void IPTEntry::removeArchmemIPT(size_t vpn, ArchMemory* archmem)

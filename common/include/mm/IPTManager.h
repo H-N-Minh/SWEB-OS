@@ -7,15 +7,13 @@
 #include "Mutex.h"
 #include "IPTEntry.h"
 
-#define PRESWAPTHRESHOLD 80 //80%
-#define MAX_PRESWAP_PAGES 20
 enum IPTMapType {RAM_MAP, DISK_MAP, PRESWAP_MAP, NONE};
-enum PRA_TYPE {RANDOM, NFU, SIMPLE};
+enum PRA_TYPE {RANDOM, NFU, SECOND_CHANGE};
 
 // class IPTEntry;
 class ArchMemory;
 
-typedef size_t fake_ppn_t;    // index of the
+typedef size_t fake_ppn_t;    // index of the 
 typedef size_t vpn_t;
 typedef size_t ppn_t;
 typedef size_t diskoffset_t;
@@ -31,6 +29,9 @@ public:
   ustl::map<ppn_t, IPTEntry*> ram_map_;
   ustl::map<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
+
+  ustl::vector<uint32> fifo_ppns;
+  unsigned last_index_ = 0;
 
   // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
   // Therefore, this map exists. It assigns a fake ppn temporarily, until the page is actually allocated a real ppn.
@@ -141,8 +142,4 @@ public:
   */
   void unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory);
 
-  private:
-
-    int pages_in_ram_ = 0;  //TODOs: not used at the moment
-    int pages_on_disk_ = 0;  //TODOs: not used at the moment
 };

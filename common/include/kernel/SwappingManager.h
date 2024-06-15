@@ -24,8 +24,8 @@ class SwappingManager
     void lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos);  //TODOs //maybe use this
     void unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
-    int getDiskWrites() const;
-    int getDiskReads() const;
+    int getDiskWrites();
+    int getDiskReads();
 
     // locking order: Ipt -> disk -> archmem
     Mutex disk_lock_;
@@ -35,6 +35,9 @@ class SwappingManager
     static bool pre_swap_enabled;
     Mutex swapping_thread_finished_lock_;
     Condition swapping_thread_finished_;
+
+    int discard_unchanged_page_ = 0;
+    int reuse_same_disk_location_ = 0;
 
   private:
     static SwappingManager* instance_;
@@ -57,12 +60,18 @@ class SwappingManager
 
     void writeToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset);
 
-    void updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset);
+    void updatePageTableEntriesForSwapOut(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t disk_offset, size_t ppn);
     void updatePageTableEntriesForSwapIn(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn, size_t disk_offset);
 
     void readFromDisk(size_t disk_offset, size_t ppn);
 
-    bool isPageUnchanged(ustl::vector<ArchmemIPT*> &virtual_page_infos);
+    bool isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
-    void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+    void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn);
+
+    void setPagesToNotPresent(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+
+    bool hasPageBeenDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos);
+
+    void resetDirtyBitSetBeenDirtyBits(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 };

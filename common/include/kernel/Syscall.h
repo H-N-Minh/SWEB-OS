@@ -94,6 +94,7 @@ public:
 
   static int mmap(size_t para, size_t retval);
 
+  static int getSwappingStats(int* disk_writes, int* disk_reads, int* discard_unchanged_page, int* reuse_same_disk_location);
   static int munmap(size_t start, size_t length);
 };
 

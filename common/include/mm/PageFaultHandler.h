@@ -3,7 +3,7 @@
 #include "types.h"
 #include "uvector.h"
 
-#define PRESENT 3
+#define IS_PRESENT 3
 #define INVALID 0
 #define VALID 1
 #define GROWING_STACK_VALID 69
@@ -13,8 +13,9 @@
 #define GROWING_STACK_FAILED 18
 
 
-#define DIRECT_SWAPPING 0
-#define ASYNCHRONOUS_SWAPPING 1
+
+#define STACK_START USER_BREAK
+#define STACK_END (USER_BREAK / 2)
 
 class PageFaultHandler
 {
@@ -77,19 +78,5 @@ public:
   */
   static void handlePresentPageFault(size_t address, bool writing);
 
-  /**
-   * Helper for handleValidPageFault. Hanldes the case of a heap page fault
-  */
-  static void handleHeapPF(ustl::vector<uint32>& preallocated_pages, size_t address);
-
-  /**
-   * Helper for handleValidPageFault. Hanldes the case of loading page from binary
-  */
-  static void handleLoadPF(ustl::vector<uint32>& preallocated_pages, size_t address);
-
-  /**
-   * Helper for handleValidPageFault. Hanldes the case of swapping in asynchronously
-  */
-  static void handleAsynSwapIn(size_t disk_offset);
 
 };
