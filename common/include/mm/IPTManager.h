@@ -79,9 +79,6 @@ public:
   */
   void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
-  void copyEntryToPreswap(IPTMapType map_type, size_t ppn);
-
-  void movePreswapedToDisk(IPTMapType map_type, size_t ppn);
 
   void removeEntry(IPTMapType map_type, size_t ppn);
 
@@ -104,6 +101,9 @@ public:
    * @return the ppn of the page that will be swapped out. This is where the PRA is used
   */
   size_t findPageToSwapOut();
+  size_t findPageToSwapOutRandom(size_t ppn_retval);
+  size_t findPageToSwapOutNFU(size_t ppn_retval);
+  size_t findPageToSwapOutSC(size_t ppn_retval);
 
 
   /**
@@ -138,7 +138,7 @@ public:
   void copyFakedPages(ArchMemory* parent, ArchMemory* child);
 
   /**
-   * this is for when a shared page is unmmaped when its not even mapped yet. removing entry from fake_ppn_map_
+   * this is for when a shared page is unmapped when its not even mapped yet. removing entry from fake_ppn_map_
   */
   void unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory);
 
