@@ -30,7 +30,6 @@ class SwappingManager
     // locking order: Ipt -> disk -> archmem
     Mutex disk_lock_;
 
-    bool preSwapPage(size_t ppn);
 
     static bool pre_swap_enabled;
     Mutex swapping_thread_finished_lock_;
