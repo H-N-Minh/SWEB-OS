@@ -22,6 +22,14 @@ int main()
         else                                  { printf("===> realloc1 failed!\n");  return -1;}
     }
 
+    if (REALLOC2)
+    {
+        printf("\nTesting realloc2: ...\n");
+        retval = realloc2();
+        if (retval == 0)                      { printf("===> realloc2 successful!\n"); } 
+        else                                  { printf("===> realloc2 failed!\n");  return -1;}
+    }
+
    
     if(failcounter == 0)
     {
