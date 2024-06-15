@@ -29,24 +29,24 @@ int realloc2()
   int* ptr1 = malloc(500 * sizeof(int));
   set(ptr1, 1, 500);
   int* ptr2 = malloc(400 * sizeof(int));
-  // set(ptr2, 2, 400);
+  set(ptr2, 2, 400);
   int* ptr3 = malloc(400 * sizeof(int));
-  // set(ptr3, 3, 400);
+  set(ptr3, 3, 400);
   int* ptr4 = malloc(300 * sizeof(int));
-  // set(ptr4, 4, 300);
+  set(ptr4, 4, 300);
   assert(ptr1 != NULL && ptr2 != NULL && ptr3 != NULL  && ptr4 != NULL );
   free(ptr3);
 
   ptr2 = realloc(ptr2, 700 * sizeof(int));
-  // check(ptr2, 2, 400);
+  check(ptr2, 2, 300);
 
-  set(ptr2, 2, 700);
+  set(ptr2, 2, 600);
   assert(ptr2 != NULL);
   assert(ptr2 < ptr4);
 
-  // check(ptr1, 1, 500);
+  check(ptr1, 1, 500);
   // check(ptr2, 2, 700);
-  // check(ptr4, 4, 300);
+  check(ptr4, 4, 300);
   
   //test that realloc also reuses split up space
   

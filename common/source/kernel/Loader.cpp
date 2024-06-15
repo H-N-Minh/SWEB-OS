@@ -76,11 +76,11 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<uint32>& preallocate
 
     program_binary_lock_.acquire();
 
-    debug(LOADER, "Loader::loadPage: Check the following ranges: %p  %p\n", (void*)virt_page_start_addr, (void*)virt_page_end_addr);
+    // debug(LOADER, "Loader::loadPage: Check the following ranges: %p  %p\n", (void*)virt_page_start_addr, (void*)virt_page_end_addr);
     // Iterate through all sections and load the ones intersecting into the page.
     for(ustl::list<Elf::Phdr>::iterator it = phdrs_.begin(); it != phdrs_.end(); it++)
     {
-      debug(LOADER, "We want %p smaller than %p.\n", (void*)(*it).p_vaddr,(void*)virt_page_end_addr);
+      // debug(LOADER, "We want %p smaller than %p.\n", (void*)(*it).p_vaddr,(void*)virt_page_end_addr);
       if((*it).p_vaddr < virt_page_end_addr)
       {
         if((*it).p_vaddr + (*it).p_filesz > virt_page_start_addr)
@@ -107,7 +107,7 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<uint32>& preallocate
         {
           found_page_content = true;
         }
-        debug(LOADER, "We want %p greater than %p.\n", (void*)((*it).p_vaddr + (*it).p_memsz),(void*)virt_page_start_addr);
+        // debug(LOADER, "We want %p greater than %p.\n", (void*)((*it).p_vaddr + (*it).p_memsz),(void*)virt_page_start_addr);
       }
     }
     program_binary_lock_.release();
@@ -130,7 +130,7 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<uint32>& preallocate
       debug(LOADER, "Loader::loadPage: The page has been mapped by someone else.\n");
       PageManager::instance()->freePPN(ppn);
     }
-    debug(LOADER, "Loader::loadPage: Load request for address %p has been successfully finished.\n", (void*)virtual_address);
+    // debug(LOADER, "Loader::loadPage: Load request for address %p has been successfully finished.\n", (void*)virtual_address);
 }
 
 bool Loader::readFromBinary (char* buffer, l_off_t position, size_t length)

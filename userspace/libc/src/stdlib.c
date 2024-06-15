@@ -325,15 +325,15 @@ void* realloc(void *ptr, size_t size)
         assert(size_left >= 0);
         block_to_realloc->size_ = size;
         block_to_realloc->next_ = block_to_realloc->next_->next_;
-
-        if(size_left >= bytesNeededForMemoryBlock(0))
-        {
-          MemoryBlock* new_block = (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
-          createNewMemoryBlock(new_block, size_left - bytesNeededForMemoryBlock(0), 0, new_block + 1, block_to_realloc->next_);
-          addOverflowProtection(new_block);
-          block_to_realloc->next_ = new_block;
-        }
         addOverflowProtection(block_to_realloc);
+
+        // if(size_left >= bytesNeededForMemoryBlock(0))
+        // {
+        //   MemoryBlock* new_block = (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
+        //   createNewMemoryBlock(new_block, size_left - bytesNeededForMemoryBlock(0), 0, new_block + 1, block_to_realloc->next_);
+        //   addOverflowProtection(new_block);
+        //   block_to_realloc->next_ = new_block;
+        // }
         pthread_spin_unlock(&memory_lock);
         return block_to_realloc->address_;     //TODOs: i should probably store this in tmp variable before releasing lock and also check for the others
       }
