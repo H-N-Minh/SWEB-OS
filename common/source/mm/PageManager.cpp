@@ -41,7 +41,8 @@ PageManager* PageManager::instance()
  * The lock is created in the constructor and is passed a name to uniquely identify it.
  * This allows for easier debugging and tracking of locks.
  */
-PageManager::PageManager():page_manager_lock_("PageManager::page_manager_lock_")
+PageManager::PageManager():page_manager_lock_("PageManager::page_manager_lock_"), preallocator_free_lock("PageManager::preallocator_free_lock"),
+preallocator_free_condition(&preallocator_free_lock, "preallocator_free_condition")
 {
   assert(!instance_);
   instance_ = this;
@@ -431,12 +432,26 @@ uint32 PageManager::getReferenceCount(uint64 page_number) // ppn
 
 ustl::vector<uint32> PageManager::preAlocatePages(int needed_pages_count)
 {
+  preallocator_free_lock.acquire();
+  if(!preallocator_free)
+  {
+    preallocator_free_condition.wait();
+  }
+  preallocator_free = false;
+  preallocator_free_lock.release();
+
   ustl::vector<uint32> pre_alocated_pages;
   for(int i = 0; i < needed_pages_count; i++)
   {
     uint32 ppn = allocPPN();
     pre_alocated_pages.push_back(ppn);
   }
+
+  preallocator_free_lock.acquire();
+  preallocator_free = true;
+  preallocator_free_condition.signal();
+  preallocator_free_lock.release();
+
   return pre_alocated_pages;
 }
 

@@ -168,8 +168,8 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   // swap-in needs 1 page
   // heap needs 3 pages (for mapPage)
   // load from binary needs 4 pages (for loadPage)
-  // TODOMINH: change 20 pages to the exact pages we need: count the pages we need in case of shared page
-  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  //TODOs make sure that it gets freed in all cases
+  // TODOMINH: change 5 pages to the exact pages we need: count the pages we need in case of shared page
+  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(5);  //TODOs make sure that it gets freed in all cases
 
   shared_mem_lock->acquire();
   swap_lock->acquire();
