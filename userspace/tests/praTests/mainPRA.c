@@ -37,7 +37,7 @@ int childMain()
     int PRA4 = 0;       // similar to pra3, but use fork instead of pthread_create
     int PRA5 = 0;       //More complex out of memory where i write in every location multiple times
     // Select pra-type:
-    // setPRA(__RANDOM_PRA__); 
+    setPRA(__RANDOM_PRA__); 
     // setPRA(__NFU_PRA__); 
     // setPRA(__SECOND_CHANCE_PRA__); 
 

@@ -799,6 +799,7 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
     else if(bit == DISCARDED && pt_entry->discarded)
     {
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
+      pt_entry->discarded = 0;
       return true;  
     }
     else if(bit == DIRTY && pt_entry->dirty)
