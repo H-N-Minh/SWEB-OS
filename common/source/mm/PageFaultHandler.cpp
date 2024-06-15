@@ -275,6 +275,8 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
   Mutex* archmem_lock = &current_archmemory.archmemory_lock_;
   PageManager* pm = PageManager::instance();
 
+  size_t vpn = address/PAGE_SIZE;
+  
   ustl::vector<uint32> preallocated_pages = pm->preAlocatePages(1);  //TODOs make sure that it gets freed in all cases
 
   ipt_lock->acquire();

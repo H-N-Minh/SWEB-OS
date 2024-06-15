@@ -4,7 +4,7 @@
 #include <stdio.h>
 
 
-int main1() {
+int main() {
     int fd = open("usr/testmmn.txt", O_WRONLY | O_CREAT , 0644);
 
 

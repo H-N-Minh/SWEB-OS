@@ -30,11 +30,9 @@ public:
   ustl::map<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
 
-<<<<<<< HEAD
   ustl::vector<uint32> fifo_ppns;
   unsigned last_index_ = 0;
 
-=======
   // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
   // Therefore this map exists. It assigns a fake ppn temprorarily, until the page is actually allocated a real ppn.
   ustl::map<ArchMemory*, ustl::map<vpn_t, fake_ppn_t>> fake_ppn_map_; 
@@ -46,7 +44,6 @@ public:
   fake_ppn_t fake_ppn_counter_ = 0; // for generating fake ppn
 
   Mutex fake_ppn_lock_; // responsible for fake_ppn_map_ and inverted_fake_ppn_ and fake_ppn_counter_
->>>>>>> main
 
   IPTManager();
   ~IPTManager();
@@ -121,8 +118,6 @@ public:
   */
   void debugRandomGenerator();
   
-<<<<<<< HEAD
-=======
   /**
    * Is called when a new shared page is created. Adding entry to both fake_ppn_map_ and inverted_fake_ppn_
   */
@@ -144,5 +139,4 @@ public:
   */
   void unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory);
 
->>>>>>> main
 };
