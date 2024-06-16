@@ -210,6 +210,7 @@ size_t IPTManager::findPageToSwapOut()
           {
             ppn_retval = ppn;
             archmem->archmemory_lock_.release();
+            last_index_--;
             break;
           }
         }

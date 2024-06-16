@@ -35,8 +35,8 @@ void printStatistic()
 int main()
 {
   //Set the pra to the one you want to test
-  //  setPRA(__RANDOM_PRA__); 
-    setPRA(__SECOND_CHANCE_PRA__); 
+   setPRA(__RANDOM_PRA__); 
+    // setPRA(__SECOND_CHANCE_PRA__); 
 
   //For random pra I get on my device:
   //----------------------------
@@ -58,7 +58,7 @@ int main()
     array2[i * (PAGESIZE / 8)] = (size_t)2;
   }
 
-  for(int j = 0; j < 20; j++)
+  for(int j = 0; j < 10; j++)
   {
     printf("%d", j);
     for(int i = 0; i < PAGES_IN_ARRAY; i++)
