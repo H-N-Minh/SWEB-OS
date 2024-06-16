@@ -11,6 +11,8 @@
 
 #include "File.h"
 
+ustl::map<ustl::string, SharedMemObject*> SharedMemManager::shm_objects_;
+
 // /////////////////////// SharedMemEntry ///////////////////////
 //
 // SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
@@ -452,7 +454,6 @@ int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
     shared_mem_lock_.release();
   	return entry->getGlobalFileDescriptor()->getFd();
   }
-	debug(SHARE_MEMORY, "---------------(shm_open) Opening shared memory object 3 \n");
   //object does not exist and O_CREAT is not set
   shared_mem_lock_.release();
   return -1;
