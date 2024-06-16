@@ -125,24 +125,7 @@ size_t IPTManager::findPageToSwapOut()
     ustl::vector<ppn_t> unique_keys;
     for (const auto& pair : ram_map_)
     {
-      bool accessed = false;
-      for(auto& archmem_ipt : pair.second->getArchmemIPTs())
-      {
-        ArchMemory* archmem = archmem_ipt->archmem_;
-        archmem->archmemory_lock_.acquire();
-        size_t vpn = archmem_ipt->vpn_;
-        if(archmem->isBitSet(vpn, BitType::ACCESSED, true))
-        {
-          accessed = true;
-          archmem->archmemory_lock_.release();
-          break;
-        }
-        archmem->archmemory_lock_.release();
-      }
-      if(accessed)
-      {
-        unique_keys.push_back(pair.first);
-      }
+      unique_keys.push_back(pair.first);
     }
     if(unique_keys.size() == 0)
     {

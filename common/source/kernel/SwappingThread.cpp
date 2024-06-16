@@ -137,7 +137,6 @@ void SwappingThread::swapIn()
         }
       }
     }
-    //updateMetaData();        //TODOs: adding this makes pra4 work !!!!!!!(maybe bad though) ?????
     swap_in_cond_.broadcast();
   }
   swap_in_lock_.release();
