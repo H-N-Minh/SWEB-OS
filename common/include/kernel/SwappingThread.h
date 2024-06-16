@@ -39,6 +39,15 @@ class SwappingThread : public Thread
 
 
 
+    /////////////// pre swap
+  private:
+    ustl::vector<uint32> pre_swapped_pages_;   // ppn that were copied to disk during preswap
+  public:
+    void preswap();
+    size_t copyPageToDisk();
+    static bool isMemoryAlmostFull();
+
+
     /////////////// swap out
   private:
     ustl::vector<uint32> free_pages_;   // ppn that were swapped out and now free
@@ -60,7 +69,6 @@ class SwappingThread : public Thread
      * If the memory is almost full and we dont have enough free pages in free_pages_, we need to swap out some pages.
      * This satisfies both preswap and swap out on demand.
     */
-    static bool isMemoryAlmostFull();
     static bool isMemoryFull();
 
     /**
@@ -94,7 +102,6 @@ class SwappingThread : public Thread
      * check if the disk_offset is in the swap_in_map_. If not, that means the page has been swapped in.
     */
     bool isOffsetInMap(size_t disk_offset);
-    static void preSwap();
 
 };
 

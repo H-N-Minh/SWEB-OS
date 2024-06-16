@@ -18,6 +18,8 @@ class SwappingManager
 
     ~SwappingManager();
 
+    void copyPageToDisk(size_t ppn);
+
     void swapOutPage(size_t ppn);
     int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
 
@@ -49,11 +51,10 @@ class SwappingManager
 
     int total_disk_reads_ = 0;
     int total_disk_writes_ = 0;
-    ustl::vector<size_t> pre_swapped_pages;
 
 
-    void lockArchmemorys(ustl::vector<ArchmemIPT*>& virtual_page_infos);
-    void unlockArchmemorys(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+    void lockArchmemories(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+    void unlockArchmemories(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 
     void printDebugInfos(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn, size_t disk_offset);
 

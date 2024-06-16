@@ -405,6 +405,42 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   }
 }
 
+void IPTManager::copyEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
+{
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::copyEntry called but IPT not locked\n");
+
+  auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
+  auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
+
+  IPTEntry* entry = (*source_map)[ppn_source];
+  assert(entry);
+
+  // copy the entry to the destination and the source remains untouched
+  (*destination_map)[ppn_destination] = new IPTEntry(*entry);
+}
+
+void IPTManager::finalizePreSwappedEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
+{
+  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::finalizePreSwappedEntry called but IPT not locked\n");
+
+  // get reference to source map and destination map
+  auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
+  auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
+
+  IPTEntry* entry = (*source_map)[ppn_source];
+
+  // add entry to the destination map
+  (*destination_map)[ppn_destination] = entry;
+  // remove entry from the source map
+  source_map->erase(ppn_source);
+
+  // Check if finalize operation failed or not
+  if (isKeyInMap(ppn_source, source) || !isKeyInMap(ppn_destination, source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP))
+  {
+    assert(0 && "IPTManager::finalizePreSwappedEntry: finalize failed\n");
+  }
+}
+
 void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)         //Todos does not delete but don't know where because I need it after remove
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntry called but IPT not locked\n");

@@ -10,7 +10,7 @@
 #define TIME_STEP 1 // in seconds
 #define TICKS_PER_SEC 18
 #define PRESWAP_THRESHOLD 80  // in percentage (start pre-swapping when memory usage is above 80%)
-#define SWAP_THRESHOLD 80
+#define SWAP_THRESHOLD 90
 #define MAX_PRESWAP_PAGES 20  // maximum total number of pages to pre-swap
 #define SWAP_OUT_AMOUNT 10     // max number of pages to swap out at a time
 #define SWAP_IN_AMOUNT 10     // max number of pages to swap in at a time
@@ -61,21 +61,43 @@ bool SwappingThread::isMemoryFull()
   return usedMemoryRatio > SWAP_THRESHOLD;
 }
 
-//void SwappingThread::preSwap()
-//{
-//
-//  if (isMemoryAlmostFull()) {
-//    IPTManager* ipt = IPTManager::instance();
-//    ipt->IPT_lock_.acquire();
-//    size_t ppn = ipt->findPageToSwapOut();
-//    SwappingManager::instance()->preSwapPage(ppn);
-//    ipt->IPT_lock_.release();
-//  }
-//}
+void SwappingThread::preswap()
+{
+  if(!SwappingManager::pre_swap_enabled)
+    return;
+
+  if (isMemoryAlmostFull() && free_pages_.size() < MAX_PRESWAP_PAGES)
+  {
+    for (int i = 0; i < SWAP_OUT_AMOUNT; i++)
+    {
+      if (free_pages_.size() >= MAX_PRESWAP_PAGES)
+      {
+        break;
+      }
+      IPTManager* ipt = IPTManager::instance();
+      ipt->IPT_lock_.acquire();
+
+      if(!ipt->ram_map_.empty())
+      {
+
+        size_t ppn = copyPageToDisk();
+        ipt->IPT_lock_.release();
+        pre_swapped_pages_.push_back(ppn);
+        miss_count_++;
+        swap_out_cond_.signal();
+      }
+      else
+      {
+        ipt->IPT_lock_.release();
+      }
+    }
+  }
+}
+
 
 void SwappingThread::swapOut()
 {
-  debug(SWAPTHREAD, "SwappingThread::swapOut: Check if swap out nessessary.\n");
+  debug(SWAPTHREAD, "SwappingThread::swapOut: Check if swap out necessary.\n");
   swap_out_lock_.acquire();
 
   bool memory_full = isMemoryFull();
@@ -106,8 +128,9 @@ void SwappingThread::swapOut()
 
     }
   }
-  else if (!memory_full)
-  {
+
+  if(!memory_full) { // if memory isn't full
+    // Free the normal swap out pages
     if (!free_pages_.empty())
     {
       for (uint32 ppn : free_pages_)
@@ -116,6 +139,16 @@ void SwappingThread::swapOut()
         debug(MINH, "SwappingThread::swapOut: free page %u\n", ppn);
       }
       free_pages_.clear();
+    }
+
+    // And if pre-swap is enabled, free the pre-swapped pages
+    if(SwappingManager::pre_swap_enabled && !pre_swapped_pages_.empty()){
+      for (uint32 ppn : pre_swapped_pages_)
+      {
+        PageManager::instance()->freePPN(ppn);
+        debug(MINH, "SwappingThread::swapOut: free preswapped page %u\n", ppn);
+      }
+      pre_swapped_pages_.clear();
     }
     memory_full_try_alloc_again_ = true;
     swap_out_cond_.signal();
@@ -187,27 +220,22 @@ void SwappingThread::Run()
         SwappingManager::instance()->swapping_thread_finished_lock_.release();
         continue;
       }
-//      if (SwappingManager::pre_swap_enabled && isMemoryAlmostFull())
-//      {
-//        preSwap(); // Call preSwap when PRESWAP_THRESHOLD surpassed
-//      }
       // 1. Updating Meta data every 1 seconds
       if (isOneTimeStep())
       {
         updateMetaData();
       }
+      // 2. Pre-swap if needed
+      preswap();
 
-      // 2. Swap out if needed
+      // 3. Swap out if needed
       swapOut();
       
-      // 3. Swap in if needed
+      // 4. Swap in if needed
       swapIn();
-
-
-
     }
 
-    // 4. Yield
+    // 5. Yield
     Scheduler::instance()->yield();
   }
 }
@@ -287,6 +315,15 @@ size_t SwappingThread::swapPageOut()
   IPTManager* ipt = IPTManager::instance();
   size_t ppn = ipt->findPageToSwapOut();
   SwappingManager::instance()->swapOutPage(ppn);
+
+  return ppn;
+}
+
+size_t SwappingThread::copyPageToDisk()
+{
+  IPTManager* ipt = IPTManager::instance();
+  size_t ppn = ipt->findPageToSwapOut();
+  SwappingManager::instance()->copyPageToDisk(ppn);
 
   return ppn;
 }

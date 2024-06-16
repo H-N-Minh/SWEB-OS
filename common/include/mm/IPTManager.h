@@ -7,7 +7,7 @@
 #include "Mutex.h"
 #include "IPTEntry.h"
 
-enum IPTMapType {RAM_MAP, DISK_MAP, PRESWAP_MAP, NONE};
+enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
 enum PRA_TYPE {RANDOM, NFU, SECOND_CHANGE};
 
 // class IPTEntry;
@@ -78,6 +78,13 @@ public:
    * @param ppn_destination Location of the new entry in the destination map. This new entry must be empty.
   */
   void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
+
+
+  void copyEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
+
+
+  void finalizePreSwappedEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
+
 
 
   void removeEntry(IPTMapType map_type, size_t ppn);

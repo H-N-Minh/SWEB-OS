@@ -34,6 +34,8 @@ public:
 
   size_t last_disk_offset_{0};
 
+  bool isPreSwapped = false;
+
 
   IPTEntry();
   ~IPTEntry();
