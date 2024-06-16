@@ -1,11 +1,12 @@
 #pragma once
 
-#include "Thread.h"
 #include "Condition.h"
-#include "Mutex.h"
-#include "uvector.h"
-#include "types.h"
 #include "IPTManager.h"
+#include "Mutex.h"
+#include "Thread.h"
+#include "types.h"
+#include "ulist.h"
+#include "uvector.h"
 
 class SwappingThread : public Thread
 {
@@ -46,6 +47,8 @@ class SwappingThread : public Thread
     void preswap();
     size_t copyPageToDisk();
     static bool isMemoryAlmostFull();
+    static ustl::deque<size_t> preswap_page_queue;
+    static ustl::deque<size_t>& getPreswapPageQueue() {return preswap_page_queue;}
 
 
     /////////////// swap out

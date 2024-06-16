@@ -114,7 +114,7 @@ void IPTManager::debugRandomGenerator()
 size_t IPTManager::findPageToSwapOut()
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::findPageToSwapOut called but IPT not locked\n");
-  
+
   size_t ppn_retval = INVALID_PPN;
 
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
@@ -142,22 +142,57 @@ size_t IPTManager::findPageToSwapOut()
 size_t IPTManager::findPageToSwapOutRandom(size_t ppn_retval) {
   debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
 
-  size_t random_num = randomNumGenerator();
-  // debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
+  if(SwappingManager::pre_swap_enabled) {
+    // Gather all the keys from ram_map_
+    ustl::vector<ppn_t> available_keys;
+    for (const auto &pair: ram_map_) {
+      available_keys.push_back(pair.first);
+    }
 
-  ustl::vector<ppn_t> unique_keys;
-  for (const auto& pair : ram_map_)
-  {
-    unique_keys.push_back(pair.first);
+    if (available_keys.size() == 0) {
+      assert(0 && "No page in ram");
+    }
+
+    // Select a random key until we find a key not in pre-swap queue
+    while (true) {
+      size_t random_num = randomNumGenerator();
+      size_t random_ipt_index = random_num % available_keys.size();
+      ppn_retval = (size_t) (available_keys[random_ipt_index]);
+
+
+      // Use the getter to get the preswap_page_queue.
+      ustl::deque<size_t>& preswap_page_queue = SwappingThread::getPreswapPageQueue();
+
+      // If this page is not in the pre-swap queue, we can return it
+      if (ustl::find(preswap_page_queue.begin(), preswap_page_queue.end(), ppn_retval) == preswap_page_queue.end()) {
+        debug(IPT, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%ld\n", ppn_retval);
+        return ppn_retval;
+      }
+      // If the selected page is already in the pre-swap queue, we remove it from our available keys and loop again.
+      else {
+        available_keys.erase(available_keys.begin() + random_ipt_index);
+        if (available_keys.size() == 0) {
+          assert(0 && "All pages are in the pre-swap queue.");
+        }
+      }
+    }
   }
-  if(unique_keys.size() == 0)
-  {
-    assert(0 && "No page in ram");
+  else{
+    size_t random_num = randomNumGenerator();
+    // debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
+
+    ustl::vector<ppn_t> unique_keys;
+    for (const auto &pair: ram_map_) {
+      unique_keys.push_back(pair.first);
+    }
+    if (unique_keys.size() == 0) {
+      assert(0 && "No page in ram");
+    }
+    size_t random_ipt_index = random_num % unique_keys.size();
+    ppn_retval = (size_t) (unique_keys[random_ipt_index]);
+    debug(IPT, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%ld\n", ppn_retval);
+    return ppn_retval;
   }
-  size_t random_ipt_index = random_num % unique_keys.size();
-  ppn_retval = (size_t) (unique_keys[random_ipt_index]);
-  debug(IPT, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%ld\n", ppn_retval);
-  return ppn_retval;
 }
 
 size_t IPTManager::findPageToSwapOutNFU(size_t ppn_retval) {

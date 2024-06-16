@@ -6,6 +6,7 @@
 #include "PageManager.h"
 #include "IPTEntry.h"
 
+#define INVALID_PPN 0
 
 #define TIME_STEP 1 // in seconds
 #define TICKS_PER_SEC 18
@@ -310,19 +311,33 @@ bool SwappingThread::isOneTimeStep()
   return false;
 }
 
+ustl::deque<size_t> SwappingThread::preswap_page_queue;
+
 size_t SwappingThread::swapPageOut()
 {
   IPTManager* ipt = IPTManager::instance();
-  size_t ppn = ipt->findPageToSwapOut();
-  SwappingManager::instance()->swapOutPage(ppn);
+  size_t ppn_to_swap = INVALID_PPN;
+  if (SwappingManager::pre_swap_enabled) {
+    if (!preswap_page_queue.empty()) {
+      ppn_to_swap = preswap_page_queue.front();
+      preswap_page_queue.pop_front();
+      SwappingManager::instance()->swapOutPage(ppn_to_swap);
+    }
+  }
+  else
+  {
+    ppn_to_swap = ipt->findPageToSwapOut();
+    SwappingManager::instance()->swapOutPage(ppn_to_swap);
+  }
 
-  return ppn;
+  return ppn_to_swap;
 }
 
 size_t SwappingThread::copyPageToDisk()
 {
   IPTManager* ipt = IPTManager::instance();
   size_t ppn = ipt->findPageToSwapOut();
+  preswap_page_queue.push_back(ppn);
   SwappingManager::instance()->copyPageToDisk(ppn);
 
   return ppn;
