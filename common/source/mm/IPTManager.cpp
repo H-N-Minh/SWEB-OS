@@ -200,27 +200,71 @@ size_t IPTManager::findPageToSwapOutNFU(size_t ppn_retval) {
   uint32 min_counter = UINT32_MAX;
   ustl::vector<uint32> min_ppns;// vector of all pages with the minimum counter
 
-  // go through ram_map_ and find the page with the lowest access counter
-  assert(ram_map_.size() > 0 && "IPTManager::findPageToSwapOut: ram_map_ is empty. this should never happen\n");
-  for(auto& pair : ram_map_)
-  {
-    ppn_t key = pair.first;
-    uint32 counter = pair.second->access_counter_;
-    if (counter < min_counter && counter != 0)
+  if(SwappingManager::pre_swap_enabled) {
+    ustl::deque<size_t>& preswap_page_queue = SwappingThread::getPreswapPageQueue(); // Get access to pre-swap queue
+
+    assert(ram_map_.size() > 0 && "IPTManager::findPageToSwapOut: ram_map_ is empty. this should never happen\n");
+    for(auto& pair : ram_map_)
     {
-      min_counter = counter;
-      min_ppns.clear();
-      ppn_retval = key;
-      min_ppns.push_back(key);
+      ppn_t key = pair.first;
+
+      // If this page is in the pre-swap queue, skip it
+      if (ustl::find(preswap_page_queue.begin(), preswap_page_queue.end(), key) != preswap_page_queue.end()) {
+        continue;
+      }
+
+      uint32 counter = pair.second->access_counter_;
+      if (counter < min_counter && counter != 0)
+      {
+        min_counter = counter;
+        min_ppns.clear();
+        ppn_retval = key;
+        min_ppns.push_back(key);
+      }
+      else if (counter == min_counter)
+      {
+        min_ppns.push_back(key);
+      }
     }
-    else if (counter == min_counter)
-    {
-      min_ppns.push_back(key);
+    debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
+    if (min_ppns.size() > 1) {
+      debug(IPT, "IPTManager::findPageToSwapOut: Multiple pages with the minimum counter. Randomly selecting one not in pre-swap queue.\n");
+      while (true) {
+        size_t random_num = randomNumGenerator();
+        size_t random_index = random_num % min_ppns.size();
+        ppn_retval = min_ppns[random_index];
+        if (ustl::find(preswap_page_queue.begin(), preswap_page_queue.end(), ppn_retval) == preswap_page_queue.end()) {
+          // Page is not in the pre-swap queue, so we can use it
+          break;
+        } else {
+          min_ppns.erase(min_ppns.begin() + random_index); // remove the chosen page from min_ppns to avoid choosing it again
+          if (min_ppns.size() == 0) {
+            assert(0 && "All minimum-counter pages are in the pre-swap queue.");
+          }
+        }
+      }
     }
+
+    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%ld, counter=%d\n", ppn_retval, min_counter);
+    return ppn_retval;
   }
-  debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
-    if (min_ppns.size() > 1)
-    {
+  else {
+    // go through ram_map_ and find the page with the lowest access counter
+    assert(ram_map_.size() > 0 && "IPTManager::findPageToSwapOut: ram_map_ is empty. this should never happen\n");
+    for (auto &pair: ram_map_) {
+      ppn_t key = pair.first;
+      uint32 counter = pair.second->access_counter_;
+      if (counter < min_counter && counter != 0) {
+        min_counter = counter;
+        min_ppns.clear();
+        ppn_retval = key;
+        min_ppns.push_back(key);
+      } else if (counter == min_counter) {
+        min_ppns.push_back(key);
+      }
+    }
+    debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
+    if (min_ppns.size() > 1) {
       debug(IPT, "IPTManager::findPageToSwapOut: Multiple pages with the minimum counter. Randomly selecting one\n");
       size_t random_num = randomNumGenerator();
       size_t random_index = random_num % min_ppns.size();
@@ -229,6 +273,7 @@ size_t IPTManager::findPageToSwapOutNFU(size_t ppn_retval) {
 
     debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%ld, counter=%d\n", ppn_retval, min_counter);
     return ppn_retval;
+  }
 }
 
 size_t IPTManager::findPageToSwapOutSC(size_t ppn_retval) {
