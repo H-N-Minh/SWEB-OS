@@ -197,7 +197,7 @@ void* calloc(size_t nmemb, size_t size)
 
 void* realloc(void *ptr, size_t size)
 {
-  return -1;
+  return (void*)-1;
   if(ptr == NULL)
   {
     return malloc(size);
