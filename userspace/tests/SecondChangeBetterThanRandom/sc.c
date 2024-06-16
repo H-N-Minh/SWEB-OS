@@ -8,12 +8,15 @@
 
 #define PAGESIZE 4096
 
+#define PAGES_IN_ARRAY2 1000
+#define ELEMENTS_IN_ARRAY2 (PAGES_IN_ARRAY2 * PAGESIZE) / 8
 
 #define PAGES_IN_ARRAY 50
 #define ELEMENTS_IN_ARRAY (PAGES_IN_ARRAY * PAGESIZE) / 8
-
-
 size_t array[ELEMENTS_IN_ARRAY];
+
+
+size_t array2[ELEMENTS_IN_ARRAY2];
 
 void printStatistic()
 {
@@ -32,7 +35,7 @@ void printStatistic()
 int main()
 {
   //Set the pra to the one you want to test
-   setPRA(__RANDOM_PRA__); 
+  //  setPRA(__RANDOM_PRA__); 
     setPRA(__SECOND_CHANCE_PRA__); 
 
   //For random pra I get on my device:
@@ -50,7 +53,10 @@ int main()
   //Reuse same disk location 
 
  
-  calloc(1000, 4096);
+  for(int i = 0; i < PAGES_IN_ARRAY2; i++)
+  {
+    array2[i * (PAGESIZE / 8)] = (size_t)2;
+  }
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {

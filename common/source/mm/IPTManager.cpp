@@ -191,7 +191,7 @@ size_t IPTManager::findPageToSwapOut()
         last_index_ = 0;
       }
           
-      for(;last_index_ <  fifo_ppns.size(); last_index_++)
+      for(;last_index_ <  fifo_ppns.size() && ppn_retval == INVALID_PPN; last_index_++)
       {
         auto& ppn = fifo_ppns.at(last_index_);
         assert(isKeyInMap(ppn, IPTMapType::RAM_MAP) && "selected page need to be in ram");
@@ -205,7 +205,6 @@ size_t IPTManager::findPageToSwapOut()
           {
             archmem->resetAccessBitsAndSetSecondChange(vpn);
             archmem->archmemory_lock_.release();
-            
           }
           else
           {

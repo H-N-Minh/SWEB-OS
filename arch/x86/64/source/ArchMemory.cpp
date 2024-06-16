@@ -955,9 +955,10 @@ void ArchMemory::resetSecondChange(size_t vpn)
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
-  if (m.pt && pt_entry && pt_entry->present)
+  if (m.pt && pt_entry)
   {
     pt_entry->second_change = 0;
+    pt_entry->accessed = 0;
     
   }
 }
