@@ -11,7 +11,7 @@ char const *user_progs[] = {
 
 //Swapping-----------------------------------------------------------------------
                             
-                            // "/usr/praTests.sweb", 
+                            "/usr/praTests.sweb", 
                             // "/usr/forkTests.sweb",           (when you run all th also use swapping) 
                             // "usr/pageSelectionTests.sweb",
                             // "/usr/praTests.sweb",  (basically swapping tests)
@@ -19,7 +19,7 @@ char const *user_progs[] = {
                             
 
                             // "usr/NFUBetterThanRandom.sweb",
-                            "usr/SecondChangeBetterThanRandom.sweb",
+                            // "usr/SecondChangeBetterThanRandom.sweb",
 
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",
