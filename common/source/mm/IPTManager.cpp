@@ -24,7 +24,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::SECOND_CHANGE;
+  pra_type_ = PRA_TYPE::NFU;
 }
 
 IPTManager::~IPTManager()
@@ -189,7 +189,7 @@ size_t IPTManager::findPageToSwapOut()
       // kprintf("fifo_ppns.size() %d\n", fifo_ppns.size());   
 
           
-      for(size_t i = 0;i <  fifo_ppns.size() && ppn_retval == INVALID_PPN; i++)
+      for(size_t i = 0; i <  fifo_ppns.size() && ppn_retval == INVALID_PPN; i++)
       {
         auto& ppn = fifo_ppns.at(i);
         assert(isKeyInMap(ppn, IPTMapType::RAM_MAP) && "selected page need to be in ram");
