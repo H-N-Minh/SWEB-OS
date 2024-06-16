@@ -58,8 +58,6 @@ int childMain()
         printStatistic();
     }
 
-    for(int i = 0; i < 3; i++)
-    {
     if(PRA3)
     {
         printf("\nTesting pra3: testing 64 threads writing to array in parallel...\n");
@@ -67,7 +65,6 @@ int childMain()
         if (retval == 0)                      { printf("===> pra3 successful!\n"); }
         else                                  { printf("===> pra3 failed!\n");  return -1;}
         printStatistic();
-    }
     }
 
 

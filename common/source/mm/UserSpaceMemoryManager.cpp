@@ -15,7 +15,7 @@ size_t UserSpaceMemoryManager::totalUsedHeap()
 UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
   : current_break_lock_("UserSpaceMemoryManager::lock_")
 {
-  heap_start_ = (size_t) loader->getBrkStart();
+  heap_start_ = 0x800000000;
   current_break_ = heap_start_;
   loader_ = loader;
   shared_mem_manager_ = new SharedMemManager();

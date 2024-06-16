@@ -6,7 +6,7 @@
 #include "offsets.h"
 #include "paging-definitions.h"
 
-enum BitType {COW, BEEN_DIRTY, DISCARDED, DIRTY, WRITEABLE, SWAPPED_OUT, PRESENT, ACCESSED};
+enum BitType {COW, BEEN_DIRTY, DISCARDED, DIRTY, WRITEABLE, SWAPPED_OUT, PRESENT, ACCESSED, SECONDCHANGE};
 
 struct ArchMemoryMapping
 {
@@ -151,6 +151,10 @@ class ArchMemory
     void setProtectionBits(size_t vpn, int read, int write, int execute);
 
     void setSharedBit(size_t vpn);
+
+    void resetSecondChange(size_t vpn); 
+
+    void resetAccessBitsAndSetSecondChange(size_t vpn);
 
 
   private:

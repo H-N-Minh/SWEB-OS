@@ -96,7 +96,7 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
               // loop through pt to get each pageT
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
-                if (PARENT_pt[pti].present || PARENT_pt[pti].swapped_out || PARENT_pt[pti].discarded)
+                if (PARENT_pt[pti].present || PARENT_pt[pti].swapped_out)
                 {
                   IPTMapType maptype = PARENT_pt[pti].present ? IPTMapType::RAM_MAP : IPTMapType::DISK_MAP;
 
@@ -826,6 +826,11 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
       // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
+    else if(bit == SECONDCHANGE && pt_entry->second_change) //TODOs - before we also check for presenet?
+    {
+      // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
+      return true;  
+    }
   }
 
   if(bit != ACCESSED)
@@ -867,6 +872,10 @@ const char* ArchMemory::bitAsString(BitType bit)
   if(bit == ACCESSED)
   {
     return "accessed";
+  }
+  if(bit == SECONDCHANGE)
+  {
+    return "second change";
   }
   assert(0);
   return "";
@@ -917,6 +926,39 @@ void ArchMemory::setSharedBit(size_t vpn)
   {
     assert(pt_entry->shared == 0 && "ArchMemory::setSharedBit: page is newly created so shared bit should not be set already\n");
     pt_entry->shared = 1;
+  }
+}
+
+
+void ArchMemory::resetAccessBitsAndSetSecondChange(size_t vpn)        
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  // debug(A_MEMORY, "ArchMemory::resetAccessBits: with vpn %zu.\n", vpn); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->present)
+  {
+    if (pt_entry->accessed)
+    {
+      pt_entry->second_change = 1;
+    }
+  }
+}
+
+void ArchMemory::resetSecondChange(size_t vpn)        
+{
+  assert(archmemory_lock_.heldBy() == currentThread);
+ 
+  // debug(A_MEMORY, "ArchMemory::resetAccessBits: with vpn %zu.\n", vpn); 
+  ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
+  PageTableEntry* pt_entry = &m.pt[m.pti];
+
+  if (m.pt && pt_entry && pt_entry->present)
+  {
+    pt_entry->second_change = 0;
+    
   }
 }
 

@@ -10,11 +10,16 @@ char const *user_progs[] = {
                             // "/usr/mmapSharedTests.sweb", 
 
 //Swapping-----------------------------------------------------------------------
-                            "/usr/SwappingForkTests.sweb", 
+                            
                             // "/usr/praTests.sweb", 
+                            // "/usr/forkTests.sweb",           (when you run all th also use swapping) 
                             // "usr/pageSelectionTests.sweb",
+                            // "/usr/praTests.sweb",  (basically swapping tests)
+                            // "/usr/SwappingForkTests.sweb",
+                            
 
                             // "usr/NFUBetterThanRandom.sweb",
+                            "usr/SecondChangeBetterThanRandom.sweb",
 
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",

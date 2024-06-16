@@ -24,7 +24,7 @@ IPTManager::IPTManager()
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::NFU;
+  pra_type_ = PRA_TYPE::SECOND_CHANGE;
 }
 
 IPTManager::~IPTManager()
@@ -185,7 +185,12 @@ size_t IPTManager::findPageToSwapOut()
     while(ppn_retval == INVALID_PPN && counter < 3)
     {
       counter++;
-      
+      // kprintf("fifo_ppns.size() %d\n", fifo_ppns.size());   
+      if(last_index_ > (fifo_ppns.size() - 1))
+      {
+        last_index_ = 0;
+      }
+          
       for(;last_index_ <  fifo_ppns.size(); last_index_++)
       {
         auto& ppn = fifo_ppns.at(last_index_);
@@ -196,9 +201,9 @@ size_t IPTManager::findPageToSwapOut()
           ArchMemory* archmem = archmem_ipt->archmem_;
           archmem->archmemory_lock_.acquire();
           size_t vpn = archmem_ipt->vpn_;
-          if(archmem->isBitSet(vpn, BitType::ACCESSED, true))
+          if(!archmem->isBitSet(vpn, BitType::SECONDCHANGE, true))
           {
-            archmem->resetAccessBits(vpn);
+            archmem->resetAccessBitsAndSetSecondChange(vpn);
             archmem->archmemory_lock_.release();
             
           }
@@ -210,11 +215,6 @@ size_t IPTManager::findPageToSwapOut()
           }
         }
       }
-
-      if(last_index_ > (fifo_ppns.size() - 1))
-      {
-        last_index_ = 0;
-      }
     }
 
     if(ppn_retval != INVALID_PPN)
@@ -223,6 +223,15 @@ size_t IPTManager::findPageToSwapOut()
       if (it != fifo_ppns.end())
       {
         fifo_ppns.erase(it);   
+
+        for(auto& archmem_ipt : ram_map_[ppn_retval]->getArchmemIPTs())
+        {
+          ArchMemory* archmem = archmem_ipt->archmem_;
+          size_t vpn = archmem_ipt->vpn_;
+          archmem->archmemory_lock_.acquire();
+          archmem->resetSecondChange(vpn);
+          archmem->archmemory_lock_.release();
+        }
       }
       else
       {
@@ -264,6 +273,16 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     assert(entry && "IPTManager::insertIPT: entry is null");
 
     entry->addArchmemIPT(vpn, archmem);
+
+    if(map_type == IPTMapType::RAM_MAP)
+    {
+      auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn);
+      if (it != fifo_ppns.end())
+      {
+        fifo_ppns.erase(it);   
+      }
+      fifo_ppns.push_back(ppn);
+    }
   }
   else
   {
