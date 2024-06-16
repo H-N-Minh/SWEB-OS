@@ -35,22 +35,22 @@ void printStatistic()
 int main()
 {
   //Set the pra to the one you want to test
-   setPRA(__RANDOM_PRA__); 
-    // setPRA(__SECOND_CHANCE_PRA__); 
+  //  setPRA(__RANDOM_PRA__); 
+    setPRA(__SECOND_CHANCE_PRA__); 
 
   //For random pra I get on my device:
   //----------------------------
-  //Total disk writes: 
-  //Total disk reads: 
-  //Discard unchanged page 
-  //Reuse same disk location 
+  //Total disk writes: 1146
+  //Total disk reads: 62
+  //Discard unchanged page: 3
+  //Reuse same disk location: 1
 
   //For second change pra I get on my device:
   //----------------------------
-  //Total disk writes: 
-  //Total disk reads: 
-  //Discard unchanged page 
-  //Reuse same disk location 
+  //Total disk writes: 1083
+  //Total disk reads: 2
+  //Discard unchanged page: 7
+  //Reuse same disk location: 0
 
  
   for(int i = 0; i < PAGES_IN_ARRAY2; i++)

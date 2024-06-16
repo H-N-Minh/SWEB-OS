@@ -182,18 +182,16 @@ size_t IPTManager::findPageToSwapOut()
       assert(0);
     }
     int counter = 0;
+
     while(ppn_retval == INVALID_PPN && counter < 3)
     {
       counter++;
       // kprintf("fifo_ppns.size() %d\n", fifo_ppns.size());   
-      if(last_index_ > (fifo_ppns.size() - 1))
-      {
-        last_index_ = 0;
-      }
+
           
-      for(;last_index_ <  fifo_ppns.size() && ppn_retval == INVALID_PPN; last_index_++)
+      for(size_t i = 0;i <  fifo_ppns.size() && ppn_retval == INVALID_PPN; i++)
       {
-        auto& ppn = fifo_ppns.at(last_index_);
+        auto& ppn = fifo_ppns.at(i);
         assert(isKeyInMap(ppn, IPTMapType::RAM_MAP) && "selected page need to be in ram");
         IPTEntry* entry = ram_map_[ppn];
         for(auto& archmem_ipt : entry->getArchmemIPTs())
@@ -210,7 +208,6 @@ size_t IPTManager::findPageToSwapOut()
           {
             ppn_retval = ppn;
             archmem->archmemory_lock_.release();
-            last_index_--;
             break;
           }
         }
