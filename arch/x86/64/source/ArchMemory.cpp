@@ -96,9 +96,9 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
               // loop through pt to get each pageT
               for (uint64 pti = 0; pti < PAGE_TABLE_ENTRIES; pti++)
               {
-                if (PARENT_pt[pti].present || PARENT_pt[pti].swapped_out)
+                if (PARENT_pt[pti].present || PARENT_pt[pti].swapped_out || PARENT_pt[pti].discarded)
                 {
-                  IPTMapType maptype = PARENT_pt[pti].swapped_out ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP;
+                  IPTMapType maptype = PARENT_pt[pti].present ? IPTMapType::RAM_MAP : IPTMapType::DISK_MAP;
 
                   if (!PARENT_pt[pti].shared)
                   {
@@ -112,7 +112,6 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
 
-                  assert(CHILD_pt[pti].present == 1 && "The page directory entries should be both be present in child and parent");
                 }
               }
             }
@@ -495,7 +494,7 @@ void ArchMemory::deleteEverythingExecpt(size_t virtual_page)
                   if(m.page_ppn != pt[pti].page_ppn)
                   {
                     size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
-                    IPTMapType maptype = pt[pti].swapped_out ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP;
+                    IPTMapType maptype = pt[pti].present ? IPTMapType::RAM_MAP : IPTMapType::DISK_MAP;
                     PageManager::instance()->decrementReferenceCount(pt[pti].page_ppn, vpn, this, maptype);
                     debug(FORK, "getReferenceCount in exec_destructor (decrement) %d \n", PageManager::instance()->getReferenceCount(pt[pti].page_ppn));
                     ((uint64*)pt)[pti] = 0;
@@ -728,7 +727,7 @@ bool ArchMemory::updatePageTableEntryForWriteBackToDisk(size_t vpn)
   assert(pt_entry->present == 0);
 
   pt_entry->cow = 0;
-  pt_entry->discarded = 0;
+  pt_entry->discarded = 1;
   pt_entry->page_ppn = 0;
 
   return true;
@@ -780,7 +779,7 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
 
   if(pagetable_need_to_be_present)
   {
-    assert(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present);             //TODOs....?
+    assert(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present);
   }
   
   if(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present)

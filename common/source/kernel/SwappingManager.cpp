@@ -56,11 +56,17 @@ void SwappingManager::swapOutPage(size_t ppn)
   {
     if(!hasPageBeenDirty(virtual_page_infos))
     {
-      ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);             //TODOs: entries should get deleted but should still be possible to unlock
+      ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);
       PageManager::instance()->setReferenceCount(ppn, 0);
       // printDebugInfos(virtual_page_infos, ppn, 0);
       updatePageTableEntriesForWriteBackToDisk(virtual_page_infos, ppn);
       unlockArchmemorys(virtual_page_infos);
+      for(auto& el : virtual_page_infos)
+      {
+        delete el;
+      }
+      virtual_page_infos.clear();
+
 
       discard_unchanged_page_++;
       return;

@@ -116,7 +116,7 @@ void* malloc(size_t size)
 
 void free(void *ptr)
 {
-  if(ptr == NULL) //TODOs (check pointer)
+  if(ptr == NULL)
   {
     return;
   }
@@ -197,6 +197,7 @@ void* calloc(size_t nmemb, size_t size)
 
 void* realloc(void *ptr, size_t size)
 {
+  return -1;
   if(ptr == NULL)
   {
     return malloc(size);
@@ -497,7 +498,7 @@ void* malloc_unlocked(size_t size)
 
 void free_unlocked(void *ptr)
 {
-  if(ptr == NULL) //TODOs (check pointer)
+  if(ptr == NULL)
   {
     return;
   }

@@ -416,7 +416,7 @@ bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archme
   }
   else
   {
-    return it->second->isArchmemExist(archmem, vpn);            //TODO: it->second->vpn_ == vpn VPN!!!!!!!!!!!!!
+    return it->second->isArchmemExist(archmem, vpn);
   }
 }
 

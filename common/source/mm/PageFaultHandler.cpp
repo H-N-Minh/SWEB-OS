@@ -224,17 +224,17 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     heap_lock->release();
   }
     //Page is on stack
-    else if(address > STACK_END && address < STACK_START && current_archmemory.isBitSet(vpn, BitType::DISCARDED, true))
-    {
-      debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", (void*)address);//todos check if page was ever mapped
-      swapper->swap_in_lock_.release();
-      heap_manager->current_break_lock_.release();
-      size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
-      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
-      assert(rv == true);
-      current_archmemory.archmemory_lock_.release();
-      IPTManager::instance()->IPT_lock_.release();
-    }
+  else if(address > STACK_END && address < STACK_START && current_archmemory.isBitSet(vpn, BitType::DISCARDED, true))
+  {
+    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", (void*)address);
+    swapper->swap_in_lock_.release();
+    heap_manager->current_break_lock_.release();
+    size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
+    assert(rv == true);
+    current_archmemory.archmemory_lock_.release();
+    IPTManager::instance()->IPT_lock_.release();
+  }
   else if(smm->isAddressValid(address))
   {
     debug(MMAP, "PageFaultHandler::handleValidPageFault: Handling pf in shared memory\n");
