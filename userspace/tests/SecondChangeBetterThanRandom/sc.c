@@ -58,30 +58,21 @@ int main()
     array2[i * (PAGESIZE / 8)] = (size_t)2;
   }
 
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)
+  for(int j = 0; j < 20; j++)
   {
-    array[i * (PAGESIZE / 8)] = (size_t)i;
+    printf("%d", j);
+    for(int i = 0; i < PAGES_IN_ARRAY; i++)
+    {
+      array[i * (PAGESIZE / 8)] = (size_t)j;
+    }
+    for(int i = 0; i < PAGES_IN_ARRAY; i++)
+    {
+      assert(array[i * (PAGESIZE / 8)] == j);
+    }
+    calloc(100, PAGESIZE);
   }
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)
-  {
-    assert(array[i * (PAGESIZE / 8)] == i);
-  }
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)
-  {
-    array[i * (PAGESIZE / 8)] = (size_t)i*2;
-  }
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)
-  {
-    assert(array[i * (PAGESIZE / 8)] == i*2);
-  }
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)
-  {
-    array[i * (PAGESIZE / 8)] = (size_t)i*3;
-  }
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)
-  {
-    assert(array[i * (PAGESIZE / 8)] == i*3);
-  }
+
+
 
   printStatistic();
 
