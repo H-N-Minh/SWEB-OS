@@ -282,58 +282,107 @@ size_t IPTManager::findPageToSwapOutSC(size_t ppn_retval) {
     assert(0);
   }
   int counter = 0;
-  while(ppn_retval == INVALID_PPN && counter < 3)
-  {
-    counter++;
 
-    for(; last_index_ < fifo_ppns.size(); last_index_++)
+  if(SwappingManager::pre_swap_enabled) {
+    ustl::deque<size_t>& preswap_page_queue = SwappingThread::getPreswapPageQueue(); // Get access to pre-swap queue
+    while(ppn_retval == INVALID_PPN && counter < 3)
     {
-      auto& ppn = fifo_ppns.at(last_index_);
-      assert(isKeyInMap(ppn, RAM_MAP) && "selected page need to be in ram");
-      IPTEntry* entry = ram_map_[ppn];
-      for(auto& archmem_ipt : entry->getArchmemIPTs())
+      counter++;
+      for(; last_index_ < fifo_ppns.size(); last_index_++)
       {
-        ArchMemory* archmem = archmem_ipt->archmem_;
-        archmem->archmemory_lock_.acquire();
-        size_t vpn = archmem_ipt->vpn_;
-        if(archmem->isBitSet(vpn, ACCESSED, true))
-        {
-          archmem->resetAccessBits(vpn);
-          archmem->archmemory_lock_.release();
+        auto& ppn = fifo_ppns.at(last_index_);
 
+        // If this page is in the pre-swap queue, skip it
+        if (ustl::find(preswap_page_queue.begin(), preswap_page_queue.end(), ppn) != preswap_page_queue.end()) {
+          continue;
         }
-        else
+
+        assert(isKeyInMap(ppn, RAM_MAP) && "selected page need to be in ram");
+        IPTEntry* entry = ram_map_[ppn];
+        for(auto& archmem_ipt : entry->getArchmemIPTs())
         {
-          ppn_retval = ppn;
-          archmem->archmemory_lock_.release();
-          break;
+          ArchMemory* archmem = archmem_ipt->archmem_;
+          archmem->archmemory_lock_.acquire();
+          size_t vpn = archmem_ipt->vpn_;
+          if(archmem->isBitSet(vpn, ACCESSED, true))
+          {
+            archmem->resetAccessBits(vpn);
+            archmem->archmemory_lock_.release();
+
+          }
+          else
+          {
+            ppn_retval = ppn;
+            archmem->archmemory_lock_.release();
+            break;
+          }
         }
+      }
+      if(last_index_ > (fifo_ppns.size() - 1))
+      {
+        last_index_ = 0;
       }
     }
 
-    if(last_index_ > (fifo_ppns.size() - 1))
+    if(ppn_retval != INVALID_PPN)
     {
-      last_index_ = 0;
-    }
-  }
-
-  if(ppn_retval != INVALID_PPN)
-  {
-    auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn_retval);
-    if (it != fifo_ppns.end())
-    {
-      fifo_ppns.erase(it);
+      auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn_retval);
+      if (it != fifo_ppns.end())
+      {
+        fifo_ppns.erase(it);
+      }
+      else
+      {
+        assert(0 && "PPN not found in fifo_ppns vector");
+      }
     }
     else
     {
-      assert(0 && "PPN not found in fifo_ppns vector");
+      assert(0);
     }
+    return ppn_retval;
   }
-  else
-  {
-    assert(0);
+  else {
+    while (ppn_retval == INVALID_PPN && counter < 3) {
+      counter++;
+
+      for (; last_index_ < fifo_ppns.size(); last_index_++) {
+        auto &ppn = fifo_ppns.at(last_index_);
+        assert(isKeyInMap(ppn, RAM_MAP) && "selected page need to be in ram");
+        IPTEntry *entry = ram_map_[ppn];
+        for (auto &archmem_ipt: entry->getArchmemIPTs()) {
+          ArchMemory *archmem = archmem_ipt->archmem_;
+          archmem->archmemory_lock_.acquire();
+          size_t vpn = archmem_ipt->vpn_;
+          if (archmem->isBitSet(vpn, ACCESSED, true)) {
+            archmem->resetAccessBits(vpn);
+            archmem->archmemory_lock_.release();
+
+          } else {
+            ppn_retval = ppn;
+            archmem->archmemory_lock_.release();
+            break;
+          }
+        }
+      }
+
+      if (last_index_ > (fifo_ppns.size() - 1)) {
+        last_index_ = 0;
+      }
+    }
+
+    if (ppn_retval != INVALID_PPN) {
+      auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn_retval);
+      if (it != fifo_ppns.end()) {
+        fifo_ppns.erase(it);
+      } else {
+        assert(0 && "PPN not found in fifo_ppns vector");
+      }
+    } else {
+      assert(0);
+    }
+    return ppn_retval;
   }
-  return ppn_retval;
 }
 
 void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
