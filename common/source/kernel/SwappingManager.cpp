@@ -74,21 +74,18 @@ void SwappingManager::swapOutPage(size_t ppn)
     else 
     {
       size_t disk_offset = ipt_->ram_map_[ppn]->last_disk_offset_;
-      if(disk_offset == 0)
+      if(!disk_offset == 0)
       {
-        assert(0);   //break is probably better
+        ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
+        // printDebugInfos(virtual_page_infos, ppn, disk_offset);
+        updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset, ppn);
+        PageManager::instance()->setReferenceCount(ppn, 0);
+        unlockArchmemorys(virtual_page_infos);
+
+        reuse_same_disk_location_++;
+        return;
       }
-         
-      ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
-      // printDebugInfos(virtual_page_infos, ppn, disk_offset);
-      updatePageTableEntriesForSwapOut(virtual_page_infos, disk_offset, ppn);
-      PageManager::instance()->setReferenceCount(ppn, 0);
-      unlockArchmemorys(virtual_page_infos);
-
-      reuse_same_disk_location_++;
-      return;
     }
-
   }
   resetDirtyBitSetBeenDirtyBits(virtual_page_infos);  //todos: remove to check if is makes problems
 

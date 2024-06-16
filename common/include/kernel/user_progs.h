@@ -10,8 +10,8 @@ char const *user_progs[] = {
                             // "/usr/mmapSharedTests.sweb", 
 
 //Swapping-----------------------------------------------------------------------
-                            "/usr/SwappingForkTests.sweb", 
-                            // "/usr/praTests.sweb", 
+                            // "/usr/SwappingForkTests.sweb", 
+                            "/usr/praTests.sweb", 
                             // "usr/pageSelectionTests.sweb",
 
                             // "usr/NFUBetterThanRandom.sweb",

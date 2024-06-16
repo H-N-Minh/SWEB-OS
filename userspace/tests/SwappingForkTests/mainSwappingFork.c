@@ -35,8 +35,8 @@ int main()
   
     // Select pra-type:
     // setPRA(__RANDOM_PRA__); 
-    // setPRA(__NFU_PRA__); 
-    setPRA(__SECOND_CHANCE_PRA__); 
+    setPRA(__NFU_PRA__); 
+    // setPRA(__SECOND_CHANCE_PRA__); 
 
     if (SWAPPINGFORK1)
     {
