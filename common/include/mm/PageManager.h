@@ -106,7 +106,4 @@ class PageManager
 
     size_t findPageToSwapOut();
 
-        bool preallocator_free{true};
-        Mutex preallocator_free_lock;                                
-        Condition preallocator_free_condition;
 };
