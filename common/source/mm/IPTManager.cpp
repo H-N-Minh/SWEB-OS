@@ -122,17 +122,22 @@ size_t IPTManager::findPageToSwapOut()
     size_t random_num = randomNumGenerator();
     // debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
     
-    ustl::vector<ppn_t> unique_keys;
-    for (const auto& pair : ram_map_)
-    {
-      unique_keys.push_back(pair.first);
-    }
-    if(unique_keys.size() == 0)
+    if(ram_map_.size() == 0)
     {
       assert(0 && "No page in ram");
     }
-    size_t random_ipt_index = random_num % unique_keys.size();
-    ppn_retval = (size_t) (unique_keys[random_ipt_index]);
+    size_t random_ipt_index = random_num % ram_map_.size();
+    
+    size_t counter = 0;
+    for (const auto& pair : ram_map_)
+    {
+      if(counter == random_ipt_index)
+      {
+        ppn_retval = pair.first;
+        break;
+      }
+      counter++;
+    }
     debug(IPT, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%ld\n", ppn_retval);
   }
   else if (pra_type_ == PRA_TYPE::NFU)

@@ -290,45 +290,45 @@ void ArchCommon::drawStat() {
       fb[i * 2 + FREE_PAGES_OFFSET] = itoa_buffer[i];
     }
 
-    // char buffer_pages_ram[33];
-    // memset(buffer_pages_ram, '\0', sizeof(buffer_pages_ram));
-    // int pages_ram = IPTManager::instance() ? IPTManager::instance()->getNumPagesInMap(IPTMapType::RAM_MAP) : 0;
-    // itoa(pages_ram, buffer_pages_ram, 10);
+    char buffer_pages_ram[33];
+    memset(buffer_pages_ram, '\0', sizeof(buffer_pages_ram));
+    int pages_ram = IPTManager::instance() ? IPTManager::instance()->getNumPagesInMap(IPTMapType::RAM_MAP) : 0;
+    itoa(pages_ram, buffer_pages_ram, 10);
 
-    // for(size_t i = 0; (i < sizeof(buffer_pages_ram)) && (buffer_pages_ram[i] != '\0'); ++i)
-    // {
-    //   fb[i * 2 + FREE_PAGES_OFFSET + 142] = buffer_pages_ram[i];
-    // }
+    for(size_t i = 0; (i < sizeof(buffer_pages_ram)) && (buffer_pages_ram[i] != '\0'); ++i)
+    {
+      fb[i * 2 + FREE_PAGES_OFFSET + 142] = buffer_pages_ram[i];
+    }
 
-    // char buffer_pages_disk[33];
-    // memset(buffer_pages_disk, '\0', sizeof(buffer_pages_disk));
-    // int pages_disk = IPTManager::instance() ? IPTManager::instance()->getNumPagesInMap(IPTMapType::DISK_MAP) : 0;
-    // itoa(pages_disk, buffer_pages_disk, 10);
+    char buffer_pages_disk[33];
+    memset(buffer_pages_disk, '\0', sizeof(buffer_pages_disk));
+    int pages_disk = IPTManager::instance() ? IPTManager::instance()->getNumPagesInMap(IPTMapType::DISK_MAP) : 0;
+    itoa(pages_disk, buffer_pages_disk, 10);
 
-    // for(size_t i = 0; (i < sizeof(buffer_pages_disk)) && (buffer_pages_disk[i] != '\0'); ++i)
-    // {
-    //   fb[i * 2 + FREE_PAGES_OFFSET + 176] = buffer_pages_disk[i];
-    // }
+    for(size_t i = 0; (i < sizeof(buffer_pages_disk)) && (buffer_pages_disk[i] != '\0'); ++i)
+    {
+      fb[i * 2 + FREE_PAGES_OFFSET + 176] = buffer_pages_disk[i];
+    }
 
-    // char total_writes_buffer[33];
-    // memset(total_writes_buffer, '\0', sizeof(total_writes_buffer));
-    // int total_writes = SwappingManager::instance() ? SwappingManager::instance()->getDiskWrites() : 0;
-    // itoa(total_writes, total_writes_buffer, 10);
+    char total_writes_buffer[33];
+    memset(total_writes_buffer, '\0', sizeof(total_writes_buffer));
+    int total_writes = SwappingManager::instance() ? SwappingManager::instance()->getDiskWrites() : 0;
+    itoa(total_writes, total_writes_buffer, 10);
 
-    // for(size_t i = 0; (i < sizeof(total_writes_buffer)) && (total_writes_buffer[i] != '\0'); ++i)
-    // {
-    //   fb[i * 2 + FREE_PAGES_OFFSET + 214] = total_writes_buffer[i];
-    // }
+    for(size_t i = 0; (i < sizeof(total_writes_buffer)) && (total_writes_buffer[i] != '\0'); ++i)
+    {
+      fb[i * 2 + FREE_PAGES_OFFSET + 214] = total_writes_buffer[i];
+    }
 
-    // char total_reads_buffer[33];
-    // memset(total_reads_buffer, '\0', sizeof(total_reads_buffer));
-    // int total_reads = SwappingManager::instance() ? SwappingManager::instance()->getDiskReads() : 0;
-    // itoa(total_reads, total_reads_buffer, 10);
+    char total_reads_buffer[33];
+    memset(total_reads_buffer, '\0', sizeof(total_reads_buffer));
+    int total_reads = SwappingManager::instance() ? SwappingManager::instance()->getDiskReads() : 0;
+    itoa(total_reads, total_reads_buffer, 10);
 
-    // for(size_t i = 0; (i < sizeof(total_reads_buffer)) && (total_reads_buffer[i] != '\0'); ++i)
-    // {
-    //   fb[i * 2 + FREE_PAGES_OFFSET + 250] = total_reads_buffer[i];
-    // }
+    for(size_t i = 0; (i < sizeof(total_reads_buffer)) && (total_reads_buffer[i] != '\0'); ++i)
+    {
+      fb[i * 2 + FREE_PAGES_OFFSET + 250] = total_reads_buffer[i];
+    }
 }
 
 void ArchCommon::drawHeartBeat()
