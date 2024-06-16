@@ -1,9 +1,10 @@
-
 #pragma once
 #include "types.h"
 #include "umultimap.h"
 #include "Mutex.h"
 #include "ustring.h"
+#include "FileDescriptor.h"
+// #include "FileDescriptorList.h"
 
 
 #define PROT_NONE     0x00000000  // 00..00
@@ -17,8 +18,6 @@
 
 #define MAP_FAILED	((void *) -1)
 
-class SharedMemObject;
-
 typedef size_t vpn_t;
 
 // struct to store parameters for mmap
@@ -31,8 +30,7 @@ typedef struct mmap_params {
   ssize_t offset;
 }mmap_params_t;
 
-
-
+extern FileDescriptorList global_fd_list;
 
 // // struct to store all information of each shared memory entry within a process
 // class SharedMemEntry
@@ -71,7 +69,10 @@ public:
     ssize_t offset_;
 
     SharedMemObject(const ustl::string& name, vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
-        : name_(name), start_(start), end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset) {}
+        : name_(name), start_(start), end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
+    {
+     global_fd_ = new FileDescriptor(nullptr, FileDescriptor::FileType::SHARED_MEMORY);
+    }
 
     bool isInBlockRange(vpn_t vpn) const {
         return vpn >= start_ && vpn <= end_;
@@ -80,6 +81,10 @@ public:
     size_t getSize() const {
         return end_ - start_ + 1;
     }
+
+    FileDescriptor* global_fd_;
+	FileDescriptor* getGlobalFileDescriptor() const;
+
 };
 
 
@@ -144,7 +149,8 @@ public:
   */
   void unmapAllPages();
 
-  SharedMemObject* shm_open(char* name, size_t oflag, mode_t mode);
+  int shm_open(char* name, size_t oflag, mode_t mode);
+  int shm_unlink(char* name);
 
 };
 

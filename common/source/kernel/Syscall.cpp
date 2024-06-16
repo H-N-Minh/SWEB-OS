@@ -164,7 +164,7 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
       return_value = munmap(arg1, arg2);
       break;
 		case sc_shm_open:
-		  shm_open(arg1, arg2, arg3);
+		  return_value = shm_open(arg1, arg2, arg3);
 		  break;
     default:
       return_value = -1;
@@ -935,19 +935,19 @@ void Syscall::checkRandomPRA()
   ipt->debugRandomGenerator();
 }
 
-size_t Syscall::shm_open(size_t name, size_t oflag, size_t mode)
+int Syscall::shm_open(size_t name, size_t oflag, size_t mode)
 {
 	debug(SYSCALL, "Syscall::shm_open: Opening shared memory object: %s with flags: %zu and mode: %zu\n", (char*)name, oflag, mode);
 	char* shm_name = (char*)(name);
 	SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
-	SharedMemObject* shm_entry = smm->shm_open(shm_name, oflag, mode);
+	int shm_entry = smm->shm_open(shm_name, oflag, mode);
 
-	if (shm_entry == nullptr)
+	if (shm_entry == -1)
 	{
     debug(ERROR_DEBUG, "Syscall::shm_open: failed to open or create shared memory\n");
     return -1;
   }
 
-	debug(SYSCALL, "Syscall::shm_open: opened/created shared memory %s at address %p\n", shm_name, (void*)(shm_entry->start_ * PAGE_SIZE));
-  return shm_entry->start_ * PAGE_SIZE;
+	debug(SYSCALL, "----------Syscall::shm_open: opened/created shared memory %s at FD %d\n", shm_name, shm_entry);
+  return shm_entry;
 }

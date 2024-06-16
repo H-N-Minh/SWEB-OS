@@ -93,7 +93,7 @@ const size_t PATHWALKER         = Ansi_Yellow;
 const size_t PSEUDOFS           = Ansi_Yellow;
 const size_t VFSSYSCALL         = Ansi_Yellow;
 const size_t VFS                = Ansi_Yellow; // | OUTPUT_ENABLED;
-const size_t VFS_FILE           = Ansi_Yellow;
+const size_t VFS_FILE           = Ansi_Yellow | OUTPUT_ENABLED;;
 const size_t SUPERBLOCK         = Ansi_Yellow;
 
 //group minix
