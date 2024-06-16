@@ -31,7 +31,7 @@ extern int fork7();
 int childMain()
 {
     int retval = 0;
-    // setPRA(__NFU_PRA__);
+    setPRA(__NFU_PRA__);
 
     if (FORK1)
     {
