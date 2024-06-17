@@ -135,6 +135,24 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
 
     // actually adding entry
     SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset, shared);
+
+//    if (fd >= 0) {
+//      UserThread& currentUserThread = *((UserThread*)currentThread);
+//      UserProcess& current_process = *currentUserThread.process_;
+//      LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+//      lfdTable.lfds_lock_.acquire();
+//
+//      LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(fd);
+//      if (localFileDescriptor != nullptr) {
+//        FileDescriptor* globalFileDescriptor = localFileDescriptor->getGlobalFileDescriptor();
+//        globalFileDescriptor ->incrementRefCount();  // check if locking is required around incrementRefCount()
+//        debug(SYSCALL, "addEntry: Reference count after increment: %d\n", globalFileDescriptor ->getRefCount());
+//      }
+//
+//      lfdTable.lfds_lock_.release();
+//    }
+
+
     shared_map_.push_back(entry);
 
     void* start_addr = (void*) (start * PAGE_SIZE);
@@ -153,37 +171,10 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
         ipt->fake_ppn_lock_.release();
     }
 
-    // // adding reference to fd
-    // if (fd >= 0)
-    // {
-    //     entry->fd_ = addReferenceToFD(fd);
-    // }
 
     debug(MMAP, "SharedMemManager::addEntry: added shared block (start: %p, size: %zu pages) to process %d\n", start_addr, entry->getSize(), ((UserThread*) currentThread)->process_->pid_);
     return start_addr;
 }
-
-// // adding reference to fd, couldnt get it to work
-// int SharedMemManager::addReferenceToFD(int fd)
-// {
-//     UserThread& currentUserThread = *((UserThread*)currentThread);
-//     UserProcess& current_process = *currentUserThread.process_;
-
-//     LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
-
-//     LocalFileDescriptor* originalLFD = lfdTable.getLocalFileDescriptor(fd);
-//     if(originalLFD == nullptr) {
-//     debug(SYSCALL, "Syscall::dup: original file descriptor not found\n");
-//     return -1;
-//     }
-
-//     int newDescriptor = lfdTable.createLocalFileDescriptor(
-//         originalLFD->getGlobalFileDescriptor(),
-//         originalLFD->getMode(),
-//         originalLFD->getOffset(),
-//         originalLFD->getType()
-//     )->getLocalFD();
-// }
 
 
 bool SharedMemManager::isAddressValid(size_t address)
@@ -386,6 +377,29 @@ int SharedMemManager::munmap(void* start, size_t length)
     {
         unmapOnePage(it.first, it.second);
     }
+
+//    if (relevant_pages[0].second->fd_ >= 0) { // If there is a valid file descriptor related to this shared memory entry
+//      UserThread& currentUserThread = *((UserThread*)currentThread);
+//      UserProcess& current_process = *currentUserThread.process_;
+//      LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
+//      lfdTable.lfds_lock_.acquire();
+//
+//      LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(relevant_pages[0].second->fd_);
+//      if (localFileDescriptor != nullptr) {
+//        FileDescriptor* globalFileDescriptor = localFileDescriptor->getGlobalFileDescriptor();
+//        globalFileDescriptor->decrementRefCount(); // ensure that locking is required around decrementRefCount()
+//
+//        debug(SYSCALL, "munmap: Reference count after decrement: %d\n", globalFileDescriptor ->getRefCount());
+//
+//        // If reference count drops to 0, delete the global file descriptor
+//        if (globalFileDescriptor->getRefCount() == 0) {
+//          FileDescriptor *global_fd_obj = localFileDescriptor->getGlobalFileDescriptor();
+//          LocalFileDescriptorTable::deleteGlobalFileDescriptor(global_fd_obj); // update with your actual method to delete Global File Descriptor
+//        }
+//      }
+//
+//      lfdTable.lfds_lock_.release();
+//    }
 
 
     archmem_lock->release();

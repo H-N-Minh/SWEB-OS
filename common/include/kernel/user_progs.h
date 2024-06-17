@@ -7,11 +7,11 @@ char const *user_progs[] = {
 
 //mmap-----------------------------------------------------------------------
                              //"/usr/mmapPrivateTests.sweb",
-                            // "/usr/mmapSharedTests.sweb", 
+                             "/usr/mmapSharedTests.sweb",
 
 //Swapping-----------------------------------------------------------------------
                             // "/usr/iptTests.sweb", 
-                            "/usr/praTests.sweb",
+//                            "/usr/praTests.sweb",
                             // "usr/pageSelectionTests.sweb",
 
                             // "usr/NFUBetterThanRandom.sweb",
