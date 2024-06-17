@@ -11,7 +11,7 @@ char const *user_progs[] = {
 
 //Swapping-----------------------------------------------------------------------
                             
-                            "/usr/praTests.sweb", 
+                            // "/usr/praTests.sweb", 
                             // "/usr/forkTests.sweb",           (when you run all th also use swapping) 
                             // "usr/pageSelectionTests.sweb",
                             // "/usr/praTests.sweb",  (basically swapping tests)
@@ -43,7 +43,7 @@ char const *user_progs[] = {
                             // "/usr/fork9.sweb",
                             // "/usr/fork10.sweb",
 
-                            // "/usr/execTests.sweb",                   
+                            "/usr/execTests.sweb",                   
                            
                            
 
