@@ -179,6 +179,7 @@ void free(void *ptr)
     element_before->size_ += bytesNeededForMemoryBlock(element_before->next_->size_);
     element_before->next_ = element_before->next_->next_;
   }
+  addOverflowProtection(element_to_free);
   pthread_spin_unlock(&memory_lock);
 }
 
@@ -197,7 +198,6 @@ void* calloc(size_t nmemb, size_t size)
 
 void* realloc(void *ptr, size_t size)
 {
-  return (void*)-1;
   if(ptr == NULL)
   {
     return malloc(size);
@@ -321,16 +321,14 @@ void* realloc(void *ptr, size_t size)
       //Enough space after this memory block and not last block
       else
       {
-       
-        size_t size_left = size - (block_to_realloc->size_ + block_to_realloc->next_->size_);
-        assert(size_left >= 0);
+        size_t size_left =  (block_to_realloc->size_ + block_to_realloc->next_->size_) - size;
         block_to_realloc->size_ = size;
         block_to_realloc->next_ = block_to_realloc->next_->next_;
 
         if(size_left >= bytesNeededForMemoryBlock(0))
         {
           MemoryBlock* new_block = (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
-          createNewMemoryBlock(new_block, size_left - bytesNeededForMemoryBlock(0), 0, new_block + 1, block_to_realloc->next_);
+          createNewMemoryBlock(new_block, 0, size_left, new_block + 1, block_to_realloc->next_);
           addOverflowProtection(new_block);
           block_to_realloc->next_ = new_block;
         }
@@ -559,6 +557,7 @@ void free_unlocked(void *ptr)
     element_before->size_ += bytesNeededForMemoryBlock(element_before->next_->size_);
     element_before->next_ = element_before->next_->next_;
   }
+  addOverflowProtection(element_to_free);
 }
 
 
