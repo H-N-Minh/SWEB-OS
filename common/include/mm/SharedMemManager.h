@@ -131,11 +131,13 @@ public:
 // struct to store parameters for shared memory object
 class SharedMemObject : public SharedMemEntry {
 public:
+    SharedMemObject(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
+        : SharedMemEntry(start, end, prot, flags, fd, offset) {}
  
     static ustl::string* name_;
     static FileDescriptor* global_fd_;
 
-    static void Init(const ustl::string& name)
+    static SharedMemObject* Init(const ustl::string& name)
     {
         if (!name_)
             name_ = new ustl::string(name); //TODO free!!!
@@ -143,6 +145,7 @@ public:
             *name_ = name;
 
         global_fd_ = new FileDescriptor(nullptr, FileDescriptor::FileType::SHARED_MEMORY); //TODO free!!!
+        return new SharedMemObject(0, 0, 0, 0, 0, 0);
     }
 
     static FileDescriptor* getGlobalFileDescriptor();

@@ -445,7 +445,7 @@ int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
 		vpn_t start = last_free_vpn_;
 		vpn_t end = start + (length / PAGE_SIZE) - 1;
 
-		SharedMemObject::Init(shm_name);
+		shm_objects_[shm_name] = SharedMemObject::Init(shm_name);
 		global_fd_list.add(SharedMemObject::getGlobalFileDescriptor());
 
 		last_free_vpn_ = end + 1;

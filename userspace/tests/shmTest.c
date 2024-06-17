@@ -16,7 +16,7 @@ int main()
 	// void *shm_ptr = (void *)0x60000000;
 
 	shm_fd = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
-	int shm_fd1 = shm_open("/shmTest2", O_CREAT | O_RDWR, 0666);
+	int shm_fd1 = shm_open(SHM_NAME, O_CREAT | O_RDWR, 0666);
   if (shm_fd == -1)
   {
 		printf("error");
