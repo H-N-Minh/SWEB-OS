@@ -11,24 +11,23 @@
 
 #include "File.h"
 
-ustl::map<ustl::string, SharedMemObject*> SharedMemManager::shm_objects_;
 
-// /////////////////////// SharedMemEntry ///////////////////////
-//
-// SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
-//     : start_(start),end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
-// {
-// }
-//
-// bool SharedMemEntry::isInBlockRange(vpn_t vpn)
-// {
-//     return vpn >= start_ && vpn <= end_;
-// }
-//
-// size_t SharedMemEntry::getSize()
-// {
-//     return end_ - start_ + 1;
-// }
+/////////////////////// SharedMemEntry ///////////////////////
+
+SharedMemEntry::SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset)
+    : start_(start),end_(end), prot_(prot), flags_(flags), fd_(fd), offset_(offset)
+{
+}
+
+bool SharedMemEntry::isInBlockRange(vpn_t vpn)
+{
+    return vpn >= start_ && vpn <= end_;
+}
+
+size_t SharedMemEntry::getSize()
+{
+    return end_ - start_ + 1;
+}
 
 /////////////////////// SharedMemManager ///////////////////////
 
@@ -53,7 +52,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     int fd  = params->fd;
     ssize_t offset = params->offset;
     debug(MMAP, "SharedMemManager::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
-    
+
     void* retval = MAP_FAILED;
 
     shared_mem_lock_.acquire();
@@ -62,7 +61,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     {
         retval = addEntry(start, length, prot, flags, fd, offset);
     }
-    
+
 
     // ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  // mapPage needs 3 and ppn needs 1
 
@@ -94,7 +93,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     //     debug(ERROR_DEBUG, "SharedMemManager::mmap: incomplete read\n");
     //     return nullptr;
     // }
-    
+
     // arch->archmemory_lock_.release();
     // IPTManager::instance()->IPT_lock_.release();
     if (retval == MAP_FAILED)
@@ -103,7 +102,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     }
 
     shared_mem_lock_.release();
-    
+
     return retval;
 }
 
@@ -123,8 +122,8 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
     {
         size++;
     }
-    SharedMemObject::vpn_t start = last_free_vpn_;
-    SharedMemObject::vpn_t end = start + size - 1;
+    vpn_t start = last_free_vpn_;
+    vpn_t end = start + size - 1;
 
     assert(start >= MIN_SHARED_MEM_VPN && end >= MIN_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
     assert(start <= MAX_SHARED_MEM_VPN && end <= MAX_SHARED_MEM_VPN && "SharedMemManager::addEntry: start or end is out of range\n");
@@ -133,8 +132,8 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
         debug(ERROR_DEBUG, "SharedMemManager::addEntry: failed, size required is bigger than the available free pages \n");
         return MAP_FAILED;
     }
-    
-		SharedMemObject* entry = new SharedMemObject("", start, end, prot, flags, fd, offset);
+
+    SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset);
     shared_map_.push_back(entry);
 
     void* start_addr = (void*) (start * PAGE_SIZE);
@@ -179,7 +178,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
     int write = 0;
     int execute = 0;
 
-    SharedMemObject* entry = getSharedMemEntry(address);
+    SharedMemEntry* entry = getSharedMemEntry(address);
     if (entry->prot_ == PROT_READ)
     {
         read = 1;
@@ -226,7 +225,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
 }
 
 
-SharedMemObject* SharedMemManager::getSharedMemEntry(size_t address)
+SharedMemEntry* SharedMemManager::getSharedMemEntry(size_t address)
 {
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::getSharedMemEntry: shared_mem_lock_ not held\n");
 
@@ -252,9 +251,9 @@ int SharedMemManager::munmap(void* start, size_t length)
     ipt_lock->acquire();
     archmem_lock->acquire();
 
-    
+
     // check if the munmap is valid, or already unmapped
-    ustl::vector<ustl::pair<vpn_t, SharedMemObject*>> relevant_pages;
+    ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> relevant_pages;
     findRevelantPages(relevant_pages, (size_t) start, length);
     if (relevant_pages.empty())
     {
@@ -279,7 +278,7 @@ int SharedMemManager::munmap(void* start, size_t length)
     return 0;
 }
 
-void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemObject*>> &relevant_pages, size_t start, size_t length)
+void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length)
 {
     debug(MMAP, "SharedMemManager::findRevelantPages: start: %zu, length: %zu. Looping through all shared mem and find relevant pages to unmap\n", start, length);
     assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::findRevelantPages: shared_mem_lock_ not held\n");
@@ -328,7 +327,7 @@ void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMe
                 assert(start_vpn <= end_vpn && "SharedMemManager::findRevelantPages: start_vpn > end_vpn\n");
                 assert(end_vpn >= MIN_SHARED_MEM_VPN && end_vpn <= MAX_SHARED_MEM_VPN && "SharedMemManager::findRevelantPages: end_vpn becomes out of range\n");
             }
-        
+
         }
     }
     debug(ERROR_DEBUG, "SharedMemManager::findRevelantPages: this shouldnt be reached, the given range is invalid\n");
@@ -336,7 +335,7 @@ void SharedMemManager::findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMe
 }
 
 
-void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemObject* sm_entry)
+void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry)
 {
     debug(MMAP, "SharedMemManager::unmapOnePage: vpn: %zu\n", vpn);
     ArchMemory* arch_memory = &((UserThread*) currentThread)->loader_->arch_memory_;
@@ -351,7 +350,7 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemObject* sm_entry)
     assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: IPT need to be locked");
     assert(arch_memory->archmemory_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: archmemory_lock_ not held\n");
     assert(sm_entry->getSize() > 0 && "SharedMemManager::unmapOnePage: sm_entry size is 0\n");
-    
+
     // split the memory segment if necessary
     if (sm_entry->getSize() == 1)
     {
@@ -370,8 +369,8 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemObject* sm_entry)
         }
         else
         {
-            shared_map_.push_back(new SharedMemObject("", sm_entry->start_, vpn - 1, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
-            shared_map_.push_back(new SharedMemObject("", vpn + 1, sm_entry->end_, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
+            shared_map_.push_back(new SharedMemEntry(sm_entry->start_, vpn - 1, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
+            shared_map_.push_back(new SharedMemEntry(vpn + 1, sm_entry->end_, sm_entry->prot_, sm_entry->flags_, sm_entry->fd_, sm_entry->offset_));
             shared_map_.erase(it);
             delete sm_entry;
         }
@@ -414,49 +413,49 @@ void SharedMemManager::unmapAllPages()
 
 int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
 {
-  shared_mem_lock_.acquire();
+	shared_mem_lock_.acquire();
+
+	ustl::string shm_name(name);
 
 	debug(SHARE_MEMORY, "---------------(shm_open) Opening shared memory object %s with flags %zu and mode %lu\n", name, oflag, mode);
 
-  auto it = shm_objects_.find(name);
-  if (it != shm_objects_.end())
-  {
-  	debug(SHARE_MEMORY, "---------------object already exists \n");
-    //object already exists
-    if (oflag & O_EXCL)
-    {
-    	debug(SHARE_MEMORY, "---------------object already exists but with flag O_EXCL so error\n");
-      // O_EXCL is set and object exists, fail with error
-      shared_mem_lock_.release();
-      return -1; //TODO other value?
-    }
-    // Return the existing object
-    shared_mem_lock_.release();
-  	return it->second->getGlobalFileDescriptor()->getFd();
-  }
+	auto it = shm_objects_.find(name);
+	if (it != shm_objects_.end())
+	{
+		debug(SHARE_MEMORY, "---------------object already exists \n");
+		//object already exists
+		if (oflag & O_EXCL)
+		{
+			debug(SHARE_MEMORY, "---------------object already exists but with flag O_EXCL so error\n");
+			// O_EXCL is set and object exists, fail with error
+			shared_mem_lock_.release();
+			return -1; //TODO other value?
+		}
+		// Return the existing object
+		shared_mem_lock_.release();
+		return it->second->getGlobalFileDescriptor()->getFd();
+	}
 
-  //object does not exist, create a new one if O_CREAT is set
-  if (oflag & O_CREAT)
-  {
-  	debug(SHARE_MEMORY, "---------------create new object\n");
-    //allocate a new shared memory object
-    size_t length = 4096;  // set to fix right now
-    int prot = PROT_READ | PROT_WRITE;  //default protection?
-    int flags = MAP_SHARED;  //default flags?
-    vpn_t start = last_free_vpn_;
-    vpn_t end = start + (length / PAGE_SIZE) - 1;
+	//object does not exist, create a new one if O_CREAT is set
+	if (oflag & O_CREAT)
+	{
+		debug(SHARE_MEMORY, "---------------create new object\n");
+		//allocate a new shared memory object
+		size_t length = 4096;  // set to fix right now
+		vpn_t start = last_free_vpn_;
+		vpn_t end = start + (length / PAGE_SIZE) - 1;
 
-    SharedMemObject* entry = new SharedMemObject(name, start, end, prot, flags, -1, 0);
-  	shm_objects_[name] = entry;
-  	global_fd_list.add(entry->getGlobalFileDescriptor());
+		SharedMemObject::Init(shm_name);
+		global_fd_list.add(SharedMemObject::getGlobalFileDescriptor());
 
-    last_free_vpn_ = end + 1;
-    shared_mem_lock_.release();
-  	return entry->getGlobalFileDescriptor()->getFd();
-  }
-  //object does not exist and O_CREAT is not set
-  shared_mem_lock_.release();
-  return -1;
+		last_free_vpn_ = end + 1;
+		
+		shared_mem_lock_.release();
+		return (int)SharedMemObject::getGlobalFileDescriptor()->getFd();
+	}
+	//object does not exist and O_CREAT is not set
+	shared_mem_lock_.release();
+	return -1;
 }
 
 int SharedMemManager::shm_unlink(char* name)
@@ -494,8 +493,12 @@ int SharedMemManager::shm_unlink(char* name)
     return 0;
 }
 
-FileDescriptor* SharedMemObject::getGlobalFileDescriptor() const
+/////////////////////// SharedMemObject ///////////////////////
+
+ustl::string SharedMemObject::name_;
+FileDescriptor* SharedMemObject::global_fd_ = nullptr;
+
+FileDescriptor* SharedMemObject::getGlobalFileDescriptor()
 {
     return global_fd_;
 }
-
