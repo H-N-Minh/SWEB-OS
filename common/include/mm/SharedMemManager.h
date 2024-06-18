@@ -1,10 +1,10 @@
 
 #pragma once
+#include "ArchMemory.h"
+#include "FileDescriptor.h"
+#include "Mutex.h"
 #include "types.h"
 #include "umultimap.h"
-#include "Mutex.h"
-#include "ArchMemory.h"
-
 
 #define PROT_NONE     0x00000000  // 00..00
 #define PROT_READ     0x00000001  // ..0001
@@ -41,9 +41,9 @@ public:
   int fd_;
   ssize_t offset_;
   bool shared_;
+  FileDescriptor* globalFileDescriptor_;
 
-  SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset, bool shared);
-
+  SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset, bool shared, FileDescriptor* globalFileDescriptor);
   SharedMemEntry(const SharedMemEntry& other);
 
   /**
@@ -107,7 +107,8 @@ public:
   /**
    * unmap one page from the shared memory. The vpn should already be a valid page that can be remove
   */
-  void unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry);
+  void unmapOnePage(vpn_t vpn, SharedMemEntry *sm_entry,
+                    FileDescriptor *pDescriptor);
 
   /**
    * find all pages in shared mem that are being used and are within the given range and fill up the vector relevant_pages with them
@@ -117,7 +118,7 @@ public:
    * @param length: the length of the range (in bytes)
    * @return : the vector filled up with all relevant pages. Vector is empty if error (if theres at least 1 vpn in the range that is not an active shared mem page)
   */
-  void findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length);
+  void findRelevantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length);
 
   /**
    * unmap all active shared mem pages. Used for process termination
@@ -132,12 +133,12 @@ public:
   /**
    * read the fd file and copy content (1 page, start from the offset) to the given ppn
   */
-  void copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory);
+  void copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory, FileDescriptor *globalFileDescriptor);
 
   /**
    * write the content of the given vpn to the fd file (1 page, start from the offset)
   */
-  void writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchMemory* arch_memory);
+  void writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchMemory* arch_memory, FileDescriptor *global_fd_obj);
 
   /**
    * check if the given page is a shared page and only 1 process left using it. If so, write back to the file before unmap

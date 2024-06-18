@@ -36,6 +36,11 @@ int shared7() {
         printf("mmap 7.3 didnt failed as expected\n");
         return 1;
     }
+    if (close(fd) == -1)
+    {
+      printf("Close failed\n");
+      return 1;
+    }
     addr = 0;
     addr = mmap(NULL, 4096, PROT_READ | PROT_WRITE, MAP_SHARED, -1, 0);      // invalid fd
     if (addr != MAP_FAILED) {

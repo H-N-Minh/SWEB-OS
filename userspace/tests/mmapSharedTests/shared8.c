@@ -25,6 +25,11 @@ int shared8() {
         printf("mmap 8 failed\n");
         return 1;
     }
+    if (close(fd) == -1)
+    {
+      printf("Close failed\n");
+      return 1;
+    }
     // test IPC
     pid_t child_pid = -1;
     int child_status = -1;

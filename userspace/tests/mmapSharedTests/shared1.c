@@ -24,6 +24,11 @@ int shared1() {
         printf("mmap 1 failed\n");
         return 1;
     }
+    if (close(fd) == -1)
+    {
+      printf("Close failed\n");
+      return 1;
+    }
     // test reading
     if (memcmp(addr, "can u see me now", strlen("can u see me now") + 1))
     {
@@ -58,6 +63,8 @@ int shared1() {
     }
     // reset the file data and test munmap
     memcpy(addr, "can u see me now", strlen("can u see me now") + 1);
+
+
     if (munmap(addr, 4096))
     {
         printf("munmap 1 failed\n");

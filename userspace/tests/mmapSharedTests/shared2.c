@@ -23,6 +23,11 @@ int shared2() {
         printf("mmap 2 failed\n");
         return 1;
     }
+    if (close(fd) == -1)
+    {
+      printf("Close failed\n");
+      return 1;
+    }
     // test reading
     if (memcmp(addr, "can u see me now", strlen("can u see me now") + 1))
     {

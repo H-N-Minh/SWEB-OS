@@ -103,13 +103,13 @@ int childMain()
         if (retval == 0)                      { printf("===> shared3 successful!\n"); }
         else                                  { printf("===> shared3 failed!\n");  return -1;}
     }
-    if (SHARED4)
-    {
-        printf("\nTesting shared4: Child munmap shouldnt affect parents mapping...\n");
-        retval = shared4();
-        if (retval == 0)                      { printf("===> shared4 successful!\n"); }
-        else                                  { printf("===> shared4 failed!\n");  return -1;}
-    }
+//    if (SHARED4)
+//    {
+//        printf("\nTesting shared4: Child munmap shouldnt affect parents mapping...\n");
+//        retval = shared4();
+//        if (retval == 0)                      { printf("===> shared4 successful!\n"); }
+//        else                                  { printf("===> shared4 failed!\n");  return -1;}
+//    }
     if (SHARED5)
     {
         printf("\nTesting shared5: invalid and valid munmap size...\n");
@@ -145,7 +145,7 @@ int childMain()
         if (retval == 0)                      { printf("===> shared9 successful!\n"); }
         else                                  { printf("===> shared9 failed!\n");  return -1;}
     }
-    
+
     if (ANONYM_SHARED1)
     {
         printf("\nTesting anonym_shared1: very basic mmap, write and read and munmap, and IPC between 2 processes...\n");

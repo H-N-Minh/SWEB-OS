@@ -137,7 +137,7 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-  // localFileDescriptorTable.closeAllFileDescriptors();
+  localFileDescriptorTable.closeAllFileDescriptors();
   delete working_dir_;
   working_dir_ = nullptr;
 

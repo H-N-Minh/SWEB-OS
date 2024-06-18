@@ -24,6 +24,11 @@ int shared9() {
         printf("mmap 9 failed\n");
         return 1;
     }
+    if (close(fd) == -1)
+    {
+      printf("Close failed\n");
+      return 1;
+    }
     pid_t child_pid = -1;
     int child_status = -1;
     char *st = "test 9";
