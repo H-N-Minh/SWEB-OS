@@ -17,7 +17,7 @@ size_t big_array5[ELEMENTS_IN_ARRAY];  //5 Megabyes
 //Trigger out of memory
 int pra5()
 {
-  printf("Write once in the array\n");
+  printf("...Write once in the array\n");
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     big_array5[i * (PAGESIZE / 8)] = (size_t)i;
@@ -27,7 +27,7 @@ int pra5()
   {
     assert(big_array5[i * (PAGESIZE / 8)] == i);
   }
-  printf("Write in the same array again\n");
+  printf("...Write in the same array again\n");
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     big_array5[i * (PAGESIZE / 8)] = (size_t)i * 39;
@@ -37,7 +37,7 @@ int pra5()
   {
     assert(big_array5[i * (PAGESIZE / 8)] == i * 39);
   }
-  printf("Write in the same array again\n");
+  printf("...Write in the same array again\n");
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     big_array5[i * (PAGESIZE / 8)] = (size_t)i * 3;
@@ -57,7 +57,7 @@ int pra5()
   {
     assert(big_array5[i * (PAGESIZE / 8)] == i * 3);
   }
-  printf("Write in the same array again\n");
+  printf("...Write in the same array again\n");
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     big_array5[i * (PAGESIZE / 8)] = (size_t)i * 11;

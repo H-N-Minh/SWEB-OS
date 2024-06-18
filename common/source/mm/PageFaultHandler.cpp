@@ -292,8 +292,8 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW and we want to write. Copy page\n");
     current_archmemory.copyPage(address, preallocated_pages);
   }
-  //Page is set writable we want to write and cow-bit is set -> sombody else was faster with cow
-  else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))  //TODOs dont reset cowbit
+  //Page is set writable we want to write -> sombody else was faster with cow
+  else if(writing && current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))
   {
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW but writeable bit is set => Somebody else was faster with COW. Do nothing\n");
   }

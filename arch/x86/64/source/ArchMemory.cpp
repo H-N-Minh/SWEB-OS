@@ -562,11 +562,13 @@ void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocate
 
     pml1_entry->page_ppn = new_ppn;
     pml1_entry->writeable = 1;
+    pml1_entry->cow = 0;
   }
   else if(reference_count == 1)
   {
     debug(FORK, "ArchMemory::copyPage: Ref count is == 1, Set page to writable\n");
     pml1_entry->writeable = 1;
+    pml1_entry->cow = 0;
   }
   else
   {

@@ -25,9 +25,9 @@ unsigned int rand(void) {
   return (randomSeed >> 16) & 0x7FFF;
 }
 
-int ipt4()
+int pra4()
 {
-  printf("Starting ipt4 test...\n");
+  printf("Starting pra4 test...\n");
   size_t count_pages = N_MEGABYTE/PAGESIZE;
 
   // random seed

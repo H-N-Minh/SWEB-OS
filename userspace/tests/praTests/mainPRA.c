@@ -33,12 +33,12 @@ int childMain()
     int PRA1 = 1;   // Test PRA
     int PRA2 = 1;       // double pagefault => double swap (still single thread)
     int PRA3 = 1;       // 64 threads  writting to array at same time
-    int PRA4 = 0;       // similar to pra3, but use fork instead of pthread_create
+    int PRA4 = 0;       // Similar to pra1 but with different order
     int PRA5 = 0;       //More complex out of memory where i write in every location multiple times
     // Select pra-type:
     // setPRA(__RANDOM_PRA__); 
     // setPRA(__NFU_PRA__); 
-    setPRA(__SECOND_CHANCE_PRA__); 
+    // setPRA(__SECOND_CHANCE_PRA__); 
 
     if (PRA1)
     {
@@ -70,12 +70,16 @@ int childMain()
 
     if (PRA4)
     {
-
+        printf("\nTesting pra4: Similar to pra1 but differrent order.\n");
+        retval = pra1();
+        if (retval == 0)                      { printf("===> pra4 successful!\n"); }
+        else                                  { printf("===> pra4 failed!\n");  return -1;}
+        printStatistic();
     }
 
     if(PRA5)
     {
-        printf("\nTesting pra5: Out of memory but more complex...\n");
+        printf("\nTesting pra5: Out of memory but more complex and more time comsuming.\n");
         retval = pra5();
         if (retval == 0)                      { printf("===> pra5 successful!\n"); }
         else                                  { printf("===> pra5 failed!\n");  return -1;}
