@@ -144,7 +144,7 @@ public:
             *name_ = name;
 
         global_fd_ = new FileDescriptor(nullptr, FileDescriptor::FileType::SHARED_MEMORY); // TODO: free!!!
-        return new SharedMemObject();
+        return new SharedMemObject(); // TODO: free!!!
     }
 
     static FileDescriptor* getGlobalFileDescriptor();

@@ -462,37 +462,32 @@ int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
 
 int SharedMemManager::shm_unlink(char* name)
 {
-    //assert(name && "SharedMemManager::shm_unlink: name is null\n");
+    shared_mem_lock_.acquire();
 
-    // shared_mem_lock_.acquire();
-     debug(SHARE_MEMORY, "---------------(shm_unlink) Unlinking shared memory object %s\n", name);
-    //
-    // auto it = shm_objects_.find(name);
-    // if (it == shm_objects_.end())
-    // {
-    //     debug(SHARE_MEMORY, "---------------object %s not found\n", name);
-    //     shared_mem_lock_.release();
-    //     return -1;
-    // }
-    //
-    // SharedMemObject* entry = it->second;
-    // // Unmap all pages associated with this shared memory object
-    // for (vpn_t vpn = entry->start_; vpn <= entry->end_; vpn++)
-    // {
-    //     if (currentThread->loader_->arch_memory_.checkAddressValid(vpn * PAGE_SIZE))
-    //     {
-    //         currentThread->loader_->arch_memory_.unmapPage(vpn);
-    //     }
-    // }
-    //
-    // //remove the shared memory object from the maps
-    // shm_objects_.erase(it);
-    // //shared_map_.erase(ustl::remove(shared_map_.begin(), shared_map_.end(), entry), shared_map_.end());
-    //
-    // delete entry;
-    //
-    // shared_mem_lock_.release();
-     return 0;
+    ustl::string shm_name(name);
+
+    debug(SHARE_MEMORY, "---------------(shm_unlink) Unlinking shared memory object %s\n", name);
+
+    auto it = shm_objects_.find(shm_name);
+    if (it == shm_objects_.end())
+    {
+        //object does not exist
+        debug(SHARE_MEMORY, "---------------object does not exist\n");
+        shared_mem_lock_.release();
+        return -1;
+    }
+
+    SharedMemObject* shm_object = it->second;
+    shm_objects_.erase(it);
+
+    global_fd_list.remove(shm_object->getGlobalFileDescriptor());
+
+    delete shm_object;
+
+    debug(SHARE_MEMORY, "---------------object unlinked and removed\n");
+
+    shared_mem_lock_.release();
+    return 0; // Indicate success
 }
 
 /////////////////////// SharedMemObject ///////////////////////
