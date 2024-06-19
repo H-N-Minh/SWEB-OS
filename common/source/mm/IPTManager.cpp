@@ -108,7 +108,7 @@ void IPTManager::debugRandomGenerator()
 size_t IPTManager::findPageToSwapOut()
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::findPageToSwapOut called but IPT not locked\n");
-  
+
   size_t ppn_retval = INVALID_PPN;
 
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
@@ -249,7 +249,7 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertEntryIPT called without fully locking\n");
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
-  
+
   // Error checking: entry should not already exist
   if (isEntryInMap(ppn, map_type, archmem, vpn))
   {
@@ -260,7 +260,7 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
   // checkRamMapConsistency();
   // checkDiskMapConsistency();
-  
+
   debug(IPT, "IPTManager::insertEntryIPT: Entry does not exist in %s yet, seems valid. Inserting\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   if(isKeyInMap(ppn, map_type))
   {
@@ -313,7 +313,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     debug(IPT, "IPTManager::removeEntryIPT Entry (ppn %zu, archmem %p) not found in the map %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
     assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in map\n");
   }
-  
+
   // remove the item and update debug info
   debug(IPT, "IPTManager::removeEntryIPT: Entry found in map %s, seems valid. Removing\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   IPTEntry* entry = (*map)[ppn];

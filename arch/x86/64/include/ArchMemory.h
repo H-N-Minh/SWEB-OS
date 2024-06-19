@@ -116,12 +116,7 @@ class ArchMemory
 
 
 
-    int isCOW(size_t virtual_addr);
-    bool isSwapped(size_t virtual_addr);
-    bool isPresent(size_t virtual_addr);
-    int isNotWriteable(size_t virtual_addr);
 
-    void copyPageTable(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
 

@@ -345,4 +345,3 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
       handleValidPageFault(address);
     }
   }
-
