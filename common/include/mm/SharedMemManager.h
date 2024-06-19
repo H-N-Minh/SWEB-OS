@@ -68,7 +68,7 @@ private:
   ustl::vector<SharedMemEntry*> shared_map_;
   vpn_t last_free_vpn_;
 
- ustl::map<ustl::string, SharedMemObject*>* shm_objects_;
+   ustl::map<ustl::string, SharedMemObject*> shm_objects_;
 
 public:
   Mutex shared_mem_lock_;
@@ -145,6 +145,14 @@ public:
 
         global_fd_ = new FileDescriptor(nullptr, FileDescriptor::FileType::SHARED_MEMORY); // TODO: free!!!
         return new SharedMemObject(); // TODO: free!!!
+    }
+
+    static void Cleanup()
+    {
+        delete name_;
+        delete global_fd_;
+        name_ = nullptr;
+        global_fd_ = nullptr;
     }
 
     static FileDescriptor* getGlobalFileDescriptor();

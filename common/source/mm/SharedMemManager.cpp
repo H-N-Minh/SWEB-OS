@@ -419,8 +419,8 @@ int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
 
 	debug(SHARE_MEMORY, "---------------(shm_open) Opening shared memory object %s with flags %zu and mode %lu\n", name, oflag, mode);
 
-	auto it = shm_objects_->find(shm_name);
-	if (it != shm_objects_->end())
+	auto it = shm_objects_.find(shm_name);
+	if (it != shm_objects_.end())
 	{
 		debug(SHARE_MEMORY, "---------------object already exists \n");
 		//object already exists
@@ -446,7 +446,7 @@ int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
 		// vpn_t end = start + (length / PAGE_SIZE) - 1;
 
 		SharedMemObject* new_obj = SharedMemObject::Init(shm_name);
-		(*shm_objects_)[shm_name] = new_obj;
+		shm_objects_[shm_name] = new_obj;
 		global_fd_list.add(SharedMemObject::getGlobalFileDescriptor());
 
 		// last_free_vpn_ = end + 1;
@@ -467,8 +467,8 @@ int SharedMemManager::shm_unlink(char* name)
 
     debug(SHARE_MEMORY, "---------------(shm_unlink) Unlinking shared memory object %s\n", name);
 
-    auto it = shm_objects_->find(shm_name);
-    if (it == shm_objects_->end())
+    auto it = shm_objects_.find(shm_name);
+    if (it == shm_objects_.end())
     {
         //object does not exist
         debug(SHARE_MEMORY, "---------------object does not exist\n");
@@ -477,11 +477,12 @@ int SharedMemManager::shm_unlink(char* name)
     }
 
     SharedMemObject* shm_object = it->second;
-    shm_objects_->erase(it);
+    shm_objects_.erase(it);
 
     global_fd_list.remove(shm_object->getGlobalFileDescriptor());
 
     delete shm_object;
+		SharedMemObject::Cleanup(); //clean up the static members
 
     debug(SHARE_MEMORY, "---------------object unlinked and removed\n");
 
