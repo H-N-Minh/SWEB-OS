@@ -42,12 +42,12 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user, bo
   else if(present)
   {
     debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
-    return PRESENT;
+    return IS_PRESENT;
   }
-  // else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
-  // {
-  //   return USER;
-  // }
+  else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
+  {
+    return USER;
+  }
   else
   {
     // everything seems to be okay
@@ -79,9 +79,13 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   {
     handleValidPageFault(address);
   }
-  else if (status == PRESENT)
+  else if (status == IS_PRESENT)
   {
     handlePresentPageFault(address, writing);
+  }
+  else if(status == USER)
+  {
+    handleUserPageFault(address);
   }
   else  //status INVALID
   {
@@ -111,7 +115,7 @@ void PageFaultHandler::enterPageFault(size_t address, bool user, bool present, b
 
 
 
-int PageFaultHandler::checkGrowingStack(size_t address)
+int PageFaultHandler::checkGrowingStack(size_t address, ustl::vector<uint32>& preallocated_pages)
 {
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
@@ -124,7 +128,7 @@ int PageFaultHandler::checkGrowingStack(size_t address)
       return status;
     }
 
-    status = manager->increaseStackSize(address);
+    status = manager->increaseStackSize(address, preallocated_pages);
     return status;
 }
 
@@ -168,7 +172,17 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   // swap-in needs 1 page
   // heap needs 3 pages (for mapPage)
   // load from binary needs 4 pages (for loadPage)
-  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);  //TODOs make sure that it gets freed in all cases
+  // TODOMINH: change 15 pages to the exact pages we need: count the pages we need in case of shared page
+  ustl::vector<uint32> preallocated_pages;
+  if((address < MIN_SHARED_MEM_ADDRESS) || (address > MAX_SHARED_MEM_ADDRESS))
+  {
+    preallocated_pages = PageManager::instance()->preAlocatePages(4); 
+  }
+  else
+  {
+    preallocated_pages = PageManager::instance()->preAlocatePages(15);
+  }
+  
 
   shared_mem_lock->acquire();
   swap_lock->acquire();
@@ -176,7 +190,9 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   ipt_lock->acquire();
   archmem_lock->acquire();
 
-  if(current_archmemory.isPresent(address))
+  size_t vpn = address/PAGE_SIZE;
+
+  if(current_archmemory.isBitSet(vpn, BitType::PRESENT, false))
   {
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Another thread already solved this pagefault. Do nothing\n"); 
     archmem_lock->release();
@@ -185,50 +201,52 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     swap_lock->release();
     shared_mem_lock->release();
   }
-  else if(current_archmemory.isSwapped(address))
+  //Page is swapped out
+  else if(current_archmemory.isBitSet(vpn, BitType::SWAPPED_OUT, false))
   {
     heap_lock->release();
     shared_mem_lock->release();
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Swapped out detected. Requesting a swap in\n");
-    size_t vpn = address / PAGE_SIZE;
     size_t disk_offset = current_archmemory.getDiskLocation(vpn);
+    assert(disk_offset != 0);
 
-    if(DIRECT_SWAPPING)
-    {
-      archmem_lock->release();
-      swap_lock->release();
-      SwappingManager::instance()->swapInPage(disk_offset, preallocated_pages);
-      ipt_lock->release();
-    }
-    else if(ASYNCHRONOUS_SWAPPING)
-    {
-      swapper->addSwapIn(disk_offset, &preallocated_pages);
-      archmem_lock->release();  //TODOs: we need to check if ipt entry still exist and page is still swapped out !!!
-      ipt_lock->release();
+    swapper->addSwapIn(disk_offset, &preallocated_pages);
+    archmem_lock->release();  //TODOs: we need to check if ipt entry still exist and page is still swapped out !!!
+    ipt_lock->release();
 
-      handleAsynSwapIn(disk_offset);
-
-      swap_lock->release();
-    }
-    else
+    while (swapper->isOffsetInMap(disk_offset))
     {
-      archmem_lock->release();
-      ipt_lock->release();
-      swap_lock->release();
-      assert(0 && "PageFaultHandler::handleValidPageFault: Try to swap in page even though swapping is disabled.\n");
+      swapper->swap_in_cond_.wait();
     }
+    swapper->swap_in_lock_.release();
+    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
   }
+  //Page is on heap
   else if(address >= heap_manager->heap_start_ && address < heap_manager->current_break_)
   {
     debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Handling pf in Heap\n");
     swap_lock->release();
     shared_mem_lock->release();
 
-    handleHeapPF(preallocated_pages, address);
+      size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+      bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
+      assert(rv == true);
 
     archmem_lock->release();
     ipt_lock->release();
     heap_lock->release();
+  }
+    //Page is on stack
+  else if(address > STACK_END && address < STACK_START && current_archmemory.isBitSet(vpn, BitType::DISCARDED, true))
+  {
+    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", (void*)address);
+    swapper->swap_in_lock_.release();
+    heap_manager->current_break_lock_.release();
+    size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
+    assert(rv == true);
+    current_archmemory.archmemory_lock_.release();
+    IPTManager::instance()->IPT_lock_.release();
   }
   else if(smm->isAddressValid(address))
   {
@@ -249,7 +267,8 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     swap_lock->release();
     shared_mem_lock->release();
 
-    handleLoadPF(preallocated_pages, address);
+    debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page is not present and not swapped out -> Loading page\n");
+    currentThread->loader_->loadPage(address, preallocated_pages);
 
     archmem_lock->release();
     ipt_lock->release();
@@ -259,35 +278,6 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 }
 
-void PageFaultHandler::handleHeapPF(ustl::vector<uint32>& preallocated_pages, size_t address)
-{
-  size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
-  size_t vpn = address / PAGE_SIZE;
-  bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
-  assert(rv == true);
-}
-
-void PageFaultHandler::handleLoadPF(ustl::vector<uint32>& preallocated_pages, size_t address)
-{
-  UserSpaceMemoryManager* heap_manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
-
-  debug(PAGEFAULT, "%18zx: heapstart, %18zx: current_break %18zx: max heap address\n",heap_manager->heap_start_, heap_manager->current_break_, (size_t)MAX_HEAP_ADDRESS);
-  debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page is not present and not swapped out -> Loading page\n");
-  
-  currentThread->loader_->loadPage(address, preallocated_pages);
-}
-
-void PageFaultHandler::handleAsynSwapIn(size_t disk_offset)
-{
-  SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
-
-  while (swapper->isOffsetInMap(disk_offset))
-  {
-    swapper->swap_in_cond_.wait();
-  }
-
-  debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page swapped in successful (from offset %zu)\n", disk_offset);
-}
 
 void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 {
@@ -298,25 +288,29 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
   Mutex* archmem_lock = &current_archmemory.archmemory_lock_;
   PageManager* pm = PageManager::instance();
 
-  // copyPage needs 1 page
+  size_t vpn = address/PAGE_SIZE;
+  
   ustl::vector<uint32> preallocated_pages = pm->preAlocatePages(1);  //TODOs make sure that it gets freed in all cases
 
   ipt_lock->acquire();
   archmem_lock->acquire();
-
-  if(!current_archmemory.isPresent(address))
+  //Page is not present anymore we need to swap it in -> do nothing so it gets swapped in on the next pagefault
+  if(!current_archmemory.isBitSet(vpn, BitType::PRESENT, false))
   {
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is not present anymore (swapped out). Do nothing\n");
   }
-  else if(writing && current_archmemory.isCOW(address) && !current_archmemory.isWriteable(address))
+  //Page is set readonly we want to write and cow-bit is set -> copy page
+  else if(writing && current_archmemory.isBitSet(vpn, BitType::COW, true) && !current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))
   {
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW and we want to write. Copy page\n");
     current_archmemory.copyPage(address, preallocated_pages);
   }
-  else if(writing && current_archmemory.isCOW(address) && current_archmemory.isWriteable(address))  //TODOs dont reset cowbit
+  //Page is set writable we want to write -> sombody else was faster with cow
+  else if(writing && current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))
   {
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW but writeable bit is set => Somebody else was faster with COW. Do nothing\n");
   }
+    //We want to write to a page that is readable and not cow -> error
   else
   {
     debug(ERROR_DEBUG, "PageFaultHandler::handlePresentPageFault: Page is not COW (read-only) and we want to write => Error\n");
@@ -325,7 +319,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
     pm-> releaseNotNeededPages(preallocated_pages);
     errorInPageFaultKillProcess();
   }
-  
+    
   archmem_lock->release();
   ipt_lock->release();
 
@@ -336,27 +330,19 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 
 //Code for growing stack:
 
-  // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
-  // {
-    // IPTManager::instance()->IPT_lock_.acquire();
-    // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
-    // int retval = checkGrowingStack(address);
-    // currentThread->loader_->arch_memory_.archmemory_lock_.release();
-    //  IPTManager::instance()->IPT_lock_.release();
-    // if (retval == GROWING_STACK_FAILED)
-    // {
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
-    //   errorInPageFaultKillProcess();
-    // }
-    // else if(retval == NOT_RELATED_TO_GROWING_STACK)
-    // {
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
-    //   currentThread->loader_->loadPage(address);
-    // }
-    // else
-    // {
-    //   assert(retval == GROWING_STACK_VALID);
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
-    // }
-  // }
+  void PageFaultHandler::handleUserPageFault(size_t address)                //TODOs: Does not work in combination with swapping - add in again later
+  {
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);
+    IPTManager::instance()->IPT_lock_.acquire();
+    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    int retval = checkGrowingStack(address, preallocated_pages);
+    IPTManager::instance()->IPT_lock_.release();
+    currentThread->loader_->arch_memory_.archmemory_lock_.release();
+    PageManager::instance()->releaseNotNeededPages(preallocated_pages);
+
+    if(retval != GROWING_STACK_VALID)
+    {
+      handleValidPageFault(address);
+    }
+  }
 

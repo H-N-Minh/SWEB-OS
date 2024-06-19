@@ -6,6 +6,8 @@
 #include "offsets.h"
 #include "paging-definitions.h"
 
+enum BitType {COW, BEEN_DIRTY, DISCARDED, DIRTY, WRITEABLE, SWAPPED_OUT, PRESENT, ACCESSED, SECONDCHANGE};
+
 struct ArchMemoryMapping
 {
   PageMapLevel4Entry* pml4;
@@ -28,6 +30,8 @@ struct ArchMemoryMapping
   uint64 pti;
 };
 
+class SharedMemManager;
+
 class ArchMemory
 {
   public:
@@ -36,7 +40,7 @@ class ArchMemory
     
     uint64 page_map_level_4_;
     
-
+    SharedMemManager* shared_mem_manager_;
 
     static constexpr size_t RESERVED_START = 0xFFFFFFFF80000ULL;
     static constexpr size_t RESERVED_END = 0xFFFFFFFFC0000ULL;
@@ -102,43 +106,55 @@ class ArchMemory
     static PageMapLevel4Entry* getRootOfKernelPagingStructure();
 
     /// Prevents accidental copying/assignment, can be implemented if needed
-    ArchMemory(ArchMemory const &src, ustl::vector<uint32>& preallocated_pages);
+    ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages);
     ArchMemory &operator=(ArchMemory const &src) = delete;
 
     
     void deleteEverythingExecpt(size_t virtual_page);
 
-    bool isCOW(size_t virtual_addr);
-    bool isSwapped(size_t virtual_addr);
-    bool isPresent(size_t virtual_addr);
-    bool isWriteable(size_t virtual_addr);
-    bool isPageAccessed(size_t vpn);
-    bool isPageDirty(size_t vpn);
+   
+    
+
+
 
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
-    size_t getDiskLocation(size_t vpn);
+    
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
     bool updatePageTableEntryForWriteBackToDisk(size_t vpn);
+    void setPageTableEntryToNotPresent(size_t vpn);
 
     size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
-    IPTMapType getMapType(PageTableEntry& pt_entry);
 
     int countArchmemPages();
 
-    /**
-     * if access or dirty bit is set, return true, else false
-    */
+
+
+     
+
+    bool isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present);
+    size_t getDiskLocation(size_t vpn);
+    const char* bitAsString(BitType bit);
+
+
 
 
     /**
-     * Reset the access and dirty bits of a page to 0
+     * Reset the access bits of a page to 0
     */
     void resetAccessBits(size_t vpn);
 
+    void resetDirtyBitSetBeenDirtyBits(size_t vpn);
+
     void setProtectionBits(size_t vpn, int read, int write, int execute);
+
+    void setSharedBit(size_t vpn);
+
+    void resetSecondChange(size_t vpn); 
+
+    void resetAccessBitsAndSetSecondChange(size_t vpn);
 
 
   private:

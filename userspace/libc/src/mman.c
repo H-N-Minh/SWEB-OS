@@ -12,8 +12,7 @@ typedef struct mmap_params {
   off_t offset;
 }mmap_params_t;
 
-int __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS, 
-                         MAP_ANONYMOUS | MAP_PRIVATE, MAP_ANONYMOUS | MAP_SHARED};
+int __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS};
 
 
 #include "../../../common/include/kernel/syscall-definitions.h"

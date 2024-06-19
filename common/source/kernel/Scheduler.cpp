@@ -34,11 +34,8 @@ Scheduler::Scheduler()
   ticks_ = 0;
   addNewThread(&cleanup_thread_);
   addNewThread(&idle_thread_);
+  addNewThread(&swapping_thread_);
 
-  if(ASYNCHRONOUS_SWAPPING)
-  {  
-    addNewThread(&swapping_thread_);
-  }
 
 }
 
@@ -196,6 +193,10 @@ void Scheduler::incTicks()
 
     unsigned long average_diference = (current_time_stamp - last_time_stamp_)/5;
     last_time_stamp_ = current_time_stamp;
+    if(average_diference == 0)
+    {
+      average_diference = 1;
+    }
     timestamp_fs_ = 54925439000000/average_diference;
   }
 
@@ -204,6 +205,10 @@ void Scheduler::incTicks()
     unsigned long current_time_stamp = Syscall::get_current_timestamp_64_bit();
     unsigned long diference = current_time_stamp - last_time_stamp_;
     last_time_stamp_ = current_time_stamp;
+    if(diference == 0)
+    {
+      diference = 1;
+    }
     timestamp_fs_ = 54925439000000/diference;
   }
 

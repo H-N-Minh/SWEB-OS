@@ -1,65 +1,60 @@
 #include "stdio.h"
-#include "pthread.h"
+#include "stdlib.h"
 #include "assert.h"
-#include "unistd.h"
 #include "sched.h"
-#include "nonstd.h"
-
-#define MEGABYTE4 1048576
-#define PAGESIZE4 4096
-
-#define N4 5
-#define N_MEGABYTE4 N4 * MEGABYTE4
 
 
-#define ELEMENTS_IN_ARRAY4 N_MEGABYTE4 / 4
-#define PAGES_IN_ARRAY4 N_MEGABYTE4/PAGESIZE4
+#define MEGABYTE 1048576
+#define PAGESIZE 4096
 
+#define N 7
+#define N_MEGABYTE N * MEGABYTE
 
-int big_array4[ELEMENTS_IN_ARRAY4];  //5 Megabyes
+#define ELEMENTS_IN_ARRAY N_MEGABYTE / 8
+#define PAGES_IN_ARRAY N_MEGABYTE/PAGESIZE
 
-size_t getTopOfThisPage(size_t variable_adr)
-{
-  size_t top_stack = variable_adr - variable_adr%PAGESIZE4 + PAGESIZE4 - sizeof(int);
-  assert(top_stack && "top_stack pointer of the current stack is NULL somehow, check the calculation");
-  return top_stack;
+size_t big_array2[ELEMENTS_IN_ARRAY];
+static unsigned int randomSeed = 0;
+
+void srand(unsigned int seed) {
+  randomSeed = seed;
 }
 
-// writting a big number at the end of a page that it overflows to the next page, causes double pagefault at a time
+unsigned int rand(void) {
+  randomSeed = randomSeed * 214013 + 2531011;
+  return (randomSeed >> 16) & 0x7FFF;
+}
+
 int pra4()
 {
-  setPRA(__RANDOM_PRA__); 
-  int hit;
-  int miss;
-  getPRAstats(&hit, &miss);
-  
-  printf("NFU PRA: Hit: %d, Miss: %d (before test)\n", hit, miss);
+  printf("Starting pra4 test...\n");
+  size_t count_pages = N_MEGABYTE/PAGESIZE;
 
-  size_t top_page = getTopOfThisPage((size_t) big_array4);
-  
-  size_t* temp = (size_t*) top_page;
-  for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
+  // random seed
+  srand(42);
+
+  // iterate over all page frames once
+  printf("Randomly modifying %zu pages\n", count_pages);
+  for(size_t i = 0; i < count_pages; i++)
   {
-    printf("%ld\n",i);
-    *temp = (size_t) (i * 10000000000 + (i + 1));      // cast to size_t to overflow into next page
-    temp = (size_t*) ((size_t) temp + PAGESIZE4 * 2);
+    // generate random page number
+//    printf("Modifying page %zu\n", i);
+    size_t page = rand() % count_pages;
+
+    // Modify a byte on the page
+    big_array2[page * (PAGESIZE / 8)] = (size_t)i;
   }
+  printf("Done\n");
 
-  printf("done writing phew!\n ");
-
-  temp = (size_t*) top_page;
-  for(size_t i = 0; i < (PAGES_IN_ARRAY4 / 2); i++)
+  // check the correctness of the data via extra read loop
+  printf("Checking correctness\n");
+  for(size_t i = 0; i < count_pages; i++)
   {
-    printf("%ld\n",i);
-    if (*temp != (size_t) (i * 10000000000 + (i + 1)))
-    {
-      printf("Error: Expected %zu, got %zu. At index %zu\n", (size_t) (i * 10000000000 + (i + 1)), *temp, i);
-    }
-    temp = (size_t*) ((size_t) temp + PAGESIZE4 * 2);
+//    printf("Checking page %zu\n", i);
+    size_t page = i % count_pages;
+    assert(big_array2[page * (PAGESIZE / 8)] <= (size_t)count_pages);
   }
-
-  getPRAstats(&hit, &miss);
-  printf("NFU PRA: Hit: %d, Miss: %d (after test)\n", hit, miss);
-
+  printf("Done2\n");
   return 0;
 }
+

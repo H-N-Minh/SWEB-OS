@@ -98,7 +98,7 @@ UserProcess::UserProcess(const UserProcess& other)
 
   PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
 
-  user_mem_manager_ = new UserSpaceMemoryManager(loader_);
+  user_mem_manager_ = new UserSpaceMemoryManager(*(other.user_mem_manager_), loader_);
 
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
@@ -137,7 +137,7 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-  localFileDescriptorTable.closeAllFileDescriptors();
+  // localFileDescriptorTable.closeAllFileDescriptors();
   delete working_dir_;
   working_dir_ = nullptr;
 
@@ -218,7 +218,8 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   assert(top_stack && "Error: top_stack is NULL in unmapThreadStack\n");
   assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
 
-  uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
+  // uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
+  size_t top_vpn = top_stack/PAGE_SIZE;
 
   IPTManager::instance()->IPT_lock_.acquire();
   arch_memory->archmemory_lock_.acquire();
@@ -227,6 +228,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
     if (arch_memory->checkAddressValid(top_stack))
     {
       arch_memory->unmapPage(top_vpn);
+      debug(SYSCALL, "unmapThreadStack: Unmap vpn %p\n", (void*)top_vpn);
       top_vpn--;
       top_stack -= PAGE_SIZE;
     }
