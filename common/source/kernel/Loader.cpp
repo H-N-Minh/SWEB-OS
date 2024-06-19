@@ -47,7 +47,7 @@ void* Loader::getBrkStart()
     for(ustl::list<Elf::Phdr>::iterator it = phdrs_.begin(); it != phdrs_.end(); it++)
     {
       size_t segment_start = (*it).p_vaddr;
-      size_t segment_size = (*it).p_filesz;
+      size_t segment_size = (*it).p_memsz;
       size_t segment_end = segment_start + segment_size;
       if(segment_end > highest_segment)
       {
