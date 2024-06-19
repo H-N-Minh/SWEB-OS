@@ -70,9 +70,5 @@ char const *user_progs[] = {
                             //  "/usr/dupTest.sweb",
                             // "/usr/dupInvalidTest.sweb",
                             // "/usr/no_test.sweb",
-
-
-
-
                             0
                            };
