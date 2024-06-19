@@ -19,7 +19,7 @@ class ArchmemIPT;
 ////////////////////// IPTManager //////////////////////
 IPTManager* IPTManager::instance_ = nullptr;
 
-IPTManager::IPTManager() 
+IPTManager::IPTManager()
   : IPT_lock_("IPTManager::IPT_lock_"), fake_ppn_lock_("IPTManager::fake_ppn_lock_")
 {
   assert(!instance_);
@@ -30,14 +30,14 @@ IPTManager::IPTManager()
 IPTManager::~IPTManager()
 {
   //delete values in ipt_disk
-  for (auto& map_entry : ram_map_) 
+  for (auto& map_entry : ram_map_)
   {
     delete map_entry.second;
   }
   ram_map_.clear();
 
   //delete values in ipt_ram
-  for (auto& map_entry : disk_map_) 
+  for (auto& map_entry : disk_map_)
   {
     delete map_entry.second;
   }
@@ -73,7 +73,7 @@ void IPTManager::debugRandomGenerator()
       myMap[randomNum_resized] = 1;
     }
   }
-  
+
   ustl::vector<ustl::pair<int, int>> numberPairs;
   for (const auto& pair : myMap) {
     numberPairs.push_back(pair);
@@ -108,7 +108,7 @@ void IPTManager::debugRandomGenerator()
 size_t IPTManager::findPageToSwapOut()
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::findPageToSwapOut called but IPT not locked\n");
-  
+
   size_t ppn_retval = INVALID_PPN;
 
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
@@ -121,13 +121,13 @@ size_t IPTManager::findPageToSwapOut()
 
     size_t random_num = randomNumGenerator();
     // debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
-    
+
     if(ram_map_.size() == 0)
     {
       assert(0 && "No page in ram");
     }
     size_t random_ipt_index = random_num % ram_map_.size();
-    
+
     size_t counter = 0;
     for (const auto& pair : ram_map_)
     {
@@ -186,7 +186,7 @@ size_t IPTManager::findPageToSwapOut()
     while(ppn_retval == INVALID_PPN && counter < 3)
     {
       counter++;
-          
+
       for(size_t i = 0; i <  fifo_ppns.size() && ppn_retval == INVALID_PPN; i++)
       {
         auto& ppn = fifo_ppns.at(i);
@@ -217,7 +217,7 @@ size_t IPTManager::findPageToSwapOut()
       auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn_retval);
       if (it != fifo_ppns.end())
       {
-        fifo_ppns.erase(it);   
+        fifo_ppns.erase(it);
 
         for(auto& archmem_ipt : ram_map_[ppn_retval]->getArchmemIPTs())
         {
@@ -249,7 +249,7 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && archmem->archmemory_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::insertEntryIPT called without fully locking\n");
 
   auto* map = (map_type == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
-  
+
   // Error checking: entry should not already exist
   if (isEntryInMap(ppn, map_type, archmem, vpn))
   {
@@ -260,7 +260,7 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   // This is not necessary and slow down the system, can be commented out, but it is good for preventing error
   // checkRamMapConsistency();
   // checkDiskMapConsistency();
-  
+
   debug(IPT, "IPTManager::insertEntryIPT: Entry does not exist in %s yet, seems valid. Inserting\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   if(isKeyInMap(ppn, map_type))
   {
@@ -274,7 +274,7 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
       auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn);
       if (it != fifo_ppns.end())
       {
-        fifo_ppns.erase(it);   
+        fifo_ppns.erase(it);
       }
       fifo_ppns.push_back(ppn);
     }
@@ -313,7 +313,7 @@ void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     debug(IPT, "IPTManager::removeEntryIPT Entry (ppn %zu, archmem %p) not found in the map %s\n", ppn, archmem, (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
     assert(0 && "IPTManager::removeEntryIPT: ppn doesnt exist in map\n");
   }
-  
+
   // remove the item and update debug info
   debug(IPT, "IPTManager::removeEntryIPT: Entry found in map %s, seems valid. Removing\n", (map_type == IPTMapType::RAM_MAP ? "RAM_MAP" : "DISK_MAP"));
   IPTEntry* entry = (*map)[ppn];
@@ -374,7 +374,7 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
     debug(IPT, "IPTManager::moveEntry: Entry to be moved (ppn %zu) not found in source map %s\n", ppn_source, source_as_string);
     assert(0 && "IPTManager::moveEntry: Entry to be moved not found in source map\n");
   }
-  
+
   IPTEntry* entry = (*source_map)[ppn_source];
   assert(entry && "IPTManager::moveEntry: entry is null");
   ustl::vector<ArchmemIPT*> archmemIPTs_vector = entry->getArchmemIPTs();
@@ -540,7 +540,7 @@ void IPTManager::checkDiskMapConsistency()
         entry_arch->archmemory_lock_.acquire();
         locked_by_us = 1;
       }
-      
+
       ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(vpn);
       assert(disk_offset != 0);
       assert(disk_offset && "checkRampMapConsistency: disk_offset is 0\n");
@@ -581,7 +581,7 @@ void IPTManager::insertFakePpnEntry(ArchMemory* archmem, size_t vpn)
     debug(IPT, "IPTManager::insertFakePpnEntry: archmem does not exist yet in fake_ppn_map_, creating new\n");
     fake_ppn_map_[archmem][vpn] = new_ppn;
   }
-  
+
   // adding entry to the inverted fake ppn map
   auto it2 = inverted_fake_ppn_.find(new_ppn);
   if (it2 != inverted_fake_ppn_.end())
@@ -636,7 +636,7 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
     auto& sub_map = it->second;
     if (sub_map.find(vpn) != sub_map.end())
     {
-      mutual_fake_ppn = sub_map[vpn];      
+      mutual_fake_ppn = sub_map[vpn];
     }
     else
     {
@@ -658,12 +658,12 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
       ArchMemory* temp_archmem = archmem_ipt->archmem_;
       assert(temp_archmem && "IPTManager::mapRealPPN: archmem is null");
       size_t temp_vpn = archmem_ipt->vpn_;
-      
+
       if (temp_archmem != arch_memory)
       {
         temp_archmem->archmemory_lock_.acquire();
       }
-      
+
 
       bool rv = temp_archmem->mapPage(temp_vpn, ppn, 1, preallocated_pages);
       assert(rv == true);
@@ -691,7 +691,7 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
       {
         fake_ppn_map_.erase(temp_archmem);
       }
-      
+
     }
   }
 }
@@ -715,7 +715,7 @@ void IPTManager::unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory)
       {
         fake_ppn_map_.erase(it);
       }
-      
+
       // removing from inverted_fake_ppn_
       for (auto it2 = inverted_fake_ppn_.begin(); it2 != inverted_fake_ppn_.end(); ++it2)
       {
@@ -747,6 +747,5 @@ void IPTManager::unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory)
     assert(0 && "IPTManager::unmapOneFakePPN: archmem not found in fake_ppn_map_\n");
   }
 }
-
 
 
