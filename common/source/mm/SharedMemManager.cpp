@@ -150,12 +150,12 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
       debug(SYSCALL, "addEntry: Reference count after increment: %d\n", globalFileDescriptor ->getRefCount());
 
       lfdTable.lfds_lock_.release();
+      debug(MMAP, "SharedMemManager::mmap: global fd: %u\n", globalFileDescriptor->getFd());
+
+
+      assert(globalFileDescriptor->getFd() != 0 && "Global file descriptor pointer is null");assert(globalFileDescriptor != nullptr && "SharedMemManager::addEntry: globalFileDescriptor is null\n");
     }
 
-    debug(MMAP, "SharedMemManager::mmap: global fd: %u\n", globalFileDescriptor->getFd());
-
-
-    assert(globalFileDescriptor->getFd() != 0 && "Global file descriptor pointer is null");assert(globalFileDescriptor != nullptr && "SharedMemManager::addEntry: globalFileDescriptor is null\n");
 
 
     // actually adding entry
@@ -264,10 +264,8 @@ void SharedMemManager::copyContentFromFD(size_t ppn, int fd, ssize_t offset, Arc
 
     // read file and write to page
     FileDescriptor* global_fd_obj = globalFileDescriptor;
-    debug(MMAP, "SharedMemManager::mmap1111111111111111: global fd: %u\n", global_fd_obj->getFd());
 
     assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
-    assert(global_fd_obj != 0 && "Global file descriptor pointer is null");
     assert(global_fd_obj->getType() != FileDescriptor::FileType::PIPE && "SharedMemManager::copyContentFromFD: cannot copy content from a pipe\n");
 
     size_t global_fd = global_fd_obj->getFd();
@@ -384,12 +382,8 @@ int SharedMemManager::munmap(void* start, size_t length)
     LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
     lfdTable.lfds_lock_.acquire();
-    assert( relevant_pages[0].second->globalFileDescriptor_ != nullptr && "SharedMemManager::munmap: relevant_pages[0].second->globalFileDescriptor_ is nullptr\n");
     // If there is a valid global file descriptor related to this shared memory entry
     FileDescriptor* globalFileDescriptor = relevant_pages[0].second->globalFileDescriptor_;
-    debug(MMAP, "SharedMemManager::munmap2222222222222222222222222222222: global fd: %u\n", globalFileDescriptor->getFd());
-
-    assert(globalFileDescriptor != 0 && "Global file descriptor pointer is null");
 
 
     lfdTable.lfds_lock_.release();
@@ -402,18 +396,7 @@ int SharedMemManager::munmap(void* start, size_t length)
 
 
 
-    lfdTable.lfds_lock_.acquire();
-    globalFileDescriptor->decrementRefCount(); // ensure that locking is required around decrementRefCount()
 
-    debug(SYSCALL, "munmap: Reference count after decrement: %d\n", globalFileDescriptor ->getRefCount());
-
-    // If reference count drops to 0, delete the global file descriptor
-    if (globalFileDescriptor->getRefCount() == 0) {
-      // Pass on your method to delete Global File Descriptor
-      LocalFileDescriptorTable::deleteGlobalFileDescriptor(globalFileDescriptor);
-    }
-
-    lfdTable.lfds_lock_.release();
 
 
     archmem_lock->release();
@@ -506,8 +489,6 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry *sm_entry,
         {
             debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
             ssize_t offset = sm_entry->getOffset(vpn);
-            debug(MMAP, "SharedMemManager::mmap44444444444444444444444444444444444: global fd: %u\n", pDescriptor->getFd());
-            assert(pDescriptor != 0 && "Global file descriptor pointer is null");
             writeBackToFile(vpn, sm_entry->fd_, offset, arch_memory, pDescriptor);
         }
         arch_memory->unmapPage(vpn);
@@ -581,8 +562,6 @@ void SharedMemManager::unmapAllPages(ArchMemory* arch_memory)
                     debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
                     ssize_t offset = it->getOffset(vpn);
                     FileDescriptor* global_fd_obj = it->globalFileDescriptor_; // retrieve the global file descriptor
-                    debug(MMAP, "SharedMemManager::mmap33333333333333333333333333: global fd: %u\n", global_fd_obj->getFd());
-                    assert(global_fd_obj->getFd() != 0 && "Global file descriptor pointer is null");
                     writeBackToFile(vpn, it->fd_, offset, arch_memory, global_fd_obj);
                 }
                 arch_memory->unmapPage(vpn);
@@ -616,11 +595,10 @@ void SharedMemManager::writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchM
     lfdTable.lfds_lock_.acquire();
 
     FileDescriptor *global_fd_obj = globalFileDescriptor;
-    assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+
     assert(global_fd_obj->getType() != FileDescriptor::FileType::PIPE && "SharedMemManager::writeBackToFile: cannot write back to a pipe with this operation\n");
 
     size_t global_fd = global_fd_obj->getFd();
-    assert(global_fd_obj->getFd() != 0 && "Global file descriptor pointer is null");
     if (VfsSyscall::lseek(global_fd, offset, SEEK_SET) == (l_off_t) -1)
     {
       debug(MMAP, "SharedMemManager::writeBackToFile: lseek failed on global fd: %zu offset: %ld\n", global_fd, offset);
@@ -631,6 +609,26 @@ void SharedMemManager::writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchM
     if (num_written == -1)
     {
       assert(false && "SharedMemManager::writeBackToFile: write failed\n");
+    }
+
+
+    if(0 <= fd) {
+      assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
+      debug(MMAP, "SharedMemManager::munmap: global fd: %u\n",
+            global_fd_obj->getFd());
+
+      assert(global_fd_obj != 0 && "Global file descriptor pointer is null");
+
+      global_fd_obj->decrementRefCount(); // ensure that locking is required around decrementRefCount()
+
+      debug(SYSCALL, "munmap: Reference count after decrement: %d\n",
+            global_fd_obj->getRefCount());
+
+      // If reference count drops to 0, delete the global file descriptor
+      if (global_fd_obj->getRefCount() == 0) {
+        // Pass on your method to delete Global File Descriptor
+        LocalFileDescriptorTable::deleteGlobalFileDescriptor(global_fd_obj);
+      }
     }
 
     lfdTable.lfds_lock_.release();

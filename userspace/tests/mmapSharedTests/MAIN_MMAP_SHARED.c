@@ -96,13 +96,13 @@ int childMain()
 //        if (retval == 0)                      { printf("===> shared2 successful!\n"); }
 //        else                                  { printf("===> shared2 failed!\n");  return -1;}
 //    }
-//    if (SHARED3)
-//    {
-//        printf("\nTesting shared3: mmap with larger size...\n");
-//        retval = shared3();
-//        if (retval == 0)                      { printf("===> shared3 successful!\n"); }
-//        else                                  { printf("===> shared3 failed!\n");  return -1;}
-//    }
+    if (SHARED3)
+    {
+        printf("\nTesting shared3: mmap with larger size...\n");
+        retval = shared3();
+        if (retval == 0)                      { printf("===> shared3 successful!\n"); }
+        else                                  { printf("===> shared3 failed!\n");  return -1;}
+    }
     if (SHARED4)
     {
         printf("\nTesting shared4: Child munmap shouldnt affect parents mapping...\n");
