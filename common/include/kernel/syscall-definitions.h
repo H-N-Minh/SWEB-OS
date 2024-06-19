@@ -63,3 +63,4 @@
 
 
 #define sc_shm_open 100
+#define sc_shm_unlink 101

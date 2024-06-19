@@ -166,6 +166,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 		case sc_shm_open:
 		  return_value = shm_open(arg1, arg2, arg3);
 		  break;
+	  case sc_shm_unlink:
+  		return_value = shm_unlink(arg1);
+  		break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -950,4 +953,21 @@ int Syscall::shm_open(size_t name, size_t oflag, size_t mode)
 
 	debug(SYSCALL, "----------Syscall::shm_open: opened/created shared memory %s at FD %d\n", shm_name, shm_entry);
   return shm_entry;
+}
+
+int Syscall::shm_unlink(size_t name)
+{
+	debug(SYSCALL, "Syscall::shm_unlink: Unlink shared memory object: %s \n", (char*)name);
+	char* shm_name = (char*)(name);
+	SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
+	int shm_entry = smm->shm_unlink(shm_name);
+
+	if (shm_entry == -1)
+	{
+		debug(ERROR_DEBUG, "Syscall::shm_unlink: failed to unlink shared memory\n");
+		return -1;
+	}
+
+	debug(SYSCALL, "----------Syscall::shm_unlink: unlinked shared memory %s \n", shm_name);
+	return shm_entry;
 }

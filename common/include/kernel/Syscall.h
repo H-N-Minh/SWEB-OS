@@ -97,6 +97,8 @@ public:
   static int munmap(size_t start, size_t length);
 
   static int shm_open(size_t name, size_t oflag, size_t mode);
+
+  static int shm_unlink(size_t name);
 };
 
 

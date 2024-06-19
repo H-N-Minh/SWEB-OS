@@ -68,7 +68,7 @@ private:
   ustl::vector<SharedMemEntry*> shared_map_;
   vpn_t last_free_vpn_;
 
-   ustl::map<ustl::string, SharedMemObject*> shm_objects_;
+ static ustl::map<ustl::string, SharedMemObject*> shm_objects_;
 
 public:
   Mutex shared_mem_lock_;

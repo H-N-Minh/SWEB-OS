@@ -495,6 +495,8 @@ int SharedMemManager::shm_unlink(char* name)
 ustl::string* SharedMemObject::name_ = nullptr;
 FileDescriptor* SharedMemObject::global_fd_ = nullptr;
 
+ustl::map<ustl::string, SharedMemObject*> SharedMemManager::shm_objects_;
+
 FileDescriptor* SharedMemObject::getGlobalFileDescriptor()
 {
     return global_fd_;

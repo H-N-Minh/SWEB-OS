@@ -93,7 +93,7 @@ int shm_open(const char* name, int oflag, mode_t mode)
  */
 int shm_unlink(const char* name)
 {
-  return -1;
+	return __syscall(sc_shm_unlink, (long)name, 0x00, 0x00, 0x00, 0x00);
 }
 
 /**

@@ -26,12 +26,7 @@ int main()
 	printf("%d \n", shm_fd);
 	printf("%d \n", shm_fd1);
 
-    //const char *message = "Hello, Shared Memory!";
-    // memcpy(shm_ptr, message, strlen(message) + 1);
-    //
-    // printf("Read from shared memory: %s\n", (char *)shm_ptr);
+	shm_unlink(SHM_NAME);
 
-
-
-    return 0;
+	return 0;
 }
