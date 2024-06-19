@@ -45,7 +45,7 @@ const size_t SYSCALL            = Ansi_Blue    | OUTPUT_ENABLED;
 const size_t MAIN               = Ansi_Red     | OUTPUT_ENABLED;
 const size_t THREAD             = Ansi_Magenta | OUTPUT_ENABLED;
 const size_t USERPROCESS        = Ansi_Cyan    | OUTPUT_ENABLED;
-const size_t USERTHREAD         = Ansi_Yellow  | OUTPUT_ENABLED;
+const size_t USERTHREAD         = Ansi_Yellow; //  | OUTPUT_ENABLED;
 const size_t PROCESS_REG        = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
@@ -68,7 +68,7 @@ const size_t GROW_STACK         = Ansi_Green;
 const size_t IPT                = Ansi_Green;// | OUTPUT_ENABLED;
 const size_t SWAPPING           = Ansi_Magenta;// | OUTPUT_ENABLED;
 const size_t PRESWAPPING        = Ansi_Magenta;// | OUTPUT_ENABLED;
-const size_t MMAP               = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t MMAP               = Ansi_Yellow; // | OUTPUT_ENABLED;
 
 //group driver
 const size_t DRIVER             = Ansi_Yellow;
@@ -93,7 +93,7 @@ const size_t PATHWALKER         = Ansi_Yellow;
 const size_t PSEUDOFS           = Ansi_Yellow;
 const size_t VFSSYSCALL         = Ansi_Yellow;
 const size_t VFS                = Ansi_Yellow; // | OUTPUT_ENABLED;
-const size_t VFS_FILE           = Ansi_Yellow | OUTPUT_ENABLED;;
+const size_t VFS_FILE           = Ansi_Yellow; // | OUTPUT_ENABLED;
 const size_t SUPERBLOCK         = Ansi_Yellow;
 
 //group minix
@@ -104,15 +104,15 @@ const size_t M_ZONE             = Ansi_Yellow;
 
 //Personal's debug
 const size_t TAI_THREAD               = Ansi_Yellow;
-const size_t MINH                     = Ansi_Red  | OUTPUT_ENABLED;
+const size_t MINH                     = Ansi_Red; //  | OUTPUT_ENABLED;
 const size_t Fabi                     = Ansi_Red;
 
 const size_t USERSPACE_LOCKS         = Ansi_Red;
 const size_t WAIT_PID               = Ansi_Red;
 
-const size_t ERROR_DEBUG                     = Ansi_Red  | OUTPUT_ENABLED;
+const size_t ERROR_DEBUG            = Ansi_Red; // | OUTPUT_ENABLED;
 
-const size_t SHARE_MEMORY         = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t SHARE_MEMORY         = Ansi_Yellow;// | OUTPUT_ENABLED;
 
 
 
