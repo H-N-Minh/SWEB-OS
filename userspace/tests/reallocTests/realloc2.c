@@ -9,7 +9,6 @@ void check(int* ptr, int value, int n)
   {
     if(ptr[i] != value)
     {
-      printf("value: %d vs ptr[i] %d", value, ptr[i]);
       assert(0);
     }
   }
@@ -31,7 +30,6 @@ int realloc2()
   set(ptr1, 1, 500);
   int* ptr2 = malloc(400 * sizeof(int));
   set(ptr2, 2, 400);
-  printf("%p\n",ptr2);
   int* ptr3 = malloc(400 * sizeof(int));
   set(ptr3, 3, 400);
   int* ptr4 = malloc(300 * sizeof(int));
@@ -40,7 +38,6 @@ int realloc2()
   free(ptr3);
 
   ptr2 = realloc(ptr2, 700 * sizeof(int));
-  printf("%p\n",ptr2);
   check(ptr2, 2, 300);
 
   set(ptr2, 2, 700);
@@ -55,16 +52,11 @@ int realloc2()
   
   
   int* ptr5 = malloc(300 * sizeof(int));
-  // assert(0);
-  printf("hey");
   int* ptr6 = malloc(300 * sizeof(int));
-  printf("hey");
   int* ptr7 = malloc(300 * sizeof(int));
-  printf("hey");
   assert(ptr5 != NULL && ptr6 != NULL && ptr7 != NULL );
   free(ptr5);
   free(ptr6);
-   printf("hey");
   ptr4 = realloc(ptr4, 700 * sizeof(int));
   assert(ptr4 < ptr7);
   assert(ptr4 != NULL);
