@@ -6,6 +6,7 @@
 #include "FileDescriptor.h"
 //#include "FileDescriptorList.h"
 #include "debug.h"
+#include "ArchMemory.h"
 
 
 #define PROT_NONE     0x00000000  // 00..00
@@ -47,8 +48,11 @@ public:
   int flags_;
   int fd_;
   ssize_t offset_;
+  bool shared_;
 
-  SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset);
+  SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset, bool shared);
+
+  SharedMemEntry(const SharedMemEntry& other);
 
   /**
    * check if the given vpn is within this shared memory block
@@ -59,6 +63,12 @@ public:
    * get the size of the mem block (in pages)
   */
   size_t getSize();
+
+  /**
+   * get the offset of the given vpn from the start of the shared memory block.
+   * @return in bytes. Assert if vpn is not within the block
+  */
+  ssize_t getOffset(size_t vpn);
 };
 
 
@@ -68,14 +78,14 @@ private:
   ustl::vector<SharedMemEntry*> shared_map_;
   vpn_t last_free_vpn_;
 
- static ustl::map<ustl::string, SharedMemObject*> shm_objects_;
+ static ustl::map<ustl::string, SharedMemObject*>* shm_objects_;
 
 public:
-  Mutex shared_mem_lock_;
-
+  Mutex shared_mem_lock_; // responsible for shared_map_ and last_free_vpn_
+  // locking order: shared_mem_lock_ -> ipt_lock_ -> archmem_lock_
 
   SharedMemManager();
-  // TODOMINH: add copy constructor so it works with fork() (maybe also add cpy ctor for UserSpaceMemManager)
+  SharedMemManager(const SharedMemManager& other);
   ~SharedMemManager();
 
 
@@ -87,7 +97,7 @@ public:
    * @return the starting address of the shared memory region
    * @return MAP_FAILED if the shared memory region is full
   */
-  void* addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset);
+  void* addEntry(void* addr, size_t length, int prot, int flags, int fd, ssize_t offset, bool shared);
 
   /**
    * check if the given address is within any shared memory block
@@ -110,18 +120,40 @@ public:
   void unmapOnePage(vpn_t vpn, SharedMemEntry* sm_entry);
 
   /**
-   * find all relevant pages that are within the given range and fill up the vector
+   * find all pages in shared mem that are being used and are within the given range and fill up the vector relevant_pages with them
+   * This vector is then used to unmap all pages in the range
    * @param relevant_pages: an empty vector to be filled up
    * @param start: the starting address of the range
    * @param length: the length of the range (in bytes)
-   * @return: the vector filled up with all relevant pages. Vector is empty if error
+   * @return : the vector filled up with all relevant pages. Vector is empty if error (if theres at least 1 vpn in the range that is not an active shared mem page)
   */
   void findRevelantPages(ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> &relevant_pages, size_t start, size_t length);
 
   /**
    * unmap all active shared mem pages. Used for process termination
   */
-  void unmapAllPages();
+  void unmapAllPages(ArchMemory* arch_memory);
+
+  /**
+   * helper for HandleSharedPF(), set the protection bits for the new vpn, based on the info from the shared memory entry
+  */
+  void setProtectionBits(SharedMemEntry* entry, ArchMemory* archmem, size_t vpn);
+
+  /**
+   * read the fd file and copy content (1 page, start from the offset) to the given ppn
+  */
+  void copyContentFromFD(size_t ppn, int fd, ssize_t offset, ArchMemory* arch_memory);
+
+  /**
+   * write the content of the given vpn to the fd file (1 page, start from the offset)
+  */
+  void writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchMemory* arch_memory);
+
+  /**
+   * check if the given page is a shared page and only 1 process left using it. If so, write back to the file before unmap
+  */
+  bool isTimeToWriteBack(SharedMemEntry* sm_entry, ArchMemory* arch_memory, size_t vpn);
+
 
   int shm_open(char* name, size_t oflag, mode_t mode);
   int shm_unlink(char* name);
@@ -157,4 +189,3 @@ public:
 
     static FileDescriptor* getGlobalFileDescriptor();
 };
-
