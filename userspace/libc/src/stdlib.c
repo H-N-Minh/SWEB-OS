@@ -116,6 +116,10 @@ void* malloc(size_t size)
 
 void free(void *ptr)
 {
+  if(!parameterInUserSpace((size_t)ptr, 1))
+  {
+    exit(-1);
+  }
   if(ptr == NULL)
   {
     return;
@@ -198,6 +202,10 @@ void* calloc(size_t nmemb, size_t size)
 
 void* realloc(void *ptr, size_t size)
 {
+  if(!parameterInUserSpace((size_t)ptr, 1))
+  {
+    exit(-1);
+  }
   if(ptr == NULL)
   {
     return malloc(size);
@@ -393,7 +401,6 @@ int checkOverflowProtection(MemoryBlock* memory_block)
   }
   else
   {
-    assert(0 && "overflow");
     return -1;
   }
 }
@@ -496,6 +503,10 @@ void* malloc_unlocked(size_t size)
 
 void free_unlocked(void *ptr)
 {
+  if(!parameterInUserSpace((size_t)ptr, 1))
+  {
+    exit(-1);
+  }
   if(ptr == NULL)
   {
     return;
@@ -560,8 +571,17 @@ void free_unlocked(void *ptr)
   addOverflowProtection(element_to_free);
 }
 
-
-
-
+int parameterInUserSpace(size_t ptr, int allowed_to_be_null)
+{
+  if(!allowed_to_be_null && ptr == 0)
+  {
+    return 0;
+  }
+  if(ptr >= __USER_BREAK__)
+  {
+    return 0;
+  }
+  return 1;
+}
 
 
