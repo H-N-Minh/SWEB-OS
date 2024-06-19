@@ -55,6 +55,9 @@ SharedMemManager::SharedMemManager()
     : shared_mem_lock_("shared_mem_lock_")
 {
     last_free_vpn_ = (vpn_t) MIN_SHARED_MEM_VPN;
+	if (!shm_objects_) {
+        shm_objects_ = new ustl::map<ustl::string, SharedMemObject*>();
+    }
 }
 
 SharedMemManager::SharedMemManager(const SharedMemManager& other)
@@ -85,7 +88,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     int fd  = params->fd;
     ssize_t offset = params->offset;
     debug(MMAP, "SharedMemManager::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
-    
+
     void* retval = MAP_FAILED;
 
     shared_mem_lock_.acquire();
@@ -105,7 +108,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     }
 
     shared_mem_lock_.release();
-    
+
     return retval;
 }
 
@@ -134,7 +137,7 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
         debug(ERROR_DEBUG, "SharedMemManager::addEntry: failed, size required is bigger than the available free pages \n");
         return MAP_FAILED;
     }
-    
+
     // actually adding entry
     SharedMemEntry* entry = new SharedMemEntry(start, end, prot, flags, fd, offset, shared);
     shared_map_.push_back(entry);
@@ -370,7 +373,7 @@ int SharedMemManager::munmap(void* start, size_t length)
     ipt_lock->acquire();
     archmem_lock->acquire();
 
-    
+
     // check if the munmap is valid, or already unmapped by some faster thread
     ustl::vector<ustl::pair<vpn_t, SharedMemEntry*>> relevant_pages;
     findRevelantPages(relevant_pages, (size_t) start, length);
@@ -573,8 +576,8 @@ int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
 
 	debug(SHARE_MEMORY, "---------------(shm_open) Opening shared memory object %s with flags %zu and mode %lu\n", name, oflag, mode);
 
-	auto it = shm_objects_.find(shm_name);
-	if (it != shm_objects_.end())
+	auto it = shm_objects_->find(shm_name);
+	if (it != shm_objects_->end())
 	{
 		debug(SHARE_MEMORY, "---------------object already exists \n");
 		//object already exists
@@ -600,8 +603,8 @@ int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
 		// vpn_t end = start + (length / PAGE_SIZE) - 1;
 
 		SharedMemObject* new_obj = SharedMemObject::Init(shm_name);
-		shm_objects_[shm_name] = new_obj;
-		global_fd_list.add(SharedMemObject::getGlobalFileDescriptor());
+    (*shm_objects_)[shm_name] = new_obj;
+    global_fd_list.add(SharedMemObject::getGlobalFileDescriptor());
 
 		// last_free_vpn_ = end + 1;
 
@@ -621,8 +624,8 @@ int SharedMemManager::shm_unlink(char* name)
 
     debug(SHARE_MEMORY, "---------------(shm_unlink) Unlinking shared memory object %s\n", name);
 
-    auto it = shm_objects_.find(shm_name);
-    if (it == shm_objects_.end())
+    auto it = shm_objects_->find(shm_name);
+    if (it == shm_objects_->end())
     {
         //object does not exist
         debug(SHARE_MEMORY, "---------------object does not exist\n");
@@ -631,7 +634,7 @@ int SharedMemManager::shm_unlink(char* name)
     }
 
     SharedMemObject* shm_object = it->second;
-    shm_objects_.erase(it);
+    shm_objects_->erase(it);
 
     global_fd_list.remove(shm_object->getGlobalFileDescriptor());
 
@@ -649,7 +652,7 @@ int SharedMemManager::shm_unlink(char* name)
 ustl::string* SharedMemObject::name_ = nullptr;
 FileDescriptor* SharedMemObject::global_fd_ = nullptr;
 
-ustl::map<ustl::string, SharedMemObject*> SharedMemManager::shm_objects_;
+ustl::map<ustl::string, SharedMemObject*>* SharedMemManager::shm_objects_ = nullptr;
 
 FileDescriptor* SharedMemObject::getGlobalFileDescriptor()
 {

@@ -78,12 +78,12 @@ private:
   ustl::vector<SharedMemEntry*> shared_map_;
   vpn_t last_free_vpn_;
 
- static ustl::map<ustl::string, SharedMemObject*> shm_objects_;
+ static ustl::map<ustl::string, SharedMemObject*>* shm_objects_;
 
 public:
   Mutex shared_mem_lock_; // responsible for shared_map_ and last_free_vpn_
   // locking order: shared_mem_lock_ -> ipt_lock_ -> archmem_lock_
-  
+
   SharedMemManager();
   SharedMemManager(const SharedMemManager& other);
   ~SharedMemManager();
@@ -189,4 +189,3 @@ public:
 
     static FileDescriptor* getGlobalFileDescriptor();
 };
-
