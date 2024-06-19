@@ -186,8 +186,6 @@ size_t IPTManager::findPageToSwapOut()
     while(ppn_retval == INVALID_PPN && counter < 3)
     {
       counter++;
-      // kprintf("fifo_ppns.size() %d\n", fifo_ppns.size());   
-
           
       for(size_t i = 0; i <  fifo_ppns.size() && ppn_retval == INVALID_PPN; i++)
       {

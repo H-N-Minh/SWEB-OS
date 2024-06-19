@@ -14,8 +14,6 @@
 
 
 
-#define STACK_START USER_BREAK
-#define STACK_END (USER_BREAK / 2)
 
 class PageFaultHandler
 {

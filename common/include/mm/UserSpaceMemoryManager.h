@@ -20,6 +20,10 @@
 #define MAX_SHARED_MEM_VPN (MAX_SHARED_MEM_ADDRESS / PAGE_SIZE) - 1
 #define MIN_SHARED_MEM_VPN (MIN_SHARED_MEM_ADDRESS / PAGE_SIZE)
 
+
+#define STACK_START USER_BREAK
+#define STACK_END (USER_BREAK / 2)
+
 #define MAX_STACK_AMOUNT 5    // if this is changed then update the define in pthread.h in userspace 
 #define GUARD_MARKER 0xbadcafe00000ULL  
 
