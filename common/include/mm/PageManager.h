@@ -83,6 +83,8 @@ class PageManager
 
     uint32 getReferenceCount(uint64 page_number);
 
+    void incrementEntryReferenceCount(uint64 page_number);
+    void decrementEntryReferenceCount(uint64 page_number);
 
 
  

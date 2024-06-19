@@ -150,7 +150,7 @@ void PageFaultHandler::errorInPageFaultKillProcess()
 
 bool allLockRealeased(Mutex* shared_mem_lock, Mutex* heap_lock, Mutex* swap_lock, Mutex* archmem_lock, Mutex* ipt_lock)
 {
-  return !shared_mem_lock->isHeldBy(currentThread) && !heap_lock->isHeldBy(currentThread) && !swap_lock->isHeldBy(currentThread) && 
+  return !shared_mem_lock->isHeldBy(currentThread) && !heap_lock->isHeldBy(currentThread) && !swap_lock->isHeldBy(currentThread) &&
          !archmem_lock->isHeldBy(currentThread) && !ipt_lock->isHeldBy(currentThread);
 }
 
@@ -176,13 +176,13 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   ustl::vector<uint32> preallocated_pages;
   if((address < MIN_SHARED_MEM_ADDRESS) || (address > MAX_SHARED_MEM_ADDRESS))
   {
-    preallocated_pages = PageManager::instance()->preAlocatePages(4); 
+    preallocated_pages = PageManager::instance()->preAlocatePages(4);
   }
   else
   {
     preallocated_pages = PageManager::instance()->preAlocatePages(15);
   }
-  
+
 
   shared_mem_lock->acquire();
   swap_lock->acquire();
@@ -194,7 +194,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
 
   if(current_archmemory.isBitSet(vpn, BitType::PRESENT, false))
   {
-    debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Another thread already solved this pagefault. Do nothing\n"); 
+    debug(PAGEFAULT, "PageFaultHandler::handleValidPageFault: Another thread already solved this pagefault. Do nothing\n");
     archmem_lock->release();
     ipt_lock->release();
     heap_lock->release();
@@ -289,7 +289,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
   PageManager* pm = PageManager::instance();
 
   size_t vpn = address/PAGE_SIZE;
-  
+
   ustl::vector<uint32> preallocated_pages = pm->preAlocatePages(1);  //TODOs make sure that it gets freed in all cases
 
   ipt_lock->acquire();
@@ -319,7 +319,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
     pm-> releaseNotNeededPages(preallocated_pages);
     errorInPageFaultKillProcess();
   }
-    
+
   archmem_lock->release();
   ipt_lock->release();
 
