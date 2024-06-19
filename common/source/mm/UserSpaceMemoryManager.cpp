@@ -137,12 +137,6 @@ int UserSpaceMemoryManager::sanityCheck(size_t address)
     return 0;
   }
 
-  // UserThread* current_thread = (UserThread*) currentThread;
-  // if (address > current_thread->top_stack_ || address < (current_thread->top_stack_ - MAX_STACK_AMOUNT*PAGE_SIZE + sizeof(size_t)))
-  // {
-  //   debug(GROW_STACK, "UserSpaceMemoryManager::sanityCheck: address is not in range of growing stack\n");
-  //   return 0;
-  // }
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
   if (arch_memory->checkAddressValid(address))
   {
@@ -172,14 +166,6 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
     return NOT_RELATED_TO_GROWING_STACK;
   }
 
-  // check if the guards are intact. this also checks overflow underflow
-  int is_guard_valid = checkGuardValid(top_current_stack);
-  if (is_guard_valid == 0)
-  {
-    debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: guards are corrupted or not found. Segfault!!\n");
-    return GROWING_STACK_FAILED;
-  }
-
   finalSanityCheck(address, top_current_stack);
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: growing stack request is valid\n");
 
@@ -195,14 +181,10 @@ void UserSpaceMemoryManager::finalSanityCheck(size_t address, size_t top_current
   assert(address < top_current_stack && "address is not within range of growing stack");
   assert(address > top_current_stack - PAGE_SIZE*MAX_STACK_AMOUNT && "address is not within range of growing stack");
 
-  size_t* guard1 = (size_t*) top_current_stack;
-  size_t* guard2 = (size_t*) (top_current_stack - sizeof(size_t)* (META_SIZE - 1));
-  assert(guard1 && "guard1 is corrupted");
-  assert(guard2 && "guard2 is corrupted");
 }
 
 
-int UserSpaceMemoryManager::increaseStackSize(size_t address)
+int UserSpaceMemoryManager::increaseStackSize(size_t address, ustl::vector<uint32>& preallocated_pages)
 {
   ArchMemory* arch_memory = &((UserThread*) currentThread)->process_->loader_->arch_memory_;
   assert(arch_memory->archmemory_lock_.heldBy() == currentThread);
@@ -220,8 +202,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address)
   
   // TODOMINH: growing stack  now has broken locking because of new allocPPN rule
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
-  uint32 new_ppn = PageManager::instance()->allocPPN(); //TODOMINH: this alloc and the prealloc below should be put outside locks
-  ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(3); // for mapPage later
+  uint32 new_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true, preallocated_pages);
   PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 

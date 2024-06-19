@@ -20,7 +20,7 @@ char const *user_progs[] = {
                             // "usr/SecondChangeBetterThanRandom.sweb",
 
                             //  "/usr/execTests.sweb",     //Changed so that the use swapping
-                             "/usr/forkTests.sweb",     //When you run all  
+                            //  "/usr/forkTests.sweb",     //When you run all  
 
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",
@@ -49,7 +49,7 @@ char const *user_progs[] = {
                            
 
 // UserSpace Memory -------------------------------------------------
-                            // "/usr/growingStackTests.sweb",
+                            "/usr/growingStackTests.sweb",
                             // "/usr/mallocTests.sweb",
                             // "/usr/reallocTests.sweb",
 

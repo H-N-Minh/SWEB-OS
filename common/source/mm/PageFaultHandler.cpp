@@ -44,10 +44,10 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user, bo
     debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
     return IS_PRESENT;
   }
-  // else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
-  // {
-  //   return USER;
-  // }
+  else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
+  {
+    return USER;
+  }
   else
   {
     // everything seems to be okay
@@ -83,6 +83,10 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
   {
     handlePresentPageFault(address, writing);
   }
+  else if(status == USER)
+  {
+    handleUserPageFault(address);
+  }
   else  //status INVALID
   {
     errorInPageFaultKillProcess();
@@ -111,7 +115,7 @@ void PageFaultHandler::enterPageFault(size_t address, bool user, bool present, b
 
 
 
-int PageFaultHandler::checkGrowingStack(size_t address)
+int PageFaultHandler::checkGrowingStack(size_t address, ustl::vector<uint32>& preallocated_pages)
 {
     debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Checking if its a growing stack %p \n", (void*)address);
     UserSpaceMemoryManager* manager = ((UserThread*) currentThread)->process_->user_mem_manager_;
@@ -124,7 +128,7 @@ int PageFaultHandler::checkGrowingStack(size_t address)
       return status;
     }
 
-    status = manager->increaseStackSize(address);
+    status = manager->increaseStackSize(address, preallocated_pages);
     return status;
 }
 
@@ -317,27 +321,19 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 
 //Code for growing stack:
 
-  // else if (status == USER)                //TODOs: Does not work in combination with swapping - add in again later
-  // {
-    // IPTManager::instance()->IPT_lock_.acquire();
-    // currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
-    // int retval = checkGrowingStack(address);
-    // currentThread->loader_->arch_memory_.archmemory_lock_.release();
-    //  IPTManager::instance()->IPT_lock_.release();
-    // if (retval == GROWING_STACK_FAILED)
-    // {
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Could not increase stack size.\n");
-    //   errorInPageFaultKillProcess();
-    // }
-    // else if(retval == NOT_RELATED_TO_GROWING_STACK)
-    // {
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: This page fault is not related to growing stack \n");
-    //   currentThread->loader_->loadPage(address);
-    // }
-    // else
-    // {
-    //   assert(retval == GROWING_STACK_VALID);
-    //   debug(GROW_STACK, "PageFaultHandler::checkPageFaultIsValid: Stack size increased successfully\n");
-    // }
-  // }
+  void PageFaultHandler::handleUserPageFault(size_t address)                //TODOs: Does not work in combination with swapping - add in again later
+  {
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);
+    IPTManager::instance()->IPT_lock_.acquire();
+    currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
+    int retval = checkGrowingStack(address, preallocated_pages);
+    IPTManager::instance()->IPT_lock_.release();
+    currentThread->loader_->arch_memory_.archmemory_lock_.release();
+    PageManager::instance()->releaseNotNeededPages(preallocated_pages);
+
+    if(retval != GROWING_STACK_VALID)
+    {
+      handleValidPageFault(address);
+    }
+  }
 

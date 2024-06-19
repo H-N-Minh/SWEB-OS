@@ -69,7 +69,7 @@ class UserSpaceMemoryManager
      * @param address the address to increase the stack size at
      * @return 0 on success, else return -1
     */
-    int increaseStackSize(size_t address);
+    int increaseStackSize(size_t address, ustl::vector<uint32>& preallocated_pages);
 
     /**
      * @return the top of the page of the given address. 0 is never returned
