@@ -112,14 +112,19 @@ class ArchMemory
     
     void deleteEverythingExecpt(size_t virtual_page);
 
-   
-    
 
 
 
+
+    int isCOW(size_t virtual_addr);
+    bool isSwapped(size_t virtual_addr);
+    bool isPresent(size_t virtual_addr);
+    int isNotWriteable(size_t virtual_addr);
+
+    void copyPageTable(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
-    
+
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
@@ -132,7 +137,7 @@ class ArchMemory
 
 
 
-     
+
 
     bool isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present);
     size_t getDiskLocation(size_t vpn);
@@ -152,7 +157,7 @@ class ArchMemory
 
     void setSharedBit(size_t vpn);
 
-    void resetSecondChange(size_t vpn); 
+    void resetSecondChange(size_t vpn);
 
     void resetAccessBitsAndSetSecondChange(size_t vpn);
 
