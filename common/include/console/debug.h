@@ -52,7 +52,7 @@ const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
 const size_t SWAPTHREAD          = Ansi_Yellow  | OUTPUT_ENABLED;
 
 const size_t PIPE               = Ansi_Cyan ;
-const size_t FILEDESCRIPTOR     = Ansi_Cyan;//    | OUTPUT_ENABLED;
+const size_t FILEDESCRIPTOR     = Ansi_Cyan    | OUTPUT_ENABLED;
 
 const size_t FORK               = Ansi_Magenta     | OUTPUT_ENABLED;
 const size_t PAGEFAULT_TEST     = Ansi_Red     | OUTPUT_ENABLED;
@@ -91,7 +91,7 @@ const size_t DENTRY             = Ansi_Blue;
 const size_t INODE              = Ansi_Blue;
 const size_t PATHWALKER         = Ansi_Yellow;
 const size_t PSEUDOFS           = Ansi_Yellow;
-const size_t VFSSYSCALL         = Ansi_Yellow;
+const size_t VFSSYSCALL         = Ansi_Yellow | OUTPUT_ENABLED;
 const size_t VFS                = Ansi_Yellow; // | OUTPUT_ENABLED;
 const size_t VFS_FILE           = Ansi_Yellow;
 const size_t SUPERBLOCK         = Ansi_Yellow;
