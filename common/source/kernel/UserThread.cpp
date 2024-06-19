@@ -318,20 +318,19 @@ void UserThread::exitThread(void* value_ptr)
   process_->threads_.erase(exiting_thread_iterator);
 
   // if this is last thread of process, clear the thread_retval_map_
-  bool last_thread = false;
   if(process_->threads_.size() == 0)  // last thread in process
   {
     debug(USERTHREAD, "UserThread::exitThread: last thread alive\n");
-    last_thread = true;
+    last_thread_alive_ = true;
     process_->thread_retval_map_.clear();
 
     debug(USERTHREAD, "UserThread::~UserThread: unmapping all shared mem pages (if theres any)\n");
-    process_->user_mem_manager_->shared_mem_manager_->unmapAllPages(&loader_->arch_memory_);
+    process_->user_mem_manager_->shared_mem_manager_->unmapAllPages();
   }
 
   // if its not last thread alive, store the return value
   join_state_lock_.acquire();
-  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread)
+  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)
   {
     debug(USERTHREAD, "UserThread::exitThread: saving return value in thread_retval_map_ in case the thread is joinable\n");
     process_->thread_retval_map_[getTID()] = value_ptr;
@@ -352,10 +351,9 @@ void UserThread::exitThread(void* value_ptr)
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
   process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
 
-  if(last_thread)
+  if(last_thread_alive_)
   {
       // for waitpid: if its the last thread of process then process dying, wake the waiting processes
-    last_thread_alive_ = true;
     ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
     ProcessRegistry::instance()->process_exit_status_map_[process_->pid_] = (size_t)value_ptr;
     ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();

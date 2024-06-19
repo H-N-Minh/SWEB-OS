@@ -16,30 +16,41 @@
 #define PAGES_IN_ARRAY N_MEGABYTE/PAGESIZE
 
 
-size_t big_array2[ELEMENTS_IN_ARRAY];  //5 Megabyes
+size_t big_array[ELEMENTS_IN_ARRAY];  //5 Megabyes
 
 
 
 //Trigger out of memory
-int pra2()
+int ipt2()
 {
-  int hit;
-  int miss;
-  getPRAstats(&hit, &miss);
-  printf("NFU PRA: Hit: %d, Miss: %d (before test)\n", hit, miss);
+  setPRA(0);  // 0 for random pra, 1 for NFU
+  for(int i = 0; i < PAGES_IN_ARRAY; i++)
+  {
+    big_array[i * (PAGESIZE / 8)] = (size_t)i;
+    if (i%100 == 0)
+    {
+      // assertIPT();
+    }
+    
+  }
+
+  int switched_pra = 0;
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    big_array2[i * (PAGESIZE / 8)] = (size_t)i;
+    assert(big_array[i * (PAGESIZE / 8)] == i);
+    if (i%100 == 0)
+    {
+      // assertIPT();
+    }
+    if (!switched_pra && i > 1000)
+    {
+      setPRA(1);
+      switched_pra = 1;
+    }
+    
+    
   }
-
-
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)
-  {
-    assert(big_array2[i * (PAGESIZE / 8)] == i);
-  }
-  getPRAstats(&hit, &miss);
-  printf("NFU PRA: Hit: %d, Miss: %d (after test)\n", hit, miss);
 
   return 0;
 }

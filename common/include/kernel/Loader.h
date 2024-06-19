@@ -13,7 +13,7 @@ class Loader
 {
   public:
     Loader(ssize_t fd);
-    Loader(Loader &src, int32 fd, ustl::vector<uint32>& preallocated_pages);
+    Loader(const Loader &src, int32 fd, ustl::vector<uint32>& preallocated_pages);
     ~Loader();
 
     /**

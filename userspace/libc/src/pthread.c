@@ -455,7 +455,6 @@ int pthread_spin_lock(pthread_spinlock_t *lock)
   if(!parameters_are_valid((size_t)lock, 0) || lock->initialized_ != SPINLOCK_INITALIZED || lock->held_by_ == current_thread_ptr)
   {
     //lock not initalized or invalid lock_ptr or lock is allready held by current thread
-    assert(0);
     return -1;
   }
 

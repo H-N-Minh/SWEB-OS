@@ -20,10 +20,6 @@
 #define MAX_SHARED_MEM_VPN (MAX_SHARED_MEM_ADDRESS / PAGE_SIZE) - 1
 #define MIN_SHARED_MEM_VPN (MIN_SHARED_MEM_ADDRESS / PAGE_SIZE)
 
-
-#define STACK_START USER_BREAK
-#define STACK_END (USER_BREAK / 2)
-
 #define MAX_STACK_AMOUNT 5    // if this is changed then update the define in pthread.h in userspace 
 #define GUARD_MARKER 0xbadcafe00000ULL  
 
@@ -32,8 +28,6 @@ class UserSpaceMemoryManager
 {
   public:
     UserSpaceMemoryManager(Loader* loader);
-    UserSpaceMemoryManager(const UserSpaceMemoryManager& other, Loader* loader);
-
     ~UserSpaceMemoryManager();
 
     size_t current_break_;
@@ -73,7 +67,7 @@ class UserSpaceMemoryManager
      * @param address the address to increase the stack size at
      * @return 0 on success, else return -1
     */
-    int increaseStackSize(size_t address, ustl::vector<uint32>& preallocated_pages);
+    int increaseStackSize(size_t address);
 
     /**
      * @return the top of the page of the given address. 0 is never returned

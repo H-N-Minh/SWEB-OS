@@ -9,7 +9,7 @@
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
 
-#define NUM_THREADS 20     // 20 threads, which fork into 20 processes
+#define NUM_THREADS 100     // 100 threads, which fork into 200 threads and 100 processes
 
 #define FAILURE9 666
 

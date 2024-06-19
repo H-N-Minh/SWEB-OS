@@ -7,14 +7,13 @@
 #include "Mutex.h"
 #include "IPTEntry.h"
 
+
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
-enum PRA_TYPE {RANDOM, NFU, SECOND_CHANGE};
+enum PRA_TYPE {RANDOM, NFU, SIMPLE};
 
 // class IPTEntry;
 class ArchMemory;
 
-typedef size_t fake_ppn_t;    // index of the 
-typedef size_t vpn_t;
 typedef size_t ppn_t;
 typedef size_t diskoffset_t;
 
@@ -30,20 +29,6 @@ public:
   ustl::map<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
 
-  ustl::vector<uint32> fifo_ppns;
-  unsigned last_index_ = 0;
-
-  // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
-  // Therefore this map exists. It assigns a fake ppn temprorarily, until the page is actually allocated a real ppn.
-  ustl::map<ArchMemory*, ustl::map<vpn_t, fake_ppn_t>> fake_ppn_map_; 
-
-  // the map to tracks backwards from fake ppn to all the archmem that is sharing this fake ppn. 
-  // This is used when the shared page is assigned a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
-  ustl::multimap<fake_ppn_t, ArchmemIPT*> inverted_fake_ppn_;
-
-  fake_ppn_t fake_ppn_counter_ = 0; // for generating fake ppn
-
-  Mutex fake_ppn_lock_; // responsible for fake_ppn_map_ and inverted_fake_ppn_ and fake_ppn_counter_
 
   IPTManager();
   ~IPTManager();
@@ -118,25 +103,13 @@ public:
   */
   void debugRandomGenerator();
   
-  /**
-   * Is called when a new shared page is created. Adding entry to both fake_ppn_map_ and inverted_fake_ppn_
-  */
-  void insertFakePpnEntry(ArchMemory* archmem, size_t vpn);
 
-  /**
-   * Is called when a page fault happens, and the shared page receives a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
-   * this also removes entry from fake_ppn_map_ and inverted_fake_ppn_
-  */
-  void mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ustl::vector<uint32>& preallocated_pages);
+  // tobe removed
+  bool isThereAnyPageToSwapOut();
 
-  /**
-   * Is called when archmemory copy constructor. Add the child to the same shared page as the parent. Adding to both fake_ppn_map_ and inverted_fake_ppn_
-  */
-  void copyFakedPages(ArchMemory* parent, ArchMemory* child);
 
-  /**
-   * this is for when a shared page is unmmaped when its not even mapped yet. removing entry from fake_ppn_map_
-  */
-  void unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory);
+  private:
 
+    int pages_in_ram_ = 0;  //TODOs: not used at the moment
+    int pages_on_disk_ = 0;  //TODOs: not used at the moment
 };

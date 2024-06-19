@@ -32,8 +32,6 @@ public:
   // for PRA, keep track of how many times this PPN is accessed
   uint32 access_counter_;
 
-  size_t last_disk_offset_{0};
-
 
   IPTEntry();
   ~IPTEntry();

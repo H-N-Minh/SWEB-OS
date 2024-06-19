@@ -12,7 +12,6 @@ extern "C" {
 
 #define __RANDOM_PRA__ 0
 #define __NFU_PRA__ 1
-#define __SECOND_CHANCE_PRA__ 2
 
 /**
  * Creates a new process.
@@ -29,7 +28,6 @@ extern int assertIPT();
 extern int setPRA(int pra);
 extern int getPRAstats(int* hit_count, int* miss_count);
 extern int checkRandomPRA();
-extern int getSwappingStats(int* disk_writes, int* disk_reads, int* discard_unchanged_page, int* reuse_same_disk_location);
 
 #ifdef __cplusplus
 }

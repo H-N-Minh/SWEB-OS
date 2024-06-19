@@ -258,29 +258,41 @@ uint32 PageManager::allocPPN(uint32 page_size)
   if (found == 0)
   {
     size_t ppn = 0;
-
-    debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
-    SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
-
-    // wait for the swapping thread to be give a free page
-    swapper->swap_out_lock_.acquire();
-    while (!swapper->isFreePageAvailable())
+    if(DIRECT_SWAPPING)
     {
-      swapper->swap_out_cond_.wait();
-      if(swapper->memory_full_try_alloc_again_)
-      {
-        swapper->memory_full_try_alloc_again_ = false;
-        swapper->swap_out_lock_.release();
-        return allocPPN(page_size);
-      }
+      debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
+      IPTManager::instance()->IPT_lock_.acquire();
+      ppn = findPageToSwapOut(); //TODOs!!!!!!!!!
+      SwappingManager::instance()->swapOutPage(ppn);
+      IPTManager::instance()->IPT_lock_.release();
+
+      // clear the new page and return it
+      memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
+      debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
     }
-    ppn = swapper->getFreePage();
-    swapper->swap_out_lock_.release();
+    else if(ASYNCHRONOUS_SWAPPING)
+    {
+      debug(SWAPPING, "PageManager::allocPPN: out of memory, start swapping\n");
+      SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
 
-    // clear the new page and return it
-    memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
-    debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %p. (swapped in)\n", (void*)ppn);
+      // wait for the swapping thread to be give a free page
+      swapper->swap_out_lock_.acquire();
+      while (!swapper->isFreePageAvailable())
+      {
+        swapper->swap_out_cond_.wait();
+      }
+      ppn = swapper->getFreePage();
+      swapper->swap_out_lock_.release();
 
+      // clear the new page and return it
+      memset((void*)ArchMemory::getIdentAddressOfPPN(ppn), 0, page_size);
+      debug(SWAPPING, "PageManager::allocPPN: Swapped successful, New ppn is %ld. (swapped in)\n", ppn);
+
+    }
+    else
+    {
+      assert(false && "PageManager::allocPPN: Out of memory / No more free physical pages");
+    }
     assert(ppn != 0);
     return ppn;
   }
@@ -354,7 +366,7 @@ uint32 PageManager::getNumPagesForUser() const
 
 void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype)
 {
-  debug(PM, "PageManager::incrementReferenceCount with offset: %p, vpn: %p, archmemory: %p.\n",(void*)offset, (void*)vpn, archmemory);
+  debug(PM, "PageManager::incrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
 
   IPTManager::instance()->insertEntryIPT(maptype, offset, vpn, archmemory);
@@ -381,7 +393,7 @@ void PageManager::incrementReferenceCount(uint64 offset, size_t vpn, ArchMemory*
 
 void PageManager::decrementReferenceCount(uint64 offset, size_t vpn, ArchMemory* archmemory, IPTMapType maptype)
 {
-  debug(PM, "PageManager::decrementReferenceCount with offset: %p, vpn: %p, archmemory: %p.\n", (void*)offset, (void*)vpn, archmemory);
+  debug(PM, "PageManager::decrementReferenceCount with offset: %ld, vpn: %ld, archmemory: %p.\n",offset, vpn, archmemory);
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
 
   IPTManager::instance()->removeEntryIPT(maptype, offset, vpn, archmemory);
@@ -413,7 +425,7 @@ void PageManager::setReferenceCount(uint64 page_number, uint32 reference_count)
   page_reference_counts_[page_number] = reference_count;
 }
 
-uint32 PageManager::getReferenceCount(uint64 page_number) // ppn
+uint32 PageManager::getReferenceCount(uint64 page_number)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "IPT need to be locked");
   // Check if the page number is in the map
@@ -458,4 +470,25 @@ size_t PageManager::getPreAlocatedPage(ustl::vector<uint32>& pre_alocated_pages)
   return ppn;
 }
 
+//TODO: At the moment it does nonesens
+size_t PageManager::findPageToSwapOut()
+{
+  int counter = 0;
+  bool key_in_ipt = false;
+  while(!key_in_ipt)
+  {
+    counter++;
+    if(counter == 2000)
+    {
+      assert(0 && "No page to swap out\n");
+    }
+    possible_ppn_++;    
+    if(possible_ppn_ > 2016)
+    {
+      possible_ppn_ = 1009;
+    }
+    key_in_ipt = IPTManager::instance()->isKeyInMap(possible_ppn_, IPTMapType::RAM_MAP);
+  }
+  return possible_ppn_;
+}
 
