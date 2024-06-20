@@ -48,7 +48,7 @@ void SwappingManager::swapOutPage(size_t ppn)
 
   ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   assert(virtual_page_infos.size() > 0);
-  lockArchmemorys(virtual_page_infos);  //TODOs not in right order yet
+  lockArchmemorys(virtual_page_infos);
 
   setPagesToNotPresent(virtual_page_infos);
 
@@ -87,7 +87,7 @@ void SwappingManager::swapOutPage(size_t ppn)
       }
     }
   }
-  resetDirtyBitSetBeenDirtyBits(virtual_page_infos);  //todos: remove to check if is makes problems
+  resetDirtyBitSetBeenDirtyBits(virtual_page_infos);
 
   //Find free disk_offset
   size_t disk_offset = disk_offset_counter_;
@@ -214,44 +214,6 @@ void SwappingManager::updatePageTableEntriesForSwapIn(ustl::vector<ArchmemIPT*>&
     size_t vpn = virtual_page_info->vpn_;
     debug(SWAPPING, "SwappingManager::swapInPage: vpn: %p, archmemory: %p (disk offset %p -> ppn %p).\n", (void*)vpn, archmemory, (void*)disk_offset, (void*)ppn);
     archmemory->updatePageTableEntryForSwapIn(vpn, ppn);
-  }
-}
-
-
-void SwappingManager::lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos)
-{
-  debug(SWAPPING, "SwappingManager::unlock_archmemories: locking archmem in order of lowest ArchMemory* address to highest\n");
-  ustl::vector<ArchMemory*> archmemories;
-  for (ArchmemIPT* virtual_page_info : virtual_page_infos)
-  {
-    assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
-    assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
-    archmemories.push_back(virtual_page_info->archmem_);
-  }
-  ustl::sort(archmemories.begin(), archmemories.end(), ustl::less<ArchMemory*>());
-
-  for(ArchMemory* archmemory : archmemories)
-  {
-    archmemory->archmemory_lock_.acquire();
-  }
-}
-
-
-void SwappingManager::unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos)
-{
-  debug(SWAPPING, "SwappingManager::unlock_archmemories: unlocking archmem in order of highest ArchMemory* to lowest ArchMemory*\n");
-  ustl::vector<ArchMemory*> archmemories;
-  for (ArchmemIPT* virtual_page_info : virtual_page_infos)
-  {
-    assert(virtual_page_info && "unlock_archmemories(): ArchmemIPT* is null");
-    assert(virtual_page_info->archmem_ && "unlock_archmemories(): ArchMemory* is null");
-    archmemories.push_back(virtual_page_info->archmem_);
-  }
-  ustl::sort(archmemories.begin(), archmemories.end(), ustl::greater<ArchMemory*>());
-
-  for(ArchMemory* archmemory : archmemories)
-  {
-    archmemory->archmemory_lock_.release();
   }
 }
 

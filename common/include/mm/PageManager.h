@@ -102,8 +102,6 @@ class PageManager
 
     size_t HEAP_PAGES;
 
-    inline static int possible_ppn_ = 1009; //TODOs:not atomic and bad
-
     size_t findPageToSwapOut();
 
 };

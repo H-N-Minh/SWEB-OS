@@ -70,7 +70,7 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
       {
         IPTManager::instance()->IPT_lock_.acquire();
         loader_->arch_memory_.archmemory_lock_.acquire();
-        if (loader_->arch_memory_.checkAddressValid(old_top_vpn * PAGE_SIZE))  //TODOs not sure if this is correct
+        if (loader_->arch_memory_.checkAddressValid(old_top_vpn * PAGE_SIZE))
         {
           loader_->arch_memory_.unmapPage(old_top_vpn);
         }

@@ -27,8 +27,7 @@ int64 UserProcess::pid_counter_ = 1;
 UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 terminal_number)
   : fd_(VfsSyscall::open(filename, O_RDONLY)), working_dir_(fs_info), filename_(filename), terminal_number_(terminal_number),
     threads_lock_("threads_lock_"), one_thread_left_lock_("one_thread_left_lock_"),
-    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable(), 
-    process_state_lock_("process_state_lock_")
+    one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
 {
   ProcessRegistry::instance()->processStart();
   if (fd_ >= 0)
@@ -68,8 +67,7 @@ UserProcess::UserProcess(ustl::string filename, FileSystemInfo *fs_info, uint32 
 UserProcess::UserProcess(const UserProcess& other)
   : fd_(VfsSyscall::open(other.filename_, O_RDONLY)), working_dir_(new FileSystemInfo(*other.working_dir_)), filename_(other.filename_), 
     terminal_number_(other.terminal_number_), threads_lock_("threads_lock_"),
-    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable(),
-    process_state_lock_("process_state_lock_")
+    one_thread_left_lock_("one_thread_left_lock_"), one_thread_left_condition_(&one_thread_left_lock_, "one_thread_left_condition_"), localFileDescriptorTable()
 {
   debug(FORK, "Copy-ctor UserProcess: start copying from process (pid:%u) \n", other.pid_);
   ProcessRegistry::instance()->processStart(); //should also be called if you fork a process
@@ -89,8 +87,18 @@ UserProcess::UserProcess(const UserProcess& other)
 
   IPTManager::instance()->IPT_lock_.acquire();
   other.loader_->arch_memory_.archmemory_lock_.acquire();
-  int check_that_count_is_the_same = other.loader_->arch_memory_.countArchmemPages();  //TODOs
-  assert(needed_preallocated_pages + 10 > check_that_count_is_the_same);
+  int check_that_count_is_the_same = other.loader_->arch_memory_.countArchmemPages();
+  int counter = 0;
+  while(needed_preallocated_pages + 10 < check_that_count_is_the_same)
+  {
+    counter++;
+    other.loader_->arch_memory_.archmemory_lock_.release();
+    IPTManager::instance()->IPT_lock_.release();
+    PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(needed_preallocated_pages + 10 + counter); 
+    IPTManager::instance()->IPT_lock_.acquire();
+    other.loader_->arch_memory_.archmemory_lock_.acquire();
+  }
   loader_ = new Loader(*other.loader_, fd_, preallocated_pages);
   other.loader_->arch_memory_.archmemory_lock_.release();
   IPTManager::instance()->IPT_lock_.release();
@@ -333,7 +341,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
 
   argc = 0;
   exec_array_offset = 0;
-  // TODOS: why not check the return value here?
+
   check_parameters_for_exec(argv, argc, exec_array_offset);
 
 
@@ -384,7 +392,6 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   fd_ = execv_fd;
 
   //create fresh user registers for the thread (only leave the cr3 the same)
-  // TODOS: memleak, this overwrites the existing user registers (calls new again)
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
   currentThread->user_registers_->cr3 = old_cr3;
 
@@ -486,7 +493,6 @@ void UserProcess::cancelAllOtherThreads()
   UserThread& currentUserThread = *((UserThread*)currentThread);
   assert(threads_lock_.heldBy() == currentThread);
 
-  // TODOs: what if a thread is currently in pthread_create? The new thread is not killed
   for (auto& thread : threads_)
   {
     if(thread != &currentUserThread)

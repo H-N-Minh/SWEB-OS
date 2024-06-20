@@ -44,8 +44,9 @@ void* malloc(size_t size)
     createNewMemoryBlock(first_memory_block_, size, 0, first_memory_block_ + 1, NULL);
     addOverflowProtection(first_memory_block_);
     used_block_counts_++;
+    void* ptr = first_memory_block_->address_;
     pthread_spin_unlock(&memory_lock);
-    return first_memory_block_->address_;
+    return ptr;
   }
   else
   {
@@ -76,8 +77,9 @@ void* malloc(size_t size)
         }
         next_memory_block->is_free_ = 0;
         used_block_counts_++;
+        void* ptr2 = next_memory_block->address_;
         pthread_spin_unlock(&memory_lock);
-        return next_memory_block->address_;
+        return ptr2;
       }
       //last element of linked list reached
       else if(next_memory_block->next_ == NULL)
@@ -102,8 +104,9 @@ void* malloc(size_t size)
         used_block_counts_++;
         next_memory_block->next_ = memory_block_new;
 
+        void* ptr3 = memory_block_new->address_;
         pthread_spin_unlock(&memory_lock);
-        return memory_block_new->address_;
+        return ptr3;
       }
       else
       {
@@ -267,7 +270,7 @@ void* realloc(void *ptr, size_t size)
     if(block_to_realloc->next_ && block_to_realloc->next_->is_free_ == 1)
     {
       MemoryBlock* new_block =  (MemoryBlock*)((size_t)block_to_realloc + bytesNeededForMemoryBlock(size));
-      size_t new_size = size_left + block_to_realloc->next_->size_;                          //TODOs - check for unallocated space in between
+      size_t new_size = size_left + block_to_realloc->next_->size_; 
       createNewMemoryBlock(new_block, new_size, 0, new_block + 1, block_to_realloc->next_);
       addOverflowProtection(new_block);
       block_to_realloc->next_ = new_block;
@@ -312,8 +315,9 @@ void* realloc(void *ptr, size_t size)
       }
       block_to_realloc->size_ = size;
       addOverflowProtection(block_to_realloc);
+      void* ptr2 = block_to_realloc->address_;
       pthread_spin_unlock(&memory_lock);
-      return block_to_realloc->address_;
+      return ptr2;
     }
     else
     {
@@ -341,8 +345,9 @@ void* realloc(void *ptr, size_t size)
           block_to_realloc->next_ = new_block;
         }
         addOverflowProtection(block_to_realloc);
+        void* ptr3 = block_to_realloc->address_;
         pthread_spin_unlock(&memory_lock);
-        return block_to_realloc->address_;     //TODOs: i should probably store this in tmp variable before releasing lock and also check for the others
+        return ptr3;
       }
     }
   }
@@ -406,8 +411,6 @@ int checkOverflowProtection(MemoryBlock* memory_block)
 }
 
 
-
-//TODOs if i free check if there is space "free" before (not in the size of previous), if so add this to the freed space
 
 void* malloc_unlocked(size_t size)
 {

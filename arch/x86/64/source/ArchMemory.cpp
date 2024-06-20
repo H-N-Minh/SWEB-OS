@@ -822,12 +822,12 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
-    else if(bit == ACCESSED && pt_entry->accessed) //TODOs - before we also check for presenet?
+    else if(bit == ACCESSED && pt_entry->accessed)
     {
       // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  
     }
-    else if(bit == SECONDCHANGE && pt_entry->second_change) //TODOs - before we also check for presenet?
+    else if(bit == SECONDCHANGE && pt_entry->second_change)
     {
       // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       return true;  

@@ -403,7 +403,7 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   }
 }
 
-void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)         //Todos does not delete but dont know where because i need it after remove
+void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntry called but IPT not locked\n");
 

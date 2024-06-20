@@ -44,7 +44,7 @@ inline int PageFaultHandler::checkPageFaultIsValid(size_t address, bool user, bo
     debug(PAGEFAULT, "You got a pagefault even though the address is mapped.\n");
     return IS_PRESENT;
   }
-  else if(user)            //TODOs: growingstack disabled for now - when adding again make sure that it works in combination with swapping
+  else if(user)
   {
     return USER;
   }
@@ -211,7 +211,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     assert(disk_offset != 0);
 
     swapper->addSwapIn(disk_offset, &preallocated_pages);
-    archmem_lock->release();  //TODOs: we need to check if ipt entry still exist and page is still swapped out !!!
+    archmem_lock->release();
     ipt_lock->release();
 
     while (swapper->isOffsetInMap(disk_offset))
@@ -290,7 +290,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 
   size_t vpn = address/PAGE_SIZE;
 
-  ustl::vector<uint32> preallocated_pages = pm->preAlocatePages(1);  //TODOs make sure that it gets freed in all cases
+  ustl::vector<uint32> preallocated_pages = pm->preAlocatePages(1);
 
   ipt_lock->acquire();
   archmem_lock->acquire();
@@ -330,7 +330,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 
 //Code for growing stack:
 
-  void PageFaultHandler::handleUserPageFault(size_t address)                //TODOs: Does not work in combination with swapping - add in again later
+  void PageFaultHandler::handleUserPageFault(size_t address)
   {
     ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);
     IPTManager::instance()->IPT_lock_.acquire();
