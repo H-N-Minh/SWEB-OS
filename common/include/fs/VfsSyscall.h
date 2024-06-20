@@ -1,7 +1,8 @@
 #pragma once
 
 #include "types.h"
-
+#include "Inode.h"
+#include "Dentry.h"
 
 class Dirent;
 class Dentry;
@@ -10,6 +11,15 @@ class FileDescriptor;
 class VfsSyscall;
 class Path;
 class FileSystemInfo;
+
+// struct SharedMemoryObject {
+//     ustl::string name;
+//     void* address;
+//     size_t size;
+//     uint32 oflag;
+//     Inode* inode;
+//     Dentry* dentry;
+// };
 
 class VfsSyscall
 {
@@ -143,6 +153,14 @@ class VfsSyscall
      * @return the file descriptor object
      */
     static FileDescriptor* getFileDescriptor(uint32 fd);
+
+    // SharedMemManager sharedMemManager;
+    // ustl::map<ustl::string, SharedMemoryObject> shared_memory_table;
+    //
+    // static int32 shm_open(const char* pathname, uint32 flags, uint32 mode);
+ 
+
+ 
 
   private:
     VfsSyscall();

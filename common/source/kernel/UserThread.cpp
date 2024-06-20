@@ -318,10 +318,11 @@ void UserThread::exitThread(void* value_ptr)
   process_->threads_.erase(exiting_thread_iterator);
 
   // if this is last thread of process, clear the thread_retval_map_
+  bool last_thread = false;
   if(process_->threads_.size() == 0)  // last thread in process
   {
     debug(USERTHREAD, "UserThread::exitThread: last thread alive\n");
-    last_thread_alive_ = true;
+    last_thread = true;
     process_->thread_retval_map_.clear();
 
     debug(USERTHREAD, "UserThread::~UserThread: unmapping all shared mem pages (if theres any)\n");
@@ -330,7 +331,7 @@ void UserThread::exitThread(void* value_ptr)
 
   // if its not last thread alive, store the return value
   join_state_lock_.acquire();
-  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread_alive_)
+  if(join_state_ != PTHREAD_CREATE_DETACHED && !last_thread)
   {
     debug(USERTHREAD, "UserThread::exitThread: saving return value in thread_retval_map_ in case the thread is joinable\n");
     process_->thread_retval_map_[getTID()] = value_ptr;
@@ -351,9 +352,10 @@ void UserThread::exitThread(void* value_ptr)
   debug(SYSCALL, "pthreadExit: Thread %ld unmapping thread's virtual page, then kill itself\n",getTID());
   process_->unmapThreadStack(&loader_->arch_memory_, top_stack_);
 
-  if(last_thread_alive_)
+  if(last_thread)
   {
       // for waitpid: if its the last thread of process then process dying, wake the waiting processes
+    last_thread_alive_ = true;
     ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
     ProcessRegistry::instance()->process_exit_status_map_[process_->pid_] = (size_t)value_ptr;
     ProcessRegistry::instance()->process_exit_status_map_condition_.broadcast();
@@ -376,7 +378,7 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
     return -1;
   }
   debug(USERPROCESS, "UserThread::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
-  
+
   JoinState join_state;
   if(attr)
   {
@@ -390,10 +392,10 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
   {
     join_state = PTHREAD_CREATE_JOINABLE;
   }
-  
+
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
-  
+
   process_->threads_lock_.acquire();
   if(new_thread)
   {
@@ -402,7 +404,7 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
     process_->threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
     size_t new_ID = new_thread->getTID();
-    process_->threads_lock_.release();  
+    process_->threads_lock_.release();
     *thread = new_ID;
     return 0;
   }
@@ -466,5 +468,3 @@ int UserThread::detachThread(size_t thread_id)
 
   return 0;
 }
-
-

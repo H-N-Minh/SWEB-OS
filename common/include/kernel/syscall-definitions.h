@@ -50,14 +50,13 @@
 #define sc_setPRA 703
 #define sc_getPRAstats 704
 #define sc_checkRandomPRA 705
+#define sc_swappingStats 706
 
 #define sc_mmap 800
 #define sc_munmap 801
 
 
+#define sc_free_pages 604
 
-
-
-
-
-
+#define sc_shm_open 100
+#define sc_shm_unlink 101

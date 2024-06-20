@@ -2,8 +2,6 @@
 #include "kstring.h"
 #include "assert.h"
 #include "Dirent.h"
-#include "Inode.h"
-#include "Dentry.h"
 #include "Superblock.h"
 #include "File.h"
 #include "FileDescriptor.h"
@@ -463,3 +461,35 @@ uint32 VfsSyscall::getFileSize(uint32 fd)
 
   return file_descriptor->getFile()->getSize();
 }
+
+// int32 VfsSyscall::shm_open(const char* name, uint32 oflag, uint32 mode)
+// {
+//   if (!name)
+//   {
+//       debug(SHARE_MEMORY, "---------------(shm_open) Invalid pathname\n");
+//       return -1;
+//   }
+//
+//   debug(SHARE_MEMORY, "---------------(shm_open) Opening shared memory object %s with flags %u and mode %u\n", name, oflag, mode);
+//
+//   if (oflag & ~(O_RDONLY | O_WRONLY | O_CREAT | O_RDWR | O_EXCL | O_TRUNC))
+//   {
+//     debug(SHARE_MEMORY, "---------------(shm_open) Invalid oflag parameter\n");
+//     return -1;
+//   }
+//
+// 	if (mode & ~(S_IRUSR | S_IWUSR | S_IXUSR | S_IRGRP | S_IWGRP | S_IXGRP | S_IROTH | S_IWOTH | S_IXOTH))
+// 	{
+// 	  debug(SHARE_MEMORY, "---------------(shm_open) Invalid mode parameter\n");
+// 	  return -1;
+// 	}
+//
+// 	ustl::string shm_name = "shm_dir/";
+// 	shm_name += name;
+//
+// 	int32 file = open(shm_name.c_str(), oflag);
+// 	debug(SHARE_MEMORY, "---------------after call open in shm open %u\n", file);
+//
+//
+//   return file;
+// }

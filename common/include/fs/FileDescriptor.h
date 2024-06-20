@@ -19,7 +19,8 @@ protected:
 public:
   enum class FileType {
     REGULAR,
-    PIPE
+    PIPE,
+    SHARED_MEMORY
   };
 
   explicit FileDescriptor(File* file, FileType type = FileType::REGULAR);

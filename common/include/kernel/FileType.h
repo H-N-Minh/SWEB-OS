@@ -2,5 +2,6 @@
 
 enum class FileType {
   REGULAR,
-  PIPE
+  PIPE,
+  SHARED_MEMORY
 };

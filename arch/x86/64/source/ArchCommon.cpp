@@ -270,8 +270,8 @@ void ArchCommon::idle()
 #define FREE_PAGES_OFFSET STATS_OFFSET + 11*2
 
 void ArchCommon::drawStat() {
-    const char* text  = "Free pages      F9 MemInfo   F10 Locks   F11 Stacktrace   F12 Threads   Pages RAM      Pages DISK      TOTAL WRITES      TOTAL READS      ";
-    const char* color = "xxxxxxxxxx      xx           xxx         xxx              xxx           xxxxxxxxx      xxxxxxxxxx      xxxxxxxxxxxx      xxxxxxxxxxx      ";
+    const char* text  = "Free pages      F9 MemInfo   F10 Locks   F11 Stacktrace   F12 Threads   Pages RAM       Pages DISK       TOTAL WRITES       TOTAL READS       ";
+    const char* color = "xxxxxxxxxx      xx           xxx         xxx              xxx           xxxxxxxxx       xxxxxxxxxx       xxxxxxxxxxxx       xxxxxxxxxxx       ";
 
     char* fb = (char*)getFBPtr();
     size_t i = 0;
@@ -307,7 +307,7 @@ void ArchCommon::drawStat() {
 
     for(size_t i = 0; (i < sizeof(buffer_pages_disk)) && (buffer_pages_disk[i] != '\0'); ++i)
     {
-      fb[i * 2 + FREE_PAGES_OFFSET + 174] = buffer_pages_disk[i];
+      fb[i * 2 + FREE_PAGES_OFFSET + 176] = buffer_pages_disk[i];
     }
 
     char total_writes_buffer[33];
@@ -317,7 +317,7 @@ void ArchCommon::drawStat() {
 
     for(size_t i = 0; (i < sizeof(total_writes_buffer)) && (total_writes_buffer[i] != '\0'); ++i)
     {
-      fb[i * 2 + FREE_PAGES_OFFSET + 210] = total_writes_buffer[i];
+      fb[i * 2 + FREE_PAGES_OFFSET + 214] = total_writes_buffer[i];
     }
 
     char total_reads_buffer[33];
@@ -327,7 +327,7 @@ void ArchCommon::drawStat() {
 
     for(size_t i = 0; (i < sizeof(total_reads_buffer)) && (total_reads_buffer[i] != '\0'); ++i)
     {
-      fb[i * 2 + FREE_PAGES_OFFSET + 246] = total_reads_buffer[i];
+      fb[i * 2 + FREE_PAGES_OFFSET + 250] = total_reads_buffer[i];
     }
 }
 

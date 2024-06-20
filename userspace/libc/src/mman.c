@@ -12,8 +12,12 @@ typedef struct mmap_params {
   off_t offset;
 }mmap_params_t;
 
-int __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS};
+int __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS, 
+                         MAP_ANONYMOUS | MAP_PRIVATE, MAP_ANONYMOUS | MAP_SHARED};
 
+
+#include "../../../common/include/kernel/syscall-definitions.h"
+#include "sys/syscall.h"
 
 /**
  * function stub
@@ -80,7 +84,7 @@ int munmap(void* start, size_t length)
  */
 int shm_open(const char* name, int oflag, mode_t mode)
 {
-  return -1;
+	return __syscall(sc_shm_open, (long)name, oflag, mode, 0x00, 0x00);
 }
 
 /**
@@ -89,7 +93,7 @@ int shm_open(const char* name, int oflag, mode_t mode)
  */
 int shm_unlink(const char* name)
 {
-  return -1;
+	return __syscall(sc_shm_unlink, (long)name, 0x00, 0x00, 0x00, 0x00);
 }
 
 /**

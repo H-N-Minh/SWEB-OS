@@ -8,12 +8,12 @@
 #include "IPTEntry.h"
 
 enum IPTMapType {RAM_MAP, DISK_MAP, NONE};
-enum PRA_TYPE {RANDOM, NFU, SIMPLE};
+enum PRA_TYPE {RANDOM, NFU, SECOND_CHANGE};
 
 // class IPTEntry;
 class ArchMemory;
 
-typedef size_t fake_ppn_t;    // index of the 
+typedef size_t fake_ppn_t;    // index of the
 typedef size_t vpn_t;
 typedef size_t ppn_t;
 typedef size_t diskoffset_t;
@@ -30,11 +30,14 @@ public:
   ustl::map<diskoffset_t, IPTEntry*> disk_map_;
   PRA_TYPE pra_type_;       // NFU is default (in ctor). This attr belongs in IPTManager because it shares the IPT_lock_
 
+  ustl::vector<uint32> fifo_ppns;
+  unsigned last_index_ = 0;
+
   // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
   // Therefore this map exists. It assigns a fake ppn temprorarily, until the page is actually allocated a real ppn.
-  ustl::map<ArchMemory*, ustl::map<vpn_t, fake_ppn_t>> fake_ppn_map_; 
+  ustl::map<ArchMemory*, ustl::map<vpn_t, fake_ppn_t>> fake_ppn_map_;
 
-  // the map to tracks backwards from fake ppn to all the archmem that is sharing this fake ppn. 
+  // the map to tracks backwards from fake ppn to all the archmem that is sharing this fake ppn.
   // This is used when the shared page is assigned a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
   ustl::multimap<fake_ppn_t, ArchmemIPT*> inverted_fake_ppn_;
 
@@ -114,7 +117,7 @@ public:
    * Debug func, check if random generator is actually random
   */
   void debugRandomGenerator();
-  
+
   /**
    * Is called when a new shared page is created. Adding entry to both fake_ppn_map_ and inverted_fake_ppn_
   */
@@ -136,8 +139,4 @@ public:
   */
   void unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory);
 
-  private:
-
-    int pages_in_ram_ = 0;  //TODOs: not used at the moment
-    int pages_on_disk_ = 0;  //TODOs: not used at the moment
 };

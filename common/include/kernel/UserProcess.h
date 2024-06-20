@@ -9,8 +9,6 @@
 #include "UserSpaceMemoryManager.h"
 #include "LocalFileDescriptorTable.h"
 
-//TODOs: USE
-enum PROCESS_STATE {EXIT, EXECV, NORMAL};
 
 class UserProcess
 {
@@ -95,7 +93,5 @@ class UserProcess
 
         bool process_creatation_failed_{false};
 
-        PROCESS_STATE process_state_{PROCESS_STATE::NORMAL};
-        Mutex process_state_lock_;
 };
 

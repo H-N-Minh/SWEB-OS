@@ -3,15 +3,25 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                            // "/usr/shell.sweb",
-                            
-//mmap-----------------------------------------------------------------------
-//                             "/usr/mmapPrivateTests.sweb",
-//                             "/usr/mmapSharedTests.sweb",
+                              // "/usr/shell.sweb",
 
-//Swapping-----------------------------------------------------------------------
-                            // "/usr/iptTests.sweb", 
-                            // "/usr/praTests.sweb", 
+//mmap-----------------------------------------------------------------------
+                            // "/usr/mmapPrivateTests.sweb",
+                            // "/usr/mmapSharedTests.sweb", //
+
+//Swapping-------------------------------------------------------------------
+
+                            // "usr/pageSelectionTests.sweb",
+                            // "/usr/praTests.sweb",  //(basically swapping tests)
+                            // "/usr/SwappingForkTests.sweb",
+
+                            "usr/NFUBetterThanRandom.sweb",
+                            // "usr/SecondChangeBetterThanRandom.sweb",
+
+                            //  "/usr/execTests.sweb",     //Changed so that the use swapping
+                            //  "/usr/forkTests.sweb",     //When you run all some of the use swapping as well
+
+                            // "usr/randomTest.sweb",
 
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",
@@ -35,13 +45,14 @@ char const *user_progs[] = {
                             // "/usr/fork9.sweb",
                             // "/usr/fork10.sweb",
 
-                            // "/usr/execTests.sweb",                   
+
                            
                            
 
 // UserSpace Memory -------------------------------------------------
                             // "/usr/growingStackTests.sweb",
                             // "/usr/mallocTests.sweb",
+                            // "/usr/reallocTests.sweb",
 
 // Userspace Locking -------------------------------------------------
                             // "/usr/condTests.sweb",
@@ -60,8 +71,5 @@ char const *user_progs[] = {
                             //  "/usr/dupTest.sweb",
                             // "/usr/dupInvalidTest.sweb",
                             // "/usr/no_test.sweb",
-
-  
-
                             0
                            };

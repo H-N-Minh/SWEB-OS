@@ -2,6 +2,13 @@
 #include "unistd.h"
 
 
+#define PAGESIZE 4096
+#define PAGES_IN_ARRAY 1280 
+#define ELEMENTS_IN_ARRAY (PAGES_IN_ARRAY * PAGESIZE)/8
+
+size_t big_array1[ELEMENTS_IN_ARRAY];  //5 Megabyes
+
+
 //Test: exec with many arguments
 int exec3_1()
 {
@@ -31,6 +38,18 @@ int exec3_1()
 
 int exec3()
 {
+
+  for(int i = 0; i < PAGES_IN_ARRAY; i++)
+  {
+    big_array1[i * (PAGESIZE / 8)] = (size_t)i;
+  }
+
+  for(int i = 0; i < PAGES_IN_ARRAY; i++)
+  {
+    assert(big_array1[i * (PAGESIZE / 8)] == i);
+  }
+
+
   pid_t pid = fork();
 
   if (pid == -1)

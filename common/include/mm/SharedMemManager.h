@@ -1,10 +1,16 @@
-
 #pragma once
 #include "ArchMemory.h"
 #include "FileDescriptor.h"
 #include "Mutex.h"
 #include "types.h"
 #include "umultimap.h"
+#include "Mutex.h"
+#include "ustring.h"
+#include "FileDescriptor.h"
+//#include "FileDescriptorList.h"
+#include "debug.h"
+#include "ArchMemory.h"
+
 
 #define PROT_NONE     0x00000000  // 00..00
 #define PROT_READ     0x00000001  // ..0001
@@ -18,6 +24,9 @@
 #define MAP_FAILED	((void *) -1)
 
 typedef size_t vpn_t;
+extern FileDescriptorList global_fd_list;
+
+class SharedMemObject;
 
 // struct to store parameters for mmap
 typedef struct mmap_params {
@@ -28,6 +37,8 @@ typedef struct mmap_params {
   int fd;
   ssize_t offset;
 }mmap_params_t;
+
+
 
 
 // struct to store all information of each shared memory entry within a process
@@ -58,7 +69,7 @@ public:
   size_t getSize();
 
   /**
-   * get the offset of the given vpn from the start of the shared memory block. 
+   * get the offset of the given vpn from the start of the shared memory block.
    * @return in bytes. Assert if vpn is not within the block
   */
   ssize_t getOffset(size_t vpn);
@@ -71,10 +82,12 @@ private:
   ustl::vector<SharedMemEntry*> shared_map_;
   vpn_t last_free_vpn_;
 
+ static ustl::map<ustl::string, SharedMemObject*>* shm_objects_;
+
 public:
   Mutex shared_mem_lock_; // responsible for shared_map_ and last_free_vpn_
   // locking order: shared_mem_lock_ -> ipt_lock_ -> archmem_lock_
-  
+
   SharedMemManager();
   SharedMemManager(const SharedMemManager& other);
   ~SharedMemManager();
@@ -147,6 +160,37 @@ public:
   bool isTimeToWriteBack(SharedMemEntry* sm_entry, ArchMemory* arch_memory, size_t vpn);
 
 
+  int shm_open(char* name, size_t oflag, mode_t mode);
+  int shm_unlink(char* name);
+
 };
 
+// struct to store parameters for shared memory object
+class SharedMemObject {
+public:
+    SharedMemObject() {}
 
+    static ustl::string* name_;
+    static FileDescriptor* global_fd_;
+
+    static SharedMemObject* Init(const ustl::string& name)
+    {
+        if (!name_)
+            name_ = new ustl::string(name); // TODO: free!!!
+        else
+            *name_ = name;
+
+        global_fd_ = new FileDescriptor(nullptr, FileDescriptor::FileType::SHARED_MEMORY); // TODO: free!!!
+        return new SharedMemObject(); // TODO: free!!!
+    }
+
+    static void Cleanup()
+    {
+        delete name_;
+        delete global_fd_;
+        name_ = nullptr;
+        global_fd_ = nullptr;
+    }
+
+    static FileDescriptor* getGlobalFileDescriptor();
+};

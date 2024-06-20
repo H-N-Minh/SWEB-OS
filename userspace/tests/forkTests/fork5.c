@@ -7,7 +7,7 @@
 #define PARENT_SUCCESS 0    // parent process returns 0 on success
 #define CHILD_SUCCESS 69    // child process returns 69 on success
 
-#define MAX_FORK 100     // without swaping, can fork around 150 times max
+#define MAX_FORK 200     // without swaping, can fork around 150 times max
 
 // this tests multiple nested forks. each of them should has their own version of the variable x
 // Exactly same as fork4, except: the child after fork dies immediately, while the same parent will 
@@ -47,7 +47,7 @@ int fork5() {
 // #define PARENT_SUCCESS 0    // parent process returns 0 on success
 // #define CHILD_SUCCESS 69    // child process returns 69 on success
 
-// #define MAX_FORK 20     // without swaping, can fork around 150 times max
+// #define MAX_FORK 10     // without swaping, can fork around 150 times max
 
 
 // #define MEGABYTE 1048576
@@ -77,10 +77,12 @@ int fork5() {
 //         {   // child dies
 //             for(int i = 0; i < PAGES_IN_ARRAY; i++)
 //             {
+//                 printf("%d\n", i);
 //                 big_array[i * (PAGESIZE / 8)] = (size_t)i;
 //             }
 //             for(int i = 0; i < PAGES_IN_ARRAY; i++)
 //             {
+//                 printf("_%d\n", i);
 //                 assert(big_array[i * (PAGESIZE / 8)] == i);
 //             }
 //             return CHILD_SUCCESS; 

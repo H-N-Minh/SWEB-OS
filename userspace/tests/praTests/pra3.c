@@ -5,54 +5,62 @@
 #include "sched.h"
 #include "nonstd.h"
 
-#define MEGABYTE 1048576
 #define PAGESIZE 4096
+#define PAGES_IN_ARRAY 1280 
+#define ELEMENTS_IN_ARRAY (PAGES_IN_ARRAY * PAGESIZE)/8
 
-#define N 5
-#define N_MEGABYTE N * MEGABYTE
+#define THREAD_NUM5 64    // should be multiple of 2, so the array can be evenly divided between threads
 
-
-#define ELEMENTS_IN_ARRAY N_MEGABYTE / 8
-#define PAGES_IN_ARRAY N_MEGABYTE/PAGESIZE
-
-
-size_t big_array3[ELEMENTS_IN_ARRAY];  //5 Megabyes
+size_t big_array3[ELEMENTS_IN_ARRAY];  //5 Megabytes
 
 
+pthread_t threads[THREAD_NUM5];
+int thread_ids[THREAD_NUM5];
 
-//change PRA in every 100 pages
-int pra3()
+
+void* thread_function5(void* arg)
 {
-  
-  int hit;
-  int miss;
-  getPRAstats(&hit, &miss);
-  printf("Random PRA: Hit: %d, Miss: %d (before test)\n", hit, miss);
+  int thread_id = *(int*)arg;
+  int start = thread_id * (PAGES_IN_ARRAY / THREAD_NUM5);
+  int end = (thread_id + 1) * (PAGES_IN_ARRAY / THREAD_NUM5);
 
-
-  int counter = 0;
-  for(int i = 0; i < PAGES_IN_ARRAY; i++)
+  for(int i = start; i < end; i++)
   {
     big_array3[i * (PAGESIZE / 8)] = (size_t)i;
-    if (i%100 == 0)
-    {
-      setPRA(counter % 2);
-      counter++;
-    }
-    
   }
+  for(int i = start; i < end; i++)
+  {
+    assert((big_array3[i * (PAGESIZE / 8)]) == (size_t)i);
+  }
+  // printf("Thread %d finished\n", thread_id);
+  return NULL;
+}
+
+//Test: testing 64 threads writing to array in parallel
+int pra3()
+{
+
+  for(int i = 0; i < THREAD_NUM5; i++)
+  {
+    thread_ids[i] = i;
+    pthread_create(&threads[i], NULL, thread_function5, &thread_ids[i]);
+  }
+  
+  printf("Threads created, waiting for them to finish\n");
+  for(int i = 0; i < THREAD_NUM5; i++)
+  {
+    pthread_join(threads[i], NULL);
+  }
+
+  printf("all Threads finished\n");
 
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
-    assert(big_array3[i * (PAGESIZE / 8)] == i);
-    if (i%100 == 0)
+    if (big_array3[i * (PAGESIZE / 8)] != i)
     {
-      setPRA(counter % 2);
-      counter++;
+      assert(0);
     }
+    assert(big_array3[i * (PAGESIZE / 8)] == i);
   }
-  getPRAstats(&hit, &miss);
-  printf("Combination of NFU and Random: Hit: %d, Miss: %d (after test)\n", hit, miss);
-
   return 0;
 }
