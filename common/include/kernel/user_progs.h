@@ -3,11 +3,11 @@
 //DO NOT CHANGE THE NAME OR THE TYPE OF THE user_progs VARIABLE!
 char const *user_progs[] = {
 // for reasons of automated testing
-                              // "/usr/shell.sweb",
+                               "/usr/shell.sweb",
 
 //mmap-----------------------------------------------------------------------
-                            // "/usr/mmapPrivateTests.sweb",
-                            // "/usr/mmapSharedTests.sweb", //
+//                             "/usr/mmapPrivateTests.sweb",
+//                             "/usr/mmapSharedTests.sweb", //
 
 //Swapping-------------------------------------------------------------------
 
@@ -15,7 +15,7 @@ char const *user_progs[] = {
                             // "/usr/praTests.sweb",  //(basically swapping tests)
                             // "/usr/SwappingForkTests.sweb",
 
-                            "usr/NFUBetterThanRandom.sweb",
+//                            "usr/NFUBetterThanRandom.sweb",
                             // "usr/SecondChangeBetterThanRandom.sweb",
 
                             //  "/usr/execTests.sweb",     //Changed so that the use swapping
