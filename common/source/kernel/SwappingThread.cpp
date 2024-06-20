@@ -251,6 +251,7 @@ bool SwappingThread::isOneTimeStep()
   // }
   if((current_ticks - last_tick_)>5)
   {
+    last_tick_ = current_ticks;
     return true;
   }
 

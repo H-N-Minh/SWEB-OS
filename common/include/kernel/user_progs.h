@@ -9,18 +9,19 @@ char const *user_progs[] = {
                             // "/usr/mmapPrivateTests.sweb",
                             // "/usr/mmapSharedTests.sweb", //
 
-//Swapping-----------------------------------------------------------------------
+//Swapping-------------------------------------------------------------------
 
                             // "usr/pageSelectionTests.sweb",
                             // "/usr/praTests.sweb",  //(basically swapping tests)
                             // "/usr/SwappingForkTests.sweb",
-
 
                             // "usr/NFUBetterThanRandom.sweb",
                             // "usr/SecondChangeBetterThanRandom.sweb",
 
                             //  "/usr/execTests.sweb",     //Changed so that the use swapping
                             //  "/usr/forkTests.sweb",     //When you run all some of the use swapping as well
+
+                            "usr/randomTest.sweb",
 
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",
@@ -50,7 +51,7 @@ char const *user_progs[] = {
 
 // UserSpace Memory -------------------------------------------------
                             // "/usr/growingStackTests.sweb",
-                            "/usr/mallocTests.sweb",
+                            // "/usr/mallocTests.sweb",
                             // "/usr/reallocTests.sweb",
 
 // Userspace Locking -------------------------------------------------
