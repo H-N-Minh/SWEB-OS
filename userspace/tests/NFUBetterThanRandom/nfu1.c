@@ -37,19 +37,18 @@ int main()
 
   //For random pra I get on my device:
   //----------------------------
-  //Total disk writes: 1465
-  //Total disk reads: 29
-  //Discard unchanged page 9
-  //Reuse same disk location 0
+  // Total disk writes: 681
+  // Total disk reads: 20
+  // Discard unchanged page 3
+  // Reuse same disk location 0
 
   //For nfu pra I get on my device:
   //----------------------------
-  //Total disk writes: 1430
-  //Total disk reads: 3
-  //Discard unchanged page 0
-  //Reuse same disk location 0
+  // Total disk writes: 665
+  // Total disk reads: 3
+  // Discard unchanged page 0
+  // Reuse same disk location 0
 
-  calloc(800, 4096);
   for(int i = 0; i < 20; i++)
   {
     for(int j = 20; j < 25; j++)
@@ -139,6 +138,7 @@ int main()
        big_array[j * (PAGESIZE / 8)] = (size_t)j * 13;    
     }
   }
+  
 
 
   printStatistic();
