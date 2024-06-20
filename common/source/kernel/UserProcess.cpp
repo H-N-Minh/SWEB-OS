@@ -98,7 +98,7 @@ UserProcess::UserProcess(const UserProcess& other)
 
   PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
 
-  user_mem_manager_ = new UserSpaceMemoryManager(loader_);
+  user_mem_manager_ = new UserSpaceMemoryManager(*(other.user_mem_manager_), loader_);
 
   UserThread* child_thread = new UserThread(*(UserThread*) currentThread, this);
   threads_.push_back(child_thread);
@@ -137,7 +137,7 @@ UserProcess::~UserProcess()
   if (fd_ > 0)
     VfsSyscall::close(fd_);
 
-  localFileDescriptorTable.closeAllFileDescriptors();
+  // localFileDescriptorTable.closeAllFileDescriptors();
   delete working_dir_;
   working_dir_ = nullptr;
 
@@ -149,7 +149,7 @@ UserProcess::~UserProcess()
   if(iterator != ProcessRegistry::instance()->processes_.end())
   {
     ProcessRegistry::instance()->processes_.erase(iterator);
-  }  
+  }
   ProcessRegistry::instance()->processes_lock_.release();
   ProcessRegistry::instance()->processExit();
 }
@@ -172,7 +172,7 @@ UserThread* UserProcess::getUserThread(size_t tid)
 int UserProcess::removeRetvalFromMapAndSetReval(size_t tid, void*& return_value)
 {
   assert(threads_lock_.heldBy() == currentThread && "getUserThread used without holding threads_lock");
-  ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);                                                   
+  ustl::map<size_t, void*>::iterator iterator = thread_retval_map_.find(tid);
   if(iterator != thread_retval_map_.end())
   {
     return_value = thread_retval_map_[tid];
@@ -194,7 +194,7 @@ bool UserProcess::isThreadInVector(UserThread* test_thread)
     if(test_thread == thread)
     {
       return true;
-    } 
+    }
   }
   return false;
 }
@@ -207,7 +207,7 @@ bool UserProcess::isProcessInVectorById(int32 process_id)
     if(process->pid_ == process_id)
     {
       return true;
-    } 
+    }
   }
   return false;
 }
@@ -218,7 +218,8 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
   assert(top_stack && "Error: top_stack is NULL in unmapThreadStack\n");
   assert(arch_memory && "Error: arch_memory is NULL in unmapThreadStack\n");
 
-  uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
+  // uint64 top_vpn = (top_stack + sizeof(size_t)) / PAGE_SIZE - 1;
+  size_t top_vpn = top_stack/PAGE_SIZE;
 
   IPTManager::instance()->IPT_lock_.acquire();
   arch_memory->archmemory_lock_.acquire();
@@ -227,6 +228,7 @@ void UserProcess::unmapThreadStack(ArchMemory* arch_memory, size_t top_stack)
     if (arch_memory->checkAddressValid(top_stack))
     {
       arch_memory->unmapPage(top_vpn);
+      debug(SYSCALL, "unmapThreadStack: Unmap vpn %p\n", (void*)top_vpn);
       top_vpn--;
       top_stack -= PAGE_SIZE;
     }
@@ -253,29 +255,29 @@ void UserProcess::write_to_page(size_t ppn, size_t next_page, size_t offset, cha
   //everythings fits on first page
   if(offset < PAGE_SIZE && offset + len_string < PAGE_SIZE)
   {
-    char* start_next_string = (char*)virtual_address + offset; 
-    debug(EXEC, "Write to first page, start from %p, and write %d characters.\n", start_next_string, len_string); 
+    char* start_next_string = (char*)virtual_address + offset;
+    debug(EXEC, "Write to first page, start from %p, and write %d characters.\n", start_next_string, len_string);
     memcpy(start_next_string, string, len_string);
   }
   else if(offset > PAGE_SIZE && offset + len_string > PAGE_SIZE)
   {
-    char* start_next_string = (char*)virtual_address_2 + offset - PAGE_SIZE;  
-    debug(EXEC, "Write to second page, start from %p, and write %d characters.\n", start_next_string, len_string); 
+    char* start_next_string = (char*)virtual_address_2 + offset - PAGE_SIZE;
+    debug(EXEC, "Write to second page, start from %p, and write %d characters.\n", start_next_string, len_string);
     memcpy(start_next_string, string, len_string);
   }
   else
   {
     //first page
     size_t len_first_page = PAGE_SIZE - offset;
-    char* start_next_string1 = (char*)virtual_address + offset;  
+    char* start_next_string1 = (char*)virtual_address + offset;
     memcpy(start_next_string1, string, len_first_page);
 
     //second page
     size_t len_second_page = len_string - len_first_page;
-    char* start_next_string2 = (char*)virtual_address_2;  
+    char* start_next_string2 = (char*)virtual_address_2;
     memcpy(start_next_string2, (char*)((size_t)string + len_first_page), len_second_page);
-    
-    debug(EXEC, "Write to first and second page, first: %p,%ld, second: %p,%ld.\n", start_next_string1, len_first_page, start_next_string2, len_second_page); 
+
+    debug(EXEC, "Write to first and second page, first: %p,%ld, second: %p,%ld.\n", start_next_string1, len_first_page, start_next_string2, len_second_page);
   }
 }
 
@@ -347,7 +349,7 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   size_t offset = 0;
   size_t virtual_address_args = USER_BREAK - 2 * PAGE_SIZE;
 
-  
+
   for(int i = 0; i < argc; i++)
   {
     int len_string = strlen(argv[i])+1;
@@ -355,21 +357,21 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
     //write next argument to page
     UserProcess::write_to_page(page_for_args, next_page_for_args, offset, argv[i], len_string);
 
-    //write the pointer to the next argument to page 
+    //write the pointer to the next argument to page
     UserProcess::write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&virtual_address_args , POINTER_SIZE);
-    
+
     offset += strlen(argv[i]) + 1;
     virtual_address_args += strlen(argv[i]) + 1;
   }
   if(argc > 0)
-  { 
+  {
     char* start_next_array_element = (char*)((size_t)exec_array_offset + argc * POINTER_SIZE);
     char* null = NULL;
 
     //nullterminate the array of pointers
     UserProcess::write_to_page(page_for_args, next_page_for_args, (size_t)start_next_array_element, (char*)&null , POINTER_SIZE);
   }
-  
+
   execv_fd = VfsSyscall::open(kernel_path, O_RDONLY);
 
   //delete the archmemory of current thread besides first page of current stack
@@ -382,14 +384,14 @@ int UserProcess::execvProcess(const char *path, char *const argv[])
   fd_ = execv_fd;
 
   //create fresh user registers for the thread (only leave the cr3 the same)
-  // TODOS: memleak, this overwrites the existing user registers (calls new again) 
+  // TODOS: memleak, this overwrites the existing user registers (calls new again)
   ArchThreads::createUserRegisters(currentThread->user_registers_, loader_->getEntryFunction(), (void*) currentUserThread.user_stack_ptr_, currentThread->getKernelStackStartPointer());
   currentThread->user_registers_->cr3 = old_cr3;
 
   //set argc and argv
   currentThread->user_registers_->rdi = argc;
   currentThread->user_registers_->rsi = USER_BREAK - 2 * PAGE_SIZE + exec_array_offset;
-  
+
   //map the argument page(s)
   ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(8);
   IPTManager::instance()->IPT_lock_.acquire();
@@ -519,14 +521,14 @@ long int UserProcess::waitProcess(long int pid, int* status, int options)
 
   ProcessRegistry::instance()->process_exit_status_map_lock_.acquire();
   ProcessRegistry::instance()->processes_lock_.acquire();
-  if(ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end() 
+  if(ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end()
     && !isProcessInVectorById(pid))
   {
     ProcessRegistry::instance()->processes_lock_.release();
     ProcessRegistry::instance()->process_exit_status_map_lock_.release();
     return -1;
   }
-  ProcessRegistry::instance()->processes_lock_.release();  
+  ProcessRegistry::instance()->processes_lock_.release();
 
   while (ProcessRegistry::instance()->process_exit_status_map_.find(pid) == ProcessRegistry::instance()->process_exit_status_map_.end())
   {
@@ -547,4 +549,3 @@ long int UserProcess::waitProcess(long int pid, int* status, int options)
 
   return pid;
 }
-

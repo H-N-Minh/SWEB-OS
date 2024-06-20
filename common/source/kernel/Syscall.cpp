@@ -154,6 +154,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_getPRAstats:
       return_value = getPRAstats((int*)arg1, (int*)arg2);
       break;
+    case sc_swappingStats:
+      return_value = getSwappingStats((int*)arg1, (int*)arg2, (int*)arg3, (int*)arg4);
+      break;
     case sc_checkRandomPRA:
       checkRandomPRA();
       break;
@@ -196,10 +199,9 @@ int Syscall::munmap(size_t start, size_t length)
   return rv;
 }
 
-int Syscall::mmap(size_t para, size_t retval)
+bool isMmapParamValid(mmap_params_t* params)
 {
-  assert(para && retval && "Syscall::mmap: arg1 is null, retval is null\n");
-  mmap_params_t* params = (mmap_params_t*) para;
+  assert(params && "params is null");
   void* start = params->start;
   size_t length = params->length;
   int prot = params->prot;
@@ -208,21 +210,97 @@ int Syscall::mmap(size_t para, size_t retval)
   off_t offset = params->offset;
   debug(SYSCALL, "Syscall::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
 
-  // error checking the para
-  // TODOMINH add error handling for prot, flags, length
-  if (start != (void*) 0 || offset != 0)
+  // start
+  if (start != (void*) 0)
   {
-    debug(ERROR_DEBUG, "Syscall::mmap: start and offset is not implemented\n");
+    debug(ERROR_DEBUG, "Syscall::mmap: start is not yet implemented, this para will be ignored\n");
+  }
+  if ((size_t) start % PAGE_SIZE != 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: start is not multiple of page size\n");
+    return false;
+  }
+
+  // length
+  if (length == 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: length is 0\n");
+    return false;
+  }
+
+  //prots
+  uint32 valid_prots[] = {PROT_NONE, PROT_READ, PROT_WRITE, PROT_EXEC,
+                          PROT_READ | PROT_WRITE, PROT_READ | PROT_EXEC, PROT_WRITE | PROT_EXEC,
+                          PROT_READ | PROT_WRITE | PROT_EXEC};
+  int prot_exists = 0;
+  for (int i : valid_prots)
+  {
+    if (prot == i)
+    {
+      prot_exists = 1;
+      break;
+    }
+  }
+  if (!prot_exists)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: prot is not valid\n");
+    return false;
+  }
+
+  // flags
+  uint32 __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS};
+  int flag_exists = 0;
+  for (int i : __VALID_FLAGS__)
+  {
+    if (flags == i)
+    {
+      flag_exists = 1;
+      break;
+    }
+  }
+  if (!flag_exists)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: flags is not valid\n");
+    return false;
+  }
+
+  // fd
+  if (fd < 0 && fd != -1)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: fd is not valid\n");
+    return false;
+  }
+
+  // offset
+  if (offset % PAGE_SIZE != 0 || offset < 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: offset is not multiple of page size or not positive\n");
+    return false;
+  }
+
+  return true;
+}
+
+int Syscall::mmap(size_t para, size_t retval)
+{
+  if (para == 0 || retval == 0)
+  {
+    debug(ERROR_DEBUG, "Syscall::mmap: para or retval is null\n");
     return -1;
   }
-  if (fd != -1)
+  mmap_params_t* params = (mmap_params_t*) para;
+  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
+  void* ret = MAP_FAILED;
+
+  // error checking
+  if (!isMmapParamValid(params))
   {
-    debug(ERROR_DEBUG, "Syscall::mmap: mmap is not yet implemented to work with fd\n");
+    *(size_t*) retval = (size_t) ret;
     return -1;
   }
 
-  SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
-  void* ret = MAP_FAILED;
+
+  // done error checking, now do the mmap
   ret = smm->mmap(params);
 
   debug(SYSCALL, "Syscall::mmap: return value: %p\n", ret);
@@ -230,6 +308,7 @@ int Syscall::mmap(size_t para, size_t retval)
 
   return 0;
 }
+
 
 l_off_t Syscall::lseek(size_t fd, l_off_t offset, uint8 whence) {
   debug(Fabi, "Syscall::lseek: Attempting to do lseek on fd: %zu\n", fd);
@@ -329,7 +408,7 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
     debug(USERTHREAD, "UserThread:pthreadJoin: Thread tries to join itself or invalid value_ptr.\n");
     return -1;
   }
-  
+
   return ((UserThread*)currentThread)->joinThread(thread_id, value_ptr);
 }
 
@@ -486,9 +565,9 @@ size_t Syscall::write(size_t fd, pointer buffer, size_t size)
 
   if (fd == fd_stdout)
   {
+    lfdTable.lfds_lock_.release();
     debug(SYSCALL, "Syscall::write: Writing to stdout\n");
     kprintf("%.*s", (int)size, (char*) buffer);
-    lfdTable.lfds_lock_.release();
     return size;
   }
   else if (localFileDescriptor != nullptr) {
@@ -532,7 +611,7 @@ size_t Syscall::read(size_t fd, pointer buffer, size_t count)
   LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
 
   lfdTable.lfds_lock_.acquire();
-  LocalFileDescriptor* localFileDescriptor = current_process.localFileDescriptorTable.getLocalFileDescriptor(fd);
+  LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(fd);
 
   if (fd == fd_stdin)
   {
@@ -854,18 +933,18 @@ void addBarChart(ustl::string lines[], int position, int number, ustl::string ti
   }
   ustl::string number_as_string = "(=" + ustl::to_string(number) + ")";
   lines[position].replace(bar_size + 2 ,number_as_string.size(),number_as_string);
-  
+
 }
 
 void Syscall::getIPTInfos()
 {
-  
+
 
   ustl::string empty_line = "|                                                                         |\n";
   ustl::string first_line = "___________________________________________________________________________\n";
   ustl::string last_line  = "|_________________________________________________________________________|\n";
   ustl::string info_line  = "|                                                x = 50 pages             |\n";
-  
+
   ustl::string lines[20];
   lines[0] = first_line;
   lines[19] = last_line;
@@ -914,7 +993,18 @@ void Syscall::setPraType(size_t type)
   debug(SYSCALL, "Syscall::setPraType: Setting PRA type to %s\n", type == 0 ? "RANDOM" : "NFU");
   IPTManager* ipt = IPTManager::instance();
   ipt->IPT_lock_.acquire();
-  ipt->pra_type_ = type? PRA_TYPE::NFU : PRA_TYPE::RANDOM;
+  if(type == PRA_TYPE::NFU)
+  {
+    ipt->pra_type_ = PRA_TYPE::NFU;
+  }
+  else if(type == PRA_TYPE::RANDOM)
+  {
+    ipt->pra_type_ = PRA_TYPE::RANDOM;
+  }
+  else if(type == PRA_TYPE::SECOND_CHANGE)
+  {
+    ipt->pra_type_ = PRA_TYPE::SECOND_CHANGE;
+  }
   ipt->IPT_lock_.release();
 }
 
@@ -928,6 +1018,28 @@ int Syscall::getPRAstats(int* hit_count, int* miss_count)
   SwappingThread* swapper = &Scheduler::instance()->swapping_thread_;
   *hit_count = swapper->getHitCount();
   *miss_count = swapper->getMissCount();
+
+  return 0;
+}
+
+int Syscall::getSwappingStats(int* disk_writes, int* disk_reads, int* discard_unchanged_page, int* reuse_same_disk_location)
+{
+  if(!check_parameter((size_t)disk_writes, false) || !check_parameter((size_t)disk_reads, false) || !check_parameter((size_t)discard_unchanged_page, false) || !check_parameter((size_t)reuse_same_disk_location, false))
+  {
+    debug(USERTHREAD, "Syscall::getPRAstats. Invalid pointers given to store the pra stats\n");
+    return -1;
+  }
+  IPTManager::instance()->IPT_lock_.acquire();
+  int disk_reads1 = SwappingManager::instance()->getDiskReads();
+  int disk_writes1 = SwappingManager::instance()->getDiskWrites();
+  int discard_unchanged_page1 = SwappingManager::instance()->discard_unchanged_page_;
+  int reuse_same_disk_location1 = SwappingManager::instance()->reuse_same_disk_location_;
+  IPTManager::instance()->IPT_lock_.release();
+
+  *disk_writes = disk_writes1;
+  *disk_reads = disk_reads1;
+  *discard_unchanged_page = discard_unchanged_page1;
+  *reuse_same_disk_location = reuse_same_disk_location1;
 
   return 0;
 }
