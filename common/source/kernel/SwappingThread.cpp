@@ -166,7 +166,7 @@ void SwappingThread::Run()
       // 3. Swap in if needed
       swapIn();
 
-      // 1. Updating Meta data every 1 seconds
+      // 1. Updating Meta data
       if (isOneTimeStep())
       {
         updateMetaData();
@@ -194,7 +194,7 @@ void SwappingThread::updateMetaData()
   }
 
   IPTManager* ipt = IPTManager::instance();
-  if(ipt->pra_type_ == PRA_TYPE::NFU)
+  if(ipt->pra_type_ != PRA_TYPE::SECOND_CHANGE)
   {
     ipt->IPT_lock_.acquire();
     debug(SWAPTHREAD, "SwappingThread::updateMetaData: updating meta data for PRA NFU\n");
