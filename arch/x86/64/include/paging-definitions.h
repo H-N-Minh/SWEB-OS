@@ -31,7 +31,9 @@ typedef struct
     uint64 ignored_2                 :4;
     uint64 page_ppn                  :28;
     uint64 reserved_1                :12; // must be 0
-    uint64 ignored_1                 :11;
+    uint64 swapped_out               :1;   //not used must be 0
+    uint64 discarded                 :1;   //not used must be 0
+    uint64 ignored_1                 :9;
     uint64 execution_disabled        :1;
 } __attribute__((__packed__)) PageMapLevel4Entry;
 
@@ -50,7 +52,9 @@ struct PageDirPointerTablePageDirEntry
     uint64 ignored_2                 :4;
     uint64 page_ppn                  :28;
     uint64 reserved_1                :12; // must be 0
-    uint64 ignored_1                 :11;
+    uint64 ignored_1                 :9;
+    uint64 swapped_out               :1;   //not used must be 0
+    uint64 discarded                 :1;   //not used must be 0
     uint64 execution_disabled        :1;
 } __attribute__((__packed__));
 
@@ -97,7 +101,9 @@ struct PageDirPageTableEntry
     uint64 ignored_2                 :4;
     uint64 page_ppn                  :28;
     uint64 reserved_1                :12; // must be 0
-    uint64 ignored_1                 :11;
+    uint64 ignored_1                 :9;
+    uint64 swapped_out               :1;   //not used must be 0
+    uint64 discarded                 :1;   //not used must be 0
     uint64 execution_disabled        :1;
 } __attribute__((__packed__));
 
@@ -142,12 +148,15 @@ typedef struct
     uint64 dirty                     :1;
     uint64 size                      :1;
     uint64 global                    :1;
-    uint64 ignored_2                 :1;
+    uint64 been_dirty                :1;
     uint64 swapped_out               :1;
     uint64 cow                       :1;
     uint64 page_ppn                  :28;
     uint64 reserved_1                :12; // must be 0
-    uint64 ignored_1                 :11;
+    uint64 discarded                 :1;
+    uint64 ignored_1                 :8;
+    uint64 second_change             :1;
+    uint64 shared                    :1;
     uint64 execution_disabled        :1;
 } __attribute__((__packed__)) PageTableEntry;
 

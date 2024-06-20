@@ -747,6 +747,3 @@ void IPTManager::unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory)
     assert(0 && "IPTManager::unmapOneFakePPN: archmem not found in fake_ppn_map_\n");
   }
 }
-
-
-

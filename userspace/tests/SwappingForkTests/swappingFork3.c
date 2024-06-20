@@ -30,6 +30,7 @@ size_t ipt3_function()
       copy += 420;
       assert(copy == 420 && "fork6_global_var should be 420 in every threads of parent process");
       int status;
+      printf("hey\n");
       waitpid(pid, &status, 0);
       if (status != 1)
       {
@@ -45,12 +46,10 @@ size_t ipt3_function()
 }
 
 
-
-//Test: 80 threads calling 100 fork at the same time
-int ipt3() 
+pthread_t thread_id[NUM_THREADS];
+//Test: Testing fork after swapping (this test only makes sense if we run the previous test as well)
+int swappingFork3() 
 {
-    pthread_t thread_id[NUM_THREADS];
-
     for(int i = 0; i < NUM_THREADS; i++)
     {
         size_t rv = pthread_create(&thread_id[i], NULL, (void * (*)(void *))ipt3_function, NULL);

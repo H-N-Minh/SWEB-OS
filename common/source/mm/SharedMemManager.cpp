@@ -88,7 +88,7 @@ void* SharedMemManager::mmap(mmap_params_t* params)
     int fd  = params->fd;
     ssize_t offset = params->offset;
     debug(MMAP, "SharedMemManager::mmap: start: %p, length: %zu, prot: %d, flags: %d, fd: %d, offset: %ld\n",start, length, prot, flags, fd, offset);
-    
+
     void* retval = MAP_FAILED;
 
     shared_mem_lock_.acquire();
