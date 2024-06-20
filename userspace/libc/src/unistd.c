@@ -15,7 +15,7 @@ int brk(void *end_data_segment)
  * posix compatible signature - do not change the signature!
  */
 void* sbrk(intptr_t increment)
-{ 
+{
   return (void*)__syscall(sc_sbrk, increment, 0x0, 0x0, 0x0, 0x0);
 }
 
