@@ -20,7 +20,7 @@ char const *user_progs[] = {
                             // "usr/SecondChangeBetterThanRandom.sweb",
 
 //                              "/usr/execTests.sweb",     //Changed so that the use swapping
-                              "/usr/forkTests.sweb",     //When you run all some of the use swapping as well
+//                              "/usr/forkTests.sweb",     //When you run all some of the use swapping as well
 
                             // "usr/randomTest.sweb",
                             
