@@ -31,7 +31,7 @@ enum AnsiColor
 
 
 //group Block Device
-const size_t BD_MANAGER         = Ansi_Yellow;
+const size_t BD_MANAGER         = Ansi_Yellow; //
 const size_t BD_VIRT_DEVICE     = Ansi_Yellow;
 
 //group Console

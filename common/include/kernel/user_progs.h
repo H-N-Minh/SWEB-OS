@@ -50,7 +50,7 @@ char const *user_progs[] = {
 
 // UserSpace Memory -------------------------------------------------
                             // "/usr/growingStackTests.sweb",
-                            // "/usr/mallocTests.sweb",
+                            "/usr/mallocTests.sweb",
                             // "/usr/reallocTests.sweb",
 
 // Userspace Locking -------------------------------------------------
