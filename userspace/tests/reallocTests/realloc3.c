@@ -28,21 +28,20 @@ void printStatistic()
 }
 
 
-//Test for which nfu works better than random - aka working locally
+//Heap and swapping
 int realloc3()
 {
   //Set the pra to the one you want to test
   //  setPRA(__RANDOM_PRA__); 
   // setPRA(__NFU_PRA__); 
 
-  printf("bigarray %p\n", &big_array[ELEMENTS_IN_ARRAY - 1]);
   int* ptr1 = calloc(800, 4096);
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
       big_array[i * (PAGESIZE / 8)] = (size_t)i * 14;  
     
   }
-  int* ptr2 = calloc(800, 4096);
+  int* ptr2 = calloc(200, 4096);
   for(int i = 0; i < PAGES_IN_ARRAY; i++)
   {
     assert(big_array[i * (PAGESIZE / 8)] == (size_t)i* 14);

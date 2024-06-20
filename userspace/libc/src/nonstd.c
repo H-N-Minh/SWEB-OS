@@ -51,3 +51,8 @@ int getSwappingStats(int* disk_writes, int* disk_reads, int* discard_unchanged_p
 {
 	return __syscall(sc_swappingStats, (size_t) disk_writes, (size_t) disk_reads, (size_t)discard_unchanged_page, (size_t)reuse_same_disk_location, 0x0);
 }
+
+int getNumFreePages()
+{
+	return __syscall(sc_free_pages, 0x0, 0x0, 0x0, 0x0, 0x0);
+}

@@ -54,7 +54,7 @@ int main()
 
     if (MALLOC2)
     {
-        printf("\nTesting malloc2: TODOs...\n");
+        printf("\nTesting malloc2: Very very simple test that big malloc does not break the system\n");
         retval = malloc2();
         if (retval == 0)                      { printf("===> malloc2 successful!\n"); } 
         else                                  { printf("===> malloc2 failed!\n");   return -1;}
@@ -70,7 +70,7 @@ int main()
 
     if (MALLOC4)
     {
-        printf("\nTesting malloc4: Check demand allocation.\n");           //Todos: syscall missing
+        printf("\nTesting malloc4: Check demand allocation. (Also uses swapping)\n");
         retval = malloc4();
         if (retval == 0)                      { printf("===> malloc4 successful!\n"); } 
         else                                  { printf("===> malloc4 failed!\n");   return -1;}
@@ -78,7 +78,7 @@ int main()
 
     if (MALLOC5)
     {
-        printf("\nTesting malloc5: Simple Test for malloc with multithreading.\n");
+        printf("\nTesting malloc5: Test for malloc with multithreading.\n");
         retval = malloc5();
         if (retval == 0)                      { printf("===> malloc5 successful!\n"); } 
         else                                  { printf("===> malloc5 failed!\n");   return -1;}

@@ -100,6 +100,8 @@ public:
   static int shm_open(size_t name, size_t oflag, size_t mode);
 
   static int shm_unlink(size_t name);
+
+  static int get_num_free_pages();
 };
 
 

@@ -172,6 +172,9 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
 	  case sc_shm_unlink:
   		return_value = shm_unlink(arg1);
   		break;
+	  case sc_free_pages:
+  		return_value = get_num_free_pages();
+  		break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -1082,4 +1085,9 @@ int Syscall::shm_unlink(size_t name)
 
 	debug(SYSCALL, "----------Syscall::shm_unlink: unlinked shared memory %s \n", shm_name);
 	return shm_entry;
+}
+
+int Syscall::get_num_free_pages()
+{
+  return PageManager::instance()->getNumFreePages();
 }
