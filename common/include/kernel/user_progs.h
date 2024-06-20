@@ -12,7 +12,7 @@ char const *user_progs[] = {
 
 //Swapping-------------------------------------------------------------------
 
-//                            "usr/pageSelectionTests.sweb",
+                          // "usr/pageSelectionTests.sweb",
                             // "/usr/praTests.sweb",  //(basically swapping tests)
                             // "/usr/SwappingForkTests.sweb",
 
