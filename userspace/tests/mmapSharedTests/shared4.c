@@ -1,20 +1,20 @@
-#include <sys/mman.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <unistd.h>
-#include "assert.h"
-#include <string.h>   // for strcpy
-#include <fcntl.h>    // for open
-#include "wait.h"
+  #include <sys/mman.h>
+  #include <stdio.h>
+  #include <stdlib.h>
+  #include <unistd.h>
+  #include "assert.h"
+  #include <string.h>   // for strcpy
+  #include <fcntl.h>    // for open
+  #include "wait.h"
 
-// TODO: currently close(fd) is never called
+  // TODO: currently close(fd) is never called
 
-int shared4() {
-    int fd = open("usr/testmmn.txt", O_RDWR | O_CREAT , 0644);
-    if (fd == -1) {
-        printf("open failed\n");
-        return 1;
-    }
+  int shared4() {
+      int fd = open("usr/testmmn.txt", O_RDWR | O_CREAT , 0644);
+      if (fd == -1) {
+          printf("open failed\n");
+          return 1;
+      }
 
     /////////////////////////////////////////////// TEST 4 ////////////////////////////////////////////////
     // Child calls munmap, parent should still be able to access the page and then call munmap itself on the same page
@@ -64,5 +64,5 @@ int shared4() {
         }
     }
 
-    return 0;
-}
+      return 0;
+  }

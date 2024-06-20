@@ -82,20 +82,20 @@ int childMain()
     ANONYM_SHARED9 = 1;
 
 
-//    if (SHARED1)
-//    {
-//        printf("\nTesting shared1: very basic mmap, write and read and munmap, and IPC between 2 processes...\n");
-//        retval = shared1();
-//        if (retval == 0)                      { printf("===> shared1 successful!\n"); }
-//        else                                  { printf("===> shared1 failed!\n");  return -1;}
-//    }
-//    if (SHARED2)
-//    {
-//        printf("\nTesting shared2: read-only protection, child tries to write and should crash...\n");
-//        retval = shared2();
-//        if (retval == 0)                      { printf("===> shared2 successful!\n"); }
-//        else                                  { printf("===> shared2 failed!\n");  return -1;}
-//    }
+    if (SHARED1)
+    {
+        printf("\nTesting shared1: very basic mmap, write and read and munmap, and IPC between 2 processes...\n");
+        retval = shared1();
+        if (retval == 0)                      { printf("===> shared1 successful!\n"); }
+        else                                  { printf("===> shared1 failed!\n");  return -1;}
+    }
+    if (SHARED2)
+    {
+        printf("\nTesting shared2: read-only protection, child tries to write and should crash...\n");
+        retval = shared2();
+        if (retval == 0)                      { printf("===> shared2 successful!\n"); }
+        else                                  { printf("===> shared2 failed!\n");  return -1;}
+    }
     if (SHARED3)
     {
         printf("\nTesting shared3: mmap with larger size...\n");
@@ -209,7 +209,7 @@ int childMain()
         if (retval == 0)                      { printf("===> anonym_shared9 successful!\n"); }
         else                                  { printf("===> anonym_shared9 failed!\n");  return -1;}
     }
-    
+
     printf("\n\n===  All mmap testcases successful  ===\n");
     return 0;
 }

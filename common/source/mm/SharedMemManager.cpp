@@ -28,6 +28,21 @@ SharedMemEntry::SharedMemEntry(const SharedMemEntry& other)
     offset_ = other.offset_;
     shared_ = other.shared_;
     globalFileDescriptor_ = other.globalFileDescriptor_;
+    if(globalFileDescriptor_ != nullptr)
+    {
+      globalFileDescriptor_->incrementRefCount();
+    }
+}
+
+SharedMemEntry::~SharedMemEntry()
+{
+  debug(MMAP, "SharedMemEntry::~SharedMemEntry\n");
+  if(globalFileDescriptor_ != nullptr) {
+    globalFileDescriptor_->decrementRefCount();
+    if(globalFileDescriptor_->getRefCount() == 0) {
+      LocalFileDescriptorTable::deleteGlobalFileDescriptor(globalFileDescriptor_);
+    }
+  }
 }
 
 bool SharedMemEntry::isInBlockRange(vpn_t vpn)
@@ -146,7 +161,7 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
       LocalFileDescriptor* localFileDescriptor = lfdTable.getLocalFileDescriptor(fd);
       assert( localFileDescriptor != nullptr && "SharedMemManager::addEntry: localFileDescriptor is null\n");
       globalFileDescriptor = localFileDescriptor->getGlobalFileDescriptor();
-      globalFileDescriptor ->incrementRefCount();  // check if locking is required around incrementRefCount()
+      globalFileDescriptor ->incrementRefCount();
       debug(SYSCALL, "addEntry: Reference count after increment: %d\n", globalFileDescriptor ->getRefCount());
 
       lfdTable.lfds_lock_.release();
@@ -396,6 +411,25 @@ int SharedMemManager::munmap(void* start, size_t length)
 
 
 
+//    if(0 <= fd) {
+//      assert(globalFileDescriptor != nullptr && "Global file descriptor pointer is null");
+//      debug(MMAP, "SharedMemManager::munmap: global fd: %u\n",
+//            globalFileDescriptor->getFd());
+//
+//      assert(globalFileDescriptor != 0 && "Global file descriptor pointer is null");
+//
+//      globalFileDescriptor->decrementRefCount();
+//
+//      debug(SYSCALL, "munmap: Reference count after decrement: %d\n",
+//            globalFileDescriptor->getRefCount());
+//
+//      // If reference count drops to 0, delete the global file descriptor
+//      if (globalFileDescriptor->getRefCount() == 0) {
+//        // Pass on your method to delete Global File Descriptor
+//        LocalFileDescriptorTable::deleteGlobalFileDescriptor(globalFileDescriptor);
+//      }
+//    }
+
 
 
 
@@ -598,7 +632,11 @@ void SharedMemManager::writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchM
 
     assert(global_fd_obj->getType() != FileDescriptor::FileType::PIPE && "SharedMemManager::writeBackToFile: cannot write back to a pipe with this operation\n");
 
+    assert(global_fd_obj != nullptr && "Global File Descriptor is nullptr");
     size_t global_fd = global_fd_obj->getFd();
+    assert((int)global_fd != -1 && "Global File Descriptor is invalid");
+
+    debug(MMAP, "writeBackToFile, lseek: global_fd: %zu, offset: %ld\n", global_fd, offset);
     if (VfsSyscall::lseek(global_fd, offset, SEEK_SET) == (l_off_t) -1)
     {
       debug(MMAP, "SharedMemManager::writeBackToFile: lseek failed on global fd: %zu offset: %ld\n", global_fd, offset);
@@ -612,24 +650,6 @@ void SharedMemManager::writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchM
     }
 
 
-    if(0 <= fd) {
-      assert(global_fd_obj != nullptr && "Global file descriptor pointer is null");
-      debug(MMAP, "SharedMemManager::munmap: global fd: %u\n",
-            global_fd_obj->getFd());
-
-      assert(global_fd_obj != 0 && "Global file descriptor pointer is null");
-
-      global_fd_obj->decrementRefCount(); // ensure that locking is required around decrementRefCount()
-
-      debug(SYSCALL, "munmap: Reference count after decrement: %d\n",
-            global_fd_obj->getRefCount());
-
-      // If reference count drops to 0, delete the global file descriptor
-      if (global_fd_obj->getRefCount() == 0) {
-        // Pass on your method to delete Global File Descriptor
-        LocalFileDescriptorTable::deleteGlobalFileDescriptor(global_fd_obj);
-      }
-    }
 
     lfdTable.lfds_lock_.release();
 

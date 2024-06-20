@@ -45,6 +45,7 @@ public:
 
   SharedMemEntry(vpn_t start, vpn_t end, int prot, int flags, int fd, ssize_t offset, bool shared, FileDescriptor* globalFileDescriptor);
   SharedMemEntry(const SharedMemEntry& other);
+  ~SharedMemEntry();
 
   /**
    * check if the given vpn is within this shared memory block
