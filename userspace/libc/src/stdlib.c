@@ -571,3 +571,17 @@ void free_unlocked(void *ptr)
   addOverflowProtection(element_to_free);
 }
 
+int parameterInUserSpace(size_t ptr, int allowed_to_be_null)
+{
+  if(!allowed_to_be_null && ptr == 0)
+  {
+    return 0;
+  }
+  if(ptr >= __USER_BREAK__)
+  {
+    return 0;
+  }
+  return 1;
+}
+
+
