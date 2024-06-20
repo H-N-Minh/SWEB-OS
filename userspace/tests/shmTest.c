@@ -25,6 +25,7 @@ int main()
 
 	printf("%d \n", shm_fd);
 	printf("%d \n", shm_fd1);
+	assert(shm_fd == shm_fd1);
 
 	shm_unlink(SHM_NAME);
 

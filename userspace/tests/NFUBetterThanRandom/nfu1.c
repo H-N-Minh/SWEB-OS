@@ -49,6 +49,7 @@ int main()
   // Discard unchanged page 0
   // Reuse same disk location 0
 
+  printf("Testing...\n");
   for(int i = 0; i < 20; i++)
   {
     for(int j = 20; j < 25; j++)
@@ -138,6 +139,17 @@ int main()
        big_array[j * (PAGESIZE / 8)] = (size_t)j * 13;    
     }
   }
+
+   calloc(800, 4096);
+
+    for(int i = 0; i < 20; i++)
+  {
+    for(int j = 500; j < 520; j++)
+    {
+       big_array[j * (PAGESIZE / 8)] = (size_t)j * 13;    
+    }
+  }
+
   
 
 

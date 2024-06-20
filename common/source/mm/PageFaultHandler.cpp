@@ -242,6 +242,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     debug(PAGEFAULT, "PageFaultHandler::checkPageFaultIsValid: Page %p is on stack.\n", (void*)address);
     swapper->swap_in_lock_.release();
     heap_manager->current_break_lock_.release();
+    shared_mem_lock->release();
     size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
     bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
     assert(rv == true);

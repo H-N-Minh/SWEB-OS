@@ -8,20 +8,22 @@ char const *user_progs[] = {
 //mmap-----------------------------------------------------------------------
                             // "/usr/mmapPrivateTests.sweb",
                             // "/usr/mmapSharedTests.sweb", //
+                            // "usr//shmTest.sweb",
 
 //Swapping-------------------------------------------------------------------
 
-                            // "usr/pageSelectionTests.sweb",
+                            "usr/pageSelectionTests.sweb",
                             // "/usr/praTests.sweb",  //(basically swapping tests)
                             // "/usr/SwappingForkTests.sweb",
 
-                            "usr/NFUBetterThanRandom.sweb",
+                            // "usr/NFUBetterThanRandom.sweb",
                             // "usr/SecondChangeBetterThanRandom.sweb",
 
                             //  "/usr/execTests.sweb",     //Changed so that the use swapping
                             //  "/usr/forkTests.sweb",     //When you run all some of the use swapping as well
 
                             // "usr/randomTest.sweb",
+                            
 
 // Threads -------------------------------------------------------------------
                             // "/usr/pthreadCreateTests.sweb",
