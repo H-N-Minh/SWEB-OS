@@ -727,3 +727,51 @@ void SharedMemManager::writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchM
 
 	debug(MMAP, "SharedMemManager::writeBackToFile: wrote %d bytes from vpn %zu (ppn %zu) to fd %d (global fd %zu)\n", num_written, vpn, ppn, fd, global_fd);
 }
+
+// int SharedMemManager::ftruncate(int fd, off_t length)
+// {
+//     shared_mem_lock_.acquire();
+//
+//     FileDescriptor* fileDescriptor = global_fd_list.getFileDescriptor(fd);
+//     if (!fileDescriptor)
+//     {
+//         shared_mem_lock_.release();
+//         return -1;
+//     }
+//
+//     if (fileDescriptor->getType() != FileDescriptor::FileType::SHARED_MEMORY)
+//     {
+//         shared_mem_lock_.release();
+//         return -1;
+//     }
+//
+//     SharedMemObject* sharedMemObject = nullptr;
+//     for (auto& entry : *shm_objects_)
+//     {
+//         if (entry.second->getGlobalFileDescriptor() == fileDescriptor)
+//         {
+//             sharedMemObject = entry.second;
+//             break;
+//         }
+//     }
+//
+//     if (!sharedMemObject)
+//     {
+//         shared_mem_lock_.release();
+//         return -1;
+//     }
+//
+//     if (fileDescriptor->getFileSize() > length)
+//     {
+//
+//         fileDescriptor->shrinkFile(length);
+//     }
+//     else if (fileDescriptor->getFileSize() < length)
+//     {
+//
+//         fileDescriptor->expandFile(length);
+//     }
+//
+//     shared_mem_lock_.release();
+//     return 0;
+// }

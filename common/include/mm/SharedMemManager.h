@@ -162,6 +162,7 @@ public:
 
 	int shm_open(char* name, size_t oflag, mode_t mode);
 	int shm_unlink(char* name);
+	int ftruncate(int fd, off_t length);
 
 };
 
