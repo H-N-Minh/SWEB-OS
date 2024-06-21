@@ -230,7 +230,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
 	SharedMemEntry* entry = getSharedMemEntry(address);
 
 	// create new ppn and copy content from fd if necessary
-	size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+	size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 	size_t vpn = address / PAGE_SIZE;
 	if ((entry->flags_ == MAP_PRIVATE || entry->flags_ == MAP_SHARED) && entry->fd_ >= 0)
 	{

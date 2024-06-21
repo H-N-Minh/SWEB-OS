@@ -95,7 +95,7 @@ UserProcess::UserProcess(const UserProcess& other)
     other.loader_->arch_memory_.archmemory_lock_.release();
     IPTManager::instance()->IPT_lock_.release();
     PageManager::instance()-> releaseNotNeededPages(preallocated_pages);
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(needed_preallocated_pages + 10 + counter); 
+    ustl::vector<uint32> preallocate_pages = PageManager::instance()->preAllocatePages(needed_preallocated_pages + 10 + counter);
     IPTManager::instance()->IPT_lock_.acquire();
     other.loader_->arch_memory_.archmemory_lock_.acquire();
   }

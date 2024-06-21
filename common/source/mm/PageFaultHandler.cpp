@@ -176,11 +176,11 @@ void PageFaultHandler::handleValidPageFault(size_t address)
   ustl::vector<uint32> preallocated_pages;
   if((address < MIN_SHARED_MEM_ADDRESS) || (address > MAX_SHARED_MEM_ADDRESS))
   {
-    preallocated_pages = PageManager::instance()->preAlocatePages(4);
+    preallocated_pages = PageManager::instance()->preAllocatePages(4);
   }
   else
   {
-    preallocated_pages = PageManager::instance()->preAlocatePages(15);
+    preallocated_pages = PageManager::instance()->preAllocatePages(15);
   }
 
 
@@ -228,7 +228,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     swap_lock->release();
     shared_mem_lock->release();
 
-      size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+      size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
       bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
       assert(rv == true);
 
@@ -243,7 +243,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     swapper->swap_in_lock_.release();
     heap_manager->current_break_lock_.release();
     shared_mem_lock->release();
-    size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
     bool rv = currentThread->loader_->arch_memory_.mapPage(vpn, ppn, 1, preallocated_pages);
     assert(rv == true);
     current_archmemory.archmemory_lock_.release();
@@ -291,7 +291,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 
   size_t vpn = address/PAGE_SIZE;
 
-  ustl::vector<uint32> preallocated_pages = pm->preAlocatePages(1);
+  ustl::vector<uint32> preallocated_pages = pm->preAllocatePages(1);
 
   ipt_lock->acquire();
   archmem_lock->acquire();
@@ -333,7 +333,7 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
 
   void PageFaultHandler::handleUserPageFault(size_t address)
   {
-    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAlocatePages(4);
+    ustl::vector<uint32> preallocated_pages = PageManager::instance()->preAllocatePages(4);
     IPTManager::instance()->IPT_lock_.acquire();
     currentThread->loader_->arch_memory_.archmemory_lock_.acquire();
     int retval = checkGrowingStack(address, preallocated_pages);

@@ -34,7 +34,7 @@ public:
   unsigned last_index_ = 0;
 
   // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
-  // Therefore this map exists. It assigns a fake ppn temprorarily, until the page is actually allocated a real ppn.
+  // Therefore, this map exists. It assigns a fake ppn temporarily, until the page is actually allocated a real ppn.
   ustl::map<ArchMemory*, ustl::map<vpn_t, fake_ppn_t>> fake_ppn_map_;
 
   // the map to tracks backwards from fake ppn to all the archmem that is sharing this fake ppn. 
@@ -79,8 +79,35 @@ public:
   */
   void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
+	/**
+	 * @brief Finalizes a pre-swapped entry by moving it from the source map to the destination map.
+	 * If the operation fails, an assertion will be triggered.
+	 * @param source The map that the entry is currently in. Must be either RAM_MAP or DISK_MAP.
+	 * @param ppn_source The location of the entry in the source map.
+	 * @param ppn_destination The location where the entry will be moved to in the destination map.
+	 */
+	void finalizePreSwappedEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
-  void removeEntry(IPTMapType map_type, size_t ppn);
+	/**
+	 * @brief Copies an entry from the source map to the destination map.
+	 *
+	 * The source map can be either RAM_MAP or DISK_MAP, and the destination map will be the other map.
+	 *
+	 * @param source The map that the entry is currently in.
+	 * @param ppn_source The location of the entry in the source map.
+	 * @param ppn_destination The location where the entry will be copied in the destination map. This location must be empty.
+	 */
+	void copyEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
+
+
+	/**
+	 * @brief Removes an entry from the specified IPT map.
+	 * Asserts if the entry does not exist in the map.
+	 *
+	 * @param map_type The type of the IPT map (RAM_MAP or DISK_MAP).
+	 * @param ppn The key of the entry to be removed.
+	 */
+	void removeEntry(IPTMapType map_type, size_t ppn);
 
   /**
    * Getter for debugging info, doesnt use any lock but who cares
@@ -138,5 +165,6 @@ public:
    * this is for when a shared page is unmapped when its not even mapped yet. removing entry from fake_ppn_map_
   */
   void unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory);
+
 
 };

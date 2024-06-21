@@ -41,7 +41,7 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
 {
   debug(SBRK, "UserSpaceMemoryManager::sbrk called with size (%zd).\n", size);
 
-  assert(current_break_lock_.heldBy() == currentThread && "Currentbreak needs to be locked");
+  assert(current_break_lock_.heldBy() == currentThread && "Current break needs to be locked");
   size_t potential_new_break = current_break_ + size;
   if (potential_new_break > MAX_HEAP_ADDRESS || potential_new_break < heap_start_)
   {
@@ -95,7 +95,7 @@ void* UserSpaceMemoryManager::sbrk(ssize_t size)
 
 int UserSpaceMemoryManager::brk(size_t new_break_addr)
 {
-  assert(current_break_lock_.heldBy() == currentThread && "Currentbreak needs to be locked");
+  assert(current_break_lock_.heldBy() == currentThread && "Current break needs to be locked");
 
   debug(SBRK, "UserSpaceMemoryManager::brk called with new break address (%zx)\n", new_break_addr);
 
@@ -106,8 +106,8 @@ int UserSpaceMemoryManager::brk(size_t new_break_addr)
   }
 
   ssize_t size = new_break_addr - current_break_;
-  void* resevered_space = sbrk(size);
-  if (resevered_space == (void*)-1)
+  void*reserved_space = sbrk(size);
+  if (reserved_space == (void*)-1)
   {
     debug(SBRK, "UserSpaceMemoryManager::brk: FATAL ERROR, could not set new break at address (%zx)\n", new_break_addr);
     return -1;
@@ -157,7 +157,7 @@ int UserSpaceMemoryManager::checkValidGrowingStack(size_t address)
     return NOT_RELATED_TO_GROWING_STACK;
   }
 
-  // get to top of stack where the meta data is stored
+  // get to top of stack where the metadata is stored
   debug(GROW_STACK, "UserSpaceMemoryManager::checkValidGrowingStack: checking for overflow/underflow corruption\n");
   size_t top_current_stack = getTopOfThisStack(address);
   if (top_current_stack == 0)
@@ -202,7 +202,7 @@ int UserSpaceMemoryManager::increaseStackSize(size_t address, ustl::vector<uint3
 
   // TODOMINH: growing stack  now has broken locking because of new allocPPN rule
   uint64 new_vpn = (top_this_page + sizeof(size_t)) / PAGE_SIZE - 1;
-  uint32 new_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+  uint32 new_ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
   bool page_mapped = arch_memory->mapPage(new_vpn, new_ppn, true, preallocated_pages);
   PageManager::instance()->releaseNotNeededPages(preallocated_pages);
 

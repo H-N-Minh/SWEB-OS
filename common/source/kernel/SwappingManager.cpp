@@ -9,8 +9,9 @@
 
 size_t SwappingManager::disk_offset_counter_ = 1;
 SwappingManager* SwappingManager::instance_ = nullptr;
+bool SwappingManager::pre_swap_enabled = false;
 
-SwappingManager::SwappingManager() : disk_lock_("disk_lock_"), pre_swap_lock_("pre_swap_lock_"),
+SwappingManager::SwappingManager() : disk_lock_("disk_lock_"),
 swapping_thread_finished_lock_("swapping_thread_finished_lock_"),
 swapping_thread_finished_(&swapping_thread_finished_lock_, "swapping_thread_finished_")
 {
@@ -47,7 +48,6 @@ void SwappingManager::copyPageToDisk(size_t ppn)
 
   ustl::vector<ArchmemIPT*>& virtual_page_infos = ipt_->ram_map_[ppn]->getArchmemIPTs();
   assert(virtual_page_infos.size() > 0);
-  lockArchmemories(virtual_page_infos);
 
   if(isPageDirty(virtual_page_infos) || hasPageBeenDirty(virtual_page_infos))
   {
@@ -70,7 +70,6 @@ void SwappingManager::copyPageToDisk(size_t ppn)
     ipt_->disk_map_[disk_offset]->isPreSwapped = true;
   }
 
-  unlockArchmemories(virtual_page_infos);
 }
 
 
@@ -108,7 +107,7 @@ void SwappingManager::swapOutPage(size_t ppn)
     else
     {
       size_t disk_offset = ipt_->ram_map_[ppn]->last_disk_offset_;
-      if(!disk_offset == 0)
+      if(!(disk_offset == 0))
       {
         ipt_->moveEntry(IPTMapType::RAM_MAP, ppn, disk_offset);
         // printDebugInfos(virtual_page_infos, ppn, disk_offset);
@@ -145,7 +144,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   debug(SWAPPING, "SwappingManager::swapOutPage: Swap out page with ppn %p finished", (void*)ppn);
 }
 
-//Only works if the page i want to swap in is in the archmemory of current thread
+//Only works if the page I want to swap in is in the archmemory of current thread
 int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages)
 {
   assert(ipt_->IPT_lock_.heldBy() == currentThread);
@@ -161,7 +160,7 @@ int SwappingManager::swapInPage(size_t disk_offset, ustl::vector<uint32>& preall
   lockArchmemorys(virtual_page_infos);
 
  //Get new ppn
-  size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+  size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 
   //Move Page infos from  ipt_map_disk to ipt_map_ram
   debug(SWAPPING, "SwappingManager::swapInPage: Swap in page with disk_offset %p to ppn %p.\n", (void*)disk_offset, (void*)ppn);
