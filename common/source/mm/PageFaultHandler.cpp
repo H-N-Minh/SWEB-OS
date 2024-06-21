@@ -306,10 +306,19 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
     debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW and we want to write. Copy page\n");
     current_archmemory.copyPage(address, preallocated_pages);
   }
-  //sombody else was faster with cow
+  //Page is set writable we want to write -> sombody else was faster with cow
+  else if(writing && current_archmemory.isBitSet(vpn, BitType::WRITEABLE, true))
+  {
+    debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Page is COW but writeable bit is set => Somebody else was faster with COW. Do nothing\n");
+  }
+    //We want to write to a page that is readable and not cow -> error
   else
   {
-    debug(PAGEFAULT, "PageFaultHandler::handlePresentPageFault: Somebody else was faster with COW. Do nothing\n");
+    debug(ERROR_DEBUG, "PageFaultHandler::handlePresentPageFault: Page is not COW (read-only) and we want to write => Error\n");
+    archmem_lock->release();
+    ipt_lock->release();
+    pm-> releaseNotNeededPages(preallocated_pages);
+    errorInPageFaultKillProcess();
   }
 
   archmem_lock->release();
