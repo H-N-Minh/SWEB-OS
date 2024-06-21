@@ -46,10 +46,6 @@ IPTManager::~IPTManager()
 
 IPTManager* IPTManager::instance()
 {
-  if(!instance_)
-  {
-    instance_ = this;
-  }
   return instance_;
 }
 
