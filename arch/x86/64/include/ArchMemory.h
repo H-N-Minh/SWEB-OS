@@ -154,7 +154,7 @@ class ArchMemory
 
     void resetSecondChange(size_t vpn);
 
-    void resetAccessBitsAndSetSecondChange(size_t vpn);
+    void setSecondChange(size_t vpn);
 
 
   private:

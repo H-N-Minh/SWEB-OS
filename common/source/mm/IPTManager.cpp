@@ -199,7 +199,7 @@ size_t IPTManager::findPageToSwapOut()
           size_t vpn = archmem_ipt->vpn_;
           if(!archmem->isBitSet(vpn, BitType::SECONDCHANGE, true))
           {
-            archmem->resetAccessBitsAndSetSecondChange(vpn);
+            archmem->setSecondChange(vpn);
             archmem->archmemory_lock_.release();
           }
           else

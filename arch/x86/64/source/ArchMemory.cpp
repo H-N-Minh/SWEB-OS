@@ -931,7 +931,7 @@ void ArchMemory::setSharedBit(size_t vpn)
 }
 
 
-void ArchMemory::resetAccessBitsAndSetSecondChange(size_t vpn)        
+void ArchMemory::setSecondChange(size_t vpn)        
 {
   assert(archmemory_lock_.heldBy() == currentThread);
  
