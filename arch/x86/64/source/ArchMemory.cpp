@@ -43,7 +43,7 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
   archmemory_lock_.acquire();
   
   debug(FORK, "ArchMemory::copy-constructor starts \n");
-  page_map_level_4_ = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+  page_map_level_4_ = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
   PageMapLevel4Entry* CHILD_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(page_map_level_4_);
   PageMapLevel4Entry* PARENT_pml4 = (PageMapLevel4Entry*) getIdentAddressOfPPN(src.page_map_level_4_);
   memcpy((void*) CHILD_pml4, (void*) PARENT_pml4, PAGE_SIZE);
@@ -56,7 +56,7 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
     if (PARENT_pml4[pml4i].present)
     {
       // setup new page directory pointer table
-      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+      CHILD_pml4[pml4i].page_ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 
       PageDirPointerTableEntry* CHILD_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(CHILD_pml4[pml4i].page_ppn);
       PageDirPointerTableEntry* PARENT_pdpt = (PageDirPointerTableEntry*) getIdentAddressOfPPN(PARENT_pml4[pml4i].page_ppn);
@@ -70,7 +70,7 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
         if (PARENT_pdpt[pdpti].pd.present)
         {
           // setup new page directory
-          CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);;
+          CHILD_pdpt[pdpti].pd.page_ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);;
 
           //CHILD_pdpt[pdpti].pd.page_ppn = PARENT_pdpt[pdpti].pd.page_ppn;
           PageDirEntry* CHILD_pd = (PageDirEntry*) getIdentAddressOfPPN(CHILD_pdpt[pdpti].pd.page_ppn);
@@ -84,7 +84,7 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
             if (PARENT_pd[pdi].pt.present)
             {
               // setup new page table
-              CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);;
+              CHILD_pd[pdi].pt.page_ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);;
 
               //CHILD_pd[pdi].pt.page_ppn = PARENT_pd[pdi].pt.page_ppn;
               PageTableEntry* CHILD_pt = (PageTableEntry*) getIdentAddressOfPPN(CHILD_pd[pdi].pt.page_ppn);
@@ -107,7 +107,7 @@ ArchMemory::ArchMemory(ArchMemory &src, ustl::vector<uint32>& preallocated_pages
                     CHILD_pt[pti].writeable = 0;
                     CHILD_pt[pti].cow = 1;
                   }
-                
+
                   size_t vpn = construct_VPN(pti, pdi, pdpti, pml4i);
                   PageManager::instance()->incrementReferenceCount(PARENT_pt[pti].page_ppn, vpn, this, maptype);
 
@@ -296,19 +296,19 @@ bool ArchMemory::mapPage(uint64 virtual_page, uint64 physical_page, uint64 user_
 
   if (m.pdpt_ppn == 0)
   {
-    m.pdpt_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    m.pdpt_ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
     insert<PageMapLevel4Entry>((pointer) m.pml4, m.pml4i, m.pdpt_ppn, 1, 0, 1, 1);
   }
 
   if (m.pd_ppn == 0)
   {
-    m.pd_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    m.pd_ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
     insert<PageDirPointerTablePageDirEntry>(getIdentAddressOfPPN(m.pdpt_ppn), m.pdpti, m.pd_ppn, 1, 0, 1, 1);
   }
 
   if (m.pt_ppn == 0)
   {
-    m.pt_ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    m.pt_ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
     insert<PageDirPageTableEntry>(getIdentAddressOfPPN(m.pd_ppn), m.pdi, m.pt_ppn, 1, 0, 1, 1);
   }
 
@@ -549,7 +549,7 @@ void ArchMemory::copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocate
   {
     debug(FORK, "ArchMemory::copyPage: Ref count is > 1, Copying to a new page\n");
     size_t old_ppn = pml1_entry->page_ppn;
-    size_t new_ppn = pm->getPreAlocatedPage(preallocated_pages);
+    size_t new_ppn = pm->getPreAllocatedPage(preallocated_pages);
     pointer old_page = ArchMemory::getIdentAddressOfPPN(old_ppn);
     pointer new_page = ArchMemory::getIdentAddressOfPPN(new_ppn);
     memcpy((void*)new_page, (void*)old_page, PAGE_SIZE);
@@ -612,7 +612,7 @@ size_t ArchMemory::getDiskLocation(size_t vpn)
     return 0; //ppn is used to store disk location
   }
 
-  
+
 }
 
 
@@ -741,7 +741,7 @@ void ArchMemory::setPageTableEntryToNotPresent(size_t vpn)
 
   debug(A_MEMORY, "ArchMemory::setPageTableEntryToNotPresent: Update vpn %p in archmemory %p.\n", (void*)vpn, this);
   ArchMemoryMapping mapping = resolveMapping(vpn);
-  
+
   PageTableEntry* pt_entry = &mapping.pt[mapping.pti];
   assert(pt_entry && "No pagetable entry");
   assert(pt_entry->present == 1);
@@ -752,11 +752,11 @@ void ArchMemory::setPageTableEntryToNotPresent(size_t vpn)
 
 
 
-void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)        
+void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
- 
-  debug(A_MEMORY, "ArchMemory::resetDirtyBitSetBeenDirtyBits: with vpn %zu.\n", vpn); 
+
+  debug(A_MEMORY, "ArchMemory::resetDirtyBitSetBeenDirtyBits: with vpn %zu.\n", vpn);
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
@@ -764,7 +764,7 @@ void ArchMemory::resetDirtyBitSetBeenDirtyBits(size_t vpn)
   {
     pt_entry->been_dirty = 1;
   }
-  
+
   pt_entry->dirty = 0;
 }
 
@@ -776,13 +776,13 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
   assert(archmemory_lock_.heldBy() == currentThread);
 
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
-  
+
 
   if(pagetable_need_to_be_present)
   {
     assert(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present);
   }
-  
+
   if(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present)
   {
     PageTableEntry* pt_entry = &m.pt[m.pti];
@@ -800,37 +800,37 @@ bool ArchMemory::isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_pre
     {
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
       pt_entry->discarded = 0;
-      return true;  
+      return true;
     }
     else if(bit == DIRTY && pt_entry->dirty)
     {
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
-      return true;  
+      return true;
     }
     else if(bit == WRITEABLE && pt_entry->writeable)
     {
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
-      return true;  
+      return true;
     }
     else if(bit == SWAPPED_OUT && pt_entry->swapped_out)
     {
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
-      return true;  
+      return true;
     }
     else if(bit == PRESENT && pt_entry->present)
     {
       debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
-      return true;  
+      return true;
     }
     else if(bit == ACCESSED && pt_entry->accessed)
     {
       // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
-      return true;  
+      return true;
     }
     else if(bit == SECONDCHANGE && pt_entry->second_change)
     {
       // debug(A_MEMORY, "ArchMemory::isBitSet: bit: %s, with vpn %p is set!\n", bitAsString(bit), (void*)vpn);
-      return true;  
+      return true;
     }
   }
 
@@ -931,11 +931,11 @@ void ArchMemory::setSharedBit(size_t vpn)
 }
 
 
-void ArchMemory::setSecondChange(size_t vpn)        
+void ArchMemory::setSecondChange(size_t vpn)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
- 
-  // debug(A_MEMORY, "ArchMemory::resetAccessBits: with vpn %zu.\n", vpn); 
+
+  // debug(A_MEMORY, "ArchMemory::resetAccessBits: with vpn %zu.\n", vpn);
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
@@ -948,11 +948,11 @@ void ArchMemory::setSecondChange(size_t vpn)
   }
 }
 
-void ArchMemory::resetSecondChange(size_t vpn)        
+void ArchMemory::resetSecondChange(size_t vpn)
 {
   assert(archmemory_lock_.heldBy() == currentThread);
- 
-  // debug(A_MEMORY, "ArchMemory::resetAccessBits: with vpn %zu.\n", vpn); 
+
+  // debug(A_MEMORY, "ArchMemory::resetAccessBits: with vpn %zu.\n", vpn);
   ArchMemoryMapping m = ArchMemory::resolveMapping(vpn);
   PageTableEntry* pt_entry = &m.pt[m.pti];
 
@@ -960,6 +960,6 @@ void ArchMemory::resetSecondChange(size_t vpn)
   {
     pt_entry->second_change = 0;
     pt_entry->accessed = 0;
-    
+
   }
 }

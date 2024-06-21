@@ -18,6 +18,8 @@ class SwappingManager
 
     ~SwappingManager();
 
+    void copyPageToDisk(size_t ppn);
+
     void swapOutPage(size_t ppn);
     int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
 
@@ -28,12 +30,8 @@ class SwappingManager
     // locking order: Ipt -> disk -> archmem
     Mutex disk_lock_;
 
-    void enqueuePageForPreSwap(size_t ppn);
-    void performPreSwap();
-    size_t getPreSwapQueueSize();
-    void swapOutPageContent(size_t ppn);
-    Mutex pre_swap_lock_;
 
+    static bool pre_swap_enabled;
     Mutex swapping_thread_finished_lock_;
     Condition swapping_thread_finished_;
 
@@ -43,10 +41,8 @@ class SwappingManager
   private:
     static SwappingManager* instance_;
     IPTManager* ipt_;
-
     BDVirtualDevice* bd_device_;
 
-    ustl::queue<size_t> pre_swap_queue_;
 
     static size_t disk_offset_counter_;    //TODO? this only goes up, so disk page is never reused
 

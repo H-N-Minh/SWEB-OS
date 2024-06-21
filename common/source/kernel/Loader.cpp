@@ -72,7 +72,7 @@ void Loader::loadPage(pointer virtual_address, ustl::vector<uint32>& preallocate
     const pointer virt_page_end_addr = virt_page_start_addr + PAGE_SIZE;
     bool found_page_content = false;
     // get a new page for the mapping
-    size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+    size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 
     program_binary_lock_.acquire();
 

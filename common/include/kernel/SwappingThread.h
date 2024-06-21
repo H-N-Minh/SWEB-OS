@@ -1,18 +1,19 @@
 #pragma once
 
-#include "Thread.h"
 #include "Condition.h"
-#include "Mutex.h"
-#include "uvector.h"
-#include "types.h"
 #include "IPTManager.h"
+#include "Mutex.h"
+#include "Thread.h"
+#include "types.h"
+#include "ulist.h"
+#include "uvector.h"
 
 class SwappingThread : public Thread
 {
   public:
     static int user_initialized_flag_;    // 0: not initialized, 1: initialized. Only UserThread can change this flag.
     static bool should_be_killed_;
-  
+
     SwappingThread();
     virtual ~SwappingThread();
     virtual void kill();
@@ -39,6 +40,17 @@ class SwappingThread : public Thread
 
 
 
+    /////////////// pre swap
+  private:
+    ustl::vector<uint32> pre_swapped_pages_;   // ppn that were copied to disk during preswap
+  public:
+    void preswap();
+    size_t copyPageToDisk();
+    static bool isMemoryAlmostFull();
+    static ustl::deque<size_t> preswap_page_queue;
+    static ustl::deque<size_t>& getPreswapPageQueue() {return preswap_page_queue;}
+
+
     /////////////// swap out
   private:
     ustl::vector<uint32> free_pages_;   // ppn that were swapped out and now free
@@ -60,7 +72,7 @@ class SwappingThread : public Thread
      * If the memory is almost full and we dont have enough free pages in free_pages_, we need to swap out some pages.
      * This satisfies both preswap and swap out on demand.
     */
-    bool isMemoryAlmostFull();
+    static bool isMemoryFull();
 
     /**
      * check if free_pages_ is empty or not
@@ -93,7 +105,5 @@ class SwappingThread : public Thread
      * check if the disk_offset is in the swap_in_map_. If not, that means the page has been swapped in.
     */
     bool isOffsetInMap(size_t disk_offset);
-
-
 
 };

@@ -230,14 +230,14 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
 	SharedMemEntry* entry = getSharedMemEntry(address);
 
 	// create new ppn and copy content from fd if necessary
-	size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
+	size_t ppn = PageManager::instance()->getPreAllocatedPage(preallocated_pages);
 	size_t vpn = address / PAGE_SIZE;
 	if ((entry->flags_ == MAP_PRIVATE || entry->flags_ == MAP_SHARED) && entry->fd_ >= 0)
 	{
 		debug(MMAP, "SharedMemManager::handleSharedPF: fd exists, copying content from fd (%d) to the new ppn (%zu)\n", entry->fd_, ppn);
 		ssize_t offset = entry->getOffset(vpn);
 		copyContentFromFD(ppn, entry->fd_, offset, arch_memory, entry->globalFileDescriptor_);
-        
+
 	}
 
 	// map every relevant archmem to the new ppn
@@ -495,12 +495,12 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry *sm_entry,
 	assert(shared_mem_lock_.isHeldBy((Thread*) currentThread) && "SharedMemManager::unmapOnePage: shared_mem_lock_ not held\n");
 	assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: IPT need to be locked");
 	assert(arch_memory->archmemory_lock_.heldBy() == currentThread && "SharedMemManager::unmapOnePage: archmemory_lock_ not held\n");
-    
+
 	// unmap and write to file if necessary
 	if (arch_memory->checkAddressValid(vpn * PAGE_SIZE))
 	{
 		debug(MMAP, "SharedMemManager::unmapOnePage: unmapping page vpn %zu\n", vpn);
-        
+
 		if (isTimeToWriteBack(sm_entry, arch_memory, vpn))
 		{
 			debug(MMAP, "SharedMemManager::unmapOnePage: private page with fd, writing back to file\n");
