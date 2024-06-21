@@ -96,6 +96,12 @@ public:
 
   static int getSwappingStats(int* disk_writes, int* disk_reads, int* discard_unchanged_page, int* reuse_same_disk_location);
   static int munmap(size_t start, size_t length);
+
+  static int shm_open(size_t name, size_t oflag, size_t mode);
+
+  static int shm_unlink(size_t name);
+
+  static int get_num_free_pages();
 };
 
 

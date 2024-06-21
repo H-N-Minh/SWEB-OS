@@ -13,12 +13,21 @@
 FileDescriptorList global_fd_list;
 
 static size_t fd_num_ = 3;
+static size_t shm_fd_start_ = 2001; //fd from shared object should shart at 2001
 
 FileDescriptor::FileDescriptor(File* file, FileType type) :
     fd_(ArchThreads::atomic_add(fd_num_, 1)),
     file_(file),
     type_(type)
 {
+	if (type == FileType::SHARED_MEMORY)
+	{
+		fd_ = ArchThreads::atomic_add(shm_fd_start_, 1);
+	}
+	else
+	{
+		fd_ = ArchThreads::atomic_add(fd_num_, 1);
+	}
   debug(VFS_FILE, "Create file descriptor %u\n", getFd());
 }
 
@@ -84,7 +93,7 @@ int FileDescriptorList::remove(FileDescriptor* fd)
   {
     if((*it)->getFd() == fd->getFd())
     {
-      fds_.erase(it);  //TODOs ?? update iterator??
+      fds_.erase(it);
 
 //      fd->decrementRefCount();
 //      if (fd->getRefCount() == 0)

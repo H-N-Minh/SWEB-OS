@@ -166,6 +166,15 @@ size_t Syscall::syscallException(size_t syscall_number, size_t arg1, size_t arg2
     case sc_munmap:
       return_value = munmap(arg1, arg2);
       break;
+		case sc_shm_open:
+		  return_value = shm_open(arg1, arg2, arg3);
+		  break;
+	  case sc_shm_unlink:
+  		return_value = shm_unlink(arg1);
+  		break;
+	  case sc_free_pages:
+  		return_value = get_num_free_pages();
+  		break;
     default:
       return_value = -1;
       kprintf("Syscall::syscallException: Unimplemented Syscall Number %zd\n", syscall_number);
@@ -223,11 +232,11 @@ bool isMmapParamValid(mmap_params_t* params)
   }
 
   //prots
-  uint32 valid_prots[] = {PROT_NONE, PROT_READ, PROT_WRITE, PROT_EXEC, 
-                          PROT_READ | PROT_WRITE, PROT_READ | PROT_EXEC, PROT_WRITE | PROT_EXEC, 
+  uint32 valid_prots[] = {PROT_NONE, PROT_READ, PROT_WRITE, PROT_EXEC,
+                          PROT_READ | PROT_WRITE, PROT_READ | PROT_EXEC, PROT_WRITE | PROT_EXEC,
                           PROT_READ | PROT_WRITE | PROT_EXEC};
   int prot_exists = 0;
-  for (int i : valid_prots) 
+  for (int i : valid_prots)
   {
     if (prot == i)
     {
@@ -244,7 +253,7 @@ bool isMmapParamValid(mmap_params_t* params)
   // flags
   uint32 __VALID_FLAGS__[] = {MAP_PRIVATE, MAP_SHARED, MAP_PRIVATE | MAP_ANONYMOUS, MAP_SHARED | MAP_ANONYMOUS};
   int flag_exists = 0;
-  for (int i : __VALID_FLAGS__) 
+  for (int i : __VALID_FLAGS__)
   {
     if (flags == i)
     {
@@ -271,7 +280,7 @@ bool isMmapParamValid(mmap_params_t* params)
     debug(ERROR_DEBUG, "Syscall::mmap: offset is not multiple of page size or not positive\n");
     return false;
   }
-  
+
   return true;
 }
 
@@ -292,11 +301,11 @@ int Syscall::mmap(size_t para, size_t retval)
     *(size_t*) retval = (size_t) ret;
     return -1;
   }
-  
-  
+
+
   // done error checking, now do the mmap
   ret = smm->mmap(params);
-  
+
   debug(SYSCALL, "Syscall::mmap: return value: %p\n", ret);
   *(size_t*) retval = (size_t) ret;
 
@@ -402,7 +411,7 @@ int Syscall::pthreadJoin(size_t thread_id, void**value_ptr)
     debug(USERTHREAD, "UserThread:pthreadJoin: Thread tries to join itself or invalid value_ptr.\n");
     return -1;
   }
-  
+
   return ((UserThread*)currentThread)->joinThread(thread_id, value_ptr);
 }
 
@@ -927,18 +936,18 @@ void addBarChart(ustl::string lines[], int position, int number, ustl::string ti
   }
   ustl::string number_as_string = "(=" + ustl::to_string(number) + ")";
   lines[position].replace(bar_size + 2 ,number_as_string.size(),number_as_string);
-  
+
 }
 
 void Syscall::getIPTInfos()
 {
-  
+
 
   ustl::string empty_line = "|                                                                         |\n";
   ustl::string first_line = "___________________________________________________________________________\n";
   ustl::string last_line  = "|_________________________________________________________________________|\n";
   ustl::string info_line  = "|                                                x = 50 pages             |\n";
-  
+
   ustl::string lines[20];
   lines[0] = first_line;
   lines[19] = last_line;
@@ -1044,3 +1053,41 @@ void Syscall::checkRandomPRA()
   ipt->debugRandomGenerator();
 }
 
+int Syscall::shm_open(size_t name, size_t oflag, size_t mode)
+{
+	debug(SYSCALL, "Syscall::shm_open: Opening shared memory object: %s with flags: %zu and mode: %zu\n", (char*)name, oflag, mode);
+	char* shm_name = (char*)(name);
+	SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
+	int shm_entry = smm->shm_open(shm_name, oflag, mode);
+
+	if (shm_entry == -1)
+	{
+    debug(ERROR_DEBUG, "Syscall::shm_open: failed to open or create shared memory\n");
+    return -1;
+  }
+
+	debug(SYSCALL, "----------Syscall::shm_open: opened/created shared memory %s at FD %d\n", shm_name, shm_entry);
+  return shm_entry;
+}
+
+int Syscall::shm_unlink(size_t name)
+{
+	debug(SYSCALL, "Syscall::shm_unlink: Unlink shared memory object: %s \n", (char*)name);
+	char* shm_name = (char*)(name);
+	SharedMemManager* smm = ((UserThread*)currentThread)->process_->user_mem_manager_->shared_mem_manager_;
+	int shm_entry = smm->shm_unlink(shm_name);
+
+	if (shm_entry == -1)
+	{
+		debug(ERROR_DEBUG, "Syscall::shm_unlink: failed to unlink shared memory\n");
+		return -1;
+	}
+
+	debug(SYSCALL, "----------Syscall::shm_unlink: unlinked shared memory %s \n", shm_name);
+	return shm_entry;
+}
+
+int Syscall::get_num_free_pages()
+{
+  return PageManager::instance()->getNumFreePages();
+}

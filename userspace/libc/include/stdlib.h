@@ -102,9 +102,12 @@ extern void createNewMemoryBlock(MemoryBlock* memory_block, size_t size, int is_
 extern void addOverflowProtection(MemoryBlock* memory_block);
 extern int checkOverflowProtection(MemoryBlock* memory_block);
 
+
+extern void free_unlocked(void *ptr);
+extern void *malloc_unlocked(size_t size);
+
+extern int parameterInUserSpace(size_t ptr, int allowed_to_be_null);
 #ifdef __cplusplus
 }
 #endif
-
-
 

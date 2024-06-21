@@ -20,6 +20,16 @@ class FileDescriptor;
 #define O_DSYNC     0x0200
 #define O_RSYNC     O_SYNC
 
+#define S_IRUSR  0x0100  // Read permission for the owner
+#define S_IWUSR  0x0080  // Write permission for the owner
+#define S_IXUSR  0x0040  // Execute permission for the owner
+#define S_IRGRP  0x0020  // Read permission for the group
+#define S_IWGRP  0x0010  // Write permission for the group
+#define S_IXGRP  0x0008  // Execute permission for the group
+#define S_IROTH  0x0004  // Read permission for others
+#define S_IWOTH  0x0002  // Write permission for others
+#define S_IXOTH  0x0001  // Execute permission for others
+
 #ifndef SEEK_SET
 #define SEEK_SET 0
 #endif

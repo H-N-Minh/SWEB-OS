@@ -25,12 +25,12 @@ class ArchmemIPT;
 ////////////////////// IPTManager //////////////////////
 IPTManager* IPTManager::instance_ = nullptr;
 
-IPTManager::IPTManager() 
+IPTManager::IPTManager()
   : IPT_lock_("IPTManager::IPT_lock_"), fake_ppn_lock_("IPTManager::fake_ppn_lock_")
 {
   assert(!instance_);
   instance_ = this;
-  pra_type_ = PRA_TYPE::RANDOM;
+  pra_type_ = PRA_TYPE::NFU;
 }
 
 IPTManager::~IPTManager()
@@ -123,96 +123,40 @@ size_t IPTManager::findPageToSwapOut()
 
   if (pra_type_ == PRA_TYPE::RANDOM)
   {
-    ppn_retval = findPageToSwapOutRandom(ppn_retval);
-  }
-  else if (pra_type_ == PRA_TYPE::NFU)
-  {
-    ppn_retval = findPageToSwapOutNFU(ppn_retval);
-  }
-  else if(pra_type_ == PRA_TYPE::SECOND_CHANGE)
-  {
-    ppn_retval = findPageToSwapOutSC(ppn_retval);
-  }
-  assert(isKeyInMap(ppn_retval, IPTMapType::RAM_MAP) && "selected page need to be in ram");
-  assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
+    debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
 
-  return ppn_retval;
-}
-
-size_t IPTManager::findPageToSwapOutRandom(size_t ppn_retval) {
-  debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA RANDOM\n");
-
-  if(SwappingManager::pre_swap_enabled) {
-    // Gather all the keys from ram_map_
-    ustl::vector<ppn_t> available_keys;
-    for (const auto &pair: ram_map_) {
-      available_keys.push_back(pair.first);
-    }
-
-    if (available_keys.size() == 0) {
-      assert(0 && "No page in ram");
-    }
-
-    // Select a random key until we find a key not in pre-swap queue
-    while (true) {
-      size_t random_num = randomNumGenerator();
-      size_t random_ipt_index = random_num % available_keys.size();
-      ppn_retval = (size_t) (available_keys[random_ipt_index]);
-
-
-      // Use the getter to get the preswap_page_queue.
-      ustl::deque<size_t>& preswap_page_queue = SwappingThread::getPreswapPageQueue();
-
-      // If this page is not in the pre-swap queue, we can return it
-      if (ustl::find(preswap_page_queue.begin(), preswap_page_queue.end(), ppn_retval) == preswap_page_queue.end()) {
-        debug(IPT, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%ld\n", ppn_retval);
-        return ppn_retval;
-      }
-      // If the selected page is already in the pre-swap queue, we remove it from our available keys and loop again.
-      else {
-        available_keys.erase(available_keys.begin() + random_ipt_index);
-        if (available_keys.size() == 0) {
-          assert(0 && "All pages are in the pre-swap queue.");
-        }
-      }
-    }
-  }
-  else{
     size_t random_num = randomNumGenerator();
     // debug(MINH, "IPTManager::findPageToSwapOut: random num : %zu\n", random_num);
 
-    ustl::vector<ppn_t> unique_keys;
-    for (const auto &pair: ram_map_) {
-      unique_keys.push_back(pair.first);
-    }
-    if (unique_keys.size() == 0) {
+    if(ram_map_.size() == 0)
+    {
       assert(0 && "No page in ram");
     }
-    size_t random_ipt_index = random_num % unique_keys.size();
-    ppn_retval = (size_t) (unique_keys[random_ipt_index]);
+    size_t random_ipt_index = random_num % ram_map_.size();
+
+    size_t counter = 0;
+    for (const auto& pair : ram_map_)
+    {
+      if(counter == random_ipt_index)
+      {
+        ppn_retval = pair.first;
+        break;
+      }
+      counter++;
+    }
     debug(IPT, "IPTManager::findPageToSwapOut: Found random page to swap out: ppn=%ld\n", ppn_retval);
-    return ppn_retval;
   }
-}
+  else if (pra_type_ == PRA_TYPE::NFU)
+  {
+    debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
+    uint32 min_counter = UINT32_MAX;
+    ustl::vector<uint32> min_ppns;    // vector of all pages with the minimum counter
 
-size_t IPTManager::findPageToSwapOutNFU(size_t ppn_retval) {
-  debug(IPT, "IPTManager::findPageToSwapOut: Finding page to swap out using PRA NFU\n");
-  uint32 min_counter = UINT32_MAX;
-  ustl::vector<uint32> min_ppns;// vector of all pages with the minimum counter
-
-  if(SwappingManager::pre_swap_enabled) {
-    ustl::deque<size_t>& preswap_page_queue = SwappingThread::getPreswapPageQueue(); // Get access to pre-swap queue
-
+    // go through ram_map_ and find the page with the lowest access counter
     assert(ram_map_.size() > 0 && "IPTManager::findPageToSwapOut: ram_map_ is empty. this should never happen\n");
     for(auto& pair : ram_map_)
     {
       ppn_t key = pair.first;
-
-      // If this page is in the pre-swap queue, skip it
-      if (ustl::find(preswap_page_queue.begin(), preswap_page_queue.end(), key) != preswap_page_queue.end()) {
-        continue;
-      }
-
       uint32 counter = pair.second->access_counter_;
       if (counter < min_counter && counter != 0)
       {
@@ -227,44 +171,8 @@ size_t IPTManager::findPageToSwapOutNFU(size_t ppn_retval) {
       }
     }
     debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
-    if (min_ppns.size() > 1) {
-      debug(IPT, "IPTManager::findPageToSwapOut: Multiple pages with the minimum counter. Randomly selecting one not in pre-swap queue.\n");
-      while (true) {
-        size_t random_num = randomNumGenerator();
-        size_t random_index = random_num % min_ppns.size();
-        ppn_retval = min_ppns[random_index];
-        if (ustl::find(preswap_page_queue.begin(), preswap_page_queue.end(), ppn_retval) == preswap_page_queue.end()) {
-          // Page is not in the pre-swap queue, so we can use it
-          break;
-        } else {
-          min_ppns.erase(min_ppns.begin() + random_index); // remove the chosen page from min_ppns to avoid choosing it again
-          if (min_ppns.size() == 0) {
-            assert(0 && "All minimum-counter pages are in the pre-swap queue.");
-          }
-        }
-      }
-    }
-
-    debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%ld, counter=%d\n", ppn_retval, min_counter);
-    return ppn_retval;
-  }
-  else {
-    // go through ram_map_ and find the page with the lowest access counter
-    assert(ram_map_.size() > 0 && "IPTManager::findPageToSwapOut: ram_map_ is empty. this should never happen\n");
-    for (auto &pair: ram_map_) {
-      ppn_t key = pair.first;
-      uint32 counter = pair.second->access_counter_;
-      if (counter < min_counter && counter != 0) {
-        min_counter = counter;
-        min_ppns.clear();
-        ppn_retval = key;
-        min_ppns.push_back(key);
-      } else if (counter == min_counter) {
-        min_ppns.push_back(key);
-      }
-    }
-    debug(IPT, "IPTManager::findPageToSwapOut: Found %zu pages with the minimum counter: %d\n", min_ppns.size(), min_counter);
-    if (min_ppns.size() > 1) {
+    if (min_ppns.size() > 1)
+    {
       debug(IPT, "IPTManager::findPageToSwapOut: Multiple pages with the minimum counter. Randomly selecting one\n");
       size_t random_num = randomNumGenerator();
       size_t random_index = random_num % min_ppns.size();
@@ -272,43 +180,33 @@ size_t IPTManager::findPageToSwapOutNFU(size_t ppn_retval) {
     }
 
     debug(SWAPPING, "IPTManager::findPageToSwapOut: Found page to swap out: ppn=%ld, counter=%d\n", ppn_retval, min_counter);
-    return ppn_retval;
   }
-}
-
-size_t IPTManager::findPageToSwapOutSC(size_t ppn_retval) {
-  if(fifo_ppns.empty())
+  else if(pra_type_ == PRA_TYPE::SECOND_CHANGE)
   {
-    assert(0);
-  }
-  int counter = 0;
+    if(fifo_ppns.empty())
+    {
+      assert(0);
+    }
+    int counter = 0;
 
-  if(SwappingManager::pre_swap_enabled) {
-    ustl::deque<size_t>& preswap_page_queue = SwappingThread::getPreswapPageQueue(); // Get access to pre-swap queue
     while(ppn_retval == INVALID_PPN && counter < 3)
     {
       counter++;
-      for(; last_index_ < fifo_ppns.size(); last_index_++)
+
+      for(size_t i = 0; i <  fifo_ppns.size() && ppn_retval == INVALID_PPN; i++)
       {
-        auto& ppn = fifo_ppns.at(last_index_);
-
-        // If this page is in the pre-swap queue, skip it
-        if (ustl::find(preswap_page_queue.begin(), preswap_page_queue.end(), ppn) != preswap_page_queue.end()) {
-          continue;
-        }
-
-        assert(isKeyInMap(ppn, RAM_MAP) && "selected page need to be in ram");
+        auto& ppn = fifo_ppns.at(i);
+        assert(isKeyInMap(ppn, IPTMapType::RAM_MAP) && "selected page need to be in ram");
         IPTEntry* entry = ram_map_[ppn];
         for(auto& archmem_ipt : entry->getArchmemIPTs())
         {
           ArchMemory* archmem = archmem_ipt->archmem_;
           archmem->archmemory_lock_.acquire();
           size_t vpn = archmem_ipt->vpn_;
-          if(archmem->isBitSet(vpn, ACCESSED, true))
+          if(!archmem->isBitSet(vpn, BitType::SECONDCHANGE, true))
           {
-            archmem->resetAccessBits(vpn);
+            archmem->setSecondChange(vpn);
             archmem->archmemory_lock_.release();
-
           }
           else
           {
@@ -318,10 +216,6 @@ size_t IPTManager::findPageToSwapOutSC(size_t ppn_retval) {
           }
         }
       }
-      if(last_index_ > (fifo_ppns.size() - 1))
-      {
-        last_index_ = 0;
-      }
     }
 
     if(ppn_retval != INVALID_PPN)
@@ -330,6 +224,15 @@ size_t IPTManager::findPageToSwapOutSC(size_t ppn_retval) {
       if (it != fifo_ppns.end())
       {
         fifo_ppns.erase(it);
+
+        for(auto& archmem_ipt : ram_map_[ppn_retval]->getArchmemIPTs())
+        {
+          ArchMemory* archmem = archmem_ipt->archmem_;
+          size_t vpn = archmem_ipt->vpn_;
+          archmem->archmemory_lock_.acquire();
+          archmem->resetSecondChange(vpn);
+          archmem->archmemory_lock_.release();
+        }
       }
       else
       {
@@ -340,49 +243,10 @@ size_t IPTManager::findPageToSwapOutSC(size_t ppn_retval) {
     {
       assert(0);
     }
-    return ppn_retval;
   }
-  else {
-    while (ppn_retval == INVALID_PPN && counter < 3) {
-      counter++;
-
-      for (; last_index_ < fifo_ppns.size(); last_index_++) {
-        auto &ppn = fifo_ppns.at(last_index_);
-        assert(isKeyInMap(ppn, RAM_MAP) && "selected page need to be in ram");
-        IPTEntry *entry = ram_map_[ppn];
-        for (auto &archmem_ipt: entry->getArchmemIPTs()) {
-          ArchMemory *archmem = archmem_ipt->archmem_;
-          archmem->archmemory_lock_.acquire();
-          size_t vpn = archmem_ipt->vpn_;
-          if (archmem->isBitSet(vpn, ACCESSED, true)) {
-            archmem->resetAccessBits(vpn);
-            archmem->archmemory_lock_.release();
-
-          } else {
-            ppn_retval = ppn;
-            archmem->archmemory_lock_.release();
-            break;
-          }
-        }
-      }
-
-      if (last_index_ > (fifo_ppns.size() - 1)) {
-        last_index_ = 0;
-      }
-    }
-
-    if (ppn_retval != INVALID_PPN) {
-      auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn_retval);
-      if (it != fifo_ppns.end()) {
-        fifo_ppns.erase(it);
-      } else {
-        assert(0 && "PPN not found in fifo_ppns vector");
-      }
-    } else {
-      assert(0);
-    }
-    return ppn_retval;
-  }
+  assert(isKeyInMap(ppn_retval, IPTMapType::RAM_MAP) && "selected page need to be in ram");
+  assert(ppn_retval != INVALID_PPN && "IPTManager::findPageToSwapOut: failed to find a valid ppn\n");
+  return ppn_retval;
 }
 
 void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
@@ -410,6 +274,16 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
     assert(entry && "IPTManager::insertIPT: entry is null");
 
     entry->addArchmemIPT(vpn, archmem);
+
+    if(map_type == IPTMapType::RAM_MAP)
+    {
+      auto it = ustl::find(fifo_ppns.begin(), fifo_ppns.end(), ppn);
+      if (it != fifo_ppns.end())
+      {
+        fifo_ppns.erase(it);
+      }
+      fifo_ppns.push_back(ppn);
+    }
   }
   else
   {
@@ -536,41 +410,41 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
 
 void IPTManager::copyEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
 {
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::copyEntry called but IPT not locked\n");
+	assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::copyEntry called but IPT not locked\n");
 
-  auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
-  auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
+	auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
+	auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
 
-  IPTEntry* entry = (*source_map)[ppn_source];
-  assert(entry);
+	IPTEntry* entry = (*source_map)[ppn_source];
+	assert(entry);
 
-  // copy the entry to the destination and the source remains untouched
-  (*destination_map)[ppn_destination] = new IPTEntry(*entry);
+	// copy the entry to the destination and the source remains untouched
+	(*destination_map)[ppn_destination] = new IPTEntry(*entry);
 }
 
 void IPTManager::finalizePreSwappedEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
 {
-  assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::finalizePreSwappedEntry called but IPT not locked\n");
+	assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::finalizePreSwappedEntry called but IPT not locked\n");
 
-  // get reference to source map and destination map
-  auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
-  auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
+	// get reference to source map and destination map
+	auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
+	auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
 
-  IPTEntry* entry = (*source_map)[ppn_source];
+	IPTEntry* entry = (*source_map)[ppn_source];
 
-  // add entry to the destination map
-  (*destination_map)[ppn_destination] = entry;
-  // remove entry from the source map
-  source_map->erase(ppn_source);
+	// add entry to the destination map
+	(*destination_map)[ppn_destination] = entry;
+	// remove entry from the source map
+	source_map->erase(ppn_source);
 
-  // Check if finalize operation failed or not
-  if (isKeyInMap(ppn_source, source) || !isKeyInMap(ppn_destination, source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP))
-  {
-    assert(0 && "IPTManager::finalizePreSwappedEntry: finalize failed\n");
-  }
+	// Check if finalize operation failed or not
+	if (isKeyInMap(ppn_source, source) || !isKeyInMap(ppn_destination, source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP))
+	{
+		assert(0 && "IPTManager::finalizePreSwappedEntry: finalize failed\n");
+	}
 }
 
-void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)         //Todos does not delete but don't know where because I need it after remove
+void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::removeEntry called but IPT not locked\n");
 
@@ -602,7 +476,7 @@ bool IPTManager::isEntryInMap(size_t ppn, IPTMapType maptype, ArchMemory* archme
   }
   else
   {
-    return it->second->isArchmemExist(archmem, vpn);            //TODO: it->second->vpn_ == vpn VPN!!!!!!!!!!!!!
+    return it->second->isArchmemExist(archmem, vpn);
   }
 }
 
@@ -636,7 +510,7 @@ int IPTManager::getNumPagesInMap(IPTMapType maptype)
 void IPTManager::checkRamMapConsistency()
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::checkRamMapConsistency called but IPT not locked\n");
-  assert(!ram_map_.empty() && "IPTManager::checkRamMapConsistency: ram_map_ is empty, unlikely to happen\n");
+  assert(ram_map_.size() && "IPTManager::checkRamMapConsistency: ram_map_ is empty, unlikely to happen\n");
 
   for (auto it = ram_map_.begin(); it != ram_map_.end(); ++it)
   {
@@ -644,7 +518,7 @@ void IPTManager::checkRamMapConsistency()
     IPTEntry* ipt_entry = it->second;
     assert(ipt_entry && "checkRampMapConsistency: No IPTEntry");
     ustl::vector<ArchmemIPT*> archmemIPTs_vector = ipt_entry->getArchmemIPTs();
-    assert(!archmemIPTs_vector.empty() && "checkRampMapConsistency: No ArchmemIPT (empty archmem vector), but IPTEntry still exists in ram_map_");
+    assert(archmemIPTs_vector.size() && "checkRampMapConsistency: No ArchmemIPT (empty archmem vector), but IPTEntry still exists in ram_map_");
 
     for (auto archmemIPT : archmemIPTs_vector)
     {
@@ -692,7 +566,7 @@ void IPTManager::checkDiskMapConsistency()
     IPTEntry* ipt_entry = it->second;
     assert(ipt_entry && "checkRampMapConsistency: No IPTEntry");
     ustl::vector<ArchmemIPT*> archmemIPTs_vector = ipt_entry->getArchmemIPTs();
-    assert(archmemIPTs_vector.size() && "checkRampMapConsistency: No ArchmemIPT (empty archmem vector), but IPTEntry still exist in disk map");
+    assert(archmemIPTs_vector.size() && "checkRampMapConsistency: No ArchmemIPT (empty archmem vector), but IPTEntry still exist in diskmap");
 
     for (auto archmemIPT : archmemIPTs_vector)
     {
@@ -707,8 +581,8 @@ void IPTManager::checkDiskMapConsistency()
         entry_arch->archmemory_lock_.acquire();
         locked_by_us = 1;
       }
-      
-      auto disk_offset = (ppn_t) entry_arch->getDiskLocation(vpn);
+
+      ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(vpn);
       assert(disk_offset != 0);
       assert(disk_offset && "checkRampMapConsistency: disk_offset is 0\n");
       assert(key == disk_offset && "checkRampMapConsistency: ppn in disk_map_ (key) does not match disk offset in ArchMemory\n");
@@ -804,7 +678,7 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
     auto& sub_map = archMemoryIt->second;
     if (sub_map.find(vpn) != sub_map.end())
     {
-      mutual_fake_ppn = sub_map[vpn];      
+      mutual_fake_ppn = sub_map[vpn];
     }
     else
     {
@@ -915,6 +789,3 @@ void IPTManager::unmapOneFakePPN(size_t vpn, ArchMemory* arch_memory)
     assert(0 && "IPTManager::unmapOneFakePPN: archmem not found in fake_ppn_map_\n");
   }
 }
-
-
-

@@ -8,7 +8,6 @@
 
 #define INVALID_PPN 0
 
-#define TIME_STEP 1 // in seconds
 #define TICKS_PER_SEC 18
 #define PRESWAP_THRESHOLD 80  // in percentage (start pre-swapping when memory usage is above 80%)
 #define SWAP_THRESHOLD 90
@@ -21,7 +20,7 @@ bool SwappingThread::should_be_killed_ = false;
 
 
 SwappingThread::SwappingThread() 
-  : Thread(nullptr, "SwappingThread", Thread::KERNEL_THREAD),
+  : Thread(0, "SwappingThread", Thread::KERNEL_THREAD), 
     swap_out_lock_("swap_out_lock_"), swap_out_cond_(&swap_out_lock_, "swap_out_cond_"),
     swap_in_lock_("swap_in_lock_"), swap_in_cond_(&swap_in_lock_, "swap_in_cond_")
 {
@@ -101,8 +100,9 @@ void SwappingThread::swapOut()
   debug(SWAPTHREAD, "SwappingThread::swapOut: Check if swap out necessary.\n");
   swap_out_lock_.acquire();
 
-  bool memory_full = isMemoryFull();
-  if (memory_full && free_pages_.size() < MAX_PRESWAP_PAGES)
+  bool almost_full_memory = isMemoryAlmostFull();
+
+  if (almost_full_memory && free_pages_.size() < MAX_PRESWAP_PAGES)    // if in low memory zone && vector is not full => swap out
   {
     // Swap out multiple pages at a time, until either the vector is full or max swap out amount is reached
     for (int i = 0; i < SWAP_OUT_AMOUNT; i++)
@@ -129,9 +129,8 @@ void SwappingThread::swapOut()
 
     }
   }
-
-  if(!memory_full) { // if memory isn't full
-    // Free the normal swap out pages
+  else if(!almost_full_memory)    // no longer in low memory zone => free the pages
+  {
     if (!free_pages_.empty())
     {
       for (uint32 ppn : free_pages_)
@@ -140,16 +139,6 @@ void SwappingThread::swapOut()
         debug(MINH, "SwappingThread::swapOut: free page %u\n", ppn);
       }
       free_pages_.clear();
-    }
-
-    // And if pre-swap is enabled, free the pre-swapped pages
-    if(SwappingManager::pre_swap_enabled && !pre_swapped_pages_.empty()){
-      for (uint32 ppn : pre_swapped_pages_)
-      {
-        PageManager::instance()->freePPN(ppn);
-        debug(MINH, "SwappingThread::swapOut: free preswapped page %u\n", ppn);
-      }
-      pre_swapped_pages_.clear();
     }
     memory_full_try_alloc_again_ = true;
     swap_out_cond_.signal();
@@ -193,7 +182,6 @@ void SwappingThread::swapIn()
         }
       }
     }
-    //updateMetaData();        //TODOs: adding this makes pra4 work !!!!!!!(maybe bad though) ?????
     swap_in_cond_.broadcast();
   }
   swap_in_lock_.release();
@@ -221,19 +209,24 @@ void SwappingThread::Run()
         SwappingManager::instance()->swapping_thread_finished_lock_.release();
         continue;
       }
-      // 1. Updating Meta data every 1 seconds
+      // 3. Swap in if needed
+      swapIn();
+
+      // 1. Updating Meta data
       if (isOneTimeStep())
       {
         updateMetaData();
       }
       // 2. Pre-swap if needed
-      preswap();
+//      preswap();
 
       // 3. Swap out if needed
       swapOut();
-      
-      // 4. Swap in if needed
-      swapIn();
+
+
+
+
+
     }
 
     // 5. Yield
@@ -250,7 +243,7 @@ void SwappingThread::updateMetaData()
   }
 
   IPTManager* ipt = IPTManager::instance();
-  if(ipt->pra_type_ == PRA_TYPE::NFU)
+  if(ipt->pra_type_ != PRA_TYPE::SECOND_CHANGE)
   {
     ipt->IPT_lock_.acquire();
     debug(SWAPTHREAD, "SwappingThread::updateMetaData: updating meta data for PRA NFU\n");
@@ -297,17 +290,12 @@ bool SwappingThread::isOneTimeStep()
 {
   size_t current_ticks = Scheduler::instance()->getTicks();
   assert(current_ticks >= last_tick_ && "SwappingThread::isOneTimeStep: current_ticks must be greater than last_tick_\n");
-  // size_t time_passed = (current_ticks - last_tick_) / TICKS_PER_SEC;
-  // if (time_passed >= TIME_STEP)
-  // {
-  //   // debug(MINH, "SwappingThread::isOneTimeStep: time_passed: %ds\n", time_passed);
-  //   last_tick_ = current_ticks;
-  //   return true;
-  // }
-  if((current_ticks - last_tick_)>5)
+  if((current_ticks - last_tick_)>1)
   {
+    last_tick_ = current_ticks;
     return true;
   }
+
   return false;
 }
 
@@ -388,4 +376,3 @@ uint32 SwappingThread::getFreePage()
   free_pages_.erase(free_pages_.begin());
   return ppn;
 }
-

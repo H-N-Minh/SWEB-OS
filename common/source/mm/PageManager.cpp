@@ -458,4 +458,3 @@ size_t PageManager::getPreAllocatedPage(ustl::vector<uint32>&pre_allocated_pages
   return ppn;
 }
 
-

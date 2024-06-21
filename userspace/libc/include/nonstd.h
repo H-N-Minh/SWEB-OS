@@ -30,10 +30,10 @@ extern int setPRA(int pra);
 extern int getPRAstats(int* hit_count, int* miss_count);
 extern int checkRandomPRA();
 extern int getSwappingStats(int* disk_writes, int* disk_reads, int* discard_unchanged_page, int* reuse_same_disk_location);
+extern int getNumFreePages();
 
 #ifdef __cplusplus
 }
 #endif
-
 
 

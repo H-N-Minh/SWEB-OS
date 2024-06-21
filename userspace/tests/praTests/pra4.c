@@ -1,53 +1,60 @@
 #include "stdio.h"
-#include "types.h"
-#include "unistd.h"
-#include "pthread.h"
+#include "stdlib.h"
 #include "assert.h"
 #include "sched.h"
 
-#define MAX_FORK  64    // should be multiple of 2, so the array can be evenly divided between child processes
 
+#define MEGABYTE 1048576
 #define PAGESIZE 4096
-#define PAGES_IN_ARRAY 1280 
-#define ELEMENTS_IN_ARRAY (PAGES_IN_ARRAY * PAGESIZE)/8        
 
+#define N 7
+#define N_MEGABYTE N * MEGABYTE
 
-size_t big_array[ELEMENTS_IN_ARRAY];  //5 Megabyes
+#define ELEMENTS_IN_ARRAY N_MEGABYTE / 8
+#define PAGES_IN_ARRAY N_MEGABYTE/PAGESIZE
 
-// Test: Many forks and children trigger out of memory
-int pra4() 
-{  
-    size_t x = 0;
-    for (int i = 0; i < MAX_FORK; i++) {
-        assert(x == i  && "each process should have its own unique value of x");
-        pid_t pid = fork();
-        if (pid > 0) 
-        {
-            x += 1;      
-            continue;    // parent continues to fork
-        } 
-        else if (pid == 0) 
-        {   // child writes data to array then die
-            int start = i * (PAGES_IN_ARRAY / MAX_FORK);
-            int end = (i + 1) * (PAGES_IN_ARRAY / MAX_FORK);
-            for(int i2 = start; i2 < end; i2++)
-            {
-                big_array[i2 * (PAGESIZE / 8)] = (size_t)i2;
-            }
-            for(int i3 = start; i3 < end; i3++)
-            {
-                assert(big_array[i3 * (PAGESIZE / 8)] == i3);
-            }
-            exit(0);
-        } 
-        else 
-        {
-            assert(0);
-        }
-    }
+size_t big_array2[ELEMENTS_IN_ARRAY];
+static unsigned int randomSeed = 0;
 
-    // only 1 last process would reach here
-    assert(x == MAX_FORK  && "parent process (the 100th process) should now have x = 100");
-    
-    return 0;
+void srand(unsigned int seed) {
+  randomSeed = seed;
 }
+
+unsigned int rand(void) {
+  randomSeed = randomSeed * 214013 + 2531011;
+  return (randomSeed >> 16) & 0x7FFF;
+}
+
+int pra4()
+{
+  printf("Starting pra4 test...\n");
+  size_t count_pages = N_MEGABYTE/PAGESIZE;
+
+  // random seed
+  srand(42);
+
+  // iterate over all page frames once
+  printf("Randomly modifying %zu pages\n", count_pages);
+  for(size_t i = 0; i < count_pages; i++)
+  {
+    // generate random page number
+//    printf("Modifying page %zu\n", i);
+    size_t page = rand() % count_pages;
+
+    // Modify a byte on the page
+    big_array2[page * (PAGESIZE / 8)] = (size_t)i;
+  }
+  printf("Done\n");
+
+  // check the correctness of the data via extra read loop
+  printf("Checking correctness\n");
+  for(size_t i = 0; i < count_pages; i++)
+  {
+//    printf("Checking page %zu\n", i);
+    size_t page = i % count_pages;
+    assert(big_array2[page * (PAGESIZE / 8)] <= (size_t)count_pages);
+  }
+  printf("Done2\n");
+  return 0;
+}
+

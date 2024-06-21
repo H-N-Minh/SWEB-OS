@@ -13,7 +13,7 @@ enum PRA_TYPE {RANDOM, NFU, SECOND_CHANGE};
 // class IPTEntry;
 class ArchMemory;
 
-typedef size_t fake_ppn_t;    // index of the 
+typedef size_t fake_ppn_t;    // index of the
 typedef size_t vpn_t;
 typedef size_t ppn_t;
 typedef size_t diskoffset_t;
@@ -34,10 +34,10 @@ public:
   unsigned last_index_ = 0;
 
   // When a page is set as shared, it is not assigned a ppn yet until a PF happens. Without ppn, it cant be added to IPT table.
-  // Therefore, this map exists. It assigns a fake ppn temporarily, until the page is actually allocated a real ppn.
+  // Therefore this map exists. It assigns a fake ppn temprorarily, until the page is actually allocated a real ppn.
   ustl::map<ArchMemory*, ustl::map<vpn_t, fake_ppn_t>> fake_ppn_map_;
 
-  // the map to tracks backwards from fake ppn to all the archmem that is sharing this fake ppn.
+  // the map to tracks backwards from fake ppn to all the archmem that is sharing this fake ppn. 
   // This is used when the shared page is assigned a real ppn, then all the archmem that is sharing the page should be updated with the real ppn
   ustl::multimap<fake_ppn_t, ArchmemIPT*> inverted_fake_ppn_;
 
@@ -80,13 +80,6 @@ public:
   void moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
 
 
-  void copyEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
-
-
-  void finalizePreSwappedEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination);
-
-
-
   void removeEntry(IPTMapType map_type, size_t ppn);
 
   /**
@@ -108,9 +101,6 @@ public:
    * @return the ppn of the page that will be swapped out. This is where the PRA is used
   */
   size_t findPageToSwapOut();
-  size_t findPageToSwapOutRandom(size_t ppn_retval);
-  size_t findPageToSwapOutNFU(size_t ppn_retval);
-  size_t findPageToSwapOutSC(size_t ppn_retval);
 
 
   /**

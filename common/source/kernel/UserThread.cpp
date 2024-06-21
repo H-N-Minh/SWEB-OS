@@ -378,7 +378,7 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
     return -1;
   }
   debug(USERPROCESS, "UserThread::createThread: func (%p), para (%zu) \n", start_routine, (size_t) arg);
-  
+
   JoinState join_state;
   if(attr)
   {
@@ -392,10 +392,10 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
   {
     join_state = PTHREAD_CREATE_JOINABLE;
   }
-  
+
   UserThread* new_thread = new UserThread(process_->working_dir_, process_->filename_, Thread::USER_THREAD, process_->terminal_number_,
                                           process_->loader_, process_, start_routine, arg, wrapper);
-  
+
   process_->threads_lock_.acquire();
   if(new_thread)
   {
@@ -404,7 +404,7 @@ int UserThread::createThread(size_t* thread, void* start_routine, void* wrapper,
     process_->threads_.push_back(new_thread);
     Scheduler::instance()->addNewThread(new_thread);
     size_t new_ID = new_thread->getTID();
-    process_->threads_lock_.release();  
+    process_->threads_lock_.release();
     *thread = new_ID;
     return 0;
   }
@@ -468,5 +468,3 @@ int UserThread::detachThread(size_t thread_id)
 
   return 0;
 }
-
-

@@ -31,7 +31,7 @@ enum AnsiColor
 
 
 //group Block Device
-const size_t BD_MANAGER         = Ansi_Yellow;
+const size_t BD_MANAGER         = Ansi_Yellow; //
 const size_t BD_VIRT_DEVICE     = Ansi_Yellow;
 
 //group Console
@@ -49,7 +49,7 @@ const size_t USERTHREAD         = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t PROCESS_REG        = Ansi_Yellow  | OUTPUT_ENABLED;
 const size_t BACKTRACE          = Ansi_Cyan    | OUTPUT_ENABLED;
 const size_t USERTRACE          = Ansi_Red     | OUTPUT_ENABLED;
-const size_t SWAPTHREAD          = Ansi_Yellow  | OUTPUT_ENABLED;
+const size_t SWAPTHREAD          = Ansi_Yellow;  // | OUTPUT_ENABLED;
 
 const size_t PIPE               = Ansi_Cyan ;
 const size_t FILEDESCRIPTOR     = Ansi_Cyan;//    | OUTPUT_ENABLED;
@@ -79,7 +79,7 @@ const size_t MMC_DRIVER         = Ansi_Yellow;
 //group arch
 const size_t A_BOOT             = Ansi_Yellow; //| OUTPUT_ENABLED;
 const size_t A_COMMON           = Ansi_Yellow;
-const size_t A_MEMORY           = Ansi_Yellow | OUTPUT_ENABLED;
+const size_t A_MEMORY           = Ansi_Yellow; // | OUTPUT_ENABLED;
 const size_t A_SERIALPORT       = Ansi_Yellow;
 const size_t A_KB_MANAGER       = Ansi_Yellow;
 const size_t A_INTERRUPTS       = Ansi_Yellow;
@@ -93,7 +93,7 @@ const size_t PATHWALKER         = Ansi_Yellow;
 const size_t PSEUDOFS           = Ansi_Yellow;
 const size_t VFSSYSCALL         = Ansi_Yellow;
 const size_t VFS                = Ansi_Yellow; // | OUTPUT_ENABLED;
-const size_t VFS_FILE           = Ansi_Yellow;
+const size_t VFS_FILE           = Ansi_Yellow | OUTPUT_ENABLED;;
 const size_t SUPERBLOCK         = Ansi_Yellow;
 
 //group minix
@@ -111,6 +111,8 @@ const size_t USERSPACE_LOCKS         = Ansi_Red;
 const size_t WAIT_PID               = Ansi_Red;
 
 const size_t ERROR_DEBUG                     = Ansi_Red  | OUTPUT_ENABLED;
+
+const size_t SHARE_MEMORY         = Ansi_Yellow | OUTPUT_ENABLED;
 
 
 

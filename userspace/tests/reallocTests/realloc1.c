@@ -29,9 +29,11 @@ int realloc1()
 	//Force memoryblock to move location, should still has its saved stuff inside
 	int* ptr3 = malloc(20 * sizeof(int));
 	assert(ptr3 != NULL);
-	int* ptr4 = realloc(ptr2, 40 * sizeof(int));
+	int* ptr4 = realloc(ptr2, 60 * sizeof(int));
 	assert(ptr4 != NULL);
-	assert(ptr4 > ptr3 && ptr3 > ptr2 && "Make sure it moved the location");
+	assert(ptr4 > ptr3 && "Make sure it moved the location");
+	assert(ptr3 > ptr2 && "Make sure it moved the location");
+
 	
 	for(int i = 0; i < 40; i++)
 	{

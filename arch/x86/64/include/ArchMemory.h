@@ -6,7 +6,7 @@
 #include "offsets.h"
 #include "paging-definitions.h"
 
-enum BitType {COW, BEEN_DIRTY, DISCARDED, DIRTY, WRITEABLE, SWAPPED_OUT, PRESENT, ACCESSED};
+enum BitType {COW, BEEN_DIRTY, DISCARDED, DIRTY, WRITEABLE, SWAPPED_OUT, PRESENT, ACCESSED, SECONDCHANGE};
 
 struct ArchMemoryMapping
 {
@@ -112,18 +112,18 @@ class ArchMemory
     
     void deleteEverythingExecpt(size_t virtual_page);
 
-   
-    
+
+
 
 
 
     void copyPage(size_t virtual_addr, ustl::vector<uint32>& preallocated_pages);
 
-    
+
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
-    bool updatePageTableEntryForWriteBackToDisk(size_t vpn);
+    bool updatePageTableEntryForDiscardPage(size_t vpn);
     void setPageTableEntryToNotPresent(size_t vpn);
 
     size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
@@ -132,7 +132,7 @@ class ArchMemory
 
 
 
-     
+
 
     bool isBitSet(size_t vpn, BitType bit, bool pagetable_need_to_be_present);
     size_t getDiskLocation(size_t vpn);
@@ -151,6 +151,10 @@ class ArchMemory
     void setProtectionBits(size_t vpn, int read, int write, int execute);
 
     void setSharedBit(size_t vpn);
+
+    void resetSecondChange(size_t vpn);
+
+    void setSecondChange(size_t vpn);
 
 
   private:

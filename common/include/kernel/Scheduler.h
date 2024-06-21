@@ -13,68 +13,68 @@ class Lock;
 
 class Scheduler
 {
-  public:
-    static Scheduler *instance();
+public:
+	static Scheduler *instance();
 
-    void addNewThread(Thread *thread);
-    void sleep();
-    void wake(Thread *thread_to_wake);
-    void yield();
-    void printThreadList();
-    void printStackTraces();
-    void printLockingInformation();
-    bool isSchedulingEnabled();
-    bool isCurrentlyCleaningUp();
-    void incTicks();
-    size_t getTicks();
-    uint32 getThreadCount();
+	void addNewThread(Thread *thread);
+	void sleep();
+	void wake(Thread *thread_to_wake);
+	void yield();
+	void printThreadList();
+	void printStackTraces();
+	void printLockingInformation();
+	bool isSchedulingEnabled();
+	bool isCurrentlyCleaningUp();
+	void incTicks();
+	size_t getTicks();
+	uint32 getThreadCount();
 
-    /**
-     * NEVER EVER EVER CALL THIS METHOD OUTSIDE OF AN INTERRUPT CONTEXT
-     * this is the method that decides which threads will be scheduled next
-     * it is called by either the timer interrupt handler or the yield interrupt handler
-     * and changes the global variables currentThread and currentThreadRegisters
-     */
-    void schedule();
+	/**
+	 * NEVER EVER EVER CALL THIS METHOD OUTSIDE OF AN INTERRUPT CONTEXT
+	 * this is the method that decides which threads will be scheduled next
+	 * it is called by either the timer interrupt handler or the yield interrupt handler
+	 * and changes the global variables currentThread and currentThreadRegisters
+	 */
+	void schedule();
 
-  protected:
-    friend class IdleThread;
-    friend class CleanupThread;
-    friend class SwappingThread;
+protected:
+	friend class IdleThread;
+	friend class CleanupThread;
+	friend class SwappingThread;
 
-    void cleanupDeadThreads();
+	void cleanupDeadThreads();
 
-  private:
-    Scheduler();
+private:
+	Scheduler();
 
-    /**
-     * Scheduler internal lock abstraction method
-     * locks the thread-list against concurrent access by prohibiting a thread switch
-     * don't call this from an Interrupt-Handler, since Atomicity won't be guaranteed
-     */
-    void lockScheduling();
+	/**
+	 * Scheduler internal lock abstraction method
+	 * locks the thread-list against concurrent access by prohibiting a thread switch
+	 * don't call this from an Interrupt-Handler, since Atomicity won't be guaranteed
+	 */
+	void lockScheduling();
 
-    /**
-     * Scheduler internal lock abstraction method
-     * unlocks the thread-list
-     */
-    void unlockScheduling();
+	/**
+	 * Scheduler internal lock abstraction method
+	 * unlocks the thread-list
+	 */
+	void unlockScheduling();
 
-    static Scheduler *instance_;
+	static Scheduler *instance_;
 
-    typedef ustl::list<Thread*> ThreadList;
-    ThreadList threads_;
+	typedef ustl::list<Thread*> ThreadList;
+	ThreadList threads_;
 
-    size_t block_scheduling_;
+	size_t block_scheduling_;
 
-    size_t ticks_;
+	size_t ticks_;
 
-    IdleThread idle_thread_;
-    CleanupThread cleanup_thread_;
-  public:
-    SwappingThread swapping_thread_;
-    
-    uint64_t last_time_stamp_{0};
-    uint64_t timestamp_fs_{0};
+	IdleThread idle_thread_;
+	CleanupThread cleanup_thread_;
+public:
+	SwappingThread swapping_thread_;
+
+	uint64_t last_time_stamp_{0};
+	uint64_t timestamp_fs_{0};
 
 };

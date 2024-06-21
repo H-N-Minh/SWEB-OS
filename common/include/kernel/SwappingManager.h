@@ -23,8 +23,6 @@ class SwappingManager
     void swapOutPage(size_t ppn);
     int swapInPage(size_t disk_offset, ustl::vector<uint32>& preallocated_pages);
 
-    void lock_archmemories_in_right_order(ustl::vector<ArchmemIPT*> &virtual_page_infos);  //TODOs //maybe use this
-    void unlock_archmemories(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
     int getDiskWrites();
     int getDiskReads();
@@ -53,8 +51,8 @@ class SwappingManager
     int total_disk_writes_ = 0;
 
 
-    void lockArchmemories(ustl::vector<ArchmemIPT*>& virtual_page_infos);
-    void unlockArchmemories(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+    void lockArchmemorys(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+    void unlockArchmemorys(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 
     void printDebugInfos(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn, size_t disk_offset);
 
@@ -67,7 +65,7 @@ class SwappingManager
 
     bool isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
-    void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn);
+    void updatePageTableEntriesForDiscardPage(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn);
 
     void setPagesToNotPresent(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 

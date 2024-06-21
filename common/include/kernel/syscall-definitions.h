@@ -56,11 +56,7 @@
 #define sc_munmap 801
 
 
+#define sc_free_pages 604
 
-
-
-
-
-
-
-
+#define sc_shm_open 100
+#define sc_shm_unlink 101

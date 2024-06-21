@@ -15,8 +15,6 @@
 
 
 
-#define STACK_START USER_BREAK
-#define STACK_END (USER_BREAK / 2)
 
 class PageFaultHandler
 {
@@ -74,7 +72,7 @@ public:
   static void restorePreviousUserSwitchState(uint32 previousUserSwitchState);
 
 
-  static int checkGrowingStack(size_t address);
+  static int checkGrowingStack(size_t address, ustl::vector<uint32>& preallocated_pages);
   static void errorInPageFaultKillProcess();
 
   /**
@@ -86,6 +84,8 @@ public:
    * Helper for handlePageFault. handles all present pagefaults including: COW, writing to read-only pages
   */
   static void handlePresentPageFault(size_t address, bool writing);
+
+  static void handleUserPageFault(size_t address);
 
 
   static void handlePageFault(size_t address, bool isWriteOperation);

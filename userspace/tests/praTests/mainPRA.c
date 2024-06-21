@@ -21,7 +21,6 @@ void printStatistic()
 extern int pra1();
 extern int pra2();
 extern int pra3();
-extern int pra4();
 extern int pra5();
 
 
@@ -33,8 +32,8 @@ int childMain()
     // comment out the tests you don't want to run
     int PRA1 = 1;   // Test PRA
     int PRA2 = 1;       // double pagefault => double swap (still single thread)
-    int PRA3 = 1;       // 64 threads  writting to array at same time                //seems to fail - mayge caused by new fix ???
-    int PRA4 = 0;       // similar to pra3, but use fork instead of pthread_create
+    int PRA3 = 1;       // 64 threads  writting to array at same time
+    int PRA4 = 0;       // Similar to pra1 but with different order
     int PRA5 = 0;       //More complex out of memory where i write in every location multiple times
     // Select pra-type:
     // setPRA(__RANDOM_PRA__); 
@@ -59,8 +58,6 @@ int childMain()
         printStatistic();
     }
 
-    for(int i = 0; i < 3; i++)
-    {
     if(PRA3)
     {
         printf("\nTesting pra3: testing 64 threads writing to array in parallel...\n");
@@ -69,13 +66,12 @@ int childMain()
         else                                  { printf("===> pra3 failed!\n");  return -1;}
         printStatistic();
     }
-    }
 
 
     if (PRA4)
     {
-        printf("\nTesting pra4: Many forks and children trigger out of memory...\n");
-        retval = pra4();
+        printf("\nTesting pra4: Similar to pra1 but differrent order.\n");
+        retval = pra1();
         if (retval == 0)                      { printf("===> pra4 successful!\n"); }
         else                                  { printf("===> pra4 failed!\n");  return -1;}
         printStatistic();
@@ -83,7 +79,7 @@ int childMain()
 
     if(PRA5)
     {
-        printf("\nTesting pra5: Out of memory but more complex...\n");
+        printf("\nTesting pra5: Out of memory but more complex and more time comsuming.\n");
         retval = pra5();
         if (retval == 0)                      { printf("===> pra5 successful!\n"); }
         else                                  { printf("===> pra5 failed!\n");  return -1;}

@@ -31,7 +31,7 @@ extern int fork7();
 int childMain()
 {
     int retval = 0;
-    // setPRA(__NFU_PRA__);
+    setPRA(__NFU_PRA__);
 
     if (FORK1)
     {
@@ -80,7 +80,7 @@ int childMain()
 
     if (FORK6)
     {
-        printf("\nTesting fork6: 100 pcreate then all fork at same time...\n");
+        printf("\nTesting fork6: 20 pcreate then all fork at same time...\n");
         retval = fork6();
         if (retval == PARENT_SUCCESS)         { printf("===> fork6 successful!\n"); }
         else if (retval == CHILD_SUCCESS)     { return CHILD_SUCCESS; }
