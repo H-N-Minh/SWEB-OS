@@ -314,11 +314,11 @@ void PageFaultHandler::handlePresentPageFault(size_t address, bool writing)
     //We want to write to a page that is readable and not cow -> error
   else
   {
-    debug(ERROR_DEBUG, "PageFaultHandler::handlePresentPageFault: Page is not COW (read-only) and we want to write => Error\n");
-    archmem_lock->release();
-    ipt_lock->release();
-    pm-> releaseNotNeededPages(preallocated_pages);
-    errorInPageFaultKillProcess();
+    // debug(ERROR_DEBUG, "PageFaultHandler::handlePresentPageFault: Page is not COW (read-only) and we want to write => Error\n");
+    // archmem_lock->release();
+    // ipt_lock->release();
+    // pm-> releaseNotNeededPages(preallocated_pages);
+    // errorInPageFaultKillProcess();
   }
 
   archmem_lock->release();
