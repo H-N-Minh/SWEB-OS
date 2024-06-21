@@ -1,9 +1,15 @@
 #include "IPTManager.h"
-#include "debug.h"
+#include "ArchMemory.h"
+#include "PageManager.h"
+#include "SwappingManager.h"
+#include "SwappingThread.h"
+#include "Syscall.h"
+#include "Thread.h"
 #include "assert.h"
 #include "debug.h"
 #include "Thread.h"
 #include "Syscall.h"
+#include "ulimits.h"
 #include "uset.h"
 #include "SwappingManager.h"
 #include "ArchMemory.h"
@@ -297,7 +303,6 @@ void IPTManager::insertEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, Arc
   }
 
   debug(IPT, "IPTManager::insertIPT: successfully inserted to IPT\n");
-
 }
 
 void IPTManager::removeEntryIPT(IPTMapType map_type, size_t ppn, size_t vpn, ArchMemory* archmem)
@@ -380,10 +385,10 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   ustl::vector<ArchmemIPT*> archmemIPTs_vector = entry->getArchmemIPTs();
   assert(archmemIPTs_vector.size() > 0 && "IPTManager::moveEntry: archmemIPTs_vector is empty even tho the IPTentry exists\n");
 
-  for (auto entry : archmemIPTs_vector)
+  for (auto archmemIPT : archmemIPTs_vector)
   {
-    assert(entry->isLockedByUs() && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
-    assert(!isEntryInMap(ppn_destination, destination, entry->archmem_,  entry->vpn_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
+    assert(archmemIPT->isLockedByUs() && "IPTManager::moveEntry: ArchMemory not locked while moving entry\n");
+    assert(!isEntryInMap(ppn_destination, destination, archmemIPT->archmem_,  archmemIPT->vpn_) && "IPTManager::moveEntry: Entry to be moved already exists in destination map\n");
   }
   debug(SWAPPING, "IPTManager::moveEntry: Entry to be moved seems valid, moving now\n");
 
@@ -401,6 +406,42 @@ void IPTManager::moveEntry(IPTMapType source, size_t ppn_source, size_t ppn_dest
   {
     assert(0 && "IPTManager::moveEntry: Move failed\n");
   }
+}
+
+void IPTManager::copyEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
+{
+	assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::copyEntry called but IPT not locked\n");
+
+	auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
+	auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
+
+	IPTEntry* entry = (*source_map)[ppn_source];
+	assert(entry);
+
+	// copy the entry to the destination and the source remains untouched
+	(*destination_map)[ppn_destination] = new IPTEntry(*entry);
+}
+
+void IPTManager::finalizePreSwappedEntry(IPTMapType source, size_t ppn_source, size_t ppn_destination)
+{
+	assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::finalizePreSwappedEntry called but IPT not locked\n");
+
+	// get reference to source map and destination map
+	auto* source_map = (source == IPTMapType::RAM_MAP ? &ram_map_ : &disk_map_);
+	auto* destination_map = (source == IPTMapType::RAM_MAP ? &disk_map_ : &ram_map_);
+
+	IPTEntry* entry = (*source_map)[ppn_source];
+
+	// add entry to the destination map
+	(*destination_map)[ppn_destination] = entry;
+	// remove entry from the source map
+	source_map->erase(ppn_source);
+
+	// Check if finalize operation failed or not
+	if (isKeyInMap(ppn_source, source) || !isKeyInMap(ppn_destination, source == IPTMapType::RAM_MAP ? IPTMapType::DISK_MAP : IPTMapType::RAM_MAP))
+	{
+		assert(0 && "IPTManager::finalizePreSwappedEntry: finalize failed\n");
+	}
 }
 
 void IPTManager::removeEntry(IPTMapType map_type, size_t ppn)
@@ -540,7 +581,6 @@ void IPTManager::checkDiskMapConsistency()
         entry_arch->archmemory_lock_.acquire();
         locked_by_us = 1;
       }
-
       ppn_t disk_offset = (ppn_t) entry_arch->getDiskLocation(vpn);
       assert(disk_offset != 0);
       assert(disk_offset && "checkRampMapConsistency: disk_offset is 0\n");
@@ -629,11 +669,12 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
 {
   assert(fake_ppn_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::mapRealPPN called but fake_ppn_lock_ not locked\n");
   fake_ppn_t mutual_fake_ppn = 0;
+
   // find if the archmemory exists in the fake_ppn_map_, it should
-  auto it = fake_ppn_map_.find(arch_memory);
-  if (it != fake_ppn_map_.end())
+  auto archMemoryIt = fake_ppn_map_.find(arch_memory);
+  if (archMemoryIt != fake_ppn_map_.end())
   {
-    auto& sub_map = it->second;
+    auto& sub_map = archMemoryIt->second;
     if (sub_map.find(vpn) != sub_map.end())
     {
       mutual_fake_ppn = sub_map[vpn];

@@ -143,7 +143,7 @@ PageManager::PageManager():page_manager_lock_("PageManager::page_manager_lock_")
   {
     while (!Bitmap::setBit(page_usage_table, used_pages, free_page))
       free_page++;
-    if ((temp_page_size = ArchMemory::get_PPN_Of_VPN_In_KernelMapping(start_vpn,nullptr,0)) == 0)
+    if ((temp_page_size = ArchMemory::get_PPN_Of_VPN_In_KernelMapping(start_vpn,nullptr,nullptr)) == 0)
       ArchMemory::mapKernelPage(start_vpn,free_page++);
     start_vpn++;
   }
@@ -429,15 +429,15 @@ uint32 PageManager::getReferenceCount(uint64 page_number) // ppn
 }
 
 
-ustl::vector<uint32> PageManager::preAlocatePages(int needed_pages_count)
+ustl::vector<uint32> PageManager::preAllocatePages(int needed_pages_count)
 {
-  ustl::vector<uint32> pre_alocated_pages;
+  ustl::vector<uint32> pre_allocated_pages;
   for(int i = 0; i < needed_pages_count; i++)
   {
     uint32 ppn = allocPPN();
-    pre_alocated_pages.push_back(ppn);
+    pre_allocated_pages.push_back(ppn);
   }
-  return pre_alocated_pages;
+  return pre_allocated_pages;
 }
 
 void PageManager::releaseNotNeededPages(ustl::vector<uint32>& not_used_pages)
@@ -449,12 +449,12 @@ void PageManager::releaseNotNeededPages(ustl::vector<uint32>& not_used_pages)
   not_used_pages.clear();
 }
 
-size_t PageManager::getPreAlocatedPage(ustl::vector<uint32>& pre_alocated_pages)
+size_t PageManager::getPreAllocatedPage(ustl::vector<uint32>&pre_allocated_pages)
 {
-  assert(pre_alocated_pages.size() != 0 && "No more page available");
-  uint32 ppn = pre_alocated_pages.back();
-  pre_alocated_pages.pop_back();
-  debug(PM, "PageManager::getPreAlocatedPage: Return ppn %d.\n", ppn);
+  assert(!pre_allocated_pages.empty() && "No more page available");
+  uint32 ppn = pre_allocated_pages.back();
+  pre_allocated_pages.pop_back();
+  debug(PM, "PageManager::getPreAllocatedPage: Return ppn %d.\n", ppn);
   return ppn;
 }
 

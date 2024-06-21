@@ -6,9 +6,11 @@
 #include "PageManager.h"
 #include "IPTEntry.h"
 
+#define INVALID_PPN 0
 
 #define TICKS_PER_SEC 18
 #define PRESWAP_THRESHOLD 80  // in percentage (start pre-swapping when memory usage is above 80%)
+#define SWAP_THRESHOLD 90
 #define MAX_PRESWAP_PAGES 20  // maximum total number of pages to pre-swap
 #define SWAP_OUT_AMOUNT 10     // max number of pages to swap out at a time
 #define SWAP_IN_AMOUNT 10     // max number of pages to swap in at a time
@@ -39,7 +41,7 @@ void SwappingThread::kill()
 bool SwappingThread::isMemoryAlmostFull()
 {
   PageManager* pm = PageManager::instance();
-  // TODO ? lock pagemanager ? but the lock is private
+  // TODO ? lock page manager ? but the lock is private
 
   uint32_t totalNumPages = pm->getTotalNumPages();
   uint32_t usedNumPages = totalNumPages - pm->getNumFreePages();
@@ -49,9 +51,53 @@ bool SwappingThread::isMemoryAlmostFull()
   return usedMemoryRatio > PRESWAP_THRESHOLD;
 }
 
+bool SwappingThread::isMemoryFull()
+{
+  PageManager* pm = PageManager::instance();
+  uint32_t totalNumPages = pm->getTotalNumPages();
+  uint32_t usedNumPages = totalNumPages - pm->getNumFreePages();
+  uint32_t usedMemoryRatio = (usedNumPages * 100) / totalNumPages;
+
+  return usedMemoryRatio > SWAP_THRESHOLD;
+}
+
+void SwappingThread::preswap()
+{
+  if(!SwappingManager::pre_swap_enabled)
+    return;
+
+  if (isMemoryAlmostFull() && free_pages_.size() < MAX_PRESWAP_PAGES)
+  {
+    for (int i = 0; i < SWAP_OUT_AMOUNT; i++)
+    {
+      if (free_pages_.size() >= MAX_PRESWAP_PAGES)
+      {
+        break;
+      }
+      IPTManager* ipt = IPTManager::instance();
+      ipt->IPT_lock_.acquire();
+
+      if(!ipt->ram_map_.empty())
+      {
+
+        size_t ppn = copyPageToDisk();
+        ipt->IPT_lock_.release();
+        pre_swapped_pages_.push_back(ppn);
+        miss_count_++;
+        swap_out_cond_.signal();
+      }
+      else
+      {
+        ipt->IPT_lock_.release();
+      }
+    }
+  }
+}
+
+
 void SwappingThread::swapOut()
 {
-  debug(SWAPTHREAD, "SwappingThread::swapOut: Check if swap out nessessary.\n");
+  debug(SWAPTHREAD, "SwappingThread::swapOut: Check if swap out necessary.\n");
   swap_out_lock_.acquire();
 
   bool almost_full_memory = isMemoryAlmostFull();
@@ -171,7 +217,10 @@ void SwappingThread::Run()
       {
         updateMetaData();
       }
-      // 2. Swap out if needed
+      // 2. Pre-swap if needed
+//      preswap();
+
+      // 3. Swap out if needed
       swapOut();
 
 
@@ -180,7 +229,7 @@ void SwappingThread::Run()
 
     }
 
-    // 4. Yield
+    // 5. Yield
     Scheduler::instance()->yield();
   }
 }
@@ -250,11 +299,33 @@ bool SwappingThread::isOneTimeStep()
   return false;
 }
 
+ustl::deque<size_t> SwappingThread::preswap_page_queue;
+
 size_t SwappingThread::swapPageOut()
 {
   IPTManager* ipt = IPTManager::instance();
+  size_t ppn_to_swap = INVALID_PPN;
+  if (SwappingManager::pre_swap_enabled && !preswap_page_queue.empty())
+  {
+    ppn_to_swap = preswap_page_queue.front();
+    preswap_page_queue.pop_front();
+    SwappingManager::instance()->swapOutPage(ppn_to_swap);
+  }
+  else
+  {
+    ppn_to_swap = ipt->findPageToSwapOut();
+    SwappingManager::instance()->swapOutPage(ppn_to_swap);
+  }
+
+  return ppn_to_swap;
+}
+
+size_t SwappingThread::copyPageToDisk()
+{
+  IPTManager* ipt = IPTManager::instance();
   size_t ppn = ipt->findPageToSwapOut();
-  SwappingManager::instance()->swapOutPage(ppn);
+  preswap_page_queue.push_back(ppn);
+  SwappingManager::instance()->copyPageToDisk(ppn);
 
   return ppn;
 }
@@ -278,7 +349,6 @@ uint32 SwappingThread::getMissCount()
   return miss_count;
 }
 
-
 void SwappingThread::addSwapIn(size_t disk_offset, ustl::vector<uint32>* preallocated_pages)
 {
   assert(swap_in_lock_.isHeldBy((Thread*) currentThread) && "SwappingThread::addSwapIn: swap_in_lock_ must be held by currentThread\n");
@@ -292,12 +362,12 @@ bool SwappingThread::isOffsetInMap(size_t disk_offset)
   return swap_in_map_.find(disk_offset) != swap_in_map_.end();
 }
 
-
 bool SwappingThread::isFreePageAvailable()
 {
   assert(swap_out_lock_.isHeldBy((Thread*) currentThread) && "SwappingThread::isFreePageAvailable: swap_out_lock_ must be held by currentThread\n");
   return !free_pages_.empty();
 }
+
 
 uint32 SwappingThread::getFreePage()
 {
