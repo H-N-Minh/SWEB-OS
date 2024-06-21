@@ -30,7 +30,6 @@ size_t ipt3_function()
       copy += 420;
       assert(copy == 420 && "fork6_global_var should be 420 in every threads of parent process");
       int status;
-      printf("hey\n");
       waitpid(pid, &status, 0);
       if (status != 1)
       {
