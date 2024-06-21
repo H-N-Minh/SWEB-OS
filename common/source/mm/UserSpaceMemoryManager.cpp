@@ -19,6 +19,7 @@ UserSpaceMemoryManager::UserSpaceMemoryManager(Loader* loader)
   current_break_ = heap_start_;
   loader_ = loader;
   shared_mem_manager_ = new SharedMemManager();
+  loader->arch_memory_.shared_mem_manager_ = shared_mem_manager_;
 
 }
 

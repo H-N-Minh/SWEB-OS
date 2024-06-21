@@ -174,7 +174,7 @@ public:
 	static ustl::string* name_;
 	static FileDescriptor* global_fd_;
 
-	static SharedMemObject* Init(const ustl::string& name)
+	static SharedMemObject* init(const ustl::string& name)
 	{
 		if (!name_)
 			name_ = new ustl::string(name); // TODO: free!!!

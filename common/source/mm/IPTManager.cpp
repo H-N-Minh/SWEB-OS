@@ -653,6 +653,7 @@ void IPTManager::mapRealPPN(size_t ppn, size_t vpn, ArchMemory* arch_memory, ust
   {
     if (it->first == mutual_fake_ppn)
     {
+      
       ArchmemIPT* archmem_ipt = it->second;
       assert(archmem_ipt && "IPTManager::mapRealPPN: archmem_ipt is null");
       ArchMemory* temp_archmem = archmem_ipt->archmem_;

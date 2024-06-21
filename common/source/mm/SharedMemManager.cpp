@@ -155,7 +155,7 @@ void* SharedMemManager::addEntry(void* addr, size_t length, int prot, int flags,
 
 	FileDescriptor* globalFileDescriptor = nullptr;
 
-	if (fd >= 0) {
+	if (fd >= 0 && fd < 2000) {
 		UserThread& currentUserThread = *((UserThread*)currentThread);
 		UserProcess& current_process = *currentUserThread.process_;
 		LocalFileDescriptorTable& lfdTable = current_process.localFileDescriptorTable;
@@ -232,7 +232,7 @@ void SharedMemManager::handleSharedPF(ustl::vector<uint32>& preallocated_pages, 
 	// create new ppn and copy content from fd if necessary
 	size_t ppn = PageManager::instance()->getPreAlocatedPage(preallocated_pages);
 	size_t vpn = address / PAGE_SIZE;
-	if ((entry->flags_ == MAP_PRIVATE || entry->flags_ == MAP_SHARED) && entry->fd_ >= 0)
+	if ((entry->flags_ == MAP_PRIVATE || entry->flags_ == MAP_SHARED) && entry->fd_ >= 0 && entry->fd_ < 2000)
 	{
 		debug(MMAP, "SharedMemManager::handleSharedPF: fd exists, copying content from fd (%d) to the new ppn (%zu)\n", entry->fd_, ppn);
 		ssize_t offset = entry->getOffset(vpn);
@@ -548,7 +548,7 @@ void SharedMemManager::unmapOnePage(vpn_t vpn, SharedMemEntry *sm_entry,
 
 bool SharedMemManager::isTimeToWriteBack(SharedMemEntry* sm_entry, ArchMemory* arch_memory, size_t vpn)
 {
-	bool shared_flag = (sm_entry->flags_ == MAP_SHARED && sm_entry->fd_ >= 0);
+	bool shared_flag = (sm_entry->flags_ == MAP_SHARED && sm_entry->fd_ >= 0 && sm_entry->fd_ < 2000);
 
 	ArchMemoryMapping m = arch_memory->resolveMapping(vpn);
 	PageTableEntry* pte = &m.pt[m.pti];
@@ -624,7 +624,7 @@ int SharedMemManager::shm_open(char* name, size_t oflag, mode_t mode)
 		// vpn_t start = last_free_vpn_;
 		// vpn_t end = start + (length / PAGE_SIZE) - 1;
 
-		SharedMemObject* new_obj = SharedMemObject::Init(shm_name);
+		SharedMemObject* new_obj = SharedMemObject::init(shm_name);
 		(*shm_objects_)[shm_name] = new_obj;
 		global_fd_list.add(SharedMemObject::getGlobalFileDescriptor());
 
@@ -775,3 +775,5 @@ void SharedMemManager::writeBackToFile(size_t vpn, int fd, ssize_t offset, ArchM
 //     shared_mem_lock_.release();
 //     return 0;
 // }
+
+
