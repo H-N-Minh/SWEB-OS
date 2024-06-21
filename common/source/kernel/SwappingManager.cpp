@@ -59,7 +59,7 @@ void SwappingManager::swapOutPage(size_t ppn)
       ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);
       PageManager::instance()->setReferenceCount(ppn, 0);
       // printDebugInfos(virtual_page_infos, ppn, 0);
-      updatePageTableEntriesForWriteBackToDisk(virtual_page_infos, ppn);
+      updatePageTableEntriesForDiscardPage(virtual_page_infos, ppn);
       unlockArchmemorys(virtual_page_infos);
       for(auto& el : virtual_page_infos)
       {
@@ -247,14 +247,14 @@ bool SwappingManager::isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos)
 
 
 
-void SwappingManager::updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn)
+void SwappingManager::updatePageTableEntriesForDiscardPage(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn)
 {
   for(ArchmemIPT* virtual_page_info : virtual_page_infos)
   {
     ArchMemory* archmemory = virtual_page_info->archmem_;
     size_t vpn = virtual_page_info->vpn_;
     debug(SWAPPING, "SwappingManager::writeBackPage: vpn: %p, archmemory: %p (ppn %p).\n", (void*)vpn, archmemory, (void*)ppn);
-    archmemory->updatePageTableEntryForWriteBackToDisk(vpn);
+    archmemory->updatePageTableEntryForDiscardPage(vpn);
   }
 }
 

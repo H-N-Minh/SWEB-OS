@@ -69,7 +69,7 @@ class SwappingManager
 
     bool isPageDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
-    void updatePageTableEntriesForWriteBackToDisk(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn);
+    void updatePageTableEntriesForDiscardPage(ustl::vector<ArchmemIPT*>& virtual_page_infos, size_t ppn);
 
     void setPagesToNotPresent(ustl::vector<ArchmemIPT*>& virtual_page_infos);
 

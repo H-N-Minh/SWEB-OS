@@ -713,12 +713,12 @@ void ArchMemory::resetAccessBits(size_t vpn)
 }
 
 
-bool ArchMemory::updatePageTableEntryForWriteBackToDisk(size_t vpn)
+bool ArchMemory::updatePageTableEntryForDiscardPage(size_t vpn)
 {
   assert(IPTManager::instance()->IPT_lock_.heldBy() == currentThread);
   assert(archmemory_lock_.heldBy() == currentThread);
 
-  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForWriteBackToDisk: Update vpn %p in archmemory %p.\n", (void*)vpn, this);
+  debug(A_MEMORY, "ArchMemory::updatePageTableEntryForDiscardPage: Update vpn %p in archmemory %p.\n", (void*)vpn, this);
   ArchMemoryMapping m = resolveMapping(vpn);
   assert(m.pml4[m.pml4i].present && m.pdpt[m.pdpti].pd.present && m.pd[m.pdi].pt.present); 
   

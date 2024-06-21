@@ -123,7 +123,7 @@ class ArchMemory
 
     bool updatePageTableEntryForSwapOut(size_t vpn, size_t disk_offset);
     bool updatePageTableEntryForSwapIn(size_t vpn, size_t ppn);
-    bool updatePageTableEntryForWriteBackToDisk(size_t vpn);
+    bool updatePageTableEntryForDiscardPage(size_t vpn);
     void setPageTableEntryToNotPresent(size_t vpn);
 
     size_t construct_VPN(size_t pti, size_t pdi, size_t pdpti, size_t pml4i);
