@@ -72,4 +72,7 @@ class SwappingManager
     bool hasPageBeenDirty(ustl::vector<ArchmemIPT*> &virtual_page_infos);
 
     void resetDirtyBitSetBeenDirtyBits(ustl::vector<ArchmemIPT*>& virtual_page_infos);
+
+    void swapSearch(const char* searchString);
+    int compareBlocks(size_t block_num_1, size_t block_num_2);
 };

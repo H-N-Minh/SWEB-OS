@@ -111,7 +111,7 @@ void IPTManager::debugRandomGenerator()
   }
 }
 
-size_t IPTManager::findPageToSwapOut()
+size_t IPTManager::findPageToSwapOut() //
 {
   assert(IPT_lock_.isHeldBy((Thread*) currentThread) && "IPTManager::findPageToSwapOut called but IPT not locked\n");
 

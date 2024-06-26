@@ -255,7 +255,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
   
   page_manager_lock_.release();
 
-  if (found == 0)
+  if (found == 0) //check if pages in ram are free
   {
     size_t ppn = 0;
 
@@ -266,7 +266,7 @@ uint32 PageManager::allocPPN(uint32 page_size)
     swapper->swap_out_lock_.acquire();
     while (!swapper->isFreePageAvailable())
     {
-      swapper->swap_out_cond_.wait();
+      swapper->swap_out_cond_.wait(); //wait
       if(swapper->memory_full_try_alloc_again_)
       {
         swapper->memory_full_try_alloc_again_ = false;

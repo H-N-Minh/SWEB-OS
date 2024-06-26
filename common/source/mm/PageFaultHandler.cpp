@@ -75,15 +75,15 @@ inline void PageFaultHandler::handlePageFault(size_t address, bool user, bool pr
 
   int status = checkPageFaultIsValid(address, user, present, switch_to_us);
 
-  if (status == VALID)
+  if (status == VALID) //for everything else
   {
     handleValidPageFault(address);
   }
-  else if (status == IS_PRESENT)
+  else if (status == IS_PRESENT) //mostly for cow
   {
     handlePresentPageFault(address, writing);
   }
-  else if(status == USER)
+  else if(status == USER) //growing stacj
   {
     handleUserPageFault(address);
   }
@@ -210,7 +210,7 @@ void PageFaultHandler::handleValidPageFault(size_t address)
     size_t disk_offset = current_archmemory.getDiskLocation(vpn);
     assert(disk_offset != 0);
 
-    swapper->addSwapIn(disk_offset, &preallocated_pages);
+    swapper->addSwapIn(disk_offset, &preallocated_pages); //
     archmem_lock->release();
     ipt_lock->release();
 

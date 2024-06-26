@@ -114,7 +114,7 @@ void SwappingThread::swapOut()
       IPTManager* ipt = IPTManager::instance();
       ipt->IPT_lock_.acquire();
 
-      if(!ipt->ram_map_.empty())
+      if(!ipt->ram_map_.empty()) //sth have to be in ram to be swapped out
       {
         size_t ppn = swapPageOut();
         ipt->IPT_lock_.release();
@@ -305,7 +305,7 @@ size_t SwappingThread::swapPageOut()
 {
   IPTManager* ipt = IPTManager::instance();
   size_t ppn_to_swap = INVALID_PPN;
-  if (SwappingManager::pre_swap_enabled && !preswap_page_queue.empty())
+  if (SwappingManager::pre_swap_enabled && !preswap_page_queue.empty()) // if only for the pre swap
   {
     ppn_to_swap = preswap_page_queue.front();
     preswap_page_queue.pop_front();

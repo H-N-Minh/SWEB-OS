@@ -89,7 +89,7 @@ void SwappingManager::swapOutPage(size_t ppn)
   {
     if(!hasPageBeenDirty(virtual_page_infos))
     {
-      ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);
+      ipt_->removeEntry(IPTMapType::RAM_MAP, ppn);  //remove it completly dont need to swap out bc if we do we cant just take it from the binary
       PageManager::instance()->setReferenceCount(ppn, 0);
       // printDebugInfos(virtual_page_infos, ppn, 0);
       updatePageTableEntriesForDiscardPage(virtual_page_infos, ppn);
@@ -325,4 +325,75 @@ void SwappingManager::resetDirtyBitSetBeenDirtyBits(ustl::vector<ArchmemIPT*>& v
     size_t vpn = virtual_page_info->vpn_;
     archmemory->resetDirtyBitSetBeenDirtyBits(vpn);
   }
+}
+
+void SwappingManager::swapSearch(const char* searchString)
+{
+  size_t searchStringLen = strlen(searchString);
+  size_t blockSize = bd_device_->getBlockSize(); //size of a single block on the disk, retrieved from the block device
+  size_t numBlocks = disk_offset_counter_; //total number of blocks used on the disk
+  char* buffer = new char[blockSize * 2]; //buffer to handle overlap between blocks
+
+  //loop through disk blocks
+  for (size_t blockNum = 2; blockNum < numBlocks; ++blockNum)
+  {
+    //reads the current block into the first half of the buffer
+    bd_device_->readData(blockNum * blockSize, blockSize, buffer);
+    //reads the next block into the second half of the buffer
+    if (blockNum + 1 < numBlocks)
+    {
+      bd_device_->readData((blockNum + 1) * blockSize, blockSize, buffer + blockSize);
+    }
+    else
+    {
+      //zero out the second part if no next block
+      memset(buffer + blockSize, 0, blockSize);
+    }
+
+    //search for the string in the buffer
+    for (size_t i = 0; i < blockSize; ++i)
+    {
+      if (strncmp(buffer + i, searchString, searchStringLen) == 0)
+      {
+        // Found the string, print until null character
+        const char* foundString = buffer + i;
+        while (*foundString != '\0')
+        {
+          debug(SWAPPING, "swapSearch found %s\n", *foundString);
+          ++foundString;
+        }
+        delete[] buffer;
+        return;
+      }
+    }
+  }
+  delete[] buffer;
+  debug(SWAPPING, "swapSearch no string found %s\n");
+}
+
+int SwappingManager::compareBlocks(size_t block_num_1, size_t block_num_2)
+{
+    // Lock the disk to ensure exclusive access
+    disk_lock_.acquire();
+
+    // Allocate temporary buffers for reading the block contents
+    char* block1 = new char[PAGE_SIZE];
+    char* block2 = new char[PAGE_SIZE];
+
+    // Read the block contents
+    bd_device_->readData(block_num_1 * PAGE_SIZE, PAGE_SIZE, block1);
+    bd_device_->readData(block_num_2 * PAGE_SIZE, PAGE_SIZE, block2);
+
+    // Unlock the disk after reading
+    disk_lock_.release();
+
+    // Compare the two blocks
+    bool are_equal = memcmp(block1, block2, PAGE_SIZE) == 0;
+
+    // Clean up the temporary buffers
+    delete[] block1;
+    delete[] block2;
+
+    // Return the comparison result
+    return are_equal ? 0 : -1;
 }
