@@ -1,14 +1,11 @@
 # sweb
 [![Build Status](https://travis-ci.org/IAIK/sweb.svg?branch=main)](https://travis-ci.org/IAIK/sweb)
 
-SWEB Educational OS
-
-Please have a look at https://www.iaik.tugraz.at/os
-
-
 # Operating Systems Kernel Development in SWEB
 
 This repository contains our solutions for the practical assignments of an Operating Systems course. The project involves extending the SWEB educational kernel with core, modern OS features, moving it from a simple single-threaded system to a more capable, concurrent operating system.
+
+Course's website (detailed explanation of Sweb and of the course's assignments): https://www.iaik.tugraz.at/os
 
 ### Technical Overview
 
